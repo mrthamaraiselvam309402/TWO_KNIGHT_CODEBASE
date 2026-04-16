@@ -224,7 +224,7 @@
   function getCoachStatus(c) { return c.status || 'active'; }
   function getCoachSalary(c) { return c.salary || c.hourly_rate || 0; }
   function getCoachAvailability(c) { return c.availability || ''; }
-  function getCoachBio(c) { return c.bio || c.additional_details || ''; }
+  function getCoachBio(c) { return c.bio || ''; }
   
   function getEventDate(e) { return e.date || e.event_date || ''; }
   function getEventType(e) { return e.type || e.event_type || 'Tournament'; }
@@ -307,8 +307,10 @@
         if (role === 'admin' || role === 'master') {
           renderDash();
           updateMsgBadge();
+          renderEvents();
         } else if (role === 'parent') {
           renderChild();
+          renderEvents();
         }
 
         setLoading('data', false);
@@ -372,7 +374,7 @@
   const PAGE_TITLES = {
     dash: 'Academy Overview', stud: 'Student Registry', 'coach-mgmt': 'Coach Management',
     child: 'My Child', fame: 'Wall of Fame', events: 'Events', bills: 'Payments',
-    msgs: 'Messages', coach: 'AI Assistant'
+    msgs: 'Messages', ai: 'AI Assistant'
   };
 
   function setPage(p) {
@@ -386,7 +388,8 @@
     if (btnArea) {
       btnArea.innerHTML = '';
       if (role === 'admin' || role === 'master') {
-        if (p === 'dash' || p === 'stud') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>`;
+        if (p === 'dash') btnArea.innerHTML = `<button class="btn btn-outline" onclick="generateFinancialReport()">📊 Financial Report</button><button class="btn btn-outline" onclick="generateStudentReport()" style="margin-left:10px">👥 Student Report</button>`;
+        if (p === 'stud') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>`;
         if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openModal('ev-modal')">+ Create Event</button>`;
       }
     }
@@ -395,6 +398,9 @@
       $('sidebar')?.classList.remove('open');
       $('sidebar-overlay')?.classList.remove('active');
     }
+
+    // Render page-specific content
+    if (p === 'events' && eventsData) renderEvents();
 
     setTimeout(() => {
       if (p === 'dash') renderDash();
@@ -505,6 +511,138 @@ function finishLogin(page) {
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // CHARTS
+  // ═══════════════════════════════════════════════════════════════
+  function buildCharts(studs) {
+    // Revenue Analysis - Monthly revenue over last 6 months
+    const revenueCtx = $('chartRevenue');
+    if (revenueCtx) {
+      const monthlyRevenue = {};
+      studs.filter(s => getStudentPaymentStatus(s) === 'Paid').forEach(s => {
+        const date = new Date(getStudentDate(s));
+        const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        monthlyRevenue[month] = (monthlyRevenue[month] || 0) + getStudentMonthlyFee(s);
+      });
+
+      const labels = [];
+      const data = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        labels.push(d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+        data.push(monthlyRevenue[month] || 0);
+      }
+
+      new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Revenue (₹)',
+            data,
+            borderColor: 'var(--gold)',
+            backgroundColor: 'rgba(220, 161, 62, 0.1)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: v => '₹' + v.toLocaleString() }
+            }
+          }
+        }
+      });
+    }
+
+    // Coach Load - Students per coach
+    const coachCtx = $('chartCoach');
+    if (coachCtx) {
+      const { coachMap } = getCoachStats(studs);
+      const labels = Object.keys(coachMap);
+      const data = Object.values(coachMap);
+
+      new Chart(coachCtx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Students',
+            data,
+            backgroundColor: 'var(--gold)',
+            borderColor: 'var(--gold2)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1 }
+            }
+          }
+        }
+      });
+    }
+
+    // Payment Status - Paid vs Due
+    const paymentCtx = $('chartPayment');
+    if (paymentCtx) {
+      const paid = studs.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
+      const due = studs.filter(s => getStudentPaymentStatus(s) === 'Due').length;
+
+      new Chart(paymentCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Paid', 'Due'],
+          datasets: [{
+            data: [paid, due],
+            backgroundColor: ['var(--success)', 'var(--danger)'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+
+    // Batch Distribution - Morning vs Evening
+    const batchCtx = $('chartBatch');
+    if (batchCtx) {
+      const morning = studs.filter(s => getStudentBatchTime(s).includes('08') || getStudentBatchTime(s).includes('09') || getStudentBatchTime(s).includes('10') || getStudentBatchTime(s).includes('11')).length;
+      const evening = studs.filter(s => getStudentBatchTime(s).includes('17') || getStudentBatchTime(s).includes('18') || getStudentBatchTime(s).includes('19') || getStudentBatchTime(s).includes('20')).length;
+
+      new Chart(batchCtx, {
+        type: 'pie',
+        data: {
+          labels: ['Morning', 'Evening'],
+          datasets: [{
+            data: [morning, evening],
+            backgroundColor: ['var(--blue)', 'var(--gold)'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // DASHBOARD
   // ═══════════════════════════════════════════════════════════════
   function renderDash() {
@@ -544,67 +682,7 @@ function finishLogin(page) {
     return { coachMap, assignedCoachIds, unassignedCount };
   }
 
-  function buildCharts(studs) {
-    // Simplified metrics display - no complex charts needed
-    const paidStudents = studs.filter(s => getStudentPaymentStatus(s) === 'Paid');
-    const dueStudents = studs.filter(s => getStudentPaymentStatus(s) === 'Due');
-    const paidAmount = paidStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-    const dueAmount = dueStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
 
-    // Update simple text-based metrics
-    const revenueEl = $('chartRevenue');
-    if (revenueEl) {
-      revenueEl.innerHTML = `
-        <div style="text-align:center;padding:20px;">
-          <div style="font-size:24px;font-weight:700;color:var(--success);margin-bottom:10px;">₹${paidAmount.toLocaleString()}</div>
-          <div style="color:var(--ivory-dim);font-size:14px;">Revenue Collected</div>
-          <div style="font-size:18px;font-weight:600;color:var(--danger);margin-top:15px;">₹${dueAmount.toLocaleString()}</div>
-          <div style="color:var(--ivory-dim);font-size:12px;">Outstanding Dues</div>
-        </div>
-      `;
-    }
-
-    const paymentEl = $('chartPayment');
-    if (paymentEl) {
-      paymentEl.innerHTML = `
-        <div style="text-align:center;padding:20px;">
-          <div style="font-size:24px;font-weight:700;color:var(--success);margin-bottom:10px;">${paidStudents.length}</div>
-          <div style="color:var(--ivory-dim);font-size:14px;">Students Paid</div>
-          <div style="font-size:18px;font-weight:600;color:var(--danger);margin-top:15px;">${dueStudents.length}</div>
-          <div style="color:var(--ivory-dim);font-size:12px;">Students Due</div>
-        </div>
-      `;
-    }
-
-    const batchEl = $('chartBatch');
-    if (batchEl) {
-      const weekendCount = studs.filter(s => s.batch_type === 'Weekend').length;
-      const weekdayCount = studs.filter(s => s.batch_type !== 'Weekend').length;
-      batchEl.innerHTML = `
-        <div style="text-align:center;padding:20px;">
-          <div style="font-size:24px;font-weight:700;color:var(--gold);margin-bottom:10px;">${weekendCount}</div>
-          <div style="color:var(--ivory-dim);font-size:14px;">Weekend Batches</div>
-          <div style="font-size:18px;font-weight:600;color:var(--accent);margin-top:15px;">${weekdayCount}</div>
-          <div style="color:var(--ivory-dim);font-size:12px;">Weekday Batches</div>
-        </div>
-      `;
-    }
-
-    const coachEl = $('chartCoach');
-    if (coachEl) {
-      const coachStats = getCoachStats(studs);
-      const totalStudents = Object.values(coachStats.coachMap).reduce((a, b) => a + b, 0);
-      const avgStudentsPerCoach = allCoaches.length ? Math.round(totalStudents / allCoaches.length) : 0;
-      coachEl.innerHTML = `
-        <div style="text-align:center;padding:20px;">
-          <div style="font-size:24px;font-weight:700;color:var(--gold);margin-bottom:10px;">${allCoaches.length}</div>
-          <div style="color:var(--ivory-dim);font-size:14px;">Active Coaches</div>
-          <div style="font-size:18px;font-weight:600;color:var(--accent);margin-top:15px;">${avgStudentsPerCoach}</div>
-          <div style="color:var(--ivory-dim);font-size:12px;">Avg Students/Coach</div>
-        </div>
-      `;
-    }
-  }
 
   // ═══════════════════════════════════════════════════════════════
   // STUDENTS
@@ -839,7 +917,7 @@ async function updateStudent() {
   }
 
   async function deleteStudent(id, name) {
-    if (!confirm(`Remove ${name}?`)) return;
+    // confirm removed
     // Clear any pending refresh
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
@@ -918,7 +996,7 @@ async function updateStudent() {
       $('cm-address').value = c.address || '';
       $('cm-photo').value = c.photo_url || '';
       $('cm-salary').value = c.salary || '';
-      $('cm-etc').value = c.bio || c.additional_details || '';
+      $('cm-etc').value = c.bio || '';
       $('coach-modal-title').textContent = 'Edit Coach';
     } else {
       ['cm-id', 'cm-name', 'cm-spec', 'cm-phone', 'cm-address', 'cm-photo', 'cm-salary', 'cm-etc'].forEach(id => $(id).value = '');
@@ -946,7 +1024,6 @@ async function updateStudent() {
       salary: parseInt($('cm-salary').value) || 0,
       hourly_rate: parseInt($('cm-salary').value) || 0,
       bio: $('cm-etc').value,
-      additional_details: $('cm-etc').value,
       status: 'active'
     };
 
@@ -988,7 +1065,7 @@ async function updateStudent() {
   }
 
   async function deleteCoach(id) {
-    if (!confirm('Delete coach?')) return;
+    // confirm removed
     // Clear any pending refresh
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
@@ -1008,6 +1085,177 @@ async function updateStudent() {
       renderStudents();
       renderDash();
     } catch (e) { toast('Delete failed', 'error'); }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // EVENTS
+  // ═══════════════════════════════════════════════════════════════
+  function renderEvents() {
+    $('ev-loading').style.display = 'none';
+    $('ev-grid').style.display = 'grid';
+
+    if (!eventsData.length) {
+      $('ev-grid').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon" style="font-size:60px">📅</div><p>No events scheduled.</p></div>`;
+      return;
+    }
+
+    $('ev-grid').innerHTML = eventsData.map(e => {
+      const isPast = new Date(getEventDate(e)) < new Date();
+      const participants = e.participants || [];
+      const registered = participants.length;
+      const max = e.max_participants || 50;
+      const canRegister = !isPast && registered < max && (role === 'parent' || role === 'admin');
+
+      return `
+        <div class="event-card ${isPast ? 'past' : ''}">
+          <div class="event-header">
+            <div class="event-title">${e.title || 'Event'}</div>
+            ${role === 'admin' || role === 'master' ? `<button class="del-btn" onclick="deleteEvent('${e.id}')">✕</button>` : ''}
+          </div>
+          <div class="event-meta">
+            <div class="event-date">📅 ${getEventDate(e) || 'TBD'}</div>
+            <div class="event-location">📍 ${getEventLocation(e) || 'TBD'}</div>
+            <div class="event-type">🏆 ${getEventType(e)}</div>
+          </div>
+          <div class="event-desc">${e.description || 'No description available.'}</div>
+          <div class="event-stats">
+            <span>👥 ${registered}/${max} registered</span>
+          </div>
+          ${canRegister ? `<button class="btn btn-gold btn-sm" onclick="registerEvent('${e.id}')">Register</button>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function saveEvent() {
+    // Clear any pending refresh
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+
+    const title = $('event-title').value.trim();
+    const description = $('event-desc').value.trim();
+    const date = $('event-date').value;
+    const time = $('event-time').value;
+    const location = $('event-location').value.trim();
+    const type = $('event-type').value;
+    const maxParticipants = parseInt($('event-max').value) || 50;
+    const prize = $('event-prize').value.trim();
+
+    if (!title || !date) {
+      toast('Title and date required', 'error');
+      return;
+    }
+
+    const eventData = {
+      title,
+      description,
+      event_date: date,
+      event_time: time,
+      location,
+      event_type: type,
+      max_participants: maxParticipants,
+      prize,
+      status: 'active'
+    };
+
+    try {
+      const res = await apiCall(`${API_BASE}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventData)
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Failed: ' + (result.error || 'Unknown error'), 'error');
+        return;
+      }
+      toast('Event created!', 'success');
+      closeModals();
+
+      // Immediately add to local data
+      const newEvent = result.data || result;
+      if (newEvent && newEvent.id) {
+        eventsData = [newEvent, ...eventsData];
+        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      }
+
+      renderEvents();
+      renderDash();
+    } catch (e) {
+      toast('Failed to create event', 'error');
+    }
+  }
+
+  async function deleteEvent(id) {
+    // confirm removed
+    // Clear any pending refresh
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    try {
+      const res = await apiCall(`${API_BASE}/events?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Delete failed: ' + (result.error || 'Unknown error'), 'error');
+        return;
+      }
+      toast('Event deleted.', 'success');
+
+      // Immediately remove from local data
+      eventsData = eventsData.filter(e => String(e.id) !== String(id));
+      dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+
+      renderEvents();
+      renderDash();
+    } catch (e) {
+      toast('Delete failed', 'error');
+    }
+  }
+
+  async function registerEvent(eventId) {
+    const event = eventsData.find(e => e.id === eventId);
+    if (!event) return;
+
+    const currentUserId = role === 'parent' ? currentStudent.id : null;
+    if (!currentUserId) {
+      toast('Unable to register', 'error');
+      return;
+    }
+
+    // Check if already registered
+    const participants = event.participants || [];
+    if (participants.includes(currentUserId)) {
+      toast('Already registered', 'warning');
+      return;
+    }
+
+    // Check max participants
+    if (participants.length >= (event.max_participants || 50)) {
+      toast('Event is full', 'error');
+      return;
+    }
+
+    const updatedParticipants = [...participants, currentUserId];
+    const updatedEvent = { ...event, participants: updatedParticipants };
+
+    try {
+      const res = await apiCall(`${API_BASE}/events?id=${encodeURIComponent(eventId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedEvent)
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Registration failed: ' + (result.error || 'Unknown error'), 'error');
+        return;
+      }
+      toast('Registered successfully!', 'success');
+
+      // Update local data
+      eventsData = eventsData.map(e => e.id === eventId ? updatedEvent : e);
+      dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+
+      renderEvents();
+    } catch (e) {
+      toast('Registration failed', 'error');
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1084,7 +1332,7 @@ async function updateStudent() {
   }
 
   async function deleteAchievement(id) {
-    if (!confirm('Remove achievement?')) return;
+    // confirm removed
     // Clear any pending refresh
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
@@ -1159,7 +1407,7 @@ async function updateStudent() {
   }
 
   async function deleteEvent(id) {
-    if (!confirm('Delete event?')) return;
+    // confirm removed
     // Clear any pending refresh
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     console.log('Deleting event with ID:', id);
@@ -1712,6 +1960,95 @@ async function registerEvent(id) {
   }
 
   // Backup current state to localStorage
+  // PDF Reports
+  async function generateFinancialReport() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(20);
+    doc.text('Chesskidoo Financial Report', 20, 30);
+
+    doc.setFontSize(12);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 45);
+
+    // Summary
+    const paidStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid');
+    const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+    const paidAmount = paidStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    const dueAmount = dueStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    const coachExpenses = allCoaches.reduce((a, c) => a + getCoachSalary(c), 0);
+    const netProfit = paidAmount - coachExpenses;
+
+    doc.text('Financial Summary:', 20, 65);
+    doc.text(`Total Revenue: ₹${paidAmount.toLocaleString()}`, 30, 80);
+    doc.text(`Outstanding Dues: ₹${dueAmount.toLocaleString()}`, 30, 90);
+    doc.text(`Coach Expenses: ₹${coachExpenses.toLocaleString()}`, 30, 100);
+    doc.text(`Net Profit: ₹${netProfit.toLocaleString()}`, 30, 110);
+
+    // Student payments table
+    doc.text('Student Payment Details:', 20, 130);
+    let y = 145;
+    doc.setFontSize(10);
+    doc.text('Name', 20, y);
+    doc.text('Fee', 100, y);
+    doc.text('Status', 140, y);
+    y += 10;
+
+    allStudents.forEach(s => {
+      if (y > 270) {
+        doc.addPage();
+        y = 30;
+      }
+      doc.text(getStudentName(s), 20, y);
+      doc.text(`₹${getStudentMonthlyFee(s)}`, 100, y);
+      doc.text(getStudentPaymentStatus(s), 140, y);
+      y += 8;
+    });
+
+    doc.save('financial-report.pdf');
+    toast('Financial report downloaded!', 'success');
+  }
+
+  async function generateStudentReport() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(20);
+    doc.text('Chesskidoo Student Report', 20, 30);
+
+    doc.setFontSize(12);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 45);
+    doc.text(`Total Students: ${allStudents.length}`, 20, 55);
+
+    // Student table
+    doc.text('Student Details:', 20, 75);
+    let y = 90;
+    doc.setFontSize(10);
+    doc.text('Name', 20, y);
+    doc.text('Level', 80, y);
+    doc.text('Coach', 120, y);
+    doc.text('Status', 160, y);
+    y += 10;
+
+    allStudents.forEach(s => {
+      if (y > 270) {
+        doc.addPage();
+        y = 30;
+      }
+      const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
+      const coachName = studentCoachId ? (allCoaches.find(c => String(c.id) === studentCoachId)?.full_name || 'Unassigned') : 'Unassigned';
+
+      doc.text(getStudentName(s), 20, y);
+      doc.text(getStudentLevel(s), 80, y);
+      doc.text(coachName, 120, y);
+      doc.text(getStudentStatus(s), 160, y);
+      y += 8;
+    });
+
+    doc.save('student-report.pdf');
+    toast('Student report downloaded!', 'success');
+  }
+
   function createLocalBackup() {
     try {
       const backup = {
@@ -1767,6 +2104,96 @@ async function registerEvent(id) {
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // AI ASSISTANT
+  // ═══════════════════════════════════════════════════════════════
+  function setAISuggestion(query) {
+    $('ai-query').value = query;
+    sendAIQuery();
+  }
+
+  async function sendAIQuery() {
+    const query = $('ai-query').value.trim();
+    if (!query) return;
+
+    // Add user message
+    addMessage(query, 'user');
+    $('ai-query').value = '';
+
+    // Show typing indicator
+    const typingId = addMessage('Thinking...', 'ai', true);
+
+    // Process query
+    const response = await processAIQuery(query);
+
+    // Remove typing, add response
+    removeMessage(typingId);
+    addMessage(response, 'ai');
+  }
+
+  function addMessage(text, type, isTyping = false) {
+    const messages = $('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    if (isTyping) messageDiv.id = 'typing-' + Date.now();
+
+    messageDiv.innerHTML = `
+      <div class="message-avatar">${type === 'ai' ? '🤖' : '👤'}</div>
+      <div class="message-content">
+        <div class="message-text">${isTyping ? '<span class="typing">Typing...</span>' : text}</div>
+      </div>
+    `;
+
+    messages.appendChild(messageDiv);
+    messages.scrollTop = messages.scrollHeight;
+    return messageDiv.id;
+  }
+
+  function removeMessage(id) {
+    const msg = $(id);
+    if (msg) msg.remove();
+  }
+
+  async function processAIQuery(query) {
+    const q = query.toLowerCase();
+
+    // Basic responses
+    if (q.includes('how many students')) {
+      const active = allStudents.filter(s => s.status === 'active').length;
+      return `You have ${allStudents.length} total students enrolled, with ${active} active students.`;
+    }
+
+    if (q.includes('total revenue') || q.includes('revenue')) {
+      const paid = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+      return `Total revenue from paid students: ₹${paid.toLocaleString()}.`;
+    }
+
+    if (q.includes('coach') && q.includes('most students')) {
+      const { coachMap } = getCoachStats(allStudents);
+      const topCoach = Object.entries(coachMap).sort(([,a], [,b]) => b - a)[0];
+      return topCoach ? `${topCoach[0]} has the most students with ${topCoach[1]} students.` : 'No coaches assigned yet.';
+    }
+
+    if (q.includes('payment status')) {
+      const paid = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
+      const due = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
+      return `Payment status: ${paid} students paid, ${due} students due.`;
+    }
+
+    if (q.includes('average rating') || q.includes('avg elo')) {
+      const avg = allStudents.length ? Math.round(allStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / allStudents.length) : 0;
+      return `Average student ELO rating: ${avg}`;
+    }
+
+    if (q.includes('events')) {
+      const upcoming = eventsData.filter(e => new Date(getEventDate(e)) > new Date()).length;
+      return `You have ${eventsData.length} total events, with ${upcoming} upcoming events.`;
+    }
+
+    // Default response
+    return "I'm here to help with your Chesskidoo academy! Try asking about students, revenue, coaches, or events.";
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════════════════
   window.addEventListener('DOMContentLoaded', loadAllData);
@@ -1815,6 +2242,8 @@ async function registerEvent(id) {
   window.sendMsg = sendMsg;
   window.sendFeedback = sendFeedback;
   window.renderChild = renderChild;
+  window.setAISuggestion = setAISuggestion;
+  window.sendAIQuery = sendAIQuery;
 
   window.toggleTheme = toggleTheme;
   window.closeModals = closeModals;
@@ -1827,4 +2256,98 @@ async function registerEvent(id) {
   window.createLocalBackup = createLocalBackup;
   window.checkHealth = checkHealth;
   window.runStressTest = runStressTest;
+
+  // PDF Report Generation
+  async function generateReportPDF() {
+    try {
+      toast('Generating PDF Report...', 'info');
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      doc.setFontSize(22);
+      doc.text('Chesskidoo Academy - Financial Report', 14, 22);
+      doc.setFontSize(11);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+      
+      const paidStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid');
+      const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+      const paidAmount = paidStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+      const dueAmount = dueStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+      const coachExp = allCoaches.reduce((a, c) => a + getCoachSalary(c), 0);
+      const totalStudents = allStudents.length;
+
+      doc.setFontSize(16);
+      doc.text('Executive Summary', 14, 45);
+      
+      doc.setFontSize(12);
+      let y = 55;
+      doc.text(`Total Active Cadets: ${totalStudents}`, 14, y); y += 8;
+      doc.text(`Total Paid Cadets: ${paidStudents.length}`, 14, y); y += 8;
+      doc.text(`Total Due Cadets: ${dueStudents.length}`, 14, y); y += 8;
+      
+      y += 5;
+      doc.text(`Revenue Collected (Paid): Rs ${paidAmount.toLocaleString()}`, 14, y); y += 8;
+      doc.text(`Outstanding Dues:         Rs ${dueAmount.toLocaleString()}`, 14, y); y += 8;
+      doc.text(`Total Coach Expenses:     Rs ${coachExp.toLocaleString()}`, 14, y); y += 8;
+      
+      doc.setFontSize(16);
+      y += 10;
+      doc.text(`Net Profit Estimate:      Rs ${(paidAmount - coachExp).toLocaleString()}`, 14, y);
+      
+      doc.save(`chesskidoo_financial_report_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast('PDF Generated Successfully', 'success');
+    } catch (e) {
+      console.error(e);
+      toast('Failed to generate PDF', 'error');
+    }
+  }
+
+  window.generateReportPDF = generateReportPDF;
+  // AI Chatbot Logic
+  let isChatbotOpen = false;
+  function toggleChatbot() {
+    isChatbotOpen = !isChatbotOpen;
+    $('ai-chat-panel').style.display = isChatbotOpen ? 'flex' : 'none';
+    if (isChatbotOpen) $('ai-input').focus();
+  }
+
+  async function sendChatMessage() {
+    const inputEl = $('ai-input');
+    const msg = inputEl.value.trim();
+    if (!msg) return;
+
+    inputEl.value = '';
+    const bodyEl = $('ai-chat-body');
+    bodyEl.innerHTML += `<div class="ai-msg user">${msg}</div>`;
+    bodyEl.scrollTop = bodyEl.scrollHeight;
+
+    const botLoadingId = 'msg-' + Date.now();
+    bodyEl.innerHTML += `<div class="ai-msg bot" id="${botLoadingId}">...</div>`;
+    bodyEl.scrollTop = bodyEl.scrollHeight;
+
+    try {
+      const parentMode = document.body.contains($('m-name')) ? false : true; 
+      // Very basic context approximation: role from global
+      const payload = {
+        message: msg,
+        role: role || 'parent',
+        context: { students: allStudents.length }
+      };
+
+      const res = await apiCall(`${API_BASE}/ai`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      $(botLoadingId).textContent = data.message || "Something went wrong.";
+    } catch (e) {
+      $(botLoadingId).textContent = "Error connecting to AI service.";
+    }
+    bodyEl.scrollTop = bodyEl.scrollHeight;
+  }
+
+  window.toggleChatbot = toggleChatbot;
+  window.sendChatMessage = sendChatMessage;
+
 })();

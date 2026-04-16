@@ -31,7 +31,6 @@ Deno.serve(async (req) => {
       availability: c.availability,
       photo_url: c.photo_url || '',
       address: c.address || '',
-      additional_details: c.bio || '',
       created_at: c.created_at,
       updated_at: c.updated_at
     };
@@ -82,18 +81,14 @@ Deno.serve(async (req) => {
       const newCoach = { 
         id: 'c' + Date.now(), 
         name: body.name || body.full_name || '',
-        full_name: body.full_name || body.name || '',
         email: body.email || null,
         phone: body.phone || '',
         specialization: body.specialization || body.specialty || '',
-        specialty: body.specialty || body.specialization || '',
         experience: body.experience || null,
         rating: body.rating || 0,
         bio: body.bio || body.additional_details || '',
-        additional_details: body.additional_details || body.bio || '',
         status: body.status || 'active',
         hourly_rate: body.hourly_rate || body.salary || 0,
-        salary: body.salary || body.hourly_rate || 0,
         availability: body.availability || '',
         photo_url: body.photo_url || '',
         address: body.address || '',
@@ -132,35 +127,30 @@ Deno.serve(async (req) => {
       
       const updateData: Record<string, unknown> = {};
       
-      if (body.name !== undefined) updateData.name = body.name;
-      if (body.full_name !== undefined) updateData.full_name = body.full_name;
+      if (body.name !== undefined || body.full_name !== undefined) {
+          updateData.name = body.name || body.full_name;
+      }
       if (body.email !== undefined) updateData.email = body.email;
       if (body.phone !== undefined) updateData.phone = body.phone;
-      if (body.specialization !== undefined) updateData.specialization = body.specialization;
-      if (body.specialty !== undefined) updateData.specialty = body.specialty;
+      if (body.specialization !== undefined || body.specialty !== undefined) {
+          updateData.specialization = body.specialization || body.specialty;
+      }
       if (body.experience !== undefined) updateData.experience = body.experience;
       if (body.rating !== undefined && body.rating !== null) {
         const ratingNum = Number(body.rating);
-        if (!isNaN(ratingNum) && isFinite(ratingNum)) {
-          updateData.rating = Math.floor(ratingNum);
-        }
+        if (!isNaN(ratingNum) && isFinite(ratingNum)) updateData.rating = Math.floor(ratingNum);
       }
-      if (body.bio !== undefined) updateData.bio = body.bio;
-      if (body.additional_details !== undefined) updateData.additional_details = body.additional_details;
+      if (body.bio !== undefined || body.additional_details !== undefined) {
+          updateData.bio = body.bio || body.additional_details;
+      }
       if (body.status !== undefined) updateData.status = body.status;
-      if (body.salary !== undefined && body.salary !== null) {
-        const salaryNum = Number(body.salary);
-        if (!isNaN(salaryNum) && isFinite(salaryNum)) {
-          updateData.salary = Math.floor(salaryNum);
-          updateData.hourly_rate = Math.floor(salaryNum);
-        }
+      
+      if (body.hourly_rate !== undefined || body.salary !== undefined) {
+          const rateVal = body.hourly_rate !== undefined ? body.hourly_rate : body.salary;
+          const rateNum = Number(rateVal);
+          if (!isNaN(rateNum) && isFinite(rateNum)) updateData.hourly_rate = Math.floor(rateNum);
       }
-      if (body.hourly_rate !== undefined && body.hourly_rate !== null) {
-        const rateNum = Number(body.hourly_rate);
-        if (!isNaN(rateNum) && isFinite(rateNum)) {
-          updateData.hourly_rate = Math.floor(rateNum);
-        }
-      }
+      
       if (body.availability !== undefined) updateData.availability = body.availability;
       if (body.address !== undefined) updateData.address = body.address;
       if (body.photo_url !== undefined) updateData.photo_url = body.photo_url;
