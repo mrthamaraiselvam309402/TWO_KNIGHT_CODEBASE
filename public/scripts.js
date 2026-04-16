@@ -2507,5 +2507,13 @@ async function updateStudent() {
   }
 
   window.generateReportPDF = generateReportPDF;
+  window.doLogin = doLogin;
+  window.doLogout = doLogout;
+  window.proceedLogin = proceedLogin;
+  window.toggleEye = toggleEye;
+  window.$ = $;
+  window.toast = toast;
+  window.openModal = openModal;
+  window.closeModals = closeModals;
 
 })();
