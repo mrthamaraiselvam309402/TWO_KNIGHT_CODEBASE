@@ -126,14 +126,13 @@
 
     <!-- Coaches -->
     <div id="page-coach-mgmt" class="page admin-only">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:20px">
-        <button class="btn btn-gold" onclick="openCoachModal()">+ Add Coach</button>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:24px">
+        <button class="btn btn-gold" onclick="openCoachModal()">
+          <svg style="width:18px;height:18px;vertical-align:middle;margin-right:6px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg> Add Coach
+        </button>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Coach</th><th>Contact & Details</th><th>Students</th><th>Actions</th></tr></thead>
-          <tbody id="coach-mgmt-body"><tr><td colspan="4"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
-        </table>
+      <div class="coach-grid" id="coach-mgmt-body">
+        <div class="loading-state" style="grid-column: 1/-1;"><span class="spinner"></span> Loading…</div>
       </div>
     </div>
 

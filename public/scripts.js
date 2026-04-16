@@ -534,6 +534,9 @@ function finishLogin(page) {
         data.push(monthlyRevenue[month] || 0);
       }
 
+      Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+      Chart.defaults.font.family = 'Inter, sans-serif';
+
       new Chart(revenueCtx, {
         type: 'line',
         data: {
@@ -541,7 +544,7 @@ function finishLogin(page) {
           datasets: [{
             label: 'Revenue (₹)',
             data,
-            borderColor: 'var(--gold)',
+            borderColor: '#dca13e',
             backgroundColor: 'rgba(220, 161, 62, 0.1)',
             tension: 0.4
           }]
@@ -552,8 +555,10 @@ function finishLogin(page) {
           scales: {
             y: {
               beginAtZero: true,
-              ticks: { callback: v => '₹' + v.toLocaleString() }
-            }
+              ticks: { callback: v => '₹' + v.toLocaleString() },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            x: { grid: { color: 'rgba(255,255,255,0.05)' } }
           }
         }
       });
@@ -573,8 +578,8 @@ function finishLogin(page) {
           datasets: [{
             label: 'Students',
             data,
-            backgroundColor: 'var(--gold)',
-            borderColor: 'var(--gold2)',
+            backgroundColor: '#dca13e',
+            borderColor: '#ffc863',
             borderWidth: 1
           }]
         },
@@ -584,8 +589,10 @@ function finishLogin(page) {
           scales: {
             y: {
               beginAtZero: true,
-              ticks: { stepSize: 1 }
-            }
+              ticks: { stepSize: 1 },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            x: { grid: { display: false } }
           }
         }
       });
@@ -603,14 +610,14 @@ function finishLogin(page) {
           labels: ['Paid', 'Due'],
           datasets: [{
             data: [paid, due],
-            backgroundColor: ['var(--success)', 'var(--danger)'],
+            backgroundColor: ['#2e7d32', '#d32f2f'],
             borderWidth: 0
           }]
         },
         options: {
           responsive: true,
           plugins: {
-            legend: { position: 'bottom' }
+            legend: { position: 'bottom', labels: { color: '#ffffff' } }
           }
         }
       });
@@ -628,14 +635,14 @@ function finishLogin(page) {
           labels: ['Morning', 'Evening'],
           datasets: [{
             data: [morning, evening],
-            backgroundColor: ['var(--blue)', 'var(--gold)'],
+            backgroundColor: ['#1976d2', '#dca13e'],
             borderWidth: 0
           }]
         },
         options: {
           responsive: true,
           plugins: {
-            legend: { position: 'bottom' }
+            legend: { position: 'bottom', labels: { color: '#ffffff' } }
           }
         }
       });
@@ -941,25 +948,50 @@ async function updateStudent() {
   // COACHES
   // ═══════════════════════════════════════════════════════════════
   function renderCoachMgmt() {
-    const tbody = $('coach-mgmt-body');
-    if (!allCoaches.length) { tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No coaches.</div></td></tr>`; return; }
+    const grid = $('coach-mgmt-body');
+    if (!allCoaches.length) { 
+      grid.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;">No coaches found.</div>`; 
+      return; 
+    }
 
-    tbody.innerHTML = allCoaches.map(c => {
+    grid.innerHTML = allCoaches.map(c => {
       const count = allStudents.filter(s => {
         const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
         return studentCoachId === String(c.id);
       }).length;
       return `
-        <tr>
-          <td><div class="av-cell"><img src="${c.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000`}" class="av-sm"><div><span style="font-weight:600;color:var(--gold)">${getCoachName(c)}</span><br><span style="font-size:11px;color:var(--ivory-dim)">${getCoachSpecialty(c)}</span></div></div></td>
-          <td style="font-size:12px;line-height:1.6">📞 +91 ${c.phone || 'N/A'}<br>📍 ${c.address || 'N/A'}<br>💰 ₹${getCoachSalary(c).toLocaleString()}<br>⭐ ${getCoachRating(c)} rating</td>
-          <td>${count} Students</td>
-          <td>
-            <button class="btn btn-outline-blue btn-sm" onclick="viewCoachSchedule('${c.id}')">Schedule</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteCoach('${c.id}')">Del</button>
-          </td>
-        </tr>`;
+        <div class="coach-card">
+          <div class="coach-card-header">
+            <img src="${c.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000`}" class="coach-card-av">
+            <div>
+              <div class="coach-card-title">${getCoachName(c)}</div>
+              <div class="coach-card-subtitle">${getCoachSpecialty(c)}</div>
+            </div>
+          </div>
+          <div class="coach-card-stats">
+            <div class="coach-stat">
+              <span class="coach-stat-label">Students</span>
+              <span class="coach-stat-val">${count}</span>
+            </div>
+            <div class="coach-stat">
+              <span class="coach-stat-label">Rating</span>
+              <span class="coach-stat-val">⭐ ${getCoachRating(c)}</span>
+            </div>
+            <div class="coach-stat">
+              <span class="coach-stat-label">Contact</span>
+              <span class="coach-stat-val" style="font-size:13px;word-break:break-all;">+91 ${c.phone || 'N/A'}</span>
+            </div>
+            <div class="coach-stat">
+              <span class="coach-stat-label">Salary</span>
+              <span class="coach-stat-val">₹${getCoachSalary(c).toLocaleString()}</span>
+            </div>
+          </div>
+          <div class="coach-card-actions">
+            <button class="btn btn-outline-blue" onclick="viewCoachSchedule('${c.id}')">Schedule</button>
+            <button class="btn btn-outline-grey" onclick="openCoachModal('${c.id}')">Edit</button>
+            <button class="btn btn-danger" onclick="deleteCoach('${c.id}')">Del</button>
+          </div>
+        </div>`;
     }).join('');
   }
 
@@ -1406,26 +1438,7 @@ async function updateStudent() {
     } catch (e) { toast('Failed', 'error'); }
   }
 
-  async function deleteEvent(id) {
-    // confirm removed
-    // Clear any pending refresh
-    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
-    console.log('Deleting event with ID:', id);
-    try {
-      const res = await apiCall(`${API_BASE}/events?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-      const result = await res.json();
-      console.log('Delete event response:', result);
-      if (!res.ok) {
-        toast('Delete failed: ' + (result.error || 'Unknown error'), 'error');
-        return;
-      }
-      toast('Deleted.', 'success');
-      // Immediately remove from local data
-      eventsData = eventsData.filter(e => String(e.id) !== String(id));
-      dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
-      renderEvents();
-    } catch (e) { toast('Delete failed: ' + e.message, 'error'); console.error(e); }
-  }
+
 
 async function registerEvent(id) {
     toast('Registered!', 'success');
