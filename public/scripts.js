@@ -513,7 +513,14 @@ function finishLogin(page) {
   // ═══════════════════════════════════════════════════════════════
   // CHARTS
   // ═══════════════════════════════════════════════════════════════
+  let chartInstances = {};
   function buildCharts(studs) {
+    // Destroy existing charts to prevent "Canvas in use" error
+    Object.values(chartInstances).forEach(chart => {
+      if (chart) chart.destroy();
+    });
+    chartInstances = {};
+
     // Revenue Analysis - Monthly revenue over last 6 months
     const revenueCtx = $('chartRevenue');
     if (revenueCtx) {
@@ -537,7 +544,7 @@ function finishLogin(page) {
       Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
       Chart.defaults.font.family = 'Inter, sans-serif';
 
-      new Chart(revenueCtx, {
+      chartInstances.revenue = new Chart(revenueCtx, {
         type: 'line',
         data: {
           labels,
@@ -571,7 +578,7 @@ function finishLogin(page) {
       const labels = Object.keys(coachMap);
       const data = Object.values(coachMap);
 
-      new Chart(coachCtx, {
+      chartInstances.coach = new Chart(coachCtx, {
         type: 'bar',
         data: {
           labels,
@@ -604,7 +611,7 @@ function finishLogin(page) {
       const paid = studs.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
       const due = studs.filter(s => getStudentPaymentStatus(s) === 'Due').length;
 
-      new Chart(paymentCtx, {
+      chartInstances.payment = new Chart(paymentCtx, {
         type: 'doughnut',
         data: {
           labels: ['Paid', 'Due'],
@@ -629,7 +636,7 @@ function finishLogin(page) {
       const morning = studs.filter(s => getStudentBatchTime(s).includes('08') || getStudentBatchTime(s).includes('09') || getStudentBatchTime(s).includes('10') || getStudentBatchTime(s).includes('11')).length;
       const evening = studs.filter(s => getStudentBatchTime(s).includes('17') || getStudentBatchTime(s).includes('18') || getStudentBatchTime(s).includes('19') || getStudentBatchTime(s).includes('20')).length;
 
-      new Chart(batchCtx, {
+      chartInstances.batch = new Chart(batchCtx, {
         type: 'pie',
         data: {
           labels: ['Morning', 'Evening'],
@@ -1138,40 +1145,50 @@ async function updateStudent() {
       const canRegister = !isPast && registered < max && (role === 'parent' || role === 'admin');
       
       const location = getEventLocation(e);
-      const mapsUrl = location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}` : '#';
+      const mapsUrl = location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}` : 'https://www.google.com/maps';
 
       return `
         <div class="event-card ${isPast ? 'past' : ''}" id="event-${e.id}">
-          <div class="event-header">
-            <div style="display:flex; flex-direction:column; gap:8px">
-              <span class="event-tag">${getEventType(e)}</span>
-              <div class="event-title">${e.title || 'Event'}</div>
-            </div>
-            ${role === 'admin' || role === 'master' ? `<button class="btn btn-danger" style="padding: 6px 12px; font-size:12px;" onclick="deleteEvent('${e.id}')">Delete</button>` : ''}
+          <div class="event-banner">
+             <div style="position:absolute; top:12px; right:12px">
+                <span class="event-tag" style="background:var(--obsidian); border:1px solid var(--gold)">${getEventType(e)}</span>
+             </div>
           </div>
           
-          <div class="event-meta">
-            <div class="event-meta-item"><span>📅</span> ${dateStr || 'Date TBD'}</div>
-            <div class="event-meta-item">
-              <span>📍</span> 
-              ${location ? `<a href="${mapsUrl}" target="_blank" class="event-location-link">${location}</a>` : 'Location TBD'}
+          <div class="event-content">
+            <div style="font-family:var(--font-head); font-size:24px; color:var(--gold); margin-bottom:4px">${e.title || 'Event'}</div>
+            <div style="font-size:14px; opacity:0.7; margin-bottom:12px; line-height:1.5">${e.description || 'Join Chesskidoo for this premium chess gathering. Refine your tactics and meet fellow masters.'}</div>
+            
+            <div class="event-bento-grid">
+              <div class="event-bento-item">
+                <div class="label">Date</div>
+                <div class="value">${dateStr || 'TBD'}</div>
+              </div>
+              <div class="event-bento-item">
+                <div class="label">Entry</div>
+                <div class="value">₹${e.prize || '500'}</div>
+              </div>
+              
+              <a href="${mapsUrl}" target="_blank" class="event-bento-item event-map-tile">
+                <div class="label">Location (Open Maps) 📍</div>
+                <div class="value">${location || 'Premium Academy Venue'}</div>
+              </a>
+
+              <div class="event-bento-item" style="grid-column: span 2">
+                <div class="label">Registrations (${registered}/${max})</div>
+                <div class="event-progress-bar" style="margin-top:8px">
+                   <div class="event-progress-fill" id="reg-fill-${e.id}" style="width: ${progress}%"></div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="event-desc">${e.description || 'Join us for this exciting chess event! Experience competitive play and premium coaching at Chesskidoo Academy.'}</div>
-
-          <div class="event-progress-container">
-            <div class="event-progress-label">
-              <span>Registration Progress</span>
-              <span id="reg-count-${e.id}">${registered}/${max}</span>
+          <div class="event-footer">
+            <div style="display:flex; gap:10px">
+              ${canRegister ? `<button class="btn btn-gold w-100" style="padding:14px" id="reg-btn-${e.id}" onclick="registerEvent('${e.id}')">Secure My Spot</button>` : ''}
+              ${role === 'admin' || role === 'master' ? `<button class="btn btn-danger" style="width:100px" onclick="deleteEvent('${e.id}')">Delete</button>` : ''}
+              ${isPast ? '<div style="width:100%; text-align:center; color:var(--ivory-dim); padding:10px">Event Completed</div>' : ''}
             </div>
-            <div class="event-progress-bar">
-              <div class="event-progress-fill" id="reg-fill-${e.id}" style="width: ${progress}%"></div>
-            </div>
-          </div>
-
-          <div style="margin-top:8px">
-            ${canRegister ? `<button class="btn btn-gold w-100" id="reg-btn-${e.id}" onclick="registerEvent('${e.id}')">Register Now</button>` : (isPast ? '<span style="color:var(--ivory-dim); font-size:13px">This event has ended</span>' : '')}
           </div>
         </div>
       `;
@@ -1182,14 +1199,14 @@ async function updateStudent() {
     // Clear any pending refresh
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
 
-    const title = $('event-title').value.trim();
-    const description = $('event-desc').value.trim();
-    const date = $('event-date').value;
-    const time = $('event-time').value;
-    const location = $('event-location').value.trim();
-    const type = $('event-type').value;
-    const maxParticipants = parseInt($('event-max').value) || 50;
-    const prize = $('event-prize').value.trim();
+    const title = $('ev-title').value.trim();
+    const description = $('ev-desc').value.trim();
+    const date = $('ev-date').value;
+    const time = $('ev-time').value;
+    const location = $('ev-loc').value.trim();
+    const type = $('ev-type').value;
+    const maxParticipants = parseInt($('ev-max').value) || 50;
+    const prize = $('ev-prize').value.trim();
 
     if (!title || !date) {
       toast('Title and date required', 'error');
