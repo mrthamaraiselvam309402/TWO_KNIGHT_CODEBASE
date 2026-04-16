@@ -437,7 +437,7 @@
     if (!rawUser || !pass) { errEl.textContent = 'Please enter credentials.'; errEl.style.display = 'block'; return; }
 
     // Use server-side authentication API for security
-    apiCall('/api/auth', {
+    apiCall(`${API_BASE}/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', username: rawUser, password: pass })

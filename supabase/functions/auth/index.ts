@@ -1,0 +1,80 @@
+Deno.serve(async (req) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
+  };
+
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
+      status: 405, 
+      headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+    });
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const { action, username, password } = body;
+
+    if (action !== 'login') {
+      return new Response(JSON.stringify({ error: 'Unknown action' }), { 
+        status: 400, 
+        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+      });
+    }
+
+    if (!username || !password) {
+      return new Response(JSON.stringify({ error: 'Username and password are required' }), { 
+        status: 400, 
+        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+      });
+    }
+
+    const masterUser = Deno.env.get('MASTER_USERNAME');
+    const masterPass = Deno.env.get('MASTER_PASSWORD');
+    const adminUser = Deno.env.get('ADMIN_USERNAME');
+    const adminPass = Deno.env.get('ADMIN_PASSWORD');
+
+    if (!masterUser || !masterPass || !adminUser || !adminPass) {
+      console.error('Auth credentials not configured');
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
+        status: 500, 
+        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+      });
+    }
+
+    // Check master credentials
+    if (username === masterUser && password === masterPass) {
+      return new Response(JSON.stringify({
+        success: true,
+        token: 'master-token-' + Date.now(),
+        role: 'master'
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
+    // Check admin credentials
+    if (username === adminUser && password === adminPass) {
+      return new Response(JSON.stringify({
+        success: true,
+        token: 'admin-token-' + Date.now(),
+        role: 'admin'
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
+    // Failed attempt
+    return new Response(JSON.stringify({ error: 'Invalid credentials' }), { 
+      status: 401, 
+      headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+    });
+  } catch (error) {
+    console.error('Auth error:', error.message);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { 
+      status: 500, 
+      headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+    });
+  }
+});

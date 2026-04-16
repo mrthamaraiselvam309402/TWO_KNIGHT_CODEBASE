@@ -31,6 +31,7 @@
     { "source": "/api/sessions/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/sessions/:match*" },
     { "source": "/api/security/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/security/:match*" },
     { "source": "/api/ai/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/ai/:match*" },
-    { "source": "/api/games/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/games/:match*" }
+    { "source": "/api/games/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/games/:match*" },
+    { "source": "/api/auth/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/auth/:match*" }
   ]
 }
