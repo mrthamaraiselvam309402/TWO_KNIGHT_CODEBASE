@@ -2119,6 +2119,48 @@ async function registerEvent(id) {
   // ═══════════════════════════════════════════════════════════════
   // AI ASSISTANT
   // ═══════════════════════════════════════════════════════════════
+  let activeAIModule = 'global';
+
+  function setAIModule(module) {
+    activeAIModule = module;
+    const btns = document.querySelectorAll('.ai-ws-menu .ai-ws-btn');
+    if(btns.length) {
+      btns.forEach(b => b.classList.remove('active'));
+      if(module === 'global') btns[0].classList.add('active');
+      if(module === 'finance') btns[1].classList.add('active');
+      if(module === 'coach') btns[2].classList.add('active');
+    }
+
+    const suggestBox = document.querySelector('.ai-ws-suggest');
+    const input = document.getElementById('ai-query');
+    if (!suggestBox || !input) return;
+
+    if(module === 'global') {
+      input.placeholder = "Ask about revenue trends, active coaches, or due payments...";
+      suggestBox.innerHTML = `
+        <button class="ai-ws-pill" onclick="setAISuggestion('How many students are enrolled?')">How many students?</button>
+        <button class="ai-ws-pill" onclick="setAISuggestion('What is the total revenue?')">Total revenue?</button>
+        <button class="ai-ws-pill" onclick="setAISuggestion('Which coach has the most students?')">Top coach?</button>
+        <button class="ai-ws-pill" onclick="setAISuggestion('Show me payment status breakdown')">Payment status breakdown</button>
+      `;
+    } else if (module === 'finance') {
+      input.placeholder = "Ask about specific payments, total fees, or monthly growth...";
+      suggestBox.innerHTML = `
+        <button class="ai-ws-pill" onclick="setAISuggestion('What is the monthly processing fee volume?')">Fee metrics?</button>
+        <button class="ai-ws-pill" onclick="setAISuggestion('Who has unpaid dues?')">List unpaid dues</button>
+        <button class="ai-ws-pill" onclick="setAISuggestion('Calculate projected monthly revenue')">Projected revenue</button>
+      `;
+    } else if (module === 'coach') {
+      input.placeholder = "Ask about coach ratings, student assignments, or salaries...";
+      suggestBox.innerHTML = `
+        <button class="ai-ws-pill" onclick="setAISuggestion('Which coach has the highest rating?')">Highest rating?</button>
+        <button class="ai-ws-pill" onclick="setAISuggestion('Show coach salary distribution')">Salary distribution</button>
+        <button class="ai-ws-pill" onclick="setAISuggestion('How many students does each coach handle?')">Coach load?</button>
+      `;
+    }
+  }
+  window.setAIModule = setAIModule;
+
   function setAISuggestion(query) {
     if ($('ai-query')) {
       $('ai-query').value = query;
@@ -2155,7 +2197,15 @@ async function registerEvent(id) {
     setTimeout(() => bodyEl.scrollTop = bodyEl.scrollHeight, 50);
 
     try {
-      const payload = { message: msg, role: 'admin', context: { students: allStudents.length } };
+      const payload = { 
+        message: msg, 
+        role: 'admin', 
+        context: { 
+          students: allStudents.length,
+          coaches: allCoaches.length,
+          moduleFocus: activeAIModule
+        } 
+      };
       const res = await apiCall(`${API_BASE}/ai`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
