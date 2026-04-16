@@ -31,9 +31,18 @@
   // ═══════════════════════════════════════════════════════════════
   const $ = id => document.getElementById(id);
 
-  // Helper for API calls (auth headers injected by vercel.json for rewritten routes)
+  // Supabase anon key — this is a PUBLIC client-side key (safe to expose).
+  // Access is controlled by Row Level Security policies on the database.
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
+
+  // Helper for API calls — injects Supabase auth headers for Edge Function rewrites
   async function apiCall(url, options = {}) {
-    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'apikey': SUPABASE_ANON_KEY,
+      ...options.headers
+    };
     return fetch(url, { ...options, headers });
   }
 
