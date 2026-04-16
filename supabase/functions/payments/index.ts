@@ -1,139 +1,155 @@
 Deno.serve(async (req) => {
-  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
   
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://vseombfkrvpffnpgbsnk.supabase.co';
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzkzNzQyMCwiZXhwIjoyMDg5NTEzNDIwfQ.SUkFrfUnzbm_IZveqVfGvS31wFZR7fggEVo8RVPiNj8';
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  async function getStudentName(studentId) {
-    if (!studentId) return '';
-    const { data } = await supabase.from('students').select('name').eq('id', studentId).single();
-    return data?.name || '';
+  if (!supabaseUrl || !supabaseKey) {
+    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
+  
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
-  async function transformPayment(p) {
-    const studentName = p.student_id ? await getStudentName(p.student_id) : '';
-    return {
-      id: p.id,
-      student_id: p.student_id,
-      student_name: studentName,
-      amount: p.amount || 0,
-      currency: p.currency || 'INR',
-      status: p.status || 'pending',
-      payment_method: p.payment_method || '',
-      transaction_id: p.transaction_id || '',
-      description: p.description || '',
-      payment_date: p.payment_date || '',
-      created_at: p.created_at
-    };
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
   }
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
-    });
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  async function getStudentName(studentId: string) {
+    if (!studentId) return ''
+    const { data } = await supabase.from('students').select('name').eq('id', studentId).single()
+    return data?.name || ''
   }
 
   try {
-    const url = new URL(req.url);
-    const id = url.searchParams.get('id');
-    const body = req.method !== 'GET' ? await req.json().catch(() => ({})) : {};
+    const url = new URL(req.url)
+    const action = url.searchParams.get('action')
+    const method = req.method
 
-    if (req.method === 'GET') {
-      if (id) {
-        const { data: payment, error } = await supabase
-          .from('payments')
-          .select('*')
-          .eq('id', id)
-          .single();
-        
-        if (error) throw error;
-        const transformed = await transformPayment(payment);
-        return new Response(JSON.stringify(transformed), {
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
+    // CREATE NEW PAYMENT
+    if (method === 'POST' || action === 'create') {
+      let body = {}
+      try {
+        body = await req.json()
+      } catch (e) {
+        // Try to parse from URL search params
+        const url = new URL(req.url)
+        body = {
+          student_id: url.searchParams.get('student_id'),
+          amount: Number(url.searchParams.get('amount')) || 5000,
+          status: url.searchParams.get('status'),
+          description: url.searchParams.get('description'),
+          payment_method: url.searchParams.get('payment_method'),
+          transaction_id: url.searchParams.get('transaction_id')
+        }
       }
+      const { student_id, amount, status, description, payment_method, transaction_id } = body
+
+      // If just updating payment status (mark as paid)
+      if (student_id && status === 'paid') {
+        const { data: payment, error } = await supabase.from('payments').insert({
+          student_id,
+          amount: amount || 5000,
+          currency: 'USD',
+          status: 'paid',
+          payment_method: payment_method || 'cash',
+          transaction_id: transaction_id || `TXN_${Date.now()}`,
+          description: description || 'Tuition Payment',
+          payment_date: new Date().toISOString()
+        }).select().single()
+
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+        // Also update student's payment_status in students table
+        await supabase.from('students').update({ 
+          payment_status: 'Paid',
+          status: 'active'
+        }).eq('id', student_id)
+
+        return new Response(JSON.stringify({ success: true, payment }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      // Create new payment record
+      const { data: payment, error } = await supabase.from('payments').insert({
+        id: 'p' + Date.now() + Math.random().toString(36).slice(2, 8),
+        student_id,
+        amount: amount || 5000,
+        currency: 'USD',
+        status: status || 'pending',
+        description: description || 'Tuition Payment',
+        payment_date: new Date().toISOString()
+      }).select().single()
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      return new Response(JSON.stringify({ success: true, payment }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // GET payments list
+    if (method === 'GET' || action === 'list') {
       const { data: payments, error } = await supabase
         .from('payments')
         .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      const transformedList = await Promise.all((payments || []).map(transformPayment));
-      return new Response(JSON.stringify(transformedList), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
-    }
+        .order('created_at', { ascending: false })
 
-    if (req.method === 'POST') {
-      console.log('POST /payments body:', JSON.stringify(body));
-      
-      const { student_id, amount, provider, ...rest } = body;
-      const newPayment = { 
-        id: 'p' + Date.now(), 
-        student_id: student_id || null,
-        amount: amount || 0,
-        currency: 'INR',
-        status: 'completed',
-        payment_method: provider || body.payment_method || '',
-        transaction_id: 'txn_' + Date.now(),
-        description: body.description || 'Tuition payment',
-        payment_date: new Date().toISOString().split('T')[0],
-        created_at: new Date().toISOString()
-      };
-      
-      console.log('POST newPayment:', JSON.stringify(newPayment));
-      
-      const { data: insertedPayment, error: insertError } = await supabase
-        .from('payments')
-        .insert(newPayment)
-        .select()
-        .single();
-      
-      if (insertError) {
-        console.error('Insert error:', JSON.stringify(insertError));
-        return new Response(JSON.stringify({ error: insertError.message, details: insertError }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
       }
-      const transformed = await transformPayment(insertedPayment);
+
+      const transformed = await Promise.all(
+        (payments || []).map(async (p) => ({
+          id: p.id,
+          student_id: p.student_id,
+          student_name: await getStudentName(p.student_id),
+          amount: p.amount || 0,
+          currency: p.currency || 'USD',
+          status: p.status || 'pending',
+          payment_method: p.payment_method || '',
+          transaction_id: p.transaction_id || '',
+          description: p.description || '',
+          payment_date: p.payment_date || '',
+          created_at: p.created_at
+        }))
+      )
+
       return new Response(JSON.stringify(transformed), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    if (req.method === 'DELETE') {
-      if (!id) return new Response(JSON.stringify({ error: 'ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      const { error: deleteError } = await supabase
-        .from('payments')
-        .delete()
-        .eq('id', id);
-      
-      if (deleteError) throw deleteError;
-      return new Response(JSON.stringify({ success: true, message: 'Deleted', id }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
-    }
+    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
 
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    });
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
-});
+})

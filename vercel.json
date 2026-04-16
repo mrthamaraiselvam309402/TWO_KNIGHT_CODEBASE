@@ -1,17 +1,36 @@
 {
   "version": 2,
-  "buildCommand": null,
+  "buildCommand": "npm run build",
   "outputDirectory": "public",
   "cleanUrls": true,
   "trailingSlash": false,
+  "framework": null,
+  "installCommand": "npm install",
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Authorization",
+          "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8"
+        },
+        {
+          "key": "apikey",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8"
+        }
+      ]
+    }
+  ],
   "rewrites": [
-    { "source": "/api/students", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/students" },
-    { "source": "/api/coaches", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/coaches" },
-    { "source": "/api/events", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/events" },
-    { "source": "/api/achievements", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/achievements" },
-    { "source": "/api/payments", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/payments" },
-    { "source": "/api/messages", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/messages" },
-    { "source": "/api/sessions", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/sessions" },
-    { "source": "/api/security", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/security" }
+    { "source": "/api/students/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/students/:match*" },
+    { "source": "/api/coaches/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/coaches/:match*" },
+    { "source": "/api/events/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/events/:match*" },
+    { "source": "/api/achievements/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/achievements/:match*" },
+    { "source": "/api/payments/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/payments/:match*" },
+    { "source": "/api/messages/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/messages/:match*" },
+    { "source": "/api/sessions/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/sessions/:match*" },
+    { "source": "/api/security/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/security/:match*" },
+    { "source": "/api/ai/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/ai/:match*" },
+    { "source": "/api/games/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/games/:match*" }
   ]
 }

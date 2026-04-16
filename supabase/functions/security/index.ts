@@ -1,14 +1,28 @@
 Deno.serve(async (req) => {
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
   
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://vseombfkrvpffnpgbsnk.supabase.co';
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzkzNzQyMCwiZXhwIjoyMDg5NTEzNDIwfQ.SUkFrfUnzbm_IZveqVfGvS31wFZR7fggEVo8RVPiNj8';
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
   
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Master credentials
-  const MASTER_USER = 'Tom@193';
-  const MASTER_PASS = 'Thamaraiselvam@309402$';
+  // Master credentials - READ FROM ENV VARIABLES (never hardcode!)
+  const MASTER_USER = Deno.env.get('MASTER_USERNAME') || '';
+  const MASTER_PASS = Deno.env.get('MASTER_PASSWORD') || '';
+
+  if (!MASTER_USER || !MASTER_PASS) {
+    return new Response(JSON.stringify({ error: 'Server misconfiguration - admin credentials not set' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   if (req.method === 'OPTIONS') {
     return new Response(null, {

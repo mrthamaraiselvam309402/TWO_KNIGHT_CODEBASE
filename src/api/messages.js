@@ -21,30 +21,33 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
       const { data, error } = await supabase
-        .from('achievements')
+        .from('messages')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return res.status(200).json(data || []);
+      return res.status(200).json({ data: data || [] });
     }
 
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       
-      const newAchievement = {
-        id: 'a' + Date.now(),
-        student_id: body.student_id || '',
-        title: body.title || '',
-        description: body.description || '',
-        image_url: body.image_url || body.custom_avatar || '',
-        custom_avatar: body.custom_avatar || body.image_url || '',
+      const newMessage = {
+        id: 'm' + Date.now(),
+        sender_type: body.sender_type || 'admin',
+        sender_id: body.sender_id || '',
+        receiver_type: body.receiver_type || 'admin',
+        receiver_id: body.receiver_id || '',
+        subject: body.subject || '',
+        message: body.message || '',
+        priority: body.priority || 'normal',
+        is_read: false,
         created_at: new Date().toISOString()
       };
 
       const { data, error } = await supabase
-        .from('achievements')
-        .insert(newAchievement)
+        .from('messages')
+        .insert(newMessage)
         .select()
         .single();
 
@@ -58,7 +61,7 @@ export default async function handler(req, res) {
       }
 
       const { error } = await supabase
-        .from('achievements')
+        .from('messages')
         .delete()
         .eq('id', id);
 
@@ -68,7 +71,7 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
-    console.error('Achievements API error:', error);
+    console.error('Messages API error:', error);
     return res.status(500).json({ error: error.message });
   }
 }

@@ -1,8 +1,15 @@
 Deno.serve(async (req) => {
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
   
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://vseombfkrvpffnpgbsnk.supabase.co';
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzkzNzQyMCwiZXhwIjoyMDg5NTEzNDIwfQ.SUkFrfUnzbm_IZveqVfGvS31wFZR7fggEVo8RVPiNj8';
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
   
   const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -74,15 +81,19 @@ Deno.serve(async (req) => {
       
       const newCoach = { 
         id: 'c' + Date.now(), 
-        name: body.name || '',
+        name: body.name || body.full_name || '',
+        full_name: body.full_name || body.name || '',
         email: body.email || null,
         phone: body.phone || '',
-        specialization: body.specialization || '',
+        specialization: body.specialization || body.specialty || '',
+        specialty: body.specialty || body.specialization || '',
         experience: body.experience || null,
         rating: body.rating || 0,
-        bio: body.bio || '',
-        status: 'active',
-        hourly_rate: body.salary || 0,
+        bio: body.bio || body.additional_details || '',
+        additional_details: body.additional_details || body.bio || '',
+        status: body.status || 'active',
+        hourly_rate: body.hourly_rate || body.salary || 0,
+        salary: body.salary || body.hourly_rate || 0,
         availability: body.availability || '',
         photo_url: body.photo_url || '',
         address: body.address || '',
@@ -119,21 +130,40 @@ Deno.serve(async (req) => {
       
       console.log('PUT /coaches body:', JSON.stringify(body));
       
-      // Build update payload with only known existing columns
       const updateData: Record<string, unknown> = {};
       
-      if (body.name) updateData.name = body.name;
-      if (body.phone) updateData.phone = body.phone;
-      if (body.email) updateData.email = body.email;
-      if (body.specialization) updateData.specialization = body.specialization;
-      if (body.experience) updateData.experience = body.experience;
-      if (body.rating) updateData.rating = body.rating;
-      if (body.bio) updateData.bio = body.bio;
-      if (body.status) updateData.status = body.status;
-      if (body.salary) updateData.hourly_rate = body.salary;
-      if (body.availability) updateData.availability = body.availability;
-      if (body.address) updateData.address = body.address;
-      if (body.photo_url) updateData.photo_url = body.photo_url;
+      if (body.name !== undefined) updateData.name = body.name;
+      if (body.full_name !== undefined) updateData.full_name = body.full_name;
+      if (body.email !== undefined) updateData.email = body.email;
+      if (body.phone !== undefined) updateData.phone = body.phone;
+      if (body.specialization !== undefined) updateData.specialization = body.specialization;
+      if (body.specialty !== undefined) updateData.specialty = body.specialty;
+      if (body.experience !== undefined) updateData.experience = body.experience;
+      if (body.rating !== undefined && body.rating !== null) {
+        const ratingNum = Number(body.rating);
+        if (!isNaN(ratingNum) && isFinite(ratingNum)) {
+          updateData.rating = Math.floor(ratingNum);
+        }
+      }
+      if (body.bio !== undefined) updateData.bio = body.bio;
+      if (body.additional_details !== undefined) updateData.additional_details = body.additional_details;
+      if (body.status !== undefined) updateData.status = body.status;
+      if (body.salary !== undefined && body.salary !== null) {
+        const salaryNum = Number(body.salary);
+        if (!isNaN(salaryNum) && isFinite(salaryNum)) {
+          updateData.salary = Math.floor(salaryNum);
+          updateData.hourly_rate = Math.floor(salaryNum);
+        }
+      }
+      if (body.hourly_rate !== undefined && body.hourly_rate !== null) {
+        const rateNum = Number(body.hourly_rate);
+        if (!isNaN(rateNum) && isFinite(rateNum)) {
+          updateData.hourly_rate = Math.floor(rateNum);
+        }
+      }
+      if (body.availability !== undefined) updateData.availability = body.availability;
+      if (body.address !== undefined) updateData.address = body.address;
+      if (body.photo_url !== undefined) updateData.photo_url = body.photo_url;
       
       updateData.updated_at = new Date().toISOString();
       

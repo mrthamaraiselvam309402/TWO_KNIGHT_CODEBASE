@@ -1,35 +1,21 @@
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
-export default async function handler(request, response) {
-  // Create fresh client for every request to avoid context issues
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      },
-      global: {
-        headers: {
-          'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      }
-    }
-  );
-  response.setHeader('Access-Control-Allow-Origin', '*');
-  response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+const supabaseUrl = process.env.SUPABASE_URL || 'https://vseombfkrvpffnpgbsnk.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmYXppmGljZmNtZHducG1icHEiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzczOTM3NDIwLCJleHAiOjIwODk1MTM0MjB9.p7XQVJ0dTK1lXWlJAKXmVJ6bR9T3nJ8xL2vK5cY6hW_s';
 
-  if (request.method === 'OPTIONS') return response.status(200).end();
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-  if (request.method !== 'GET') {
-    return response.status(405).json({ error: 'Method not allowed' });
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
 
   try {
-
     const [studentsRes, coachesRes, achievementsRes, eventsRes] = await Promise.all([
       supabase.from('students').select('*').order('created_at', { ascending: false }),
       supabase.from('coaches').select('*').order('created_at', { ascending: false }),
@@ -37,12 +23,7 @@ export default async function handler(request, response) {
       supabase.from('events').select('*').order('created_at', { ascending: false })
     ]);
 
-    if (studentsRes.error) throw studentsRes.error;
-    if (coachesRes.error) throw coachesRes.error;
-    if (achievementsRes.error) throw achievementsRes.error;
-    if (eventsRes.error) throw eventsRes.error;
-
-    return response.status(200).json({
+    return res.status(200).json({
       students: studentsRes.data || [],
       coaches: coachesRes.data || [],
       achievements: achievementsRes.data || [],
@@ -50,7 +31,7 @@ export default async function handler(request, response) {
       message: 'Hello from Chesskidoo API!'
     });
   } catch (error) {
-    console.error('API Error:', error);
-    return response.status(500).json({ error: error.message || 'Internal Server Error' });
+    console.error('Hello API error:', error);
+    return res.status(500).json({ error: error.message });
   }
 }

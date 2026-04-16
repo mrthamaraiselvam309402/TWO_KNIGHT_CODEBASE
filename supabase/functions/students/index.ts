@@ -1,8 +1,15 @@
 Deno.serve(async (req) => {
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
   
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://vseombfkrvpffnpgbsnk.supabase.co';
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzkzNzQyMCwiZXhwIjoyMDg5NTEzNDIwfQ.SUkFrfUnzbm_IZveqVfGvS31wFZR7fggEVo8RVPiNj8';
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
   
   const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -80,18 +87,27 @@ Deno.serve(async (req) => {
 if (req.method === 'POST') {
       console.log('POST /students body:', JSON.stringify(body));
       
-      // Build insert payload with ONLY the most basic fields
       const newStudent: Record<string, unknown> = { 
         id: 's' + Date.now(), 
-        name: body.name || '',
-        status: body.status || 'pending',
+        name: body.name || body.full_name || '',
+        full_name: body.full_name || body.name || '',
+        phone: body.phone || body.parent_phone || '',
+        parent_phone: body.parent_phone || body.phone || '',
+        grade: body.grade || body.level || null,
+        level: body.level || body.grade || 'Beginner',
+        enrollment_date: body.enrollment_date || body.join_date || new Date().toISOString().split('T')[0],
+        join_date: body.join_date || body.enrollment_date || new Date().toISOString().split('T')[0],
         rating: body.rating || 800,
+        current_rating: body.current_rating || body.rating || 800,
+        monthly_fee: body.monthly_fee || 0,
+        batch_type: body.batch_type || 'Evening',
+        batch_time: body.batch_time || '17:00',
+        payment_status: body.payment_status || 'Due',
+        status: body.status || 'pending',
+        coach_id: body.coach_id || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
-      
-      // Only add phone if provided
-      if (body.phone !== undefined && body.phone) newStudent.phone = body.phone;
       
       console.log('POST newStudent:', JSON.stringify(newStudent));
       
@@ -123,48 +139,49 @@ if (req.method === 'POST') {
       console.log('PUT /students body:', JSON.stringify(body));
       console.log('PUT /students id:', id);
       
-      // Build update payload with ONLY explicit type-safe fields
       const updateData: Record<string, unknown> = {};
       
-      // Name - must be non-empty string
-      if (typeof body.name === 'string' && body.name.trim().length > 0) {
-        updateData.name = body.name.trim();
-      }
-      
-      // Phone - must be non-empty string (digits only ideally)
-      if (typeof body.phone === 'string' && body.phone.trim().length > 0) {
-        updateData.phone = body.phone.trim();
-      }
-      
-      // Rating - must be a valid number
+      if (body.name !== undefined) updateData.name = body.name;
+      if (body.full_name !== undefined) updateData.full_name = body.full_name;
+      if (body.phone !== undefined) updateData.phone = body.phone;
+      if (body.parent_phone !== undefined) updateData.parent_phone = body.parent_phone;
+      if (body.grade !== undefined) updateData.grade = body.grade;
+      if (body.level !== undefined) updateData.level = body.level;
+      if (body.join_date !== undefined) updateData.join_date = body.join_date;
+      if (body.enrollment_date !== undefined) updateData.enrollment_date = body.enrollment_date;
       if (body.rating !== undefined && body.rating !== null && body.rating !== '') {
         const ratingNum = Number(body.rating);
         if (!isNaN(ratingNum) && isFinite(ratingNum)) {
           updateData.rating = Math.floor(ratingNum);
         }
       }
-      
-      // Status - must be valid string
-      if (typeof body.status === 'string' && (body.status === 'active' || body.status === 'pending')) {
-        updateData.status = body.status;
+      if (body.current_rating !== undefined && body.current_rating !== null) {
+        const ratingNum = Number(body.current_rating);
+        if (!isNaN(ratingNum) && isFinite(ratingNum)) {
+          updateData.current_rating = Math.floor(ratingNum);
+        }
       }
+      if (body.monthly_fee !== undefined && body.monthly_fee !== null && body.monthly_fee !== '') {
+        const feeNum = Number(body.monthly_fee);
+        if (!isNaN(feeNum) && isFinite(feeNum)) {
+          updateData.monthly_fee = Math.floor(feeNum);
+        }
+      }
+      if (body.batch_type !== undefined) updateData.batch_type = body.batch_type;
+      if (body.batch_time !== undefined) updateData.batch_time = body.batch_time;
+      if (body.payment_status !== undefined) updateData.payment_status = body.payment_status;
+      if (body.status !== undefined) updateData.status = body.status;
+      if (body.coach_id !== undefined) updateData.coach_id = body.coach_id || null;
+      if (body.custom_avatar !== undefined) updateData.custom_avatar = body.custom_avatar;
+      if (body.coach_notes !== undefined) updateData.coach_notes = body.coach_notes;
+      if (body.tactics_score !== undefined) updateData.tactics_score = body.tactics_score;
+      if (body.endgame_score !== undefined) updateData.endgame_score = body.endgame_score;
+      if (body.openings_score !== undefined) updateData.openings_score = body.openings_score;
+      if (body.positional_score !== undefined) updateData.positional_score = body.positional_score;
       
       updateData.updated_at = new Date().toISOString();
       
       console.log('PUT updateData:', JSON.stringify(updateData));
-      
-      // Must have at least name or phone to update
-      const keysToUpdate = Object.keys(updateData).filter(k => k !== 'updated_at');
-      if (keysToUpdate.length === 0) {
-        return new Response(JSON.stringify({ 
-          message: 'No valid fields to update', 
-          id, 
-          valid_fields: ['name (string)', 'phone (string)', 'rating (number)', 'status (active/pending)'],
-          received_fields: Object.keys(body)
-        }), {
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
-      }
       
       const { data: updatedStudent, error: updateError } = await supabase
         .from('students')

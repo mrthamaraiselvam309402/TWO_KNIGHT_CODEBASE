@@ -6,8 +6,8 @@
 (function() {
   'use strict';
 
-  // ═══════════════════════════════════════════════════════════════
-  // GLOBAL STATE
+// ═══════════════════════════════════════════════════════════════
+  // UTILITIES
   // ═══════════════════════════════════════════════════════════════
   let allCoaches = [];
   let allStudents = [];
@@ -20,13 +20,20 @@
   let currentStudent = null;
   let charts = {};
   let payTarget = null;
+  let dataCache = { coaches: null, students: null, achievements: null, events: null, timestamp: 0 };
+  const CACHE_DURATION = 2000; // Faster refresh
+  let loadDebounceTimer = null;
+  let loadingStates = {}; // Track loading states for different operations
+  let performanceMetrics = { apiCalls: 0, errors: 0, loadTime: 0 }; // Performance monitoring
 
   // ═══════════════════════════════════════════════════════════════
-  // UTILITIES
+// UTILITIES
   // ═══════════════════════════════════════════════════════════════
   const $ = id => document.getElementById(id);
 
   const isValidPhone = p => /^\d{10}$/.test(p);
+
+  const capitalizeFirst = str => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
 
   const formatTime = time24 => {
     if (!time24) return '—';
@@ -44,6 +51,120 @@
     setTimeout(() => el.remove(), 3800);
   }
 
+  function setLoading(key, loading) {
+    loadingStates[key] = loading;
+    // Update UI based on loading state
+    const loadingIndicator = $(`loading-${key}`);
+    if (loadingIndicator) {
+      loadingIndicator.style.display = loading ? 'block' : 'none';
+    }
+  }
+
+  function isLoading(key) {
+    return loadingStates[key] || false;
+  }
+
+  // Performance monitoring
+  function trackAPICall(success = true) {
+    performanceMetrics.apiCalls++;
+    if (!success) performanceMetrics.errors++;
+  }
+
+  // Health check
+  async function checkHealth() {
+    try {
+      const start = Date.now();
+      const response = await fetch('/health');
+      const end = Date.now();
+      const healthy = response.ok;
+
+      if (healthy) {
+        const data = await response.json();
+        console.log('✅ System health check passed:', data);
+        toast(`System healthy (${end - start}ms response)`, 'success');
+      } else {
+        console.warn('⚠️ System health check failed');
+        toast('System may be experiencing issues', 'warning');
+      }
+
+      return { healthy, responseTime: end - start };
+    } catch (error) {
+      console.error('❌ Health check failed:', error);
+      toast('Unable to connect to server', 'error');
+      return { healthy: false, error };
+    }
+  }
+
+  // Stress test function for robustness testing
+  async function runStressTest() {
+    if (!confirm('Run stress test? This will make many API calls.')) return;
+
+    console.log('🧪 Starting stress test...');
+    toast('Starting stress test...', 'info');
+
+    const startTime = Date.now();
+    const results = { total: 0, success: 0, errors: 0, responseTimes: [] };
+
+    // Test API endpoints
+    const endpoints = ['/api/coaches', '/api/students', '/api/achievements', '/api/events', '/api/messages'];
+
+    for (let i = 0; i < 10; i++) { // 10 iterations
+      for (const endpoint of endpoints) {
+        results.total++;
+        const callStart = Date.now();
+
+        try {
+          const response = await fetch(endpoint);
+          const callEnd = Date.now();
+          results.responseTimes.push(callEnd - callStart);
+
+          if (response.ok) {
+            results.success++;
+            await response.json(); // Consume the response
+          } else {
+            results.errors++;
+            console.warn(`Stress test: ${endpoint} returned ${response.status}`);
+          }
+        } catch (error) {
+          results.errors++;
+          console.error(`Stress test: ${endpoint} failed:`, error);
+        }
+      }
+    }
+
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    const avgResponseTime = results.responseTimes.reduce((a, b) => a + b, 0) / results.responseTimes.length;
+
+    const report = {
+      duration,
+      totalCalls: results.total,
+      successRate: ((results.success / results.total) * 100).toFixed(1) + '%',
+      avgResponseTime: Math.round(avgResponseTime) + 'ms',
+      errors: results.errors,
+      performance: performanceMetrics
+    };
+
+    console.log('🧪 Stress test completed:', report);
+    toast(`Stress test: ${report.successRate} success rate (${report.avgResponseTime} avg)`, results.errors > 0 ? 'warning' : 'success');
+
+    // Reset performance metrics
+    performanceMetrics = { apiCalls: 0, errors: 0, loadTime: 0 };
+  }
+
+  // Global error handler
+  window.addEventListener('error', (e) => {
+    console.error('Global error:', e.error);
+    performanceMetrics.errors++;
+    toast('An unexpected error occurred', 'error');
+  });
+
+  window.addEventListener('unhandledrejection', (e) => {
+    console.error('Unhandled promise rejection:', e.reason);
+    performanceMetrics.errors++;
+    toast('Network error occurred', 'error');
+  });
+
   function openModal(id) { $(id).style.display = 'flex'; }
   function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
   document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModals(); }));
@@ -60,13 +181,45 @@
 
   // Helper functions for schema differences
   function getStudentName(s) { return s.full_name || s.name || ''; }
-  function getStudentLevel(s) { return s.level || s.grade || 'Beginner'; }
-  function getStudentRating(s) { return s.current_rating || s.rating || 800; }
-  function getStudentDate(s) { return s.join_date || s.enrollment_date || ''; }
+  function getStudentLevel(s) { return capitalizeFirst(s.level || s.grade || 'Beginner'); }
+  function getStudentRating(s) { return s.rating || 800; }
+  function getStudentDate(s) { return s.enrollment_date || s.join_date || ''; }
   function getStudentPhone(s) { return s.parent_phone || s.phone || ''; }
+  function getStudentEmail(s) { return s.email || ''; }
+  function getStudentMonthlyFee(s) { return s.notes ? parseInt(s.notes.match(/fee[:\s]*(\d+)/i)?.[1]) || 5000 : 5000; }
+  function getStudentPaymentStatus(s) { return s.status === 'active' ? 'Paid' : 'Due'; }
+  function getStudentBatchType(s) { return 'Evening'; }
+  function getStudentBatchTime(s) { return '17:00'; }
+  function getStudentStatus(s) { return s.status || 'pending'; }
+  function getStudentCoachNotes(s) { return s.notes || ''; }
+  function getStudentSkills(s) { 
+    return {
+      tactics: s.tactics_score || 50,
+      endgame: s.endgame_score || 50,
+      openings: s.openings_score || 50,
+      positional: s.positional_score || 50
+    }; 
+  }
+  
   function getCoachName(c) { return c.full_name || c.name || ''; }
   function getCoachSpecialty(c) { return c.specialty || c.specialization || ''; }
+  function getCoachEmail(c) { return c.email || ''; }
+  function getCoachExperience(c) { return c.experience || 0; }
+  function getCoachRating(c) { return c.rating || 0; }
+  function getCoachStatus(c) { return c.status || 'active'; }
+  function getCoachSalary(c) { return c.salary || c.hourly_rate || 0; }
+  function getCoachAvailability(c) { return c.availability || ''; }
+  function getCoachBio(c) { return c.bio || c.additional_details || ''; }
+  
   function getEventDate(e) { return e.date || e.event_date || ''; }
+  function getEventType(e) { return e.type || e.event_type || 'Tournament'; }
+  function getEventLocation(e) { return e.location || ''; }
+  function getEventPrize(e) { return e.prize || ''; }
+  
+  function getMessagePriority(m) { return m.priority || 'normal'; }
+  function getMessageIsRead(m) { return m.is_read || false; }
+  function getMessageReplyTo(m) { return m.reply_to || null; }
+  function getMessageReadAt(m) { return m.read_at || null; }
 
   function makeAvSrc(s) {
     if (s.custom_avatar) return s.custom_avatar;
@@ -77,31 +230,84 @@
   // ═══════════════════════════════════════════════════════════════
   // DATA LOADING
   // ═══════════════════════════════════════════════════════════════
-  async function loadAllData() {
-    try {
-      const [cRes, sRes, aRes, eRes] = await Promise.all([
-        fetch('/api/coaches'),
-        fetch('/api/students'),
-        fetch('/api/achievements'),
-        fetch('/api/events')
-      ]);
-
-      allCoaches = await cRes.json();
-      allStudents = await sRes.json();
-      achievementsData = await aRes.json();
-      eventsData = await eRes.json();
-
-      syncCoachDropdowns();
-      
-      if (role === 'admin' || role === 'master') {
-        renderDash();
-        updateMsgBadge();
-      } else if (role === 'parent') {
-        renderChild();
+  async function loadAllData(forceRefresh = false) {
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    
+    const executeLoad = async () => {
+      const now = Date.now();
+      const hasValidCache = dataCache.timestamp > 0 && dataCache.coaches && dataCache.students;
+      if (!forceRefresh && hasValidCache && (now - dataCache.timestamp) < CACHE_DURATION) {
+        allCoaches = dataCache.coaches;
+        allStudents = dataCache.students;
+        achievementsData = dataCache.achievements;
+        eventsData = dataCache.events;
+        syncCoachDropdowns();
+        if (role === 'admin' || role === 'master') {
+          renderDash();
+          updateMsgBadge();
+        } else if (role === 'parent') {
+          renderChild();
+        }
+        return;
       }
-    } catch (err) {
-      console.error('Load error:', err);
-      toast('Failed to load data', 'error');
+      try {
+        setLoading('data', true);
+
+        // Load data with retry mechanism
+        const loadWithRetry = async (url, maxRetries = 2) => {
+          for (let i = 0; i <= maxRetries; i++) {
+            try {
+              const response = await fetch(url);
+              if (response.ok) {
+                return await response.json();
+              }
+              throw new Error(`HTTP ${response.status}`);
+            } catch (error) {
+              if (i === maxRetries) {
+                console.warn(`Failed to load ${url} after ${maxRetries + 1} attempts:`, error);
+                return []; // Return empty array on failure
+              }
+              await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+            }
+          }
+        };
+
+        const [coaches, students, achievements, events, messages] = await Promise.all([
+          loadWithRetry('/api/coaches'),
+          loadWithRetry('/api/students'),
+          loadWithRetry('/api/achievements'),
+          loadWithRetry('/api/events'),
+          loadWithRetry('/api/messages').then(r => r.data || r || [])
+        ]);
+
+        allCoaches = coaches || [];
+        allStudents = students || [];
+        achievementsData = achievements || [];
+        eventsData = events || [];
+        allMessages = messages || [];
+
+        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: now };
+        syncCoachDropdowns();
+
+        if (role === 'admin' || role === 'master') {
+          renderDash();
+          updateMsgBadge();
+        } else if (role === 'parent') {
+          renderChild();
+        }
+
+        setLoading('data', false);
+      } catch (err) {
+        console.error('Load error:', err);
+        toast('Failed to load data - please refresh', 'error');
+        setLoading('data', false);
+      }
+    };
+    
+    if (forceRefresh) {
+      await executeLoad();
+    } else {
+      loadDebounceTimer = setTimeout(executeLoad, 100);
     }
   }
 
@@ -117,13 +323,18 @@
     try {
       const res = await fetch('/api/messages');
       const msgs = await res.json();
-      const unread = msgs.filter(m => !m.is_read && m.receiver_type === 'admin').length;
+      allMessages = msgs.data || msgs || [];
+      const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin').length;
       const badge = $('msg-badge');
       if (badge) {
         if (unread > 0) { badge.style.display = 'inline'; badge.textContent = unread; }
         else { badge.style.display = 'none'; }
       }
-    } catch (e) {}
+      updateNotificationBadge();
+    } catch (e) {
+      console.error('Failed to update message badge:', e);
+      toast('Failed to load messages', 'error');
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -179,7 +390,7 @@
       if (p === 'bills') renderBills();
       if (p === 'msgs') renderMsgs();
       if (p === 'child') renderChild();
-    }, 100);
+    }, 10);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -204,10 +415,65 @@
     if (errEl) errEl.style.display = 'none';
     if (!rawUser || !pass) { errEl.textContent = 'Please enter credentials.'; errEl.style.display = 'block'; return; }
 
-    const lowerUser = rawUser.toLowerCase();
+    // Use server-side authentication API for security
+    fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', username: rawUser, password: pass })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        // Store token securely
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('userRole', data.role);
+        
+        if (data.role === 'master') {
+          role = 'master';
+          document.body.classList.add('admin-mode', 'master-mode');
+          $('top-profile').style.display = 'flex';
+          $('top-profile-name').innerHTML = 'Master <span style="background:var(--gold);color:#000;padding:2px 8px;border-radius:10px;font-size:10px">👑</span>';
+          $('top-profile-av').src = `https://ui-avatars.com/api/?name=Master&background=dca33e&color=000&bold=true&size=80`;
+        } else if (data.role === 'admin') {
+          role = 'admin';
+          document.body.classList.add('admin-mode');
+          $('top-profile').style.display = 'flex';
+          $('top-profile-name').textContent = 'Admin';
+          $('top-profile-av').src = `https://ui-avatars.com/api/?name=Admin&background=dca33e&color=000&bold=true&size=80`;
+        } else if (data.role === 'parent') {
+          role = 'parent';
+          document.body.classList.add('parent-mode');
+          $('top-profile').style.display = 'flex';
+          $('top-profile-name').textContent = data.user.name.split(' ')[0];
+          $('top-profile-av').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.user.name)}&background=dca33e&color=000&bold=true&size=80`;
+          // Store student ID for parent
+          if (data.user.studentId) localStorage.setItem('studentId', data.user.studentId);
+        }
+        
+        finishLogin('dash');
+      } else {
+        errEl.textContent = data.error || 'Invalid credentials.';
+        errEl.style.display = 'block';
+      }
+    })
+    .catch(err => {
+      console.error('Login error:', err);
+      // Fallback to local verification if server unavailable
+      handleLocalLogin(rawUser, pass, errEl);
+    });
+  }
 
-    // Master
-    if (rawUser === 'Tom@193' && pass === 'Thamaraiselvam@309402$') {
+  // Fallback local login (for offline/error scenarios)
+  function handleLocalLogin(rawUser, pass, errEl) {
+    const lowerUser = rawUser.toLowerCase();
+    const MASTER_USER = 'Tom@193';
+    const MASTER_PASS = 'Thamaraiselvam@309402$';
+    const ADMIN_USER = 'admin';
+    const ADMIN_PASS = 'admin123';
+
+    // Master (only show warning about insecure fallback)
+    if (rawUser === MASTER_USER && pass === MASTER_PASS) {
+      console.warn('⚠️ Using insecure local auth - configure server for production');
       role = 'master';
       document.body.classList.add('admin-mode', 'master-mode');
       $('top-profile').style.display = 'flex';
@@ -218,7 +484,8 @@
     }
 
     // Admin
-    if (lowerUser === 'admin' && pass === 'admin123') {
+    if (lowerUser === ADMIN_USER && pass === ADMIN_PASS) {
+      console.warn('⚠️ Using insecure local auth - configure server for production');
       role = 'admin';
       document.body.classList.add('admin-mode');
       $('top-profile').style.display = 'flex';
@@ -248,11 +515,13 @@
     errEl.style.display = 'block';
   }
 
-  function finishLogin(page) {
+function finishLogin(page) {
     $('login-screen').style.display = 'none';
     setPage(page);
-    loadAllData();
-  }
+    // Clear any pending refresh and load fresh data on login
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    loadAllData(true);
+}
 
   function doLogout() {
     closeModals();
@@ -276,16 +545,16 @@
   // DASHBOARD
   // ═══════════════════════════════════════════════════════════════
   function renderDash() {
-    const paidStudents = allStudents.filter(s => s.payment_status === 'Paid');
+    const paidStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid');
     const avgElo = allStudents.length ? Math.round(allStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / allStudents.length) : 0;
 
     $('s-total').textContent = allStudents.length;
     $('s-elo').textContent = avgElo;
     $('s-coaches').textContent = allCoaches.length;
 
-    const revenue = paidStudents.reduce((a, s) => a + (s.monthly_fee || 0), 0);
+    const revenue = paidStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
     const operationsCost = 15000;
-    const totalSalaries = allCoaches.reduce((a, c) => a + (Number(c.salary) || 0), 0);
+    const totalSalaries = allCoaches.reduce((a, c) => a + getCoachSalary(c), 0);
     const spending = totalSalaries + operationsCost;
     const profit = revenue - spending;
 
@@ -298,31 +567,80 @@
     buildCharts(allStudents);
   }
 
-  function buildCharts(studs) {
-    const isLight = document.body.getAttribute('data-theme') === 'light';
-    const tick = isLight ? '#6b6b80' : '#888884';
-    const grid = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
-
-    if (charts.elo) { charts.elo.destroy(); charts.elo = null; }
-    if (charts.coach) { charts.coach.destroy(); charts.coach = null; }
-
-    const eloCtx = $('chartElo');
-    const coachCtx = $('chartCoach');
-    if (!eloCtx || !coachCtx) return;
-
-    charts.elo = new Chart(eloCtx, {
-      type: 'bar',
-      data: { labels: studs.map(s => getStudentName(s).split(' ')[0]), datasets: [{ label: 'ELO', data: studs.map(s => getStudentRating(s)), backgroundColor: '#dca33e', borderRadius: 5 }] },
-      options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: grid }, ticks: { color: tick } }, x: { grid: { display: false }, ticks: { color: tick } } } }
-    });
-
+  function getCoachStats(studs) {
     const coachMap = {};
-    studs.forEach(s => { const cn = (s.coaches && s.coaches.full_name) || 'Unassigned'; coachMap[cn] = (coachMap[cn] || 0) + 1; });
-    charts.coach = new Chart(coachCtx, {
-      type: 'doughnut',
-      data: { labels: Object.keys(coachMap), datasets: [{ data: Object.values(coachMap), backgroundColor: ['#dca33e', '#5a9fff', '#52c41a', '#ff4d4f'], borderWidth: isLight ? 2 : 0 }] },
-      options: { plugins: { legend: { labels: { color: tick } } } }
+    studs.forEach(s => {
+      const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
+      const cn = studentCoachId ? (allCoaches.find(c => String(c.id) === studentCoachId)?.full_name || 'Unknown') : 'Unassigned';
+      coachMap[cn] = (coachMap[cn] || 0) + 1;
     });
+    const allStudentCoachIds = studs.map(s => s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null));
+    const allCoachIds = allCoaches.map(c => c.id);
+    const assignedCoachIds = new Set(allStudentCoachIds.filter(id => id && allCoachIds.includes(id)));
+    const unassignedCount = allStudentCoachIds.filter(id => !id || !allCoachIds.includes(id)).length;
+    return { coachMap, assignedCoachIds, unassignedCount };
+  }
+
+  function buildCharts(studs) {
+    // Simplified metrics display - no complex charts needed
+    const paidStudents = studs.filter(s => getStudentPaymentStatus(s) === 'Paid');
+    const dueStudents = studs.filter(s => getStudentPaymentStatus(s) === 'Due');
+    const paidAmount = paidStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    const dueAmount = dueStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+
+    // Update simple text-based metrics
+    const revenueEl = $('chartRevenue');
+    if (revenueEl) {
+      revenueEl.innerHTML = `
+        <div style="text-align:center;padding:20px;">
+          <div style="font-size:24px;font-weight:700;color:var(--success);margin-bottom:10px;">₹${paidAmount.toLocaleString()}</div>
+          <div style="color:var(--ivory-dim);font-size:14px;">Revenue Collected</div>
+          <div style="font-size:18px;font-weight:600;color:var(--danger);margin-top:15px;">₹${dueAmount.toLocaleString()}</div>
+          <div style="color:var(--ivory-dim);font-size:12px;">Outstanding Dues</div>
+        </div>
+      `;
+    }
+
+    const paymentEl = $('chartPayment');
+    if (paymentEl) {
+      paymentEl.innerHTML = `
+        <div style="text-align:center;padding:20px;">
+          <div style="font-size:24px;font-weight:700;color:var(--success);margin-bottom:10px;">${paidStudents.length}</div>
+          <div style="color:var(--ivory-dim);font-size:14px;">Students Paid</div>
+          <div style="font-size:18px;font-weight:600;color:var(--danger);margin-top:15px;">${dueStudents.length}</div>
+          <div style="color:var(--ivory-dim);font-size:12px;">Students Due</div>
+        </div>
+      `;
+    }
+
+    const batchEl = $('chartBatch');
+    if (batchEl) {
+      const weekendCount = studs.filter(s => s.batch_type === 'Weekend').length;
+      const weekdayCount = studs.filter(s => s.batch_type !== 'Weekend').length;
+      batchEl.innerHTML = `
+        <div style="text-align:center;padding:20px;">
+          <div style="font-size:24px;font-weight:700;color:var(--gold);margin-bottom:10px;">${weekendCount}</div>
+          <div style="color:var(--ivory-dim);font-size:14px;">Weekend Batches</div>
+          <div style="font-size:18px;font-weight:600;color:var(--accent);margin-top:15px;">${weekdayCount}</div>
+          <div style="color:var(--ivory-dim);font-size:12px;">Weekday Batches</div>
+        </div>
+      `;
+    }
+
+    const coachEl = $('chartCoach');
+    if (coachEl) {
+      const coachStats = getCoachStats(studs);
+      const totalStudents = Object.values(coachStats.coachMap).reduce((a, b) => a + b, 0);
+      const avgStudentsPerCoach = allCoaches.length ? Math.round(totalStudents / allCoaches.length) : 0;
+      coachEl.innerHTML = `
+        <div style="text-align:center;padding:20px;">
+          <div style="font-size:24px;font-weight:700;color:var(--gold);margin-bottom:10px;">${allCoaches.length}</div>
+          <div style="color:var(--ivory-dim);font-size:14px;">Active Coaches</div>
+          <div style="font-size:18px;font-weight:600;color:var(--accent);margin-top:15px;">${avgStudentsPerCoach}</div>
+          <div style="color:var(--ivory-dim);font-size:12px;">Avg Students/Coach</div>
+        </div>
+      `;
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -335,73 +653,82 @@
 
   function renderStudents() {
     const tbody = $('stud-body');
-    const fCoach = $('f-coach')?.value;
-    const fStatus = $('f-status')?.value;
-    const fMinFee = parseInt($('f-min-fee')?.value) || 0;
-    const fMaxFee = parseInt($('f-max-fee')?.value) || Infinity;
+    const studs = role === 'admin' || role === 'master' ? allStudents : (currentStudent ? [currentStudent] : []);
+    if (!studs.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">No students found.</div></td></tr>`; return; }
 
-    const filtered = allStudents.filter(s => {
-      if (fCoach && s.coaches?.id !== fCoach) return false;
-      if (fStatus && s.payment_status !== fStatus) return false;
-      if ((s.monthly_fee || 0) < fMinFee || (s.monthly_fee || 0) > fMaxFee) return false;
-      return true;
-    });
+    // Apply filters
+    let filtered = studs;
+    const coachFilter = $('f-coach').value;
+    const statusFilter = $('f-status').value;
+    const minFee = parseInt($('f-min-fee').value) || 0;
+    const maxFee = parseInt($('f-max-fee').value) || Infinity;
 
-    if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">♟</div><p>No students found.</p></div></td></tr>`; return; }
+    if (coachFilter) {
+      filtered = filtered.filter(s => {
+        const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
+        return studentCoachId === coachFilter;
+      });
+    }
+    if (statusFilter) {
+      filtered = filtered.filter(s => getStudentPaymentStatus(s) === statusFilter);
+    }
+    filtered = filtered.filter(s => getStudentMonthlyFee(s) >= minFee && getStudentMonthlyFee(s) <= maxFee);
 
-    tbody.innerHTML = filtered.map(s => `
-      <tr>
-        <td><div class="av-cell"><img src="${makeAvSrc(s)}" class="av-sm"><div>${getStudentName(s)}</div></div></td>
-        <td><span class="text-gold">${getStudentLevel(s)}</span><br><span style="font-family:'DM Mono';font-size:12px">${getStudentRating(s)}</span></td>
-        <td>${getStudentDate(s) || '—'}</td>
-        <td>${(s.coaches && s.coaches.full_name) || '—'}</td>
-        <td><span class="${s.payment_status === 'Paid' ? 'text-success' : 'text-danger'}">${s.payment_status || 'Due'}</span><br><span style="font-size:11px;color:var(--ivory-dim)">₹${s.monthly_fee || 0}</span></td>
-        <td>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-outline-blue btn-sm" onclick="viewStudent('${s.id}')">View</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}','${getStudentName(s).replace(/'/g, "\\'")}')">Del</button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
+    // Show bulk payment button if there are due students
+    const hasDueStudents = filtered.some(s => getStudentPaymentStatus(s) === 'Due');
+    $('bulk-pay-btn').style.display = hasDueStudents && (role === 'admin' || role === 'master') ? 'inline-block' : 'none';
+
+    tbody.innerHTML = filtered.map((s, i) => {
+      const status = getStudentPaymentStatus(s);
+      const fee = getStudentMonthlyFee(s);
+      const action = status === 'Due'
+        ? `<button class="btn btn-gold btn-sm" onclick="markPaid('${s.id}')">Mark Paid</button>`
+        : `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}','${getStudentName(s)}','${fee}')">Receipt</button>`;
+      return `<tr><td style="font-family:'DM Mono';color:var(--ivory-dim)">#CK-${String(i+1).padStart(4,'0')}</td><td style="font-weight:600">${getStudentName(s)}</td><td style="font-family:'DM Mono'">₹${fee}</td><td><span class="${status==='Paid'?'text-success':'text-danger'}">${status}</span></td><td>${action}</td></tr>`;
+    }).join('');
   }
 
   function viewStudent(id) {
-    const s = allStudents.find(x => x.id === id);
+    const s = allStudents.find(x => String(x.id) === String(id));
     if (!s) return;
     $('sv-av').src = makeAvSrc(s);
     $('sv-name').textContent = getStudentName(s);
     $('sv-level').textContent = getStudentLevel(s);
     $('sv-elo').textContent = getStudentRating(s);
     $('sv-join').textContent = getStudentDate(s) || '—';
-    $('sv-coach').textContent = (s.coaches && s.coaches.full_name) || 'Unassigned';
-    $('sv-batch').textContent = s.batch_type || '—';
-    $('sv-fee').textContent = s.monthly_fee || 0;
-    $('sv-status').innerHTML = `<span class="${s.payment_status === 'Paid' ? 'text-success' : 'text-danger'}">${s.payment_status || 'Due'}</span>`;
+    const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
+    const coachName = studentCoachId ? (allCoaches.find(c => String(c.id) === studentCoachId)?.full_name || 'Unassigned') : 'Unassigned';
+    $('sv-coach').textContent = coachName;
+    $('sv-batch').textContent = getStudentBatchType(s) || '—';
+    $('sv-fee').textContent = getStudentMonthlyFee(s);
+    $('sv-status').innerHTML = `<span class="${getStudentPaymentStatus(s) === 'Paid' ? 'text-success' : 'text-danger'}">${getStudentPaymentStatus(s)}</span>`;
     $('sv-phone').textContent = getStudentPhone(s) || '—';
     $('sv-edit-btn').onclick = () => { closeModals(); openEdit(s.id); };
     openModal('student-view-modal');
   }
 
   function openEdit(id) {
-    const s = allStudents.find(x => x.id === id);
+    const s = allStudents.find(x => String(x.id) === String(id));
     if (!s) return;
     $('e-id').value = s.id;
     $('e-name').value = getStudentName(s);
     $('e-phone').value = getStudentPhone(s);
     $('e-elo').value = getStudentRating(s);
-    $('e-level').value = getStudentLevel(s).toUpperCase();
+    $('e-level').value = getStudentLevel(s);
     $('e-join').value = getStudentDate(s);
-    $('e-fee').value = s.monthly_fee || 0;
-    $('e-status').value = s.payment_status || 'Due';
-    $('e-batch-type').value = s.batch_type || 'Evening';
-    $('e-batch-time').value = s.batch_time || '17:00';
-    $('e-coach').innerHTML = allCoaches.map(c => `<option value="${c.id}" ${s.coaches && c.id === s.coaches.id ? 'selected' : ''}>${getCoachName(c)}</option>`).join('');
+    $('e-fee').value = getStudentMonthlyFee(s);
+    $('e-status').value = getStudentPaymentStatus(s);
+    $('e-batch-type').value = getStudentBatchType(s);
+    $('e-batch-time').value = getStudentBatchTime(s);
+    const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : '');
+    $('e-coach').innerHTML = allCoaches.map(c => `<option value="${c.id}" ${studentCoachId === String(c.id) ? 'selected' : ''}>${getCoachName(c)}</option>`).join('');
     openModal('edit-modal');
   }
 
 async function updateStudent() {
+    // Clear any pending refresh for immediate update
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    
     const id = $('e-id').value;
     if (!id) return;
     const name = $('e-name').value.trim();
@@ -409,15 +736,20 @@ async function updateStudent() {
     if (!name) { toast('Name required', 'error'); return; }
     if (!isValidPhone(phone)) { toast('Phone must be 10 digits', 'error'); return; }
 
-    // Send with proper type conversion - ensure numbers are actually numbers
-    const eloValue = $('e-elo').value;
-    const statusValue = $('e-status').value;
+    const coachId = $('e-coach').value;
     
     const data = {
       name: name,
-      phone: phone,
-      rating: eloValue ? parseInt(eloValue, 10) : 800,
-      status: statusValue === 'Paid' ? 'active' : 'pending'
+      full_name: name,
+      parent_phone: phone,
+      rating: parseInt($('e-elo').value) || 800,
+      current_rating: parseInt($('e-elo').value) || 800,
+      grade: capitalizeFirst($('e-level').value),
+      level: capitalizeFirst($('e-level').value),
+      join_date: $('e-join').value,
+      coach_id: coachId ? coachId : null,
+      status: $('e-status').value === 'Paid' ? 'active' : 'pending',
+      notes: 'fee:' + (parseInt($('e-fee').value) || 5000)
     };
 
     console.log('Sending PUT payload:', JSON.stringify(data));
@@ -432,7 +764,18 @@ async function updateStudent() {
       }
       toast('Updated!', 'success');
       closeModals();
-      loadAllData();
+      
+      // Immediately update local data
+      const updatedStudent = result.data || result;
+      if (updatedStudent && updatedStudent.id) {
+        allStudents = allStudents.map(s => String(s.id) === String(id) ? updatedStudent : s);
+        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      }
+      
+      renderStudents();
+      renderDash();
+      renderBills();
+      closeModals();
     } catch (e) { toast('Update failed', 'error'); console.error(e); }
   }
 
@@ -446,16 +789,23 @@ async function updateStudent() {
   }
 
   async function saveStudent() {
+    // Clear any pending refresh for immediate update
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    
     const name = $('m-name').value.trim();
     const phone = $('m-phone').value.trim();
     if (!name) { toast('Name required', 'error'); return; }
     if (!isValidPhone(phone)) { toast('Phone must be 10 digits', 'error'); return; }
 
-    // Send only the core fields that exist in the database
     const data = {
       name: name,
-      phone: phone,
+      full_name: name,
+      parent_phone: phone,
+      grade: $('m-level').value,
+      enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
+      coach_id: $('m-coach').value || null,
       rating: parseInt($('m-elo').value) || 800,
+      notes: 'fee:' + (parseInt($('m-fee').value) || 5000),
       status: 'pending'
     };
 
@@ -471,16 +821,45 @@ async function updateStudent() {
       }
       toast(`${name} enrolled!`, 'success');
       closeModals();
-      loadAllData();
+      
+      // Immediately add to local data
+      const newStudent = result.data || result;
+      if (newStudent && newStudent.id) {
+        allStudents = [newStudent, ...allStudents];
+        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      }
+      
+      // Clear form
+      $('m-name').value = '';
+      $('m-phone').value = '';
+      $('m-elo').value = '800';
+      $('m-fee').value = '5000';
+      
+      renderStudents();
+      renderDash();
+      renderBills();
+      syncCoachDropdowns();
     } catch (e) { toast('Enrollment failed', 'error'); console.error(e); }
   }
 
   async function deleteStudent(id, name) {
     if (!confirm(`Remove ${name}?`)) return;
+    // Clear any pending refresh
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
-      await fetch(`${API_BASE}/students?id=${id}`, { method: 'DELETE' });
-      toast('Removed.', 'info');
-      loadAllData();
+      const res = await fetch(`${API_BASE}/students?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Delete failed: ' + (result.error || 'Unknown error'), 'error');
+        return;
+      }
+      toast('Removed.', 'success');
+      // Immediately remove from local data without waiting for API reload
+      allStudents = allStudents.filter(s => String(s.id) !== String(id));
+      dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      renderStudents();
+      renderDash();
+      renderBills();
     } catch (e) { toast('Delete failed', 'error'); }
   }
 
@@ -492,11 +871,14 @@ async function updateStudent() {
     if (!allCoaches.length) { tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No coaches.</div></td></tr>`; return; }
 
     tbody.innerHTML = allCoaches.map(c => {
-      const count = allStudents.filter(s => s.coaches && s.coaches.id === c.id).length;
+      const count = allStudents.filter(s => {
+        const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
+        return studentCoachId === String(c.id);
+      }).length;
       return `
         <tr>
           <td><div class="av-cell"><img src="${c.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000`}" class="av-sm"><div><span style="font-weight:600;color:var(--gold)">${getCoachName(c)}</span><br><span style="font-size:11px;color:var(--ivory-dim)">${getCoachSpecialty(c)}</span></div></div></td>
-          <td style="font-size:12px;line-height:1.6">📞 +91 ${c.phone || 'N/A'}<br>📍 ${c.address || 'N/A'}<br>💰 ₹${Number(c.salary || 0).toLocaleString()}</td>
+          <td style="font-size:12px;line-height:1.6">📞 +91 ${c.phone || 'N/A'}<br>📍 ${c.address || 'N/A'}<br>💰 ₹${getCoachSalary(c).toLocaleString()}<br>⭐ ${getCoachRating(c)} rating</td>
           <td>${count} Students</td>
           <td>
             <button class="btn btn-outline-blue btn-sm" onclick="viewCoachSchedule('${c.id}')">Schedule</button>
@@ -508,11 +890,16 @@ async function updateStudent() {
   }
 
   function viewCoachSchedule(id) {
-    const c = allCoaches.find(x => x.id === id);
+    const c = allCoaches.find(x => String(x.id) === String(id));
+    if (!c) return;
+    $('sched-coach-name').textContent = getCoachName(c);
     $('sched-coach-name').textContent = getCoachName(c);
     const container = $('schedule-container');
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    const myStudents = allStudents.filter(s => s.coaches && s.coaches.id === id);
+    const myStudents = allStudents.filter(s => {
+      const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
+      return studentCoachId === String(id);
+    });
 
     if (!myStudents.length) { container.innerHTML = '<div class="empty-state">No batches.</div>'; }
     else {
@@ -545,37 +932,85 @@ async function updateStudent() {
   }
 
   async function saveCoach() {
+    // Clear any pending refresh for immediate update
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    
     const id = $('cm-id').value;
     const name = $('cm-name').value.trim();
     if (!name) { toast('Name required', 'error'); return; }
 
     const data = {
+      full_name: name,
       name: name,
       specialization: $('cm-spec').value,
+      specialty: $('cm-spec').value,
       phone: $('cm-phone').value,
       address: $('cm-address').value,
       photo_url: $('cm-photo').value,
-      salary: $('cm-salary').value,
-      bio: $('cm-etc').value
+      salary: parseInt($('cm-salary').value) || 0,
+      hourly_rate: parseInt($('cm-salary').value) || 0,
+      bio: $('cm-etc').value,
+      additional_details: $('cm-etc').value,
+      status: 'active'
     };
 
     const method = id ? 'PUT' : 'POST';
-    const url = id ? `${API_BASE}/coaches?id=${id}` : `${API_BASE}/coaches`;
+    const url = id ? `${API_BASE}/coaches?id=${encodeURIComponent(id)}` : `${API_BASE}/coaches`;
 
     try {
-      await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Failed: ' + (result.error || 'Unknown error'), 'error');
+        return;
+      }
       toast(`Coach ${id ? 'updated' : 'added'}!`, 'success');
       closeModals();
-      loadAllData();
+      
+      // Immediately update local data
+      const updatedCoach = result.data || result;
+      if (updatedCoach && updatedCoach.id) {
+        if (id) {
+          // Update existing
+          allCoaches = allCoaches.map(c => String(c.id) === String(id) ? updatedCoach : c);
+        } else {
+          // Add new
+          allCoaches = [updatedCoach, ...allCoaches];
+        }
+        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      }
+      
+      // Clear form
+      $('cm-id').value = '';
+      ['cm-name', 'cm-spec', 'cm-phone', 'cm-address', 'cm-photo', 'cm-salary', 'cm-etc'].forEach(id => $(id).value = '');
+      
+      renderCoachMgmt();
+      renderStudents();
+      renderDash();
+      syncCoachDropdowns();
     } catch (e) { toast('Error saving coach', 'error'); }
   }
 
   async function deleteCoach(id) {
     if (!confirm('Delete coach?')) return;
+    // Clear any pending refresh
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
-      await fetch(`${API_BASE}/coaches?id=${id}`, { method: 'DELETE' });
-      toast('Removed.', 'info');
-      loadAllData();
+      const res = await fetch(`${API_BASE}/coaches?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Delete failed: ' + (result.error || 'Unknown error'), 'error');
+        return;
+      }
+      toast('Removed.', 'success');
+      // Immediately remove from local data without waiting for API reload
+      allCoaches = allCoaches.filter(c => String(c.id) !== String(id));
+      // Clear students assigned to this coach
+      allStudents = allStudents.map(s => s.coach_id === id ? { ...s, coach_id: null, coaches: null } : s);
+      dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      renderCoachMgmt();
+      renderStudents();
+      renderDash();
     } catch (e) { toast('Delete failed', 'error'); }
   }
 
@@ -609,6 +1044,9 @@ async function updateStudent() {
   function onAwardStudentChange() { $('award-sid').value = $('award-student').value; }
 
   async function saveAward() {
+    // Clear any pending refresh for immediate update
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    
     const title = $('award-title').value.trim();
     const studentId = $('award-sid').value;
     if (!title) { toast('Title required', 'error'); return; }
@@ -623,19 +1061,48 @@ async function updateStudent() {
     };
 
     try {
-      await fetch(`${API_BASE}/achievements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await fetch(`${API_BASE}/achievements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Failed: ' + (result.error || 'Unknown error'), 'error');
+        return;
+      }
       toast('Published!', 'success');
       closeModals();
-      loadAllData();
+      
+      // Immediately update local data - no API reload
+      const newAward = result.data || result;
+      if (newAward && newAward.id) {
+        achievementsData = [newAward, ...achievementsData];
+        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      }
+      
+      // Clear achievement form
+      $('award-title').value = '';
+      $('award-img-url').value = '';
+      $('award-img-preview').style.display = 'none';
+      
+      renderFame();
+      renderDash();
     } catch (e) { toast('Failed', 'error'); }
   }
 
   async function deleteAchievement(id) {
     if (!confirm('Remove achievement?')) return;
+    // Clear any pending refresh
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
-      await fetch(`${API_BASE}/achievements?id=${id}`, { method: 'DELETE' });
-      toast('Removed.', 'info');
-      loadAllData();
+      const res = await fetch(`${API_BASE}/achievements?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Delete failed: ' + (result.error || 'Unknown error'), 'error');
+        return;
+      }
+      toast('Removed.', 'success');
+      // Immediately remove from local data
+      achievementsData = achievementsData.filter(a => String(a.id) !== String(id));
+      dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      renderFame();
     } catch (e) { toast('Failed', 'error'); }
   }
 
@@ -662,38 +1129,69 @@ async function updateStudent() {
   }
 
   async function saveEvent() {
+    // Clear any pending refresh for immediate update
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    
     const title = $('ev-title').value.trim();
     if (!title) { toast('Title required', 'error'); return; }
 
     const data = { title: title, date: $('ev-date').value, type: $('ev-type').value, prize: $('ev-prize').value, location: $('ev-loc').value };
 
     try {
-      await fetch(`${API_BASE}/events`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await fetch(`${API_BASE}/events`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Failed: ' + (result.error || 'Unknown error'), 'error');
+        return;
+      }
       toast('Published!', 'success');
       closeModals();
-      loadAllData();
+      
+      // Immediately add new event
+      const newEvent = result.data || result;
+      if (newEvent && newEvent.id) {
+        eventsData = [newEvent, ...eventsData];
+        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      }
+      
+      $('ev-title').value = '';
+      $('ev-date').value = '';
+      $('ev-prize').value = '';
+      $('ev-loc').value = '';
+      renderEvents();
     } catch (e) { toast('Failed', 'error'); }
   }
 
   async function deleteEvent(id) {
     if (!confirm('Delete event?')) return;
+    // Clear any pending refresh
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    console.log('Deleting event with ID:', id);
     try {
-      const res = await fetch(`${API_BASE}/events?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/events?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const result = await res.json();
       console.log('Delete event response:', result);
       if (!res.ok) {
         toast('Delete failed: ' + (result.error || 'Unknown error'), 'error');
         return;
       }
-      toast('Deleted.', 'info');
-      loadAllData();
+      toast('Deleted.', 'success');
+      // Immediately remove from local data
+      eventsData = eventsData.filter(e => String(e.id) !== String(id));
+      dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      renderEvents();
     } catch (e) { toast('Delete failed: ' + e.message, 'error'); console.error(e); }
   }
 
-  async function registerEvent(id) {
+async function registerEvent(id) {
     toast('Registered!', 'success');
-    loadAllData();
-  }
+    // Clear any pending refresh
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    
+    // Immediately update local data - mark as registered by adding a flag or updating
+    // For now, we'll just refresh the events display since registration doesn't change event data
+    renderEvents();
+}
 
   // ═══════════════════════════════════════════════════════════════
   // PAYMENTS
@@ -704,36 +1202,253 @@ async function updateStudent() {
     if (!studs.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No records.</div></td></tr>`; return; }
 
     tbody.innerHTML = studs.map((s, i) => {
-      const action = s.payment_status === 'Due'
-        ? `<button class="btn btn-gold btn-sm" onclick="${role === 'admin' ? `markPaid('${s.id}')` : `openPay('${s.id}','${getStudentName(s)}','${s.monthly_fee||0}')`}">${role === 'admin' ? 'Mark Paid' : 'Pay'}</button>`
-        : `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}','${getStudentName(s)}','${s.monthly_fee||0}')">Receipt</button>`;
-      return `<tr><td style="font-family:'DM Mono';color:var(--ivory-dim)">#CK-${String(i+1).padStart(4,'0')}</td><td style="font-weight:600">${getStudentName(s)}</td><td style="font-family:'DM Mono'">₹${s.monthly_fee||0}</td><td><span class="${s.payment_status==='Paid'?'text-success':'text-danger'}">${s.payment_status||'Due'}</span></td><td>${action}</td></tr>`;
+      const status = getStudentPaymentStatus(s);
+      const fee = getStudentMonthlyFee(s);
+      const action = status === 'Due'
+        ? `<button class="btn btn-gold btn-sm" onclick="${role === 'admin' ? `markPaid('${s.id}')` : `openPay('${s.id}','${getStudentName(s)}','${fee}')`}">${role === 'admin' ? 'Mark Paid' : 'Pay'}</button>`
+        : `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}','${getStudentName(s)}','${fee}')">Receipt</button>`;
+      return `<tr><td style="font-family:'DM Mono';color:var(--ivory-dim)">#CK-${String(i+1).padStart(4,'0')}</td><td style="font-weight:600">${getStudentName(s)}</td><td style="font-family:'DM Mono'">₹${fee}</td><td><span class="${status==='Paid'?'text-success':'text-danger'}">${status}</span></td><td>${action}</td></tr>`;
     }).join('');
   }
 
   async function markPaid(id) {
+    // Clear any pending refresh for immediate update
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+
     try {
-      await fetch(`${API_BASE}/students?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'active' }) });
+      const res = await fetch(`${API_BASE}/students?id=${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'active', payment_status: 'Paid' }) });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Failed: ' + (result.error || 'Unknown error'), 'error');
+        return false;
+      }
       toast('Marked as paid!', 'success');
-      loadAllData();
-    } catch (e) { toast('Failed', 'error'); }
+
+      // Immediately update local data without API reload
+      const updatedStudent = result.data || { id, status: 'active', payment_status: 'Paid' };
+      allStudents = allStudents.map(s => String(s.id) === String(id) ? { ...s, ...updatedStudent } : s);
+      dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+
+      renderBills();
+      renderDash();
+      renderStudents();
+      return true;
+    } catch (e) { toast('Failed', 'error'); return false; }
   }
 
-  function openPay(id, name, fee) { payTarget = { id, name, fee }; $('pay-amt').textContent = '₹' + fee; $('pay-name').textContent = name; openModal('pay-modal'); }
+  async function bulkMarkPaid() {
+    if (!confirm('Mark all filtered students as paid?')) return;
+    if (isLoading('bulk-payment')) return;
+
+    // Clear any pending refresh
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+
+    const coachFilter = $('f-coach').value;
+    const statusFilter = $('f-status').value;
+    const minFee = parseInt($('f-min-fee').value) || 0;
+    const maxFee = parseInt($('f-max-fee').value) || Infinity;
+
+    // Get filtered students that are due
+    let studentsToUpdate = allStudents.filter(s => {
+      if (getStudentPaymentStatus(s) !== 'Due') return false;
+      if (coachFilter) {
+        const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
+        if (studentCoachId !== coachFilter) return false;
+      }
+      if (statusFilter && getStudentPaymentStatus(s) !== statusFilter) return false;
+      const fee = getStudentMonthlyFee(s);
+      if (fee < minFee || fee > maxFee) return false;
+      return true;
+    });
+
+    if (!studentsToUpdate.length) {
+      toast('No students match the current filters', 'error');
+      return;
+    }
+
+    setLoading('bulk-payment', true);
+    toast(`Processing ${studentsToUpdate.length} payments...`, 'info');
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // Process payments with concurrency control (max 3 at a time)
+    const batchSize = 3;
+    for (let i = 0; i < studentsToUpdate.length; i += batchSize) {
+      const batch = studentsToUpdate.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (student) => {
+        try {
+          const res = await fetch(`${API_BASE}/students?id=${encodeURIComponent(student.id)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'active', payment_status: 'Paid' })
+          });
+          const result = await res.json();
+
+          if (res.ok) {
+            // Update local data immediately
+            const updatedStudent = result.data || { id: student.id, status: 'active', payment_status: 'Paid' };
+            allStudents = allStudents.map(s => String(s.id) === String(student.id) ? { ...s, ...updatedStudent } : s);
+            successCount++;
+            trackAPICall(true);
+          } else {
+            failCount++;
+            trackAPICall(false);
+            console.error('Failed to update student:', student.id, result);
+          }
+        } catch (e) {
+          failCount++;
+          trackAPICall(false);
+          console.error('Error updating student:', student.id, e);
+        }
+      }));
+    }
+
+    // Update cache and re-render
+    dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+
+    renderBills();
+    renderDash();
+    renderStudents();
+
+    setLoading('bulk-payment', false);
+
+    const message = `Bulk payment complete: ${successCount} successful${failCount > 0 ? `, ${failCount} failed` : ''}`;
+    toast(message, failCount > 0 ? 'error' : 'success');
+  }
+
+  async function markPaidAndDownload(id, name, fee) {
+    const success = await markPaid(id);
+    if (success) downloadReceipt(id, name, fee);
+  }
+
+  function openPay(id, name, fee) { payTarget = { id, name, fee }; $('pay-amt').textContent = '₹' + fee; $('pay-name').textContent = name; $('pay-preview').style.display = 'none'; $('pay-options').style.display = 'grid'; $('pay-processing').style.display = 'none'; openModal('pay-modal'); }
+
+  function initiatePay(provider) {
+    if (!payTarget) return;
+    $('pay-options').style.display = 'none';
+    $('pay-processing').style.display = 'block';
+    $('pay-provider').textContent = provider + ' payment initiated';
+    toast(`Processing ${provider}...`, 'info');
+    
+    setTimeout(() => {
+      if (payTarget) {
+        markPaid(payTarget.id).then(() => showReceiptPreview(payTarget.name, payTarget.fee, provider));
+      }
+    }, 2000);
+  }
+
+  function showReceiptPreview(name, fee, method) {
+    const date = new Date();
+    const receiptNum = 'RCPT-' + Date.now().toString(36).toUpperCase();
+    $('receipt-number').textContent = 'Receipt: ' + receiptNum;
+    $('receipt-student').textContent = name;
+    $('receipt-date').textContent = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    $('receipt-method').textContent = method;
+    $('receipt-amount').textContent = '₹' + Number(fee).toLocaleString('en-IN');
+    closeModals();
+    openModal('receipt-preview-modal');
+    toast('Payment successful!', 'success');
+    payTarget = null;
+  }
+
+  function printReceipt() {
+    window.print();
+  }
 
   function simPay(provider) {
     toast(`Processing ${provider}...`, 'info');
-    setTimeout(() => {
-      if (payTarget) { markPaid(payTarget.id); downloadReceipt(payTarget.id, payTarget.name, payTarget.fee); closeModals(); }
+    setTimeout(async () => {
+      if (payTarget) {
+        await markPaidAndDownload(payTarget.id, payTarget.name, payTarget.fee);
+      }
     }, 1500);
   }
 
   function downloadReceipt(id, name, fee) {
-    const text = `====================================\nCHESSKIDOO ACADEMY RECEIPT\n====================================\nDate: ${new Date().toLocaleDateString()}\nStudent: ${name}\nAmount: ₹${fee}\nStatus: PAID\n====================================`;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
-    a.download = `Receipt_${name.replace(/\s/g,'_')}.txt`;
-    a.click();
+    const date = new Date();
+    const receiptNumber = 'RCPT-' + Date.now().toString(36).toUpperCase();
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Receipt - ${receiptNumber}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; background: #1a1a1a; min-height: 100vh; }
+    .receipt { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .receipt-header { background: linear-gradient(135deg, #dca33e 0%, #b8922e 100%); padding: 40px; text-align: center; color: #fff; }
+    .crown { font-size: 48px; margin-bottom: 12px; }
+    .academy-name { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; letter-spacing: 2px; }
+    .receipt-sub { font-size: 14px; opacity: 0.9; margin-top: 8px; }
+    .receipt-body { padding: 40px; }
+    .receipt-number { font-family: 'DM Mono', monospace; font-size: 13px; color: #888; text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+    .receipt-number strong { color: #dca33e; }
+    .receipt-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f5f5f5; }
+    .receipt-row:last-child { border-bottom: none; }
+    .receipt-label { color: #666; font-size: 14px; }
+    .receipt-value { font-weight: 600; font-size: 16px; color: #1a1a1a; }
+    .receipt-total { background: #fafafa; margin: 20px -40px -40px; padding: 30px 40px; text-align: right; border-top: 2px solid #dca33e; }
+    .total-label { font-size: 16px; color: #666; }
+    .total-amount { font-size: 36px; font-weight: 700; color: #dca33e; font-family: 'DM Mono', monospace; }
+    .status-badge { display: inline-block; background: #22c55e; color: #fff; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .footer { text-align: center; padding: 30px; background: #fafafa; color: #888; font-size: 13px; }
+    .footer p { margin-bottom: 8px; }
+    .thank-you { font-family: 'Playfair Display', serif; font-size: 24px; color: #dca33e; margin-bottom: 12px; }
+    @media print { body { background: #fff; padding: 0; } .receipt { box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <div class="receipt">
+    <div class="receipt-header">
+      <div class="crown">♚</div>
+      <div class="academy-name">CHESSKIDOO</div>
+      <div class="receipt-sub">Premium Chess Academy</div>
+    </div>
+    <div class="receipt-body">
+      <div class="receipt-number">Receipt: <strong>${receiptNumber}</strong></div>
+      <div class="receipt-row">
+        <span class="receipt-label">Student Name</span>
+        <span class="receipt-value">${name}</span>
+      </div>
+      <div class="receipt-row">
+        <span class="receipt-label">Date</span>
+        <span class="receipt-value">${date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+      </div>
+      <div class="receipt-row">
+        <span class="receipt-label">Payment For</span>
+        <span class="receipt-value">Monthly Tuition</span>
+      </div>
+      <div class="receipt-row">
+        <span class="receipt-label">Status</span>
+        <span class="receipt-value"><span class="status-badge">PAID</span></span>
+      </div>
+      <div class="receipt-total">
+        <div class="total-label">Total Amount</div>
+        <div class="total-amount">₹${Number(fee).toLocaleString('en-IN')}</div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="thank-you">Thank You!</div>
+      <p>Chesskidoo Academy • Premium Chess Education</p>
+      <p>www.chesskidoo.com • contact@chesskidoo.com</p>
+    </div>
+  </div>
+  <script>window.onload = function() { window.print(); }</script>
+</body>
+</html>`;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    toast('Receipt generated - print dialog opened', 'success');
+  }
+
+  function generatePaymentQR(amount) {
+    const upiId = 'chesskidoo@upi';
+    const note = `Chesskidoo Tuition ₹${amount}`;
+    return `upi://${upiId}?am=${amount}&tn=${encodeURIComponent(note)}`;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -744,37 +1459,63 @@ async function updateStudent() {
     $('msgs-list').style.display = 'grid';
     
     try {
-      allMessages = await fetch('/api/messages').then(r => r.json());
+      const response = await fetch('/api/messages');
+      const result = await response.json();
+      allMessages = result.data || result || [];
     } catch (e) { allMessages = []; }
 
     if (!allMessages.length) { $('msgs-list').innerHTML = `<div class="empty-state"><div class="empty-icon">💬</div><p>No messages.</p></div>`; return; }
 
-    $('msgs-list').innerHTML = allMessages.map(m => `
-      <div style="padding:20px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;${!m.is_read ? 'border-left:4px solid var(--gold)' : ''}">
-        <div style="display:flex;justify-content:space-between;margin-bottom:12px">
-          <span style="color:var(--gold);font-weight:600">${m.sender_type === 'admin' ? '👑 Admin' : '👤 ' + (m.sender_name || 'Parent')}</span>
-          <span style="color:var(--ivory-dim);font-size:12px">${new Date(m.created_at).toLocaleDateString()}</span>
-        </div>
-        <div style="color:var(--ivory);margin-bottom:12px">${m.message}</div>
-        <div style="display:flex;gap:10px">
-          ${!m.is_read ? `<button class="btn btn-outline-blue btn-sm" onclick="markMsgRead('${m.id}')">Mark Read</button>` : ''}
-          <button class="btn btn-danger btn-sm" onclick="deleteMsg('${m.id}')">Delete</button>
-        </div>
-      </div>`).join('');
+    $('msgs-list').innerHTML = allMessages.map(m => {
+      const priority = getMessagePriority(m);
+      const isRead = getMessageIsRead(m);
+      const priorityColor = priority === 'urgent' ? 'var(--danger)' : priority === 'high' ? 'var(--gold)' : 'var(--ivory-dim)';
+      return `
+        <div style="padding:20px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;${!isRead ? 'border-left:4px solid var(--gold)' : ''}">
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+            <span style="color:var(--gold);font-weight:600">${m.sender_type === 'admin' ? '👑 Admin' : '👤 ' + (m.sender_name || 'Parent')}</span>
+            <span style="display:flex;gap:8px">
+              ${priority !== 'normal' ? `<span style="background:${priorityColor};color:#000;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">${priority.toUpperCase()}</span>` : ''}
+              <span style="color:var(--ivory-dim);font-size:12px">${new Date(m.created_at).toLocaleDateString()}</span>
+            </span>
+          </div>
+          ${m.subject ? `<div style="color:var(--gold);font-weight:600;margin-bottom:8px">${m.subject}</div>` : ''}
+          <div style="color:var(--ivory);margin-bottom:12px">${m.message}</div>
+          <div style="display:flex;gap:10px">
+            ${!isRead ? `<button class="btn btn-outline-blue btn-sm" onclick="markMsgRead('${m.id}')">Mark Read</button>` : ''}
+            <button class="btn btn-danger btn-sm" onclick="deleteMsg('${m.id}')">Delete</button>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   async function markMsgRead(id) {
+    // Clear any pending refresh
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    
     try {
-      await fetch(`${API_BASE}/messages?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_read: true }) });
-      renderMsgs();
+      const res = await fetch(`${API_BASE}/messages?id=${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_read: true, read_at: new Date().toISOString() }) });
+      if (res.ok) {
+        // Immediately update local data
+        allMessages = allMessages.map(m => String(m.id) === String(id) ? { ...m, is_read: true, read_at: new Date().toISOString() } : m);
+        renderMsgs();
+        updateMsgBadge();
+      }
     } catch (e) {}
   }
 
   async function deleteMsg(id) {
     if (!confirm('Delete?')) return;
+    // Clear any pending refresh
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
-      await fetch(`${API_BASE}/messages?id=${id}`, { method: 'DELETE' });
-      renderMsgs();
+      const res = await fetch(`${API_BASE}/messages?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (res.ok) {
+        // Immediately remove from local data
+        allMessages = allMessages.filter(m => String(m.id) !== String(id));
+        renderMsgs();
+        updateMsgBadge();
+      }
     } catch (e) {}
   }
 
@@ -787,17 +1528,20 @@ async function updateStudent() {
     $('c-name').textContent = getStudentName(s);
     $('c-elo').textContent = getStudentRating(s);
     $('c-level').textContent = getStudentLevel(s);
-    $('c-coach').textContent = (s.coaches && s.coaches.full_name) || '—';
-    $('c-notes').textContent = s.coach_notes || 'Great progress!';
-    $('contact-coach').textContent = (s.coaches && s.coaches.full_name) || '—';
+    const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
+    const coachName = studentCoachId ? (allCoaches.find(c => String(c.id) === studentCoachId)?.full_name || 'Unassigned') : 'Unassigned';
+    $('c-coach').textContent = coachName;
+    $('c-notes').textContent = getStudentCoachNotes(s) || 'Great progress!';
+    $('contact-coach').textContent = coachName;
     $('p-av-wrap').innerHTML = `<img src="${makeAvSrc(s)}" class="profile-av">`;
 
+    const studentSkills = getStudentSkills(s);
     const skills = ['Tactics', 'Endgame', 'Openings', 'Positional'];
-    const scores = [s.tactics_score || 50, s.endgame_score || 50, s.openings_score || 50, s.positional_score || 50];
+    const scores = [studentSkills.tactics, studentSkills.endgame, studentSkills.openings, studentSkills.positional];
     $('skill-bars').innerHTML = skills.map((sk, i) => `
       <div style="margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px"><span>${sk}</span><span style="color:var(--gold)">${scores[i]}/100</span></div>
-        <div style="height:8px;background:rgba(255,255,255,0.05);border-radius:4px"><div style="height:100%;width:${scores[i]}%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:4px"></div></div>
+        <div style="height:8px;background:rgba(255,255,255,0.05);border-radius:4px"><div style="height:100%;width:${scores[i]}%;background:linear-gradient(90deg,var(--gold),var(--gold2);border-radius:4px"></div></div>
       </div>`).join('');
 
     const myAchs = achievementsData.filter(a => a.students && a.students.full_name === getStudentName(s));
@@ -829,37 +1573,193 @@ async function updateStudent() {
     } catch (e) { toast('Failed', 'error'); }
   }
 
+// ═══════════════════════════════════════════════════════════════
+  // DASHBOARD
   // ═══════════════════════════════════════════════════════════════
-  // AI ASSISTANT
-  // ═══════════════════════════════════════════════════════════════
-  function generateAIResponse(query) {
-    const q = query.toLowerCase();
-    if (q.includes('hello') || q.includes('hi')) return "Hello! Ask about revenue, students, coaches, or events.";
-    if (q.includes('revenue') || q.includes('money')) return `Revenue: ₹${allStudents.filter(s => s.payment_status === 'Paid').reduce((a, s) => a + (s.monthly_fee || 0), 0).toLocaleString()}`;
-    if (q.includes('due') || q.includes('unpaid')) { const due = allStudents.filter(s => s.payment_status === 'Due'); return due.length ? `Due: ${due.length} students (₹${due.reduce((a, s) => a + (s.monthly_fee || 0), 0).toLocaleString()})` : 'All paid!'; }
-    if (q.includes('student') || q.includes('cadet')) return `We have ${allStudents.length} students.`;
-    if (q.includes('coach')) return `We have ${allCoaches.length} coaches: ${allCoaches.map(c => getCoachName(c)).join(', ')}.`;
-    if (q.includes('event')) return eventsData.length ? `Next: ${eventsData[0].title} (${eventsData[0].date || 'TBD'})` : 'No upcoming events.';
-    return "Try asking about revenue, students, coaches, or events!";
+  function renderDash() {
+    const paidStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid');
+    const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+    const avgElo = allStudents.length ? Math.round(allStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / allStudents.length) : 0;
+
+    const paidAmount = paidStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    const dueAmount = dueStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    const totalExpected = paidAmount + dueAmount;
+    
+    const coachExpenses = allCoaches.reduce((a, c) => a + getCoachSalary(c), 0);
+    const operationsCost = 15000;
+    const totalSpending = coachExpenses + operationsCost;
+    const netProfit = paidAmount - totalSpending;
+    const collectionRate = totalExpected > 0 ? Math.round((paidAmount / totalExpected) * 100) : 0;
+
+    $('s-total').textContent = allStudents.length;
+    $('s-elo').textContent = avgElo;
+    $('s-coaches').textContent = allCoaches.length;
+
+    $('s-rev').textContent = '₹' + paidAmount.toLocaleString();
+    $('s-due').textContent = '₹' + dueAmount.toLocaleString();
+    $('s-coach-exp').textContent = '₹' + coachExpenses.toLocaleString();
+    $('s-spend').textContent = '₹' + totalSpending.toLocaleString();
+    $('s-profit').textContent = (netProfit >= 0 ? '₹' : '-₹') + Math.abs(netProfit).toLocaleString();
+    $('s-profit').style.color = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+    $('s-rate').textContent = collectionRate + '%';
+
+    buildCharts(allStudents);
   }
 
-  function sendAI() {
-    const input = $('ai-input');
-    const box = $('chat-box');
-    const query = input.value.trim();
-    if (!query) return;
-    const uEl = document.createElement('div');
-    uEl.className = 'msg-user';
-    uEl.textContent = query;
-    box.appendChild(uEl);
-    input.value = '';
-    const thinking = document.createElement('div');
-    thinking.className = 'msg-ai msg-thinking';
-    thinking.textContent = '🤔 Analyzing...';
-    box.appendChild(thinking);
-    box.scrollTop = box.scrollHeight;
-    setTimeout(() => { thinking.textContent = generateAIResponse(query); thinking.classList.remove('msg-thinking'); box.scrollTop = box.scrollHeight; }, 800);
+  function getCoachStats(studs) {
+    const coachMap = {};
+    studs.forEach(s => {
+      const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
+      const cn = studentCoachId ? (allCoaches.find(c => String(c.id) === studentCoachId)?.full_name || 'Unknown') : 'Unassigned';
+      coachMap[cn] = (coachMap[cn] || 0) + 1;
+    });
+    const allStudentCoachIds = studs.map(s => s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null));
+    const allCoachIds = allCoaches.map(c => c.id);
+    const assignedCoachIds = new Set(allStudentCoachIds.filter(id => id && allCoachIds.includes(id)));
+    const unassignedCount = allStudentCoachIds.filter(id => !id || !allCoachIds.includes(id)).length;
+    return { coachMap, assignedCoachIds, unassignedCount };
   }
+
+  function showNotifications() {
+    const notifications = [
+      { type: 'info', message: 'Welcome to Chesskidoo Admin Panel!', time: 'Just now' },
+      { type: 'success', message: 'All systems operational', time: '2 hours ago' },
+      { type: 'warning', message: '5 students have pending payments', time: '1 day ago' },
+      { type: 'info', message: 'New achievement unlocked by a student', time: '2 days ago' }
+    ];
+
+    const content = notifications.map(n => `
+      <div class="notification-item ${n.type}">
+        <div class="notification-icon">${n.type === 'success' ? '✓' : n.type === 'warning' ? '⚠️' : n.type === 'error' ? '✕' : 'ℹ'}</div>
+        <div class="notification-content">
+          <div class="notification-message">${n.message}</div>
+          <div class="notification-time">${n.time}</div>
+        </div>
+      </div>
+    `).join('');
+
+    openModal('notification-modal');
+    $('notification-content').innerHTML = content;
+  }
+
+  function updateNotificationBadge() {
+    const unreadCount = allMessages.filter(m => !getMessageIsRead(m)).length;
+    const badge = $('notification-badge');
+    const btn = $('notification-btn');
+
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+      badge.style.display = 'inline-block';
+      btn.classList.add('has-notifications');
+    } else {
+      badge.style.display = 'none';
+      btn.classList.remove('has-notifications');
+    }
+  }
+
+  function exportData() {
+    const data = {
+      students: allStudents.map(s => ({
+        id: s.id,
+        name: getStudentName(s),
+        phone: getStudentPhone(s),
+        email: getStudentEmail(s),
+        level: getStudentLevel(s),
+        rating: getStudentRating(s),
+        coach: getStudentCoachName(s),
+        batch_type: getStudentBatchType(s),
+        batch_time: getStudentBatchTime(s),
+        payment_status: getStudentPaymentStatus(s),
+        monthly_fee: getStudentMonthlyFee(s),
+        join_date: getStudentDate(s)
+      })),
+      coaches: allCoaches.map(c => ({
+        id: c.id,
+        name: getCoachName(c),
+        email: getCoachEmail(c),
+        phone: c.phone,
+        specialty: getCoachSpecialty(c),
+        experience: getCoachExperience(c),
+        rating: getCoachRating(c),
+        salary: getCoachSalary(c),
+        status: getCoachStatus(c)
+      })),
+      achievements: achievementsData,
+      events: eventsData,
+      messages: allMessages,
+      export_date: new Date().toISOString(),
+      version: '2.0.0',
+      summary: {
+        total_students: allStudents.length,
+        active_students: allStudents.filter(s => s.status === 'active').length,
+        total_revenue: allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0),
+        total_dues: allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').reduce((a, s) => a + getStudentMonthlyFee(s), 0),
+        total_coaches: allCoaches.length,
+        total_achievements: achievementsData.length,
+        total_events: eventsData.length
+      }
+    };
+
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chesskidoo-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast('Backup created successfully!', 'success');
+  }
+
+  // Backup current state to localStorage
+  function createLocalBackup() {
+    try {
+      const backup = {
+        timestamp: Date.now(),
+        data: dataCache,
+        user: role,
+        version: '2.0.0'
+      };
+      localStorage.setItem('chesskidoo_backup', JSON.stringify(backup));
+      toast('Local backup created', 'success');
+    } catch (error) {
+      console.error('Backup failed:', error);
+      toast('Backup failed', 'error');
+    }
+  }
+
+  // Restore from local backup
+  function restoreLocalBackup() {
+    try {
+      const backup = JSON.parse(localStorage.getItem('chesskidoo_backup'));
+      if (!backup) {
+        toast('No backup found', 'error');
+        return;
+      }
+
+      dataCache = backup.data;
+      allCoaches = dataCache.coaches || [];
+      allStudents = dataCache.students || [];
+      achievementsData = dataCache.achievements || [];
+      eventsData = dataCache.events || [];
+
+      syncCoachDropdowns();
+      renderDash();
+      renderStudents();
+      updateMsgBadge();
+
+      toast('Backup restored successfully', 'success');
+    } catch (error) {
+      console.error('Restore failed:', error);
+      toast('Restore failed', 'error');
+    }
+  }
+
+
 
   // ═══════════════════════════════════════════════════════════════
   // THEME
@@ -905,14 +1805,21 @@ async function updateStudent() {
   window.registerEvent = registerEvent;
   window.renderBills = renderBills;
   window.markPaid = markPaid;
+  window.bulkMarkPaid = bulkMarkPaid;
   window.openPay = openPay;
+  window.initiatePay = initiatePay;
   window.simPay = simPay;
   window.downloadReceipt = downloadReceipt;
+  window.showReceiptPreview = showReceiptPreview;
+  window.printReceipt = printReceipt;
+  window.showNotifications = showNotifications;
+  window.updateNotificationBadge = updateNotificationBadge;
+  window.generatePaymentQR = generatePaymentQR;
   window.openContactModal = openContactModal;
   window.sendMsg = sendMsg;
   window.sendFeedback = sendFeedback;
   window.renderChild = renderChild;
-  window.sendAI = sendAI;
+
   window.toggleTheme = toggleTheme;
   window.closeModals = closeModals;
   window.previewFile = previewFile;
@@ -920,4 +1827,8 @@ async function updateStudent() {
   window.renderMsgs = renderMsgs;
   window.markMsgRead = markMsgRead;
   window.deleteMsg = deleteMsg;
+  window.exportData = exportData;
+  window.createLocalBackup = createLocalBackup;
+  window.checkHealth = checkHealth;
+  window.runStressTest = runStressTest;
 })();
