@@ -644,10 +644,43 @@ function finishLogin(page) {
     tbody.innerHTML = filtered.map((s, i) => {
       const status = getStudentPaymentStatus(s);
       const fee = getStudentMonthlyFee(s);
-      const action = status === 'Due'
-        ? `<button class="btn btn-gold btn-sm" onclick="markPaid('${s.id}')">Mark Paid</button>`
-        : `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}','${getStudentName(s)}','${fee}')">Receipt</button>`;
-      return `<tr><td style="font-family:'DM Mono';color:var(--ivory-dim)">#CK-${String(i+1).padStart(4,'0')}</td><td style="font-weight:600">${getStudentName(s)}</td><td style="font-family:'DM Mono'">₹${fee}</td><td><span class="${status==='Paid'?'text-success':'text-danger'}">${status}</span></td><td>${action}</td></tr>`;
+      const safeName = getStudentName(s).replace(/'/g, "\\'");
+      const studentCoachId = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null);
+      const coachObj = allCoaches.find(c => String(c.id) === studentCoachId);
+      const coachNameHtml = coachObj ? `<span class="badge badge-outline">${getCoachName(coachObj)}</span>` : `<span style="color:var(--ivory-dim)">None</span>`;
+
+      let actionHtml = `<div style="display:flex;gap:4px">
+        <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')">View</button>`;
+      
+      if (role === 'admin' || role === 'master') {
+        actionHtml += `<button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${safeName}')">Del</button>`;
+      }
+      
+      if (status === 'Due') {
+        actionHtml += `<button class="btn btn-gold btn-sm" onclick="markPaid('${s.id}')">Pay</button>`;
+      } else {
+        actionHtml += `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}','${safeName}','${fee}')">Receipt</button>`;
+      }
+      actionHtml += `</div>`;
+
+      return `<tr>
+        <td>
+          <div style="font-family:'DM Mono';color:var(--ivory-dim);font-size:11px;margin-bottom:2px">#CK-${String(i+1).padStart(4,'0')}</div>
+          <div style="font-weight:600">${getStudentName(s)}</div>
+        </td>
+        <td>
+          <div style="font-weight:500;margin-bottom:2px">${getStudentLevel(s)}</div>
+          <div style="font-size:11px;color:var(--gold);font-family:'DM Mono'">${getStudentRating(s)} ELO</div>
+        </td>
+        <td style="font-family:'DM Mono';color:var(--ivory-dim)">${getStudentDate(s) || '-'}</td>
+        <td>${coachNameHtml}</td>
+        <td>
+          <div style="font-family:'DM Mono';font-size:13px;margin-bottom:2px">₹${fee}/mo</div>
+          <span class="${status==='Paid'?'text-success':'text-danger'}" style="font-size:11px;font-weight:600">${status}</span>
+        </td>
+        <td>${actionHtml}</td>
+      </tr>`;
     }).join('');
   }
 
