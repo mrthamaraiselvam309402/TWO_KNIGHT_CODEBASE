@@ -50,7 +50,9 @@ Deno.serve(async (req) => {
     const data = await res.json();
     let reply = "I'm having trouble thinking right now.";
     
-    if (data.candidates && data.candidates.length > 0) {
+    if (!res.ok) {
+      reply = `API Error: ${data.error?.message || res.statusText}`;
+    } else if (data.candidates && data.candidates.length > 0) {
       reply = data.candidates[0].content.parts[0].text;
     }
 
