@@ -1333,28 +1333,50 @@
   // ═══════════════════════════════════════════════════════════════
   // CHATBOT WIDGET
   // ═══════════════════════════════════════════════════════════════
-  function toggleChatbot() {
-    const panel = $('ai-chat-panel');
-    if (panel) panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+  function toggleChat() {
+    const panel = $('chat-panel');
+    if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'flex' : 'none';
   }
+  function toggleChatbot() { toggleChat(); }
 
-  async function sendChatMessage() {
-    const input = $('ai-input');
+  async function sendChat() {
+    const input = $('chat-input');
     const body = $('ai-chat-body');
     if (!input || !body) return;
     const msg = input.value.trim();
     if (!msg) return;
     input.value = '';
-    body.innerHTML += `<div class="ai-msg user">${msg}</div>`;
+    
+    const uMsg = document.createElement('div');
+    uMsg.className = 'chat-msg user';
+    uMsg.textContent = msg;
+    body.appendChild(uMsg);
     body.scrollTop = body.scrollHeight;
-    try {
-      const res = await apiCall(`${API_BASE}/ai`, { method: 'POST', body: JSON.stringify({ message: msg, role: role || 'admin', context: { students: allStudents.length, coaches: allCoaches.length } }) });
-      const data = await res.json();
-      body.innerHTML += `<div class="ai-msg bot">${data.message || 'No response.'}</div>`;
-    } catch (e) {
-      body.innerHTML += `<div class="ai-msg bot" style="color:var(--danger)">AI unavailable.</div>`;
+
+    setTimeout(() => {
+      const bMsg = document.createElement('div');
+      bMsg.className = 'chat-msg bot';
+      bMsg.textContent = generateChatReply(msg);
+      body.appendChild(bMsg);
+      body.scrollTop = body.scrollHeight;
+    }, 600);
+  }
+  function sendChatMessage() { sendChat(); }
+
+  function generateChatReply(q) {
+    const lq = q.toLowerCase();
+    if (lq.includes('student') || lq.includes('enroll')) return "You have " + allStudents.length + " active students. " + (allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length) + " paid this month.";
+    if (lq.includes('revenue') || lq.includes('money') || lq.includes('income')) {
+      const revenue = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+      return "Revenue: ₹" + revenue.toLocaleString() + ". Outstanding: ₹" + (allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').reduce((a, s) => a + getStudentMonthlyFee(s), 0)).toLocaleString();
     }
-    body.scrollTop = body.scrollHeight;
+    if (lq.includes('elo') || lq.includes('top') || lq.includes('best') || lq.includes('rating')) {
+      const top = [...allStudents].sort((a, b) => getStudentRating(b) - getStudentRating(a)).slice(0, 3);
+      return "Top by ELO:\n" + top.map((s, i) => (i+1) + ". " + getStudentName(s) + " — " + getStudentRating(s)).join('\n');
+    }
+    if (lq.includes('due') || lq.includes('pending') || lq.includes('pay') || lq.includes('unpaid')) return "Due: " + allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').map(s => getStudentName(s)).join(', ') || "All paid!";
+    if (lq.includes('coach') || lq.includes('teacher')) return allCoaches.map(c => getCoachName(c) + " (" + allStudents.filter(s => { const cid = s.coaches?.id ? String(s.coaches.id) : (s.coach_id ? String(s.coach_id) : null); return cid === String(c.id); }).length + " students)").join('\n') || "No coaches";
+    return "Ask about students, revenue, ELO ratings, due fees, or coaches!";
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1434,7 +1456,7 @@
     renderMsgs, markMsgRead, deleteMsg,
     renderChild, openContactModal, sendMsg, sendFeedback,
     showNotifications, updateNotificationBadge,
-    setAIModule, setAISuggestion, sendAIQuery, toggleChatbot, sendChatMessage,
+    setAIModule, setAISuggestion, sendAIQuery, toggleChatbot, sendChatMessage, toggleChat, sendChat,
     toggleTheme, closeModals, openModal, previewFile,
     generateReportPDF, exportData, toast, $
   };
