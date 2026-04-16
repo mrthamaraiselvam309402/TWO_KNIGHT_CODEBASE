@@ -2279,12 +2279,9 @@ async function updateStudent() {
   // AUTH
   // ═══════════════════════════════════════════════════════════════
   async function doLogin() {
-    console.log('doLogin called');
     const user = $('li-user').value.trim();
     const pass = $('li-pass').value;
     const errEl = $('login-err');
-
-    console.log('User:', user, 'Pass length:', pass.length);
 
     if (!user || !pass) {
       errEl.textContent = 'Please enter both username and password';
@@ -2294,18 +2291,59 @@ async function updateStudent() {
 
     errEl.style.display = 'none';
 
-    // Simple login for now - admin/admin123
+    // Load students first for parent login
+    try {
+      const studentsRes = await apiCall(`${API_BASE}/students`);
+      allStudents = await studentsRes.json();
+    } catch (e) {
+      console.warn('Failed to load students:', e);
+    }
+
+    // Check master admin first
+    try {
+      const masterRes = await apiCall(`${API_BASE}/security?action=verify_master`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, password: pass })
+      });
+      if (masterRes.ok) {
+        const masterData = await masterRes.json();
+        if (masterData.is_master) {
+          role = 'master';
+          localStorage.setItem('chesskidoo_auth', JSON.stringify({ role: 'master', user }));
+          proceedLogin();
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Security API failed, using fallback');
+    }
+
+    // Check parent login
+    const student = allStudents.find(s => 
+      (s.full_name || s.name || '').toLowerCase() === user.toLowerCase()
+    );
+    if (student && (student.parent_phone || student.phone) === pass) {
+      role = 'parent';
+      currentStudent = student;
+      localStorage.setItem('chesskidoo_auth', JSON.stringify({ 
+        role: 'parent', 
+        user: student.full_name || student.name, 
+        studentId: student.id 
+      }));
+      proceedLogin();
+      return;
+    }
+
+    // Fallback admin login
     if (user === 'admin' && pass === 'admin123') {
-      console.log('Admin login success');
       role = 'admin';
       localStorage.setItem('chesskidoo_auth', JSON.stringify({ role: 'admin', user }));
       proceedLogin();
       return;
     }
 
-    // TODO: Add API-based auth for master and parent login
-    console.log('Invalid credentials');
-    errEl.textContent = 'Invalid credentials (use admin/admin123 for now)';
+    errEl.textContent = 'Invalid credentials';
     errEl.style.display = 'block';
   }
 
