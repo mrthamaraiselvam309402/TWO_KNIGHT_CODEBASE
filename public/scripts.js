@@ -117,6 +117,15 @@
   function getEventDate(e) { return e.date || e.event_date || ''; }
   function getEventType(e) { return e.type || e.event_type || 'Tournament'; }
   function getEventLocation(e) { return e.location || ''; }
+  function getEventTime(e) { 
+    const t = e.time || e.event_time || '10:00';
+    return formatTime(t);
+  }
+  async function registerForEvent(eventId) {
+    const e = eventsData.find(x => String(x.id) === String(eventId));
+    if (!e) { toast('Event not found', 'error'); return; }
+    toast('Registration feature coming soon!', 'info');
+  }
 
   function getMessagePriority(m) { return m.priority || 'normal'; }
   function getMessageIsRead(m) { return m.is_read || false; }
@@ -848,9 +857,9 @@
     } catch (e) { toast('Delete failed', 'error'); }
   }
 
-  // ═══════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════
   // EVENTS
-  // ═══════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════
   function renderEvents() {
     const loadingEl = $('ev-loading');
     const gridEl = $('ev-grid');
@@ -866,30 +875,54 @@
     gridEl.innerHTML = eventsData.map(e => {
       const dateStr = getEventDate(e);
       const isPast = dateStr && new Date(dateStr) < new Date();
+      const eventTime = getEventTime(e);
       const registered = (e.participants || []).length || e.current_participants || 0;
       const max = e.max_participants || 50;
       const progress = Math.min(100, Math.round((registered / max) * 100));
       const location = getEventLocation(e);
-      const mapsUrl = location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}` : 'https://www.google.com/maps';
+      const type = getEventType(e);
+      const prize = e.prize || 'Free';
 
-      return `<div class="event-card ${isPast ? 'past' : ''}">
-        <div class="event-banner"><div style="position:absolute;top:12px;right:12px"><span class="event-tag" style="background:var(--obsidian);border:1px solid var(--gold)">${getEventType(e)}</span></div></div>
-        <div class="event-content">
-          <div style="font-family:var(--font-head);font-size:24px;color:var(--gold);margin-bottom:4px">${e.title || 'Event'}</div>
-          <div style="font-size:14px;opacity:0.7;margin-bottom:12px">${e.description || ''}</div>
-          <div class="event-bento-grid">
-            <div class="event-bento-item"><div class="label">Date</div><div class="value">${dateStr || 'TBD'}</div></div>
-            <div class="event-bento-item"><div class="label">Entry</div><div class="value">₹${e.prize || '500'}</div></div>
-            <a href="${mapsUrl}" target="_blank" class="event-bento-item event-map-tile"><div class="label">Location 📍</div><div class="value">${location || 'TBD'}</div></a>
-            <div class="event-bento-item" style="grid-column:span 2"><div class="label">Registrations (${registered}/${max})</div><div class="event-progress-bar" style="margin-top:8px"><div class="event-progress-fill" style="width:${progress}%;height:6px;background:var(--gold);border-radius:3px"></div></div></div>
+      return `<div class="ev-card">
+        <div class="ev-header">
+          <span class="ev-type-badge">${type}</span>
+          <span class="ev-date-badge">${dateStr || 'TBD'}</span>
+        </div>
+        <div class="ev-body">
+          <div class="ev-title">${e.title || 'Chess Tournament'}</div>
+          <div class="ev-meta">
+            <span class="ev-meta-item ev-time">${eventTime}</span>
+            <span class="ev-meta-item ev-loc">${location || 'TBD'}</span>
+            <span class="ev-meta-item ev-prize">${prize}</span>
+          </div>
+          <div class="ev-desc">${e.description || 'Join us for an exciting chess event!'}</div>
+        </div>
+        <div class="ev-progress-wrap">
+          <div class="ev-progress-label">
+            <span>Registrations</span>
+            <span>${registered}/${max}</span>
+          </div>
+          <div class="ev-progress-track">
+            <div class="ev-progress-bar" style="width:${progress}%"></div>
           </div>
         </div>
-        <div class="event-footer"><div style="display:flex;gap:10px">
-          ${role === 'admin' || role === 'master' ? `<button class="btn btn-danger" style="width:100px" onclick="deleteEvent('${e.id}')">Delete</button>` : ''}
-          ${isPast ? '<div style="width:100%;text-align:center;color:var(--ivory-dim);padding:10px">Event Completed</div>' : ''}
-        </div></div>
+        <div class="ev-footer">
+          <div class="ev-spots"><strong>${max - registered}</strong> spots left</div>
+          ${isPast ? 
+            '<button class="btn-register registered" disabled>Event Completed</button>' : 
+            `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register Now</button>`
+          }
+        </div>
       </div>`;
     }).join('');
+  }
+
+  function openEventModal() {
+    ['ev-title','ev-desc','ev-date','ev-time','ev-loc','ev-type','ev-max','ev-prize'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+    if ($('ev-date')) $('ev-date').value = '';
+    if ($('ev-time')) $('ev-time').value = '10:00';
+    if ($('ev-max')) $('ev-max').value = '50';
+    openModal('ev-modal');
   }
 
   // FIX: single saveEvent function — no duplicate
