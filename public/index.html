@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Chesskidoo — Premium Chess Academy</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="styles.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -43,8 +43,8 @@
     <div class="nav-item" id="nav-fame" onclick="setPage('fame')"><span class="ico">🏆</span> Wall of Fame</div>
     <div class="nav-item" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Events</div>
     <div class="nav-item" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
-     <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
-     <div class="nav-item" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
+    <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
+    <div class="nav-item" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
   </div>
   <div style="padding:16px;border-top:1px solid var(--border)">
     <div class="nav-item" onclick="toggleTheme()"><span class="ico">🌗</span> Switch Theme</div>
@@ -60,8 +60,8 @@
       </button>
       <span id="p-title">Overview</span>
     </div>
-     <div class="top-nav-right">
-       <button class="btn btn-outline" onclick="showNotifications()" style="margin-right:10px" title="Notifications" id="notification-btn">🔔 <span id="notification-badge" class="badge badge-danger" style="display:none">0</span></button>
+    <div class="top-nav-right">
+      <button class="btn btn-outline" onclick="showNotifications()" style="margin-right:10px" title="Notifications" id="notification-btn">🔔 <span id="notification-badge" class="badge badge-danger" style="display:none">0</span></button>
       <div id="top-btn-area" style="display:flex;gap:10px;align-items:center"></div>
       <div class="top-profile" id="top-profile" onclick="openProfile()" style="display:none;">
         <img id="top-profile-av" class="top-profile-av" src="" alt="Profile">
@@ -189,66 +189,64 @@
       </div>
     </div>
 
-     <!-- Messages -->
-     <div id="page-msgs" class="page admin-only">
-       <div id="msgs-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
-       <div class="msgs-list" id="msgs-list" style="display:none;grid-template-columns:1fr;gap:16px"></div>
-     </div>
+    <!-- Messages -->
+    <div id="page-msgs" class="page admin-only">
+      <div id="msgs-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
+      <div class="msgs-list" id="msgs-list" style="display:none;grid-template-columns:1fr;gap:16px"></div>
+    </div>
 
-     <!-- AI Assistant Workspace -->
-     <div id="page-ai" class="page">
-       <div class="ai-ws">
-         <!-- Sidebar -->
-         <div class="ai-ws-sidebar">
-           <div class="ai-ws-brand">
-             <span>✨</span> Chesskidoo AI
-           </div>
-           
-           <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--ivory-dim);margin-bottom:12px;font-weight:600">Copilot Modules</div>
-           <div class="ai-ws-menu" id="ai-modules">
-             <button class="ai-ws-btn active" onclick="setAIModule('global')">⚡ Global Insights</button>
-             <button class="ai-ws-btn" onclick="setAIModule('finance')">💰 Financial Analysis</button>
-             <button class="ai-ws-btn" onclick="setAIModule('coach')">🧑‍🏫 Coach Performance</button>
-           </div>
-         </div>
-         
-         <!-- Main Chat Area -->
-         <div class="ai-ws-main">
-           <div class="ai-ws-header">
-             <h2>Academy Intelligence</h2>
-             <p>Real-time analytics and predictive capabilities.</p>
-           </div>
-           
-           <div class="ai-ws-chat" id="ai-workspace-msgs">
-             <div class="ai-ws-msg bot">
-               <div class="ai-ws-avatar">🤖</div>
-               <div class="ai-ws-bubble">
-                 Hello Admin! I'm your dedicated AI Copilot. I'm securely connected to your live academy database. How can I assist you with analytics, student insights, or performance metrics today?
-               </div>
-             </div>
-           </div>
-           
-           <div class="ai-ws-input-area">
-             <div class="ai-ws-input-box">
-               <input type="text" id="ai-query" placeholder="Ask about revenue trends, active coaches, or due payments..." onkeydown="if(event.key==='Enter') sendAIQuery()">
-               <button class="ai-ws-send" onclick="sendAIQuery()">
-                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
-               </button>
-             </div>
-             <div class="ai-ws-suggest">
-               <button class="ai-ws-pill" onclick="setAISuggestion('How many students are enrolled?')">How many students?</button>
-               <button class="ai-ws-pill" onclick="setAISuggestion('What is the total revenue?')">Total revenue?</button>
-               <button class="ai-ws-pill" onclick="setAISuggestion('Which coach has the most students?')">Top coach?</button>
-               <button class="ai-ws-pill" onclick="setAISuggestion('Show me payment status breakdown')">Payment status breakdown</button>
-             </div>
-           </div>
-         </div>
-       </div>
-     </div>
+    <!-- AI Assistant Workspace -->
+    <div id="page-ai" class="page">
+      <div class="ai-ws">
+        <!-- Sidebar -->
+        <div class="ai-ws-sidebar">
+          <div class="ai-ws-brand">
+            <span>✨</span> Chesskidoo AI
+          </div>
+          
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--ivory-dim);margin-bottom:12px;font-weight:600">Copilot Modules</div>
+          <div class="ai-ws-menu" id="ai-modules">
+            <button class="ai-ws-btn active" onclick="setAIModule('global')">⚡ Global Insights</button>
+            <button class="ai-ws-btn" onclick="setAIModule('finance')">💰 Financial Analysis</button>
+            <button class="ai-ws-btn" onclick="setAIModule('coach')">🧑‍🏫 Coach Performance</button>
+          </div>
+        </div>
+        
+        <!-- Main Chat Area -->
+        <div class="ai-ws-main">
+          <div class="ai-ws-header">
+            <h2>Academy Intelligence</h2>
+            <p>Real-time analytics and predictive capabilities.</p>
+          </div>
+          
+          <div class="ai-ws-chat" id="ai-workspace-msgs">
+            <div class="ai-ws-msg bot">
+              <div class="ai-ws-avatar">🤖</div>
+              <div class="ai-ws-bubble">
+                Hello Admin! I'm your dedicated AI Copilot. I'm securely connected to your live academy database. How can I assist you with analytics, student insights, or performance metrics today?
+              </div>
+            </div>
+          </div>
+          
+          <div class="ai-ws-input-area">
+            <div class="ai-ws-input-box">
+              <input type="text" id="ai-query" placeholder="Ask about revenue trends, active coaches, or due payments..." onkeydown="if(event.key==='Enter') sendAIQuery()">
+              <button class="ai-ws-send" onclick="sendAIQuery()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
+              </button>
+            </div>
+            <div class="ai-ws-suggest">
+              <button class="ai-ws-pill" onclick="setAISuggestion('How many students are enrolled?')">How many students?</button>
+              <button class="ai-ws-pill" onclick="setAISuggestion('What is the total revenue?')">Total revenue?</button>
+              <button class="ai-ws-pill" onclick="setAISuggestion('Which coach has the most students?')">Top coach?</button>
+              <button class="ai-ws-pill" onclick="setAISuggestion('Show me payment status breakdown')">Payment status breakdown</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-
-
-   </div>
+  </div>
 </div>
 
 <!-- Toast -->
@@ -495,7 +493,6 @@
   </div>
 </div>
 
-
 <!-- Receipt Preview Modal -->
 <div class="modal" id="receipt-preview-modal">
   <div class="modal-box" style="max-width:500px;padding:0;overflow:hidden">
@@ -536,12 +533,12 @@
   </div>
 </div>
 
-
-
-<!-- AI Chat Widget -->
+<!-- AI Chat Widget - Floating Button -->
 <div class="ai-chat-btn" id="ai-chat-btn" onclick="toggleChatbot()">
   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
 </div>
+
+<!-- AI Chat Panel -->
 <div class="ai-chat-panel" id="ai-chat-panel">
   <div class="ai-chat-header">
     <div class="ai-chat-title">Chesskidoo AI <span class="ai-online-dot"></span></div>
