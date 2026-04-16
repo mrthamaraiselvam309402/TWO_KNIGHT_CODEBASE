@@ -136,19 +136,13 @@ Deno.serve(async (req) => {
         full_name: sanitizeString(body.full_name || body.name, 100),
         phone: validatePhone(body.phone || body.parent_phone),
         parent_phone: validatePhone(body.parent_phone || body.phone),
-        email: validateEmail(body.email),
         grade: sanitizeString(body.grade, 50),
         level: sanitizeString(body.level || body.grade, 50) || 'Beginner',
         enrollment_date: sanitizeString(body.enrollment_date || body.join_date, 10),
         join_date: sanitizeString(body.join_date || body.enrollment_date, 10),
         rating: validateRating(body.rating),
-        current_rating: validateRating(body.current_rating || body.rating),
         payment_status: sanitizeString(body.payment_status, 20) || 'Due',
         status: validateStatus(body.status),
-        coach_id: body.coach_id ? sanitizeString(body.coach_id, 50) : null,
-        notes: sanitizeString(body.notes, 2000),
-        parent_name: sanitizeString(body.parent_name, 100),
-        address: sanitizeString(body.address, 500),
         created_at: new Date().toISOString()
       }
       
@@ -190,15 +184,11 @@ Deno.serve(async (req) => {
       if (body.full_name !== undefined) updateData.full_name = sanitizeString(body.full_name, 100)
       if (body.phone !== undefined) updateData.phone = validatePhone(body.phone)
       if (body.parent_phone !== undefined) updateData.parent_phone = validatePhone(body.parent_phone)
-      if (body.email !== undefined) updateData.email = validateEmail(body.email)
       if (body.grade !== undefined) updateData.grade = sanitizeString(body.grade, 50)
       if (body.level !== undefined) updateData.level = sanitizeString(body.level, 50)
       if (body.payment_status !== undefined) updateData.payment_status = sanitizeString(body.payment_status, 20)
       if (body.status !== undefined) updateData.status = validateStatus(body.status)
       if (body.rating !== undefined) updateData.rating = validateRating(body.rating)
-      if (body.current_rating !== undefined) updateData.current_rating = validateRating(body.current_rating)
-      if (body.coach_id !== undefined) updateData.coach_id = body.coach_id ? sanitizeString(body.coach_id, 50) : null
-      if (body.notes !== undefined) updateData.notes = sanitizeString(body.notes, 2000)
       if (body.join_date !== undefined) updateData.join_date = sanitizeString(body.join_date, 10)
       
       updateData.updated_at = new Date().toISOString()
