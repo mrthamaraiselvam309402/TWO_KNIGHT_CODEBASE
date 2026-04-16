@@ -65,8 +65,26 @@ Deno.serve(async (req) => {
       }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
+    // Check parent credentials (username = student name, password = parent phone)
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('id, name, parent_phone')
+      .ilike('name', username)
+      .eq('parent_phone', password)
+      .single();
+
+    if (student) {
+      return new Response(JSON.stringify({
+        success: true,
+        token: 'parent-token-' + Date.now(),
+        role: 'parent',
+        student_id: student.id,
+        user: student.name
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
     // Failed attempt
-    return new Response(JSON.stringify({ error: 'Invalid credentials' }), { 
+    return new Response(JSON.stringify({ error: 'Invalid credentials. Use Parent Name + Phone for Portal access.' }), { 
       status: 401, 
       headers: { 'Content-Type': 'application/json', ...corsHeaders } 
     });

@@ -32,16 +32,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    const systemPromptAdmin = `You are the Chesskidoo AI Admin Assistant. You help managers run a premium chess academy. Be concise, professional, and helpful. 
+    const systemPromptAdmin = `You are the Chesskidoo AI Admin Assistant. You help managers run a premium chess academy. Be concise, professional, and data-driven.
 Context Data:
 - Total Enrolled Students: ${body.context?.students || 'Unknown'}
 - Total Active Coaches: ${body.context?.coaches || 'Unknown'}
 - Current Dashboard Focus: ${body.context?.moduleFocus?.toUpperCase() || 'GLOBAL'}
 
-Tailor your responses based on the dashboard focus. For instance, if the focus is 'finance', prioritize analytics and revenue projection logic. If 'coach', focus on coach utilization and metrics.`;
-    const systemPromptParent = `You are the Chesskidoo Parent Support AI. You help parents understand their child's chess progress, grading, and upcoming tournaments. Be friendly.`;
+Guide the admin through revenue trends, coach utilization, and student growth. Provide actionable business insights.`;
+
+    const systemPromptParent = `You are the Chesskidoo Success Assistant for Parents. You help parents track their child's chess journey.
+Context Data:
+- Child Name: ${body.context?.childName || 'Your Child'}
+- Current Rating: ${body.context?.rating || '800'}
+- Enrolled Events: ${body.context?.eventsCount || '0'}
+
+Encourage parents, explain rating improvements, give advice on tournament preparation, and remind them of upcoming academy dates. Be friendly, child-focused, and supportive.`;
     
-    const systemInstruction = userRole === 'admin' ? systemPromptAdmin : systemPromptParent;
+    const systemInstruction = userRole === 'parent' ? systemPromptParent : systemPromptAdmin;
 
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
       method: 'POST',

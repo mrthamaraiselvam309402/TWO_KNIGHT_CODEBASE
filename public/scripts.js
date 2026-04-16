@@ -465,13 +465,14 @@
           role = 'parent';
           document.body.classList.add('parent-mode');
           $('top-profile').style.display = 'flex';
-          $('top-profile-name').textContent = data.user.name.split(' ')[0];
-          $('top-profile-av').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.user.name)}&background=dca33e&color=000&bold=true&size=80`;
+          const pName = data.user || 'Parent';
+          $('top-profile-name').textContent = pName.split(' ')[0];
+          $('top-profile-av').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(pName)}&background=dca33e&color=000&bold=true&size=80`;
           // Store student ID for parent
-          if (data.user.studentId) localStorage.setItem('studentId', data.user.studentId);
+          if (data.student_id) localStorage.setItem('studentId', data.student_id);
         }
         
-        finishLogin('dash');
+        finishLogin(data.role === 'parent' ? 'child' : 'dash');
       } else {
         errEl.textContent = data.error || 'Invalid credentials.';
         errEl.style.display = 'block';
@@ -1185,7 +1186,7 @@ async function updateStudent() {
 
           <div class="event-footer">
             <div style="display:flex; gap:10px">
-              ${canRegister ? `<button class="btn btn-gold w-100" style="padding:14px" id="reg-btn-${e.id}" onclick="registerEvent('${e.id}')">Secure My Spot</button>` : ''}
+              ${canRegister && (role !== 'admin' && role !== 'master') ? `<button class="btn btn-gold w-100" style="padding:14px" id="reg-btn-${e.id}" onclick="registerEvent('${e.id}')">Secure My Spot</button>` : ''}
               ${role === 'admin' || role === 'master' ? `<button class="btn btn-danger" style="width:100px" onclick="deleteEvent('${e.id}')">Delete</button>` : ''}
               ${isPast ? '<div style="width:100%; text-align:center; color:var(--ivory-dim); padding:10px">Event Completed</div>' : ''}
             </div>
@@ -1813,43 +1814,43 @@ async function updateStudent() {
   }
 
 
-
   function showNotifications() {
+    renderNotifications();
+    openModal('notification-modal');
+  }
+  window.showNotifications = showNotifications;
+
+  function renderNotifications() {
+    const list = $('notification-list');
+    if (!list) return;
+
+    // Pull from messages or simulate live feed from events/achievements
     const notifications = [
-      { type: 'info', message: 'Welcome to Chesskidoo Admin Panel!', time: 'Just now' },
-      { type: 'success', message: 'All systems operational', time: '2 hours ago' },
-      { type: 'warning', message: '5 students have pending payments', time: '1 day ago' },
-      { type: 'info', message: 'New achievement unlocked by a student', time: '2 days ago' }
+      ...eventsData.slice(0, 3).map(e => ({ type: 'event', title: 'New Event!', msg: e.title, time: 'Live' })),
+      ...allMessages.filter(m => m.receiver_type === role && !getMessageIsRead(m)).map(m => ({ type: 'msg', title: 'New Message', msg: m.message, time: 'Recent' }))
     ];
 
-    const content = notifications.map(n => `
-      <div class="notification-item ${n.type}">
-        <div class="notification-icon">${n.type === 'success' ? '✓' : n.type === 'warning' ? '⚠️' : n.type === 'error' ? '✕' : 'ℹ'}</div>
-        <div class="notification-content">
-          <div class="notification-message">${n.message}</div>
-          <div class="notification-time">${n.time}</div>
+    if (notifications.length === 0) {
+      list.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">🔔</div><p>All caught up!</p></div>`;
+      $('notification-badge').style.display = 'none';
+      return;
+    }
+
+    $('notification-badge').style.display = 'inline';
+    $('notification-badge').textContent = notifications.length;
+
+    list.innerHTML = notifications.map(n => `
+      <div class="notification-item" style="padding:15px; border-bottom:1px solid var(--border); display:flex; gap:12px; align-items:start">
+        <div style="font-size:20px">${n.type === 'event' ? '📅' : '💬'}</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:var(--gold)">${n.title}</div>
+          <div style="font-size:14px; margin:2px 0">${n.msg}</div>
+          <div style="font-size:11px; opacity:0.5">${n.time}</div>
         </div>
       </div>
     `).join('');
-
-    openModal('notification-modal');
-    $('notification-content').innerHTML = content;
   }
 
-  function updateNotificationBadge() {
-    const unreadCount = allMessages.filter(m => !getMessageIsRead(m)).length;
-    const badge = $('notification-badge');
-    const btn = $('notification-btn');
-
-    if (unreadCount > 0) {
-      badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-      badge.style.display = 'inline-block';
-      btn.classList.add('has-notifications');
-    } else {
-      badge.style.display = 'none';
-      btn.classList.remove('has-notifications');
-    }
-  }
 
   function exportData() {
     const data = {
@@ -2133,14 +2134,16 @@ async function updateStudent() {
     `;
     setTimeout(() => bodyEl.scrollTop = bodyEl.scrollHeight, 50);
 
-    try {
       const payload = { 
         message: msg, 
-        role: 'admin', 
+        role: role || 'admin', 
         context: { 
           students: allStudents.length,
           coaches: allCoaches.length,
-          moduleFocus: activeAIModule
+          moduleFocus: activeAIModule,
+          childName: role === 'parent' ? getStudentName(currentStudent) : null,
+          rating: role === 'parent' ? getStudentRating(currentStudent) : null,
+          eventsCount: role === 'parent' ? (currentStudent?.participants?.length || 0) : null
         } 
       };
       const res = await apiCall(`${API_BASE}/ai`, {
