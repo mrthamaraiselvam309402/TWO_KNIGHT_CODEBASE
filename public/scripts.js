@@ -1226,12 +1226,12 @@ async function updateStudent() {
     };
 
     try {
-      const res = await apiCall(`${API_BASE}/events`, {
+      const res = await apiCall(`${API_BASE}/events/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(eventData)
       });
-      const result = await res.json();
+      const result = await res.json().catch(() => ({ error: 'Invalid JSON response from server' }));
       if (!res.ok) {
         toast('Failed: ' + (result.error || 'Unknown error'), 'error');
         return;
@@ -1249,7 +1249,8 @@ async function updateStudent() {
       renderEvents();
       renderDash();
     } catch (e) {
-      toast('Failed to create event', 'error');
+      console.error('Event creation error:', e);
+      toast('Network error occurred while saving event', 'error');
     }
   }
 

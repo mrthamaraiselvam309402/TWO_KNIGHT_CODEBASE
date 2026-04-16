@@ -408,11 +408,16 @@
     <div class="modal-title">Create Event</div>
     <input type="text" id="ev-title" placeholder="Event Name">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <input type="text" id="ev-date" placeholder="Date (e.g. Oct 20)">
+      <input type="date" id="ev-date">
       <select id="ev-type"><option>Tournament</option><option>Rapid</option><option>Blitz</option><option>Workshop</option></select>
     </div>
-    <input type="text" id="ev-prize" placeholder="Prize Pool">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <input type="time" id="ev-time" value="10:00">
+      <input type="number" id="ev-max" placeholder="Max Spots" value="50">
+    </div>
+    <input type="text" id="ev-prize" placeholder="Prize Pool (e.g. ₹2000)">
     <input type="text" id="ev-loc" placeholder="Location">
+    <textarea id="ev-desc" placeholder="Event Description..." rows="3"></textarea>
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
       <button class="btn btn-gold" style="flex:1" onclick="saveEvent()">Publish</button>
