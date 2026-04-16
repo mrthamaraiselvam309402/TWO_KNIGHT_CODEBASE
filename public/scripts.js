@@ -1142,7 +1142,7 @@ async function updateStudent() {
         <div class="event-card ${isPast ? 'past' : ''}">
           <div class="event-header">
             <div class="event-title">${e.title || 'Event'}</div>
-            ${role === 'admin' || role === 'master' ? `<button class="del-btn" onclick="deleteEvent('${e.id}')">✕</button>` : ''}
+            ${role === 'admin' || role === 'master' ? `<button class="btn btn-danger" style="padding: 6px 12px; font-weight: bold;" onclick="deleteEvent('${e.id}')">Delete</button>` : ''}
           </div>
           <div class="event-meta">
             <div class="event-date">📅 ${getEventDate(e) || 'TBD'}</div>
@@ -1385,39 +1385,7 @@ async function updateStudent() {
   // ═══════════════════════════════════════════════════════════════
   // EVENTS
   // ═══════════════════════════════════════════════════════════════
-  function renderEvents() {
-    $('ev-loading').style.display = 'none';
-    $('ev-grid').style.display = 'grid';
 
-    if (!eventsData.length) { $('ev-grid').innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>No events.</p></div>`; return; }
-
-    $('ev-grid').innerHTML = eventsData.map(e => `
-      <div class="ev-card">
-        <div class="ev-date">${getEventDate(e) || '—'}</div>
-        <div class="ev-type">${e.type || 'Event'}</div>
-        <div class="ev-title">${e.title}</div>
-        <div class="ev-meta">📍 ${e.location || '—'}<br>🏆 ${e.prize || '—'}</div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-gold btn-sm" style="flex:1" onclick="registerEvent('${e.id}')">Register</button>
-          ${role === 'admin' || role === 'master' ? `<button class="btn btn-danger btn-sm" onclick="deleteEvent('${e.id}')">Del</button>` : ''}
-        </div>
-      </div>`).join('');
-  }
-
-  async function saveEvent() {
-    // Clear any pending refresh for immediate update
-    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
-    
-    const title = $('ev-title').value.trim();
-    if (!title) { toast('Title required', 'error'); return; }
-
-    const data = { title: title, date: $('ev-date').value, type: $('ev-type').value, prize: $('ev-prize').value, location: $('ev-loc').value };
-
-    try {
-      const res = await apiCall(`${API_BASE}/events`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-      const result = await res.json();
-      if (!res.ok) {
-        toast('Failed: ' + (result.error || 'Unknown error'), 'error');
         return;
       }
       toast('Published!', 'success');

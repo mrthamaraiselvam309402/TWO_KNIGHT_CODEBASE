@@ -1020,17 +1020,24 @@ input:focus, select:focus, textarea:focus {
 }
 .ai-ws-msg.user .ai-ws-avatar { background: var(--gold); color: var(--obsidian); border-color: var(--gold2); }
 .ai-ws-bubble {
-  background: rgba(255,255,255,0.03);
+  background: rgba(40,40,60,0.4);
+  backdrop-filter: blur(8px);
   padding: 16px 20px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
   color: var(--ivory);
   line-height: 1.6;
   font-size: 15px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transition: transform 0.2s, border-color 0.2s;
+}
+.ai-ws-bubble:hover {
+  border-color: rgba(255,255,255,0.2);
 }
 .ai-ws-msg.user .ai-ws-bubble {
-  background: rgba(220, 161, 62, 0.1);
-  border-color: rgba(220, 161, 62, 0.3);
+  background: rgba(220, 161, 62, 0.15);
+  border-color: rgba(220, 161, 62, 0.4);
+  box-shadow: 0 4px 16px rgba(220,161,62,0.1);
 }
 .ai-ws-input-area {
   padding: 24px 40px;
