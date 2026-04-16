@@ -910,7 +910,9 @@
           <div class="ev-spots"><strong>${max - registered}</strong> spots left</div>
           ${isPast ? 
             '<button class="btn-register registered" disabled>Event Completed</button>' : 
-            `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register Now</button>`
+            role === 'parent' || role === null ? 
+              `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register Now</button>` :
+              `<button class="btn-register" style="background:var(--surface2);color:var(--ivory3);border:1px solid var(--border)" disabled>View Only</button>`
           }
         </div>
       </div>`;
@@ -1435,8 +1437,26 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // INIT
-  // ═══════════════════════════════════════════════════════════════
+// INIT
+  // ═══════════════════════════════════════════════════════════════════════
+  function checkAuth() {
+    try {
+      const saved = localStorage.getItem('chesskidoo_auth');
+      if (!saved) return false;
+      const auth = JSON.parse(saved);
+      if (!auth.role) return false;
+      role = auth.role;
+      if (auth.role === 'parent' && auth.studentId) {
+        currentStudent = allStudents.find(s => s.id === auth.studentId) || null;
+      }
+      const name = auth.user || (auth.role === 'admin' ? 'Admin' : 'User');
+      finishLogin(name, auth.role, auth.studentId || null);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
     if (!checkAuth()) {
       const loginScreen = $('login-screen');
