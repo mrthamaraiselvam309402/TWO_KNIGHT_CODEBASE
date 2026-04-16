@@ -1382,31 +1382,6 @@ async function updateStudent() {
     } catch (e) { toast('Failed', 'error'); }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // EVENTS
-  // ═══════════════════════════════════════════════════════════════
-
-        return;
-      }
-      toast('Published!', 'success');
-      closeModals();
-      
-      // Immediately add new event
-      const newEvent = result.data || result;
-      if (newEvent && newEvent.id) {
-        eventsData = [newEvent, ...eventsData];
-        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
-      }
-      
-      $('ev-title').value = '';
-      $('ev-date').value = '';
-      $('ev-prize').value = '';
-      $('ev-loc').value = '';
-      renderEvents();
-    } catch (e) { toast('Failed', 'error'); }
-  }
-
-
 
 async function registerEvent(id) {
     toast('Registered!', 'success');
