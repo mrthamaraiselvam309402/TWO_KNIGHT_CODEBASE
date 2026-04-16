@@ -196,30 +196,53 @@
        <div class="msgs-list" id="msgs-list" style="display:none;grid-template-columns:1fr;gap:16px"></div>
      </div>
 
-     <!-- AI Assistant -->
+     <!-- AI Assistant Workspace -->
      <div id="page-ai" class="page">
-       <div class="ai-chat">
-         <div class="chat-header">
-           <h2>🤖 Chesskidoo AI Assistant</h2>
-           <p>Ask me anything about your academy data, analytics, or get insights!</p>
-         </div>
-         <div class="chat-messages" id="chat-messages">
-           <div class="message ai">
-             <div class="message-avatar">🤖</div>
-             <div class="message-content">
-               <div class="message-text">Hello! I'm your Chesskidoo AI assistant. I can help you with analytics, student insights, coach management, and more. What would you like to know?</div>
-             </div>
+       <div class="ai-ws">
+         <!-- Sidebar -->
+         <div class="ai-ws-sidebar">
+           <div class="ai-ws-brand">
+             <span>✨</span> Chesskidoo AI
+           </div>
+           
+           <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--ivory-dim);margin-bottom:12px;font-weight:600">Copilot Modules</div>
+           <div class="ai-ws-menu">
+             <button class="ai-ws-btn active">⚡ Global Insights</button>
+             <button class="ai-ws-btn">💰 Financial Analysis</button>
+             <button class="ai-ws-btn">🧑‍🏫 Coach Performance</button>
            </div>
          </div>
-         <div class="chat-input">
-           <input type="text" id="ai-query" placeholder="Ask me about students, revenue, coaches..." onkeydown="if(event.key==='Enter') sendAIQuery()">
-           <button class="btn btn-gold" onclick="sendAIQuery()">Send</button>
-         </div>
-         <div class="ai-suggestions">
-           <button class="suggestion-btn" onclick="setAISuggestion('How many students are enrolled?')">How many students?</button>
-           <button class="suggestion-btn" onclick="setAISuggestion('What is the total revenue?')">Total revenue?</button>
-           <button class="suggestion-btn" onclick="setAISuggestion('Which coach has the most students?')">Top coach?</button>
-           <button class="suggestion-btn" onclick="setAISuggestion('Show me payment status breakdown')">Payment status</button>
+         
+         <!-- Main Chat Area -->
+         <div class="ai-ws-main">
+           <div class="ai-ws-header">
+             <h2>Academy Intelligence</h2>
+             <p>Real-time analytics and predictive capabilities.</p>
+           </div>
+           
+           <div class="ai-ws-chat" id="ai-workspace-msgs">
+             <div class="ai-ws-msg bot">
+               <div class="ai-ws-avatar">🤖</div>
+               <div class="ai-ws-bubble">
+                 Hello Admin! I'm your dedicated AI Copilot. I'm securely connected to your live academy database. How can I assist you with analytics, student insights, or performance metrics today?
+               </div>
+             </div>
+           </div>
+           
+           <div class="ai-ws-input-area">
+             <div class="ai-ws-input-box">
+               <input type="text" id="ai-query" placeholder="Ask about revenue trends, active coaches, or due payments..." onkeydown="if(event.key==='Enter') sendAIQuery()">
+               <button class="ai-ws-send" onclick="sendAIQuery()">
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
+               </button>
+             </div>
+             <div class="ai-ws-suggest">
+               <button class="ai-ws-pill" onclick="setAISuggestion('How many students are enrolled?')">How many students?</button>
+               <button class="ai-ws-pill" onclick="setAISuggestion('What is the total revenue?')">Total revenue?</button>
+               <button class="ai-ws-pill" onclick="setAISuggestion('Which coach has the most students?')">Top coach?</button>
+               <button class="ai-ws-pill" onclick="setAISuggestion('Show me payment status breakdown')">Payment status breakdown</button>
+             </div>
+           </div>
          </div>
        </div>
      </div>

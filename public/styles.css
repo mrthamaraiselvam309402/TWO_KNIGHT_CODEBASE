@@ -928,3 +928,163 @@ input:focus, select:focus, textarea:focus {
   font-size: 12px;
   color: var(--ivory-dim);
 }
+
+/* AI Assistant Full Page Redesign */
+.ai-ws {
+  display: flex;
+  height: calc(100vh - 120px);
+  background: var(--surface2);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+.ai-ws-sidebar {
+  width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+.ai-ws-brand {
+  font-family: var(--font-head);
+  font-size: 20px;
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+.ai-ws-brand span { font-size: 24px; }
+.ai-ws-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ai-ws-btn {
+  background: transparent;
+  color: var(--ivory-dim);
+  border: 1px solid transparent;
+  padding: 12px 16px;
+  text-align: left;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ai-ws-btn:hover { background: rgba(255,255,255,0.03); color: var(--ivory); }
+.ai-ws-btn.active {
+  background: rgba(220, 161, 62, 0.1);
+  color: var(--gold);
+  border: 1px solid rgba(220, 161, 62, 0.3);
+}
+.ai-ws-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: linear-gradient(135deg, rgba(20,20,30,1) 0%, rgba(30,30,40,1) 100%);
+}
+.ai-ws-header {
+  padding: 24px 40px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+}
+.ai-ws-header h2 { font-size: 24px; color: var(--ivory); margin-bottom: 4px; }
+.ai-ws-header p { color: var(--ivory-dim); font-size: 14px; }
+.ai-ws-chat {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.ai-ws-msg {
+  display: flex;
+  gap: 16px;
+  max-width: 800px;
+  animation: fadeIn 0.3s ease;
+}
+.ai-ws-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+.ai-ws-avatar {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.ai-ws-msg.user .ai-ws-avatar { background: var(--gold); color: var(--obsidian); border-color: var(--gold2); }
+.ai-ws-bubble {
+  background: rgba(255,255,255,0.03);
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+  color: var(--ivory);
+  line-height: 1.6;
+  font-size: 15px;
+}
+.ai-ws-msg.user .ai-ws-bubble {
+  background: rgba(220, 161, 62, 0.1);
+  border-color: rgba(220, 161, 62, 0.3);
+}
+.ai-ws-input-area {
+  padding: 24px 40px;
+  background: rgba(20,20,30,0.8);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.ai-ws-input-box {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 8px 8px 8px 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  transition: all 0.3s;
+}
+.ai-ws-input-box:focus-within {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 8px 30px rgba(220,161,62,0.15);
+}
+.ai-ws-input-box input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--ivory);
+  font-size: 16px;
+  outline: none;
+}
+.ai-ws-input-box input::placeholder { color: var(--ivory-dim); }
+.ai-ws-send {
+  background: var(--gold);
+  color: var(--obsidian);
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.ai-ws-send:hover { transform: scale(1.05); }
+.ai-ws-suggest {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.ai-ws-pill {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--ivory-dim);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ai-ws-pill:hover { background: rgba(220, 161, 62, 0.1); color: var(--gold); border-color: rgba(220, 161, 62, 0.3); }

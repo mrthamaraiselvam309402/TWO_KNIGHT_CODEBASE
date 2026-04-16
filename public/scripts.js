@@ -2107,91 +2107,61 @@ async function registerEvent(id) {
   // AI ASSISTANT
   // ═══════════════════════════════════════════════════════════════
   function setAISuggestion(query) {
-    $('ai-query').value = query;
-    sendAIQuery();
+    if ($('ai-query')) {
+      $('ai-query').value = query;
+      sendAIQuery();
+    }
   }
+  window.setAISuggestion = setAISuggestion;
 
   async function sendAIQuery() {
-    const query = $('ai-query').value.trim();
-    if (!query) return;
+    const inputEl = $('ai-query');
+    if (!inputEl) return;
+    const msg = inputEl.value.trim();
+    if (!msg) return;
 
-    // Add user message
-    addMessage(query, 'user');
-    $('ai-query').value = '';
+    inputEl.value = '';
+    const bodyEl = $('ai-workspace-msgs');
+    if (!bodyEl) return;
 
-    // Show typing indicator
-    const typingId = addMessage('Thinking...', 'ai', true);
-
-    // Process query
-    const response = await processAIQuery(query);
-
-    // Remove typing, add response
-    removeMessage(typingId);
-    addMessage(response, 'ai');
-  }
-
-  function addMessage(text, type, isTyping = false) {
-    const messages = $('chat-messages');
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}`;
-    if (isTyping) messageDiv.id = 'typing-' + Date.now();
-
-    messageDiv.innerHTML = `
-      <div class="message-avatar">${type === 'ai' ? '🤖' : '👤'}</div>
-      <div class="message-content">
-        <div class="message-text">${isTyping ? '<span class="typing">Typing...</span>' : text}</div>
+    bodyEl.innerHTML += `
+      <div class="ai-ws-msg user">
+        <div class="ai-ws-avatar">👤</div>
+        <div class="ai-ws-bubble">${msg}</div>
       </div>
     `;
+    setTimeout(() => bodyEl.scrollTop = bodyEl.scrollHeight, 50);
 
-    messages.appendChild(messageDiv);
-    messages.scrollTop = messages.scrollHeight;
-    return messageDiv.id;
+    const botLoadingId = 'ws-msg-' + Date.now();
+    bodyEl.innerHTML += `
+      <div class="ai-ws-msg bot" id="${botLoadingId}">
+        <div class="ai-ws-avatar">🤖</div>
+        <div class="ai-ws-bubble" style="color:var(--ivory-dim)">Thinking...</div>
+      </div>
+    `;
+    setTimeout(() => bodyEl.scrollTop = bodyEl.scrollHeight, 50);
+
+    try {
+      const payload = { message: msg, role: 'admin', context: { students: allStudents.length } };
+      const res = await apiCall(`${API_BASE}/ai`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      $(botLoadingId).innerHTML = `
+        <div class="ai-ws-avatar">🤖</div>
+        <div class="ai-ws-bubble">${data.message || "An error occurred."}</div>
+      `;
+    } catch (e) {
+      $(botLoadingId).innerHTML = `
+        <div class="ai-ws-avatar">🤖</div>
+        <div class="ai-ws-bubble" style="color:var(--danger)">Connection to Copilot failed.</div>
+      `;
+    }
+    setTimeout(() => bodyEl.scrollTop = bodyEl.scrollHeight, 50);
   }
-
-  function removeMessage(id) {
-    const msg = $(id);
-    if (msg) msg.remove();
-  }
-
-  async function processAIQuery(query) {
-    const q = query.toLowerCase();
-
-    // Basic responses
-    if (q.includes('how many students')) {
-      const active = allStudents.filter(s => s.status === 'active').length;
-      return `You have ${allStudents.length} total students enrolled, with ${active} active students.`;
-    }
-
-    if (q.includes('total revenue') || q.includes('revenue')) {
-      const paid = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-      return `Total revenue from paid students: ₹${paid.toLocaleString()}.`;
-    }
-
-    if (q.includes('coach') && q.includes('most students')) {
-      const { coachMap } = getCoachStats(allStudents);
-      const topCoach = Object.entries(coachMap).sort(([,a], [,b]) => b - a)[0];
-      return topCoach ? `${topCoach[0]} has the most students with ${topCoach[1]} students.` : 'No coaches assigned yet.';
-    }
-
-    if (q.includes('payment status')) {
-      const paid = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
-      const due = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
-      return `Payment status: ${paid} students paid, ${due} students due.`;
-    }
-
-    if (q.includes('average rating') || q.includes('avg elo')) {
-      const avg = allStudents.length ? Math.round(allStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / allStudents.length) : 0;
-      return `Average student ELO rating: ${avg}`;
-    }
-
-    if (q.includes('events')) {
-      const upcoming = eventsData.filter(e => new Date(getEventDate(e)) > new Date()).length;
-      return `You have ${eventsData.length} total events, with ${upcoming} upcoming events.`;
-    }
-
-    // Default response
-    return "I'm here to help with your Chesskidoo academy! Try asking about students, revenue, coaches, or events.";
-  }
+  window.sendAIQuery = sendAIQuery;
 
   // ═══════════════════════════════════════════════════════════════
   // INIT
