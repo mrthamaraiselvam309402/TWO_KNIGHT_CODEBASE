@@ -31,15 +31,9 @@
   // ═══════════════════════════════════════════════════════════════
   const $ = id => document.getElementById(id);
 
-  // Supabase auth token for API calls
-  const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
-  
-  // Helper for API calls with auth
+  // Helper for API calls (auth headers injected by vercel.json for rewritten routes)
   async function apiCall(url, options = {}) {
     const headers = { 'Content-Type': 'application/json', ...options.headers };
-    if (!headers['Authorization']) {
-      headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
-    }
     return fetch(url, { ...options, headers });
   }
 
@@ -470,61 +464,9 @@
     })
     .catch(err => {
       console.error('Login error:', err);
-      // Fallback to local verification if server unavailable
-      handleLocalLogin(rawUser, pass, errEl);
+      errEl.textContent = 'Server unavailable. Please try again later.';
+      errEl.style.display = 'block';
     });
-  }
-
-  // Fallback local login (for offline/error scenarios)
-  function handleLocalLogin(rawUser, pass, errEl) {
-    const lowerUser = rawUser.toLowerCase();
-    const MASTER_USER = 'Tom@193';
-    const MASTER_PASS = 'Thamaraiselvam@309402$';
-    const ADMIN_USER = 'admin';
-    const ADMIN_PASS = 'admin123';
-
-    // Master (only show warning about insecure fallback)
-    if (rawUser === MASTER_USER && pass === MASTER_PASS) {
-      console.warn('⚠️ Using insecure local auth - configure server for production');
-      role = 'master';
-      document.body.classList.add('admin-mode', 'master-mode');
-      $('top-profile').style.display = 'flex';
-      $('top-profile-name').innerHTML = 'Master <span style="background:var(--gold);color:#000;padding:2px 8px;border-radius:10px;font-size:10px">👑</span>';
-      $('top-profile-av').src = `https://ui-avatars.com/api/?name=Master&background=dca33e&color=000&bold=true&size=80`;
-      finishLogin('dash');
-      return;
-    }
-
-    // Admin
-    if (lowerUser === ADMIN_USER && pass === ADMIN_PASS) {
-      console.warn('⚠️ Using insecure local auth - configure server for production');
-      role = 'admin';
-      document.body.classList.add('admin-mode');
-      $('top-profile').style.display = 'flex';
-      $('top-profile-name').textContent = 'Admin';
-      $('top-profile-av').src = `https://ui-avatars.com/api/?name=Admin&background=dca33e&color=000&bold=true&size=80`;
-      finishLogin('dash');
-      return;
-    }
-
-    // Parent - check against student phones
-    const student = allStudents.find(s => getStudentName(s).toLowerCase() === lowerUser);
-    if (student) {
-      const storedPhone = getStudentPhone(student);
-      if (storedPhone === pass) {
-        role = 'parent';
-        document.body.classList.add('parent-mode');
-        currentStudent = student;
-        $('top-profile').style.display = 'flex';
-        $('top-profile-name').textContent = getStudentName(student).split(' ')[0];
-        $('top-profile-av').src = makeAvSrc(student);
-        finishLogin('child');
-        return;
-      }
-    }
-
-    errEl.textContent = 'Invalid credentials.';
-    errEl.style.display = 'block';
   }
 
 function finishLogin(page) {

@@ -1,8 +1,11 @@
 import crypto from 'crypto';
 
 export default async function handler(request, response) {
-  // Handle CORS
-  response.setHeader('Access-Control-Allow-Origin', '*');
+  // Handle CORS — restrict to known origins
+  const allowedOrigins = ['https://chesskidoo-ai-admin.vercel.app', 'http://localhost:3000', 'http://localhost:5000'];
+  const origin = request.headers?.origin || '';
+  const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  response.setHeader('Access-Control-Allow-Origin', corsOrigin);
   response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
