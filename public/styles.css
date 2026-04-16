@@ -1168,3 +1168,109 @@ input:focus, select:focus, textarea:focus {
 }
 .coach-card-actions .btn { flex: 1; padding: 10px; font-size: 13px; }
 
+/* ── EVENTS UPGRADE ── */
+.event-card {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(220,163,62,0.1);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  position: relative;
+  overflow: hidden;
+}
+.event-card:hover {
+  transform: translateY(-8px);
+  border-color: var(--gold);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+.event-card.past { opacity: 0.6; filter: grayscale(0.5); }
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.event-title {
+  font-family: var(--font-head);
+  font-size: 22px;
+  color: var(--gold);
+  line-height: 1.2;
+}
+.event-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ivory-dim);
+}
+.event-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.event-meta-item i { width: 18px; text-align: center; }
+
+.event-location-link {
+  color: var(--gold);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: 0.2s;
+}
+.event-location-link:hover { color: var(--gold2); text-decoration: underline; }
+
+.event-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ivory);
+  opacity: 0.8;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.event-progress-container {
+  margin-top: auto;
+  padding: 16px 0 8px;
+}
+.event-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: var(--ivory-dim);
+}
+.event-progress-bar {
+  height: 6px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.event-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold2));
+  border-radius: 10px;
+  transition: width 1s cubic-bezier(0.23, 1, 0.32, 1);
+  box-shadow: 0 0 10px var(--gold-glow);
+}
+
+.event-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: rgba(220,163,62,0.1);
+  color: var(--gold);
+  border: 1px solid rgba(220,163,62,0.2);
+}
