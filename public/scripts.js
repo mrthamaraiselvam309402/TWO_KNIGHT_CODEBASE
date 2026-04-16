@@ -26,10 +26,22 @@
   let loadingStates = {}; // Track loading states for different operations
   let performanceMetrics = { apiCalls: 0, errors: 0, loadTime: 0 }; // Performance monitoring
 
-  // ═══════════════════════════════════════════════════════════════
-// UTILITIES
+// ═══════════════════════════════════════════════════════════════
+  // UTILITIES
   // ═══════════════════════════════════════════════════════════════
   const $ = id => document.getElementById(id);
+
+  // Supabase auth token for API calls
+  const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
+  
+  // Helper for API calls with auth
+  async function apiCall(url, options = {}) {
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    if (!headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+    }
+    return apiCall(url, { ...options, headers });
+  }
 
   const isValidPhone = p => /^\d{10}$/.test(p);
 
@@ -74,7 +86,7 @@
   async function checkHealth() {
     try {
       const start = Date.now();
-      const response = await fetch('/health');
+      const response = await apiCall('/health');
       const end = Date.now();
       const healthy = response.ok;
 
@@ -114,7 +126,7 @@
         const callStart = Date.now();
 
         try {
-          const response = await fetch(endpoint);
+          const response = await apiCall(endpoint);
           const callEnd = Date.now();
           results.responseTimes.push(callEnd - callStart);
 
@@ -257,7 +269,7 @@
         const loadWithRetry = async (url, maxRetries = 2) => {
           for (let i = 0; i <= maxRetries; i++) {
             try {
-              const response = await fetch(url);
+              const response = await apiCall(url);
               if (response.ok) {
                 return await response.json();
               }
@@ -321,7 +333,7 @@
 
   async function updateMsgBadge() {
     try {
-      const res = await fetch('/api/messages');
+      const res = await apiCall('/api/messages');
       const msgs = await res.json();
       allMessages = msgs.data || msgs || [];
       const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin').length;
@@ -416,7 +428,7 @@
     if (!rawUser || !pass) { errEl.textContent = 'Please enter credentials.'; errEl.style.display = 'block'; return; }
 
     // Use server-side authentication API for security
-    fetch('/api/auth', {
+    apiCall('/api/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', username: rawUser, password: pass })
@@ -755,7 +767,7 @@ async function updateStudent() {
     console.log('Sending PUT payload:', JSON.stringify(data));
 
     try {
-      const res = await fetch(`${API_BASE}/students?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       const result = await res.json();
       console.log('PUT response:', result);
       if (!res.ok) {
@@ -812,7 +824,7 @@ async function updateStudent() {
     console.log('Sending POST payload:', JSON.stringify(data));
 
     try {
-      const res = await fetch(`${API_BASE}/students`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await apiCall(`${API_BASE}/students`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       const result = await res.json();
       console.log('POST response:', result);
       if (!res.ok) {
@@ -847,7 +859,7 @@ async function updateStudent() {
     // Clear any pending refresh
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
-      const res = await fetch(`${API_BASE}/students?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await apiCall(`${API_BASE}/students?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const result = await res.json();
       if (!res.ok) {
         toast('Delete failed: ' + (result.error || 'Unknown error'), 'error');
@@ -958,7 +970,7 @@ async function updateStudent() {
     const url = id ? `${API_BASE}/coaches?id=${encodeURIComponent(id)}` : `${API_BASE}/coaches`;
 
     try {
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await apiCall(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       const result = await res.json();
       if (!res.ok) {
         toast('Failed: ' + (result.error || 'Unknown error'), 'error');
@@ -996,7 +1008,7 @@ async function updateStudent() {
     // Clear any pending refresh
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
-      const res = await fetch(`${API_BASE}/coaches?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await apiCall(`${API_BASE}/coaches?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const result = await res.json();
       if (!res.ok) {
         toast('Delete failed: ' + (result.error || 'Unknown error'), 'error');
@@ -1061,7 +1073,7 @@ async function updateStudent() {
     };
 
     try {
-      const res = await fetch(`${API_BASE}/achievements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await apiCall(`${API_BASE}/achievements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       const result = await res.json();
       if (!res.ok) {
         toast('Failed: ' + (result.error || 'Unknown error'), 'error');
@@ -1092,7 +1104,7 @@ async function updateStudent() {
     // Clear any pending refresh
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
-      const res = await fetch(`${API_BASE}/achievements?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await apiCall(`${API_BASE}/achievements?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const result = await res.json();
       if (!res.ok) {
         toast('Delete failed: ' + (result.error || 'Unknown error'), 'error');
@@ -1138,7 +1150,7 @@ async function updateStudent() {
     const data = { title: title, date: $('ev-date').value, type: $('ev-type').value, prize: $('ev-prize').value, location: $('ev-loc').value };
 
     try {
-      const res = await fetch(`${API_BASE}/events`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await apiCall(`${API_BASE}/events`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       const result = await res.json();
       if (!res.ok) {
         toast('Failed: ' + (result.error || 'Unknown error'), 'error');
@@ -1168,7 +1180,7 @@ async function updateStudent() {
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     console.log('Deleting event with ID:', id);
     try {
-      const res = await fetch(`${API_BASE}/events?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await apiCall(`${API_BASE}/events?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const result = await res.json();
       console.log('Delete event response:', result);
       if (!res.ok) {
@@ -1216,7 +1228,7 @@ async function registerEvent(id) {
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
 
     try {
-      const res = await fetch(`${API_BASE}/students?id=${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'active', payment_status: 'Paid' }) });
+      const res = await apiCall(`${API_BASE}/students?id=${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'active', payment_status: 'Paid' }) });
       const result = await res.json();
       if (!res.ok) {
         toast('Failed: ' + (result.error || 'Unknown error'), 'error');
@@ -1278,7 +1290,7 @@ async function registerEvent(id) {
       const batch = studentsToUpdate.slice(i, i + batchSize);
       await Promise.all(batch.map(async (student) => {
         try {
-          const res = await fetch(`${API_BASE}/students?id=${encodeURIComponent(student.id)}`, {
+          const res = await apiCall(`${API_BASE}/students?id=${encodeURIComponent(student.id)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'active', payment_status: 'Paid' })
@@ -1459,7 +1471,7 @@ async function registerEvent(id) {
     $('msgs-list').style.display = 'grid';
     
     try {
-      const response = await fetch('/api/messages');
+      const response = await apiCall('/api/messages');
       const result = await response.json();
       allMessages = result.data || result || [];
     } catch (e) { allMessages = []; }
@@ -1494,7 +1506,7 @@ async function registerEvent(id) {
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     
     try {
-      const res = await fetch(`${API_BASE}/messages?id=${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_read: true, read_at: new Date().toISOString() }) });
+      const res = await apiCall(`${API_BASE}/messages?id=${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_read: true, read_at: new Date().toISOString() }) });
       if (res.ok) {
         // Immediately update local data
         allMessages = allMessages.map(m => String(m.id) === String(id) ? { ...m, is_read: true, read_at: new Date().toISOString() } : m);
@@ -1509,7 +1521,7 @@ async function registerEvent(id) {
     // Clear any pending refresh
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     try {
-      const res = await fetch(`${API_BASE}/messages?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await apiCall(`${API_BASE}/messages?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (res.ok) {
         // Immediately remove from local data
         allMessages = allMessages.filter(m => String(m.id) !== String(id));
@@ -1557,7 +1569,7 @@ async function registerEvent(id) {
     const msg = $('contact-msg').value.trim();
     if (!msg) { toast('Message required', 'error'); return; }
     try {
-      await fetch(`${API_BASE}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sender_type: 'parent', sender_id: currentStudent.id, receiver_type: 'admin', message: msg }) });
+      await apiCall(`${API_BASE}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sender_type: 'parent', sender_id: currentStudent.id, receiver_type: 'admin', message: msg }) });
       toast('Sent!', 'success');
       closeModals();
     } catch (e) { toast('Failed', 'error'); }
@@ -1567,7 +1579,7 @@ async function registerEvent(id) {
     const msg = $('fb-msg').value.trim();
     if (!msg) { toast('Feedback required', 'error'); return; }
     try {
-      await fetch(`${API_BASE}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sender_type: 'parent', sender_id: currentStudent?.id, receiver_type: 'admin', subject: 'Parent Feedback', message: msg }) });
+      await apiCall(`${API_BASE}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sender_type: 'parent', sender_id: currentStudent?.id, receiver_type: 'admin', subject: 'Parent Feedback', message: msg }) });
       toast('Thank you!', 'success');
       closeModals();
     } catch (e) { toast('Failed', 'error'); }
