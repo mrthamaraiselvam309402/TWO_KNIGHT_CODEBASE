@@ -1197,7 +1197,7 @@ async function updateStudent() {
   }
 
   async function saveEvent() {
-    // Clear any pending refresh
+    // Clear any pending refresh for immediate update
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
 
     const title = $('ev-title').value.trim();
@@ -1213,6 +1213,46 @@ async function updateStudent() {
       toast('Title and date required', 'error');
       return;
     }
+
+    const eventData = {
+      title,
+      description,
+      event_date: date,
+      event_time: time,
+      location,
+      event_type: type,
+      max_participants: maxParticipants,
+      prize,
+      status: 'active'
+    };
+
+    try {
+      const res = await apiCall(`${API_BASE}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventData)
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        toast('Failed: ' + (result.error || 'Unknown error'), 'error');
+        return;
+      }
+      toast('Event created!', 'success');
+      closeModals();
+
+      // Immediately add to local data
+      const newEvent = result.data || result;
+      if (newEvent && newEvent.id) {
+        eventsData = [newEvent, ...eventsData];
+        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: Date.now() };
+      }
+
+      renderEvents();
+      renderDash();
+    } catch (e) {
+      toast('Failed to create event', 'error');
+    }
+  }
 
     const eventData = {
       title,
@@ -1814,9 +1854,77 @@ async function updateStudent() {
   }
 
 
-  function showNotifications() {
-    renderNotifications();
+  async function showNotifications() {
+    const notifications = [];
+
+    // Add real notifications based on data
+    if (allStudents.length > 0) {
+      const dueCount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
+      if (dueCount > 0) {
+        notifications.push({
+          type: 'warning',
+          message: `${dueCount} student${dueCount > 1 ? 's have' : ' has'} pending payment${dueCount > 1 ? 's' : ''}`,
+          time: 'Recent'
+        });
+      }
+    }
+
+    if (eventsData.length > 0) {
+      const upcoming = eventsData.filter(e => new Date(getEventDate(e)) > new Date()).length;
+      if (upcoming > 0) {
+        notifications.push({
+          type: 'info',
+          message: `${upcoming} upcoming event${upcoming > 1 ? 's' : ''} scheduled`,
+          time: 'Recent'
+        });
+      }
+    }
+
+    if (allMessages.length > 0) {
+      const unread = allMessages.filter(m => !getMessageIsRead(m)).length;
+      if (unread > 0) {
+        notifications.push({
+          type: 'info',
+          message: `${unread} unread message${unread > 1 ? 's' : ''} from parents`,
+          time: 'Recent'
+        });
+      }
+    }
+
+    if (achievementsData.length > 0) {
+      const recent = achievementsData.filter(a => {
+        const date = new Date(a.created_at || a.date_achieved);
+        return (Date.now() - date.getTime()) < 7 * 24 * 60 * 60 * 1000; // Last 7 days
+      }).length;
+      if (recent > 0) {
+        notifications.push({
+          type: 'success',
+          message: `${recent} new achievement${recent > 1 ? 's' : ''} unlocked this week`,
+          time: 'This week'
+        });
+      }
+    }
+
+    // Fallback notifications
+    if (notifications.length === 0) {
+      notifications.push(
+        { type: 'info', message: 'Welcome to Chesskidoo Admin Panel!', time: 'Just now' },
+        { type: 'success', message: 'System ready for operation', time: 'Just now' }
+      );
+    }
+
+    const content = notifications.map(n => `
+      <div class="notification-item ${n.type}">
+        <div class="notification-icon">${n.type === 'success' ? '✓' : n.type === 'warning' ? '⚠️' : n.type === 'error' ? '✕' : 'ℹ'}</div>
+        <div class="notification-content">
+          <div class="notification-message">${n.message}</div>
+          <div class="notification-time">${n.time}</div>
+        </div>
+      </div>
+    `).join('');
+
     openModal('notification-modal');
+    $('notification-content').innerHTML = content;
   }
   window.showNotifications = showNotifications;
 
@@ -2134,6 +2242,7 @@ async function updateStudent() {
     `;
     setTimeout(() => bodyEl.scrollTop = bodyEl.scrollHeight, 50);
 
+    try {
       const payload = { 
         message: msg, 
         role: role || 'admin', 
@@ -2167,9 +2276,126 @@ async function updateStudent() {
   window.sendAIQuery = sendAIQuery;
 
   // ═══════════════════════════════════════════════════════════════
+  // AUTH
+  // ═══════════════════════════════════════════════════════════════
+  async function doLogin() {
+    const user = $('li-user').value.trim();
+    const pass = $('li-pass').value;
+    const errEl = $('login-err');
+
+    if (!user || !pass) {
+      errEl.textContent = 'Please enter both username and password';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    errEl.style.display = 'none';
+
+    try {
+      // Check if master admin
+      const masterRes = await apiCall(`${API_BASE}/security?action=verify_master`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, password: pass })
+      });
+      const masterData = await masterRes.json();
+
+      if (masterData.is_master) {
+        role = 'master';
+        localStorage.setItem('chesskidoo_auth', JSON.stringify({ role: 'master', user }));
+        proceedLogin();
+        return;
+      }
+    } catch (e) {
+      console.warn('Security API not available, using fallback auth');
+    }
+
+    // Check if parent login (student name + parent phone)
+    // Load students first if not loaded
+    if (allStudents.length === 0) {
+      try {
+        const studentsRes = await apiCall(`${API_BASE}/students`);
+        allStudents = await studentsRes.json();
+      } catch (e) {
+        console.warn('Failed to load students for login');
+      }
+    }
+
+    const student = allStudents.find(s => getStudentName(s).toLowerCase() === user.toLowerCase());
+    if (student && getStudentPhone(student) === pass) {
+      role = 'parent';
+      currentStudent = student;
+      localStorage.setItem('chesskidoo_auth', JSON.stringify({ role: 'parent', user: getStudentName(student), studentId: student.id }));
+      proceedLogin();
+      return;
+    }
+
+    // Fallback to admin
+    if (user === 'admin' && pass === 'admin123') {
+      role = 'admin';
+      localStorage.setItem('chesskidoo_auth', JSON.stringify({ role: 'admin', user }));
+      proceedLogin();
+      return;
+    }
+
+    errEl.textContent = 'Invalid credentials';
+    errEl.style.display = 'block';
+  }
+
+  function proceedLogin() {
+    $('login-screen').style.display = 'none';
+    document.body.classList.remove('login-mode');
+    loadAllData();
+    updateUIForRole();
+  }
+
+  function doLogout() {
+    role = null;
+    currentStudent = null;
+    localStorage.removeItem('chesskidoo_auth');
+    location.reload();
+  }
+
+  function updateUIForRole() {
+    const isAdmin = role === 'admin' || role === 'master';
+    const isParent = role === 'parent';
+
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+    document.querySelectorAll('.parent-only').forEach(el => el.style.display = isParent ? '' : 'none');
+
+    if (isParent && currentStudent) {
+      setPage('child');
+    } else {
+      setPage('dash');
+    }
+  }
+
+  // Check for existing session
+  function checkAuth() {
+    const auth = localStorage.getItem('chesskidoo_auth');
+    if (auth) {
+      const data = JSON.parse(auth);
+      role = data.role;
+      if (data.role === 'parent') {
+        currentStudent = allStudents.find(s => s.id === data.studentId);
+      }
+      updateUIForRole();
+      return true;
+    }
+    return false;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════════════════
-  window.addEventListener('DOMContentLoaded', loadAllData);
+  window.addEventListener('DOMContentLoaded', () => {
+    if (!checkAuth()) {
+      $('login-screen').style.display = 'flex';
+      document.body.classList.add('login-mode');
+    } else {
+      loadAllData();
+    }
+  });
 
   // Expose functions
   window.toggleSidebar = toggleSidebar;
