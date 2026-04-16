@@ -30,13 +30,6 @@ Deno.serve(async (req) => {
     return str.slice(0, maxLength).replace(/[<>"'`;]/g, '').trim()
   }
 
-  function validateEmail(email: unknown): string | null {
-    if (!email || typeof email !== 'string') return null
-    const cleaned = email.toLowerCase().trim().slice(0, 254)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(cleaned) ? cleaned : null
-  }
-
   function validatePhone(phone: unknown): string {
     if (!phone || typeof phone !== 'string') return ''
     const digits = phone.replace(/\D/g, '').slice(0, 15)
@@ -54,37 +47,31 @@ Deno.serve(async (req) => {
     return valid.includes(String(status)) ? String(status) : 'pending'
   }
 
-  function stripUnknownFields(body: Record<string, unknown>, allowed: string[]): Record<string, unknown> {
-    const result: Record<string, unknown> = {}
-    for (const key of allowed) {
-      if (body[key] !== undefined) result[key] = body[key]
-    }
-    return result
-  }
+  // DB SCHEMA: id, name, email, phone, age, grade, parent_name, parent_phone,
+  //            address, enrollment_date, status, coach_id, rating, notes,
+  //            created_at, updated_at
 
-  const ALLOWED_STUDENT_FIELDS = [
-    'name', 'full_name', 'phone', 'parent_phone', 'email',
-    'grade', 'level', 'enrollment_date', 'join_date',
-    'rating', 'current_rating', 'payment_status', 'status',
-    'coach_id', 'notes', 'age', 'parent_name', 'address'
-  ]
-
+  // Transform DB row to API response (add convenience aliases the frontend expects)
   function transformStudent(s: Record<string, unknown>) {
     return {
       id: s.id,
-      full_name: s.full_name || s.name || '',
-      name: s.name || s.full_name || '',
+      name: s.name || '',
+      full_name: s.name || '',    // alias for frontend compatibility
+      email: s.email || '',
       phone: s.phone || '',
       parent_phone: s.parent_phone || s.phone || '',
+      parent_name: s.parent_name || '',
+      age: s.age || null,
       grade: s.grade || null,
-      level: s.level || s.grade || 'Beginner',
-      join_date: s.join_date || s.enrollment_date || '',
-      enrollment_date: s.enrollment_date || s.join_date || '',
-      rating: s.rating || s.current_rating || 800,
-      current_rating: s.current_rating || s.rating || 800,
-      payment_status: s.payment_status || 'Due',
+      level: s.grade || 'Beginner',           // alias
+      enrollment_date: s.enrollment_date || '',
+      join_date: s.enrollment_date || '',      // alias
+      address: s.address || '',
       status: s.status || 'pending',
+      payment_status: s.status === 'active' ? 'Paid' : 'Due', // computed
       coach_id: s.coach_id || null,
+      rating: s.rating || 800,
+      current_rating: s.rating || 800,         // alias
       notes: s.notes || '',
       created_at: s.created_at,
       updated_at: s.updated_at
@@ -118,11 +105,8 @@ Deno.serve(async (req) => {
       let rawBody: Record<string, unknown> = {}
       try { rawBody = await req.json() } catch (_e) {}
       
-      // Strip unknown fields
-      const body = stripUnknownFields(rawBody, ALLOWED_STUDENT_FIELDS)
-      
-      // Validate required field
-      const name = sanitizeString(body.name || body.full_name, 100)
+      // Accept both name and full_name from frontend
+      const name = sanitizeString(rawBody.name || rawBody.full_name, 100)
       if (!name || name.length < 2) {
         return new Response(JSON.stringify({ error: 'Name is required (2-100 characters)' }), {
           status: 400,
@@ -130,19 +114,22 @@ Deno.serve(async (req) => {
         })
       }
 
+      // Build INSERT object using ONLY actual DB columns
       const newStudent: Record<string, unknown> = {
         id: 's' + Date.now() + Math.random().toString(36).slice(2, 8),
         name: name,
-        full_name: sanitizeString(body.full_name || body.name, 100),
-        phone: validatePhone(body.phone || body.parent_phone),
-        parent_phone: validatePhone(body.parent_phone || body.phone),
-        grade: sanitizeString(body.grade, 50),
-        level: sanitizeString(body.level || body.grade, 50) || 'Beginner',
-        enrollment_date: sanitizeString(body.enrollment_date || body.join_date, 10),
-        join_date: sanitizeString(body.join_date || body.enrollment_date, 10),
-        rating: validateRating(body.rating),
-        payment_status: sanitizeString(body.payment_status, 20) || 'Due',
-        status: validateStatus(body.status),
+        phone: validatePhone(rawBody.phone || rawBody.parent_phone),
+        parent_phone: validatePhone(rawBody.parent_phone || rawBody.phone),
+        email: sanitizeString(rawBody.email, 254),
+        age: rawBody.age ? parseInt(String(rawBody.age)) || null : null,
+        grade: sanitizeString(rawBody.grade || rawBody.level, 50),
+        parent_name: sanitizeString(rawBody.parent_name, 100),
+        address: sanitizeString(rawBody.address, 500),
+        enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0],
+        status: validateStatus(rawBody.status),
+        coach_id: rawBody.coach_id ? sanitizeString(rawBody.coach_id, 50) : null,
+        rating: validateRating(rawBody.rating || rawBody.current_rating),
+        notes: sanitizeString(rawBody.notes, 2000),
         created_at: new Date().toISOString()
       }
       
@@ -176,20 +163,34 @@ Deno.serve(async (req) => {
       let rawBody: Record<string, unknown> = {}
       try { rawBody = await req.json() } catch (_e) {}
       
-      // Strip unknown fields and validate
-      const body = stripUnknownFields(rawBody, ALLOWED_STUDENT_FIELDS)
+      // Build UPDATE object using ONLY actual DB columns
       const updateData: Record<string, unknown> = {}
       
-      if (body.name !== undefined) updateData.name = sanitizeString(body.name, 100)
-      if (body.full_name !== undefined) updateData.full_name = sanitizeString(body.full_name, 100)
-      if (body.phone !== undefined) updateData.phone = validatePhone(body.phone)
-      if (body.parent_phone !== undefined) updateData.parent_phone = validatePhone(body.parent_phone)
-      if (body.grade !== undefined) updateData.grade = sanitizeString(body.grade, 50)
-      if (body.level !== undefined) updateData.level = sanitizeString(body.level, 50)
-      if (body.payment_status !== undefined) updateData.payment_status = sanitizeString(body.payment_status, 20)
-      if (body.status !== undefined) updateData.status = validateStatus(body.status)
-      if (body.rating !== undefined) updateData.rating = validateRating(body.rating)
-      if (body.join_date !== undefined) updateData.join_date = sanitizeString(body.join_date, 10)
+      if (rawBody.name !== undefined || rawBody.full_name !== undefined) {
+        updateData.name = sanitizeString(rawBody.name || rawBody.full_name, 100)
+      }
+      if (rawBody.phone !== undefined) updateData.phone = validatePhone(rawBody.phone)
+      if (rawBody.parent_phone !== undefined) updateData.parent_phone = validatePhone(rawBody.parent_phone)
+      if (rawBody.email !== undefined) updateData.email = sanitizeString(rawBody.email, 254)
+      if (rawBody.age !== undefined) updateData.age = parseInt(String(rawBody.age)) || null
+      if (rawBody.grade !== undefined || rawBody.level !== undefined) {
+        updateData.grade = sanitizeString(rawBody.grade || rawBody.level, 50)
+      }
+      if (rawBody.parent_name !== undefined) updateData.parent_name = sanitizeString(rawBody.parent_name, 100)
+      if (rawBody.address !== undefined) updateData.address = sanitizeString(rawBody.address, 500)
+      if (rawBody.enrollment_date !== undefined || rawBody.join_date !== undefined) {
+        updateData.enrollment_date = sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10)
+      }
+      if (rawBody.status !== undefined) updateData.status = validateStatus(rawBody.status)
+      if (rawBody.payment_status !== undefined) {
+        // Map payment_status to DB status field
+        updateData.status = rawBody.payment_status === 'Paid' ? 'active' : 'pending'
+      }
+      if (rawBody.coach_id !== undefined) updateData.coach_id = rawBody.coach_id ? sanitizeString(rawBody.coach_id, 50) : null
+      if (rawBody.rating !== undefined || rawBody.current_rating !== undefined) {
+        updateData.rating = validateRating(rawBody.rating || rawBody.current_rating)
+      }
+      if (rawBody.notes !== undefined) updateData.notes = sanitizeString(rawBody.notes, 2000)
       
       updateData.updated_at = new Date().toISOString()
       
@@ -221,7 +222,6 @@ Deno.serve(async (req) => {
         })
       }
       
-      // Validate ID format
       const sanitizedId = sanitizeString(id, 50)
       
       const { error: deleteError } = await supabase
