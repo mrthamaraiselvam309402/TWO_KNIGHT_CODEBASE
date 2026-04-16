@@ -40,7 +40,7 @@
     if (!headers['Authorization']) {
       headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
     }
-    return apiCall(url, { ...options, headers });
+    return fetch(url, { ...options, headers });
   }
 
   const isValidPhone = p => /^\d{10}$/.test(p);

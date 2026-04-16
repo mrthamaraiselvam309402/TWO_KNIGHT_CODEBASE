@@ -4,7 +4,7 @@ node_modules/
 /yarn.lock
 .pnpm-lock.yaml
 
-# Environment variables
+# Environment variables (NEVER commit these!)
 .env
 .env.local
 .env.*.local
@@ -16,6 +16,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+server.log
+debug.log
+server_out.log
 
 # Runtime data
 pids
@@ -59,10 +62,4 @@ Thumbs.db
 .vercel
 output/
 
-# Miscellaneous
-.env.example
-npm-debug.log
-yarn-debug.log
-yarn-error.log
-package-lock.json
-.vercel
+nul

@@ -6,7 +6,6 @@
   <title>Chesskidoo — Premium Chess Academy</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <link rel="stylesheet" href="styles.css"/>
 </head>
 <body data-theme="dark">
@@ -43,7 +42,6 @@
     <div class="nav-item" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Events</div>
     <div class="nav-item" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
     <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
-    <div class="nav-item admin-only" id="nav-coach" onclick="setPage('coach')"><span class="ico">🤖</span> AI Assistant</div>
   </div>
   <div style="padding:16px;border-top:1px solid var(--border)">
     <div class="nav-item" onclick="toggleTheme()"><span class="ico">🌗</span> Switch Theme</div>
@@ -60,6 +58,11 @@
       <span id="p-title">Overview</span>
     </div>
     <div class="top-nav-right">
+      <button class="btn btn-outline" onclick="exportData()" style="margin-right:10px" title="Export Data">📊 Export</button>
+      <button class="btn btn-outline" onclick="createLocalBackup()" style="margin-right:10px" title="Create Backup">💾</button>
+      <button class="btn btn-outline" onclick="checkHealth()" style="margin-right:10px" title="Health Check">❤️</button>
+      <button class="btn btn-outline" onclick="runStressTest()" style="margin-right:10px" title="Stress Test">⚡</button>
+      <button class="btn btn-outline" onclick="showNotifications()" style="margin-right:10px" title="Notifications" id="notification-btn">🔔 <span id="notification-badge" class="badge badge-danger" style="display:none">0</span></button>
       <div id="top-btn-area" style="display:flex;gap:10px;align-items:center"></div>
       <div class="top-profile" id="top-profile" onclick="openProfile()" style="display:none;">
         <img id="top-profile-av" class="top-profile-av" src="" alt="Profile">
@@ -82,13 +85,22 @@
         <div class="card"><div class="stat-label">Active Coaches</div><div class="stat-value" id="s-coaches">—</div></div>
       </div>
       <div class="dash-grid" style="margin-bottom:32px">
-        <div class="card"><div class="stat-label">Revenue (Collected)</div><div class="stat-value text-success" id="s-rev">—</div></div>
-        <div class="card"><div class="stat-label">Spending (Salaries + Ops)</div><div class="stat-value text-danger" id="s-spend">—</div></div>
+        <div class="card"><div class="stat-label">Amount Paid</div><div class="stat-value text-success" id="s-rev">—</div></div>
+        <div class="card"><div class="stat-label">Amount Due</div><div class="stat-value text-danger" id="s-due">—</div></div>
+        <div class="card"><div class="stat-label">Coach Expenses</div><div class="stat-value" style="color:var(--gold)" id="s-coach-exp">—</div></div>
+      </div>
+      <div class="dash-grid" style="margin-bottom:32px">
+        <div class="card"><div class="stat-label">Total Spending</div><div class="stat-value text-danger" id="s-spend">—</div></div>
         <div class="card"><div class="stat-label">Net Profit</div><div class="stat-value" id="s-profit">—</div></div>
+        <div class="card"><div class="stat-label">Collection Rate</div><div class="stat-value" style="color:var(--blue)" id="s-rate">—</div></div>
       </div>
       <div class="dash-charts">
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">ELO Distribution</h3><canvas id="chartElo" height="160"></canvas></div>
+        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Revenue Analysis</h3><canvas id="chartRevenue" height="160"></canvas></div>
         <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Coach Load</h3><canvas id="chartCoach" height="260"></canvas></div>
+      </div>
+      <div class="dash-charts">
+        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Payment Status</h3><canvas id="chartPayment" height="160"></canvas></div>
+        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Batch Distribution</h3><canvas id="chartBatch" height="160"></canvas></div>
       </div>
     </div>
 
@@ -100,6 +112,7 @@
         <input type="number" id="f-min-fee" placeholder="Min Fee ₹" oninput="renderStudents()">
         <input type="number" id="f-max-fee" placeholder="Max Fee ₹" oninput="renderStudents()">
         <button class="btn btn-outline-grey btn-sm" onclick="clearFilters()">Clear</button>
+        <button class="btn btn-gold btn-sm" onclick="bulkMarkPaid()" id="bulk-pay-btn" style="display:none">Mark Selected Paid</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -181,17 +194,7 @@
       <div class="msgs-list" id="msgs-list" style="display:none;grid-template-columns:1fr;gap:16px"></div>
     </div>
 
-    <!-- AI Assistant -->
-    <div id="page-coach" class="page admin-only">
-      <div class="card" style="height:520px;display:flex;flex-direction:column">
-        <h3 style="margin-bottom:14px;color:var(--gold)">🤖 AI Assistant</h3>
-        <div class="chat-box" id="chat-box"><div class="msg-ai">System active. Ask me about revenue, unpaid fees, top students, or events!</div></div>
-        <div style="display:flex;gap:10px;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-          <input type="text" id="ai-input" placeholder="Ask: 'What is our total revenue?'" style="margin:0;flex:1" onkeydown="if(event.key==='Enter')sendAI()">
-          <button class="btn btn-gold" onclick="sendAI()">Send</button>
-        </div>
-      </div>
-    </div>
+
 
   </div>
 </div>
@@ -289,7 +292,7 @@
     <input type="text" id="e-name" placeholder="Full Name">
     <input type="tel" id="e-phone" placeholder="Parent Phone" maxlength="10">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <select id="e-level"><option>BEGINNER</option><option>INTERMEDIATE</option><option>ADVANCED</option><option>ELITE</option></select>
+      <select id="e-level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Elite</option></select>
       <input type="date" id="e-join">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -392,18 +395,84 @@
 
 <!-- Payment Modal -->
 <div class="modal" id="pay-modal">
-  <div class="modal-box" style="text-align:center">
+  <div class="modal-box" style="text-align:center;max-width:420px">
     <div style="font-size:42px;margin-bottom:10px">🛡️</div>
     <div class="modal-title">Secure Checkout</div>
     <p style="color:var(--ivory-dim);font-size:14px;margin-bottom:6px">Academy Tuition</p>
     <div id="pay-amt" style="font-size:36px;font-weight:700;color:var(--gold);font-family:'DM Mono'">₹0</div>
     <p style="color:var(--ivory-dim);font-size:12px">Student: <span id="pay-name" style="color:var(--ivory)">—</span></p>
-    <div class="upi-list">
-      <div class="upi-item" onclick="simPay('Google Pay')"><b>Google Pay</b></div>
-      <div class="upi-item" onclick="simPay('PhonePe')"><b>PhonePe</b></div>
-      <div class="upi-item" onclick="simPay('Paytm')"><b>Paytm</b></div>
+    
+    <div id="pay-preview" style="margin:20px 0;padding:20px;background:var(--bg3);border-radius:12px;display:none">
+      <div style="margin-bottom:12px">
+        <canvas id="pay-qr-canvas"></canvas>
+      </div>
+      <div style="font-size:11px;color:var(--ivory-dim);font-family:'DM Mono'">Scan to Pay via UPI</div>
+      <div id="pay-upi-id" style="font-size:12px;color:var(--gold);margin-top:8px;font-family:'DM Mono'"></div>
     </div>
-    <button class="btn btn-outline" style="width:100%" onclick="closeModals()">Cancel</button>
+    
+    <div id="pay-processing" style="display:none;padding:30px 0">
+      <div class="spinner" style="width:40px;height:40px;border-width:3px;margin:0 auto 16px"></div>
+      <div style="color:var(--gold);font-weight:600">Processing Payment...</div>
+      <div id="pay-provider" style="font-size:13px;color:var(--ivory-dim);margin-top:8px"></div>
+    </div>
+    
+    <div class="upi-list" id="pay-options">
+      <div class="upi-item" onclick="initiatePay('Google Pay')"><b>Google Pay</b></div>
+      <div class="upi-item" onclick="initiatePay('PhonePe')"><b>PhonePe</b></div>
+      <div class="upi-item" onclick="initiatePay('Paytm')"><b>Paytm</b></div>
+    </div>
+    <button class="btn btn-outline" style="width:100%;margin-top:12px" onclick="closeModals()">Cancel</button>
+  </div>
+</div>
+
+<!-- Notification Modal -->
+<div class="modal" id="notification-modal">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-title">🔔 Notifications</div>
+    <div id="notification-content" style="max-height:400px;overflow-y:auto;padding:10px 0">
+      <!-- Notifications will be populated here -->
+    </div>
+    <button class="btn btn-outline" style="width:100%;margin-top:16px" onclick="closeModals()">Close</button>
+  </div>
+</div>
+
+<!-- Receipt Preview Modal -->
+<div class="modal" id="receipt-preview-modal">
+  <div class="modal-box" style="max-width:500px;padding:0;overflow:hidden">
+    <div style="background:linear-gradient(135deg,#dca33e,#b8922e);padding:30px;text-align:center;color:#000">
+      <div style="font-size:36px">♚</div>
+      <div style="font-family:var(--font-head);font-size:24px;font-weight:700">CHESSKIDOO</div>
+      <div style="font-size:13px;opacity:0.8">Payment Receipt</div>
+    </div>
+    <div style="padding:24px">
+      <div id="receipt-number" style="text-align:center;font-family:'DM Mono';font-size:12px;color:var(--ivory-dim);margin-bottom:20px"></div>
+      <div style="display:grid;gap:12px">
+        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--ivory-dim)">Student</span>
+          <span style="font-weight:600" id="receipt-student">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--ivory-dim)">Date</span>
+          <span style="font-weight:600" id="receipt-date">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--ivory-dim)">Payment Method</span>
+          <span style="font-weight:600" id="receipt-method">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--ivory-dim)">Status</span>
+          <span style="color:var(--success);font-weight:600">PAID</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:16px 0;background:var(--bg3);margin:8px -24px -24px;padding:20px 24px">
+          <span style="font-weight:600;font-size:16px">Total</span>
+          <span style="font-size:24px;font-weight:700;color:var(--gold);font-family:'DM Mono'" id="receipt-amount">₹0</span>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:20px">
+        <button class="btn btn-gold" style="width:100%" onclick="printReceipt()">🖨️ Print Receipt</button>
+        <button class="btn btn-outline" style="width:100%;margin-top:8px" onclick="closeModals()">Close</button>
+      </div>
+    </div>
   </div>
 </div>
 

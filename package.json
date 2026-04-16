@@ -2,23 +2,18 @@
   "name": "chesskidoo-ai-admin",
   "version": "2.0.0",
   "description": "Comprehensive chess academy management system with AI assistant, payment processing, and Supabase cloud database",
-  "main": "public/index.html",
   "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js",
+    "dev": "npx vercel dev",
     "build": "echo 'No build step required - static site'",
+    "start": "npx vercel dev",
     "test": "echo 'No tests configured'",
-    "lint": "echo 'No linting configured'",
-    "backup": "node scripts/backup-database.js",
-    "backup:list": "node scripts/restore-database.js list",
-    "backup:restore": "node scripts/restore-database.js restore",
-    "backup:setup": "node scripts/setup-backup.js"
+    "lint": "echo 'No linting configured'"
   },
   "keywords": [
     "chess",
     "academy",
     "management",
-    "razorpay",
+    "stripe",
     "ai-assistant",
     "supabase",
     "cloud-database",
@@ -29,7 +24,6 @@
   "type": "module",
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
-    "better-sqlite3": "^12.8.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",

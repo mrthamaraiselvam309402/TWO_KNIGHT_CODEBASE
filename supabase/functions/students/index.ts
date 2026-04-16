@@ -1,245 +1,189 @@
 Deno.serve(async (req) => {
-  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
   
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   
   if (!supabaseUrl || !supabaseKey) {
     return new Response(JSON.stringify({ error: 'Server configuration error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
-    });
+    })
   }
   
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabase = createClient(supabaseUrl, supabaseKey)
+
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+  }
+
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
   function transformStudent(s) {
     return {
       id: s.id,
-      full_name: s.name || s.full_name || '',
+      full_name: s.full_name || s.name || '',
       name: s.name || s.full_name || '',
-      email: s.email,
-      phone: s.phone,
+      phone: s.phone || '',
       parent_phone: s.parent_phone || s.phone || '',
-      grade: s.grade,
-      level: s.grade || s.level || 'Beginner',
-      join_date: s.enrollment_date || s.join_date || '',
+      grade: s.grade || null,
+      level: s.level || s.grade || 'Beginner',
+      join_date: s.join_date || s.enrollment_date || '',
       enrollment_date: s.enrollment_date || s.join_date || '',
-      current_rating: s.rating || s.current_rating || 800,
       rating: s.rating || s.current_rating || 800,
-      payment_status: s.payment_status || (s.status === 'active' ? 'Paid' : 'Due'),
-      status: s.status,
-      monthly_fee: s.monthly_fee || 5000,
-      batch_type: s.batch_type || 'Evening',
-      batch_time: s.batch_time || '17:00',
-      coaches: s.coach_id ? { id: s.coach_id, full_name: s.coach_name || '' } : null,
-      coach_id: s.coach_id,
-      custom_avatar: s.custom_avatar,
-      tactics_score: s.tactics_score || 50,
-      endgame_score: s.endgame_score || 50,
-      openings_score: s.openings_score || 50,
-      positional_score: s.positional_score || 50,
-      coach_notes: s.coach_notes || '',
+      current_rating: s.current_rating || s.rating || 800,
+      payment_status: s.payment_status || 'Due',
+      status: s.status || 'pending',
       created_at: s.created_at,
       updated_at: s.updated_at
-    };
-  }
-
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
-    });
+    }
   }
 
   try {
-    const url = new URL(req.url);
-    const id = url.searchParams.get('id');
-    const body = req.method !== 'GET' ? await req.json().catch(() => ({})) : {};
+    const url = new URL(req.url)
+    const id = url.searchParams.get('id')
+    const method = req.method
 
-    if (req.method === 'GET') {
-      if (id) {
-        const { data: student, error } = await supabase
-          .from('students')
-          .select('*')
-          .eq('id', id)
-          .single();
-        
-        if (error) throw error;
-        return new Response(JSON.stringify(student ? transformStudent(student) : null), {
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
-      }
+    // GET - List all students
+    if (method === 'GET') {
       const { data: students, error } = await supabase
         .from('students')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
       
-      if (error) throw error;
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
       return new Response(JSON.stringify((students || []).map(transformStudent)), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-if (req.method === 'POST') {
-      console.log('POST /students body:', JSON.stringify(body));
+    // POST - Create new student
+    if (method === 'POST') {
+      let body = {}
+      try { body = await req.json() } catch (e) {}
       
-      const newStudent: Record<string, unknown> = { 
-        id: 's' + Date.now(), 
+      const newStudent: Record<string, unknown> = {
+        id: 's' + Date.now(),
         name: body.name || body.full_name || '',
         full_name: body.full_name || body.name || '',
-        phone: body.phone || body.parent_phone || '',
-        parent_phone: body.parent_phone || body.phone || '',
-        grade: body.grade || body.level || null,
-        level: body.level || body.grade || 'Beginner',
-        enrollment_date: body.enrollment_date || body.join_date || new Date().toISOString().split('T')[0],
-        join_date: body.join_date || body.enrollment_date || new Date().toISOString().split('T')[0],
-        rating: body.rating || 800,
-        current_rating: body.current_rating || body.rating || 800,
-        monthly_fee: body.monthly_fee || 0,
-        batch_type: body.batch_type || 'Evening',
-        batch_time: body.batch_time || '17:00',
-        payment_status: body.payment_status || 'Due',
-        status: body.status || 'pending',
-        coach_id: body.coach_id || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+        created_at: new Date().toISOString()
+      }
       
-      console.log('POST newStudent:', JSON.stringify(newStudent));
+      if (body.phone) newStudent.phone = body.phone
+      if (body.parent_phone) newStudent.parent_phone = body.parent_phone
+      if (body.grade) newStudent.grade = body.grade
+      if (body.level) newStudent.level = body.level
+      if (body.enrollment_date) newStudent.enrollment_date = body.enrollment_date
+      if (body.join_date) newStudent.join_date = body.join_date
+      if (body.rating) newStudent.rating = body.rating
+      if (body.current_rating) newStudent.current_rating = body.current_rating
+      if (body.payment_status) newStudent.payment_status = body.payment_status
+      if (body.status) newStudent.status = body.status
       
       const { data: insertedStudent, error: insertError } = await supabase
         .from('students')
         .insert(newStudent)
         .select()
-        .single();
+        .single()
       
       if (insertError) {
-        console.error('Insert error:', JSON.stringify(insertError));
-        return new Response(JSON.stringify({ error: insertError.message, code: insertError.code, details: insertError }), {
+        return new Response(JSON.stringify({ error: insertError.message }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
       }
-      return new Response(JSON.stringify(insertedStudent ? transformStudent(insertedStudent) : null), {
+      return new Response(JSON.stringify(insertedStudent ? transformStudent(insertedStudent) : { success: true }), {
         status: 201,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    if (req.method === 'PUT') {
-      if (!id) return new Response(JSON.stringify({ error: 'ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      console.log('PUT /students body:', JSON.stringify(body));
-      console.log('PUT /students id:', id);
-      
-      const updateData: Record<string, unknown> = {};
-      
-      if (body.name !== undefined) updateData.name = body.name;
-      if (body.full_name !== undefined) updateData.full_name = body.full_name;
-      if (body.phone !== undefined) updateData.phone = body.phone;
-      if (body.parent_phone !== undefined) updateData.parent_phone = body.parent_phone;
-      if (body.grade !== undefined) updateData.grade = body.grade;
-      if (body.level !== undefined) updateData.level = body.level;
-      if (body.join_date !== undefined) updateData.join_date = body.join_date;
-      if (body.enrollment_date !== undefined) updateData.enrollment_date = body.enrollment_date;
-      if (body.rating !== undefined && body.rating !== null && body.rating !== '') {
-        const ratingNum = Number(body.rating);
-        if (!isNaN(ratingNum) && isFinite(ratingNum)) {
-          updateData.rating = Math.floor(ratingNum);
-        }
+    // PUT - Update student
+    if (method === 'PUT') {
+      if (!id) {
+        return new Response(JSON.stringify({ error: 'ID is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
       }
-      if (body.current_rating !== undefined && body.current_rating !== null) {
-        const ratingNum = Number(body.current_rating);
-        if (!isNaN(ratingNum) && isFinite(ratingNum)) {
-          updateData.current_rating = Math.floor(ratingNum);
-        }
-      }
-      if (body.monthly_fee !== undefined && body.monthly_fee !== null && body.monthly_fee !== '') {
-        const feeNum = Number(body.monthly_fee);
-        if (!isNaN(feeNum) && isFinite(feeNum)) {
-          updateData.monthly_fee = Math.floor(feeNum);
-        }
-      }
-      if (body.batch_type !== undefined) updateData.batch_type = body.batch_type;
-      if (body.batch_time !== undefined) updateData.batch_time = body.batch_time;
-      if (body.payment_status !== undefined) updateData.payment_status = body.payment_status;
-      if (body.status !== undefined) updateData.status = body.status;
-      if (body.coach_id !== undefined) updateData.coach_id = body.coach_id || null;
-      if (body.custom_avatar !== undefined) updateData.custom_avatar = body.custom_avatar;
-      if (body.coach_notes !== undefined) updateData.coach_notes = body.coach_notes;
-      if (body.tactics_score !== undefined) updateData.tactics_score = body.tactics_score;
-      if (body.endgame_score !== undefined) updateData.endgame_score = body.endgame_score;
-      if (body.openings_score !== undefined) updateData.openings_score = body.openings_score;
-      if (body.positional_score !== undefined) updateData.positional_score = body.positional_score;
       
-      updateData.updated_at = new Date().toISOString();
+      let body = {}
+      try { body = await req.json() } catch (e) {}
       
-      console.log('PUT updateData:', JSON.stringify(updateData));
+      const updateData: Record<string, unknown> = {}
+      
+      if (body.name !== undefined) updateData.name = body.name
+      if (body.full_name !== undefined) updateData.full_name = body.full_name
+      if (body.phone !== undefined) updateData.phone = body.phone
+      if (body.parent_phone !== undefined) updateData.parent_phone = body.parent_phone
+      if (body.grade !== undefined) updateData.grade = body.grade
+      if (body.level !== undefined) updateData.level = body.level
+      if (body.payment_status !== undefined) updateData.payment_status = body.payment_status
+      if (body.status !== undefined) updateData.status = body.status
+      if (body.rating !== undefined) updateData.rating = body.rating
+      updateData.updated_at = new Date().toISOString()
       
       const { data: updatedStudent, error: updateError } = await supabase
         .from('students')
         .update(updateData)
         .eq('id', id)
         .select()
-        .single();
+        .single()
       
       if (updateError) {
-        console.error('Update error:', JSON.stringify(updateError));
-        return new Response(JSON.stringify({ 
-          error: updateError.message, 
-          code: updateError.code, 
-          details: updateError,
-          hint: 'Check that all field types match database schema'
-        }), {
+        return new Response(JSON.stringify({ error: updateError.message }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
       }
-      return new Response(JSON.stringify({ message: 'Updated', data: updatedStudent ? transformStudent(updatedStudent) : null }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      
+      return new Response(JSON.stringify(updatedStudent ? transformStudent(updatedStudent) : { success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    if (req.method === 'DELETE') {
-      if (!id) return new Response(JSON.stringify({ error: 'ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      console.log('Deleting student with id:', id);
+    // DELETE - Delete student
+    if (method === 'DELETE') {
+      if (!id) {
+        return new Response(JSON.stringify({ error: 'ID is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
       
       const { error: deleteError } = await supabase
         .from('students')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
       
       if (deleteError) {
-        console.error('Delete error:', deleteError);
-        throw deleteError;
+        return new Response(JSON.stringify({ error: deleteError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
       }
       
-      console.log('Delete successful for id:', id);
-      
-      return new Response(JSON.stringify({ success: true, message: 'Deleted', id }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      return new Response(JSON.stringify({ success: true, id }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    });
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
-});
+})
