@@ -915,6 +915,13 @@
               `<button class="btn-register" style="background:var(--surface2);color:var(--ivory3);border:1px solid var(--border)" disabled>View Only</button>`
           }
         </div>
+        ${role === 'admin' || role === 'master' ? `
+        <div class="ev-admin-actions" style="display:flex;gap:8px;padding:12px 22px;border-top:1px solid rgba(232,168,48,0.08);background:rgba(0,0,0,0.15)">
+          <button class="btn-xs edit" onclick="editEvent('${e.id}')" style="flex:1">Edit</button>
+          <button class="btn-xs del" onclick="deleteEvent('${e.id}')" style="flex:1;background:rgba(232,64,64,0.1);border-color:rgba(232,64,64,0.3);color:var(--ruby)">Delete</button>
+        </div>
+        ` : ''}
+      </div>
       </div>`;
     }).join('');
   }
@@ -927,10 +934,26 @@
     openModal('ev-modal');
   }
 
+  function editEvent(id) {
+    const event = eventsData.find(e => String(e.id) === String(id));
+    if (!event) return;
+    if ($('ev-title')) $('ev-title').value = event.title || '';
+    if ($('ev-desc')) $('ev-desc').value = event.description || '';
+    if ($('ev-date')) $('ev-date').value = event.date || event.event_date || '';
+    if ($('ev-time')) $('ev-time').value = event.time || event.event_time || '10:00';
+    if ($('ev-loc')) $('ev-loc').value = event.location || '';
+    if ($('ev-type')) $('ev-type').value = event.type || 'Tournament';
+    if ($('ev-max')) $('ev-max').value = event.max_participants || 50;
+    if ($('ev-prize')) $('ev-prize').value = event.prize || '';
+    if ($('ev-id')) $('ev-id').value = event.id;
+    openModal('ev-modal');
+  }
+
   // FIX: single saveEvent function — no duplicate
   async function saveEvent() {
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
 
+    const eventId = $('ev-id') ? $('ev-id').value : '';
     const title = $('ev-title') ? $('ev-title').value.trim() : '';
     const description = $('ev-desc') ? $('ev-desc').value.trim() : '';
     const date = $('ev-date') ? $('ev-date').value : '';
@@ -948,19 +971,41 @@
     };
 
     try {
-      const res = await apiCall(`${API_BASE}/events`, {
-        method: 'POST',
-        body: JSON.stringify(eventData)
-      });
+      const isEdit = eventId && eventId.length > 0;
+      if (isEdit) {
+        if ($('ev-modal-title')) $('ev-modal-title').textContent = 'Update Event';
+      } else {
+        if ($('ev-modal-title')) $('ev-modal-title').textContent = 'Create Event';
+      }
+      
+      let res;
+      if (isEdit) {
+        res = await apiCall(`${API_BASE}/events?id=${encodeURIComponent(eventId)}`, {
+          method: 'PUT',
+          body: JSON.stringify(eventData)
+        });
+      } else {
+        res = await apiCall(`${API_BASE}/events`, {
+          method: 'POST',
+          body: JSON.stringify(eventData)
+        });
+      }
       const result = await res.json().catch(() => ({ error: 'Invalid JSON response' }));
       if (!res.ok) { toast('Failed: ' + (result.error || 'Unknown'), 'error'); return; }
-      toast('Event created!', 'success');
+      toast(isEdit ? 'Event updated!' : 'Event created!', 'success');
       closeModals();
       const newEvent = result.data || result;
-      if (newEvent && newEvent.id) { eventsData = [newEvent, ...eventsData]; dataCache.timestamp = Date.now(); }
+      if (newEvent && newEvent.id) {
+        if (isEdit) {
+          eventsData = eventsData.map(e => String(e.id) === String(eventId) ? newEvent : e);
+        } else {
+          eventsData = [newEvent, ...eventsData];
+        }
+        dataCache.timestamp = Date.now();
+      }
       renderEvents(); renderDash();
     } catch (e) {
-      console.error('Event creation error:', e);
+      console.error('Event save error:', e);
       toast('Network error while saving event', 'error');
     }
   }
