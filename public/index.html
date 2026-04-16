@@ -538,18 +538,16 @@
   </div>
 </div>
 
-<!-- CHAT WIDGET - Floating Button (New Design) -->
-<button class="chat-fab" id="ai-chat-btn" onclick="toggleChat()">
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-</button>
+<!-- CHAT WIDGET - Floating Button (Chess Design) -->
+<button class="chat-fab" id="ai-chat-btn" onclick="toggleChat()" title="AI Chat">♟</button>
 
-<!-- Chat Panel (New Design) -->
+<!-- Chat Panel (Chess Design) -->
 <div class="chat-panel" id="chat-panel" style="display:none">
   <div class="chat-head">
-    <div class="chat-head-av">♚</div>
+    <div class="chat-head-av">⚡</div>
     <div class="chat-head-info">
-      <h4>Chesskidoo AI <span class="ai-online-dot"></span></h4>
-      <p><span class="online-dot"></span>Online</p>
+      <h4>Chesskidoo AI</h4>
+      <p><span style="display:inline-block;width:6px;height:6px;background:var(--emerald);border-radius:50%;margin-right:4px;"></span>Online</p>
     </div>
   </div>
   <div class="chat-body" id="ai-chat-body">
