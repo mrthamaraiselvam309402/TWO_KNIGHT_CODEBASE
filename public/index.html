@@ -17,6 +17,25 @@
 
 <!-- Login Screen -->
 <div id="login-screen">
+  <!-- Chat Widget on Login Page -->
+  <button class="chat-fab" id="login-chat-btn" style="bottom:28px;right:28px;" onclick="toggleLoginChat()" title="AI Chat">♟</button>
+  <div class="chat-panel" id="login-chat-panel" style="display:none;bottom:96px;left:28px;">
+    <div class="chat-head">
+      <div class="chat-head-av">⚡</div>
+      <div class="chat-head-info">
+        <h4>Chesskidoo AI</h4>
+        <p><span style="display:inline-block;width:6px;height:6px;background:var(--emerald);border-radius:50%;margin-right:4px;"></span>Online</p>
+      </div>
+    </div>
+    <div class="chat-body" id="login-chat-body">
+      <div class="chat-msg bot">Hi! I'm your AI assistant. Ask me anything about the academy!</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="login-chat-input" placeholder="Type a message…" onkeypress="if(event.key==='Enter')sendLoginChat()">
+      <button class="chat-send" onclick="sendLoginChat()">↑</button>
+    </div>
+  </div>
+
   <div class="login-box">
     <svg class="login-crown" viewBox="0 0 512 512"><path d="M458 139.7a32 32 0 10-53 30.6l-50.6 84.4L275.6 96.3a32 32 0 10-39.2 0L157.6 254.7l-50.6-84.4a32 32 0 10-53-30.6L102 384h308zM64 432h384v48H64z"/></svg>
     <h1 class="login-title">Chesskidoo Login</h1>
@@ -143,23 +162,82 @@
         <div class="profile-hdr">
           <div class="profile-info">
             <div id="p-av-wrap"></div>
-            <div class="profile-details"><h1 id="c-name">—</h1><div class="profile-meta"><span><b>Level:</b> <span id="c-level" class="text-gold">—</span></span><span><b>Coach:</b> <span id="c-coach">—</span></span></div></div>
+            <div class="profile-details">
+              <h1 id="c-name">—</h1>
+              <div class="profile-meta">
+                <span><b>Level:</b> <span id="c-level" class="text-gold">—</span></span>
+                <span><b>Coach:</b> <span id="c-coach">—</span></span>
+              </div>
+            </div>
           </div>
           <div class="profile-actions">
             <button class="btn btn-gold" onclick="openContactModal()">✉️ Message Coach</button>
             <button class="btn btn-outline" onclick="openModal('fb-modal')">📝 Feedback</button>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:26px">
-          <div class="card">
-            <h3 style="margin-bottom:18px;color:var(--gold)">Coach Review</h3>
-            <div style="padding:18px;background:var(--glass);border-radius:10px;line-height:1.8;margin-bottom:24px;font-size:14px"><span style="color:var(--success);font-weight:700">★ LATEST:</span><br><span id="c-notes">—</span></div>
-            <div class="stat-label">Current ELO</div><div class="stat-value" id="c-elo" style="font-size:42px">—</div>
-          </div>
-          <div class="card"><h3 style="margin-bottom:20px;color:var(--gold)">Skill Breakdown</h3><div id="skill-bars"></div></div>
+
+        <!-- Parent Portal Tabs -->
+        <div class="tabs-nav">
+          <button class="tab-link active" onclick="setChildTab('overview', this)">Overview</button>
+          <button class="tab-link" onclick="setChildTab('growth', this)">Growth</button>
+          <button class="tab-link" onclick="setChildTab('learning', this)">Resources</button>
+          <button class="tab-link" onclick="setChildTab('billing', this)">Billing</button>
         </div>
-        <h2 style="font-family:var(--font-head);margin-bottom:12px;font-size:22px">My Achievements</h2>
-        <div class="ach-grid" id="parent-ach"></div>
+
+        <div id="child-tab-overview" class="child-tab-content active">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:26px">
+            <div class="card">
+              <h3 style="margin-bottom:18px;color:var(--gold)">Coach Review</h3>
+              <div style="padding:18px;background:var(--glass);border-radius:10px;line-height:1.8;margin-bottom:24px;font-size:14px">
+                <span style="color:var(--success);font-weight:700">★ LATEST:</span><br>
+                <span id="c-notes">—</span>
+              </div>
+              <div class="stat-label">Current ELO</div>
+              <div class="stat-value" id="c-elo" style="font-size:42px">—</div>
+            </div>
+            <div class="card">
+              <h3 style="margin-bottom:20px;color:var(--gold)">Skill Breakdown</h3>
+              <div id="skill-bars"></div>
+            </div>
+          </div>
+          <h2 style="font-family:var(--font-head);margin-bottom:12px;font-size:22px">Achievements</h2>
+          <div class="ach-grid" id="parent-ach"></div>
+        </div>
+
+        <div id="child-tab-growth" class="child-tab-content">
+          <div class="dash-grid" style="margin-bottom:22px">
+            <div class="card">
+              <h3 style="margin-bottom:16px;color:var(--gold)">Rating Progression</h3>
+              <div style="height:300px"><canvas id="chartChildElo"></canvas></div>
+            </div>
+            <div class="card">
+              <h3 style="margin-bottom:16px;color:var(--gold)">Attendance Overview</h3>
+              <div id="attendance-heatmap" class="heatmap-container"></div>
+              <div class="heatmap-legend" style="margin-top:12px;display:flex;gap:12px;font-size:11px;color:var(--ivory-dim)">
+                <span style="display:flex;align-items:center;gap:4px"><i style="display:inline-block;width:10px;height:10px;background:var(--success);border-radius:2px"></i> Present</span>
+                <span style="display:flex;align-items:center;gap:4px"><i style="display:inline-block;width:10px;height:10px;background:var(--danger);border-radius:2px"></i> Absent</span>
+                <span style="display:flex;align-items:center;gap:4px"><i style="display:inline-block;width:10px;height:10px;background:var(--bg3);border-radius:2px"></i> No Class</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="child-tab-learning" class="child-tab-content">
+          <div id="resource-grid" class="resource-grid">
+            <div class="loading-state"><span class="spinner"></span> Loading Library…</div>
+          </div>
+        </div>
+
+        <div id="child-tab-billing" class="child-tab-content">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Date</th><th>Period</th><th>Amount</th><th>Status</th><th>Action</th></tr>
+              </thead>
+              <tbody id="child-bill-body"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -540,7 +618,7 @@
 </div>
 
 <!-- CHAT WIDGET - Floating Button (Chess Design) -->
-<button class="chat-fab" id="ai-chat-btn" onclick="toggleChat()" title="AI Chat">♟</button>
+<button class="chat-fab" id="ai-chat-btn" style="bottom:28px;right:28px;" onclick="toggleChat()" title="AI Chat">♟</button>
 
 <!-- Chat Panel (Chess Design) -->
 <div class="chat-panel" id="chat-panel" style="display:none">

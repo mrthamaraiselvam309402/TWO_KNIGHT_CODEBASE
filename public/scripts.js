@@ -1382,9 +1382,132 @@
   // ═══════════════════════════════════════════════════════════════
   function toggleChat() {
     const panel = $('chat-panel');
+    const btn = $('ai-chat-btn');
     if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'flex' : 'none';
   }
   function toggleChatbot() { toggleChat(); }
+  function toggleLoginChat() {
+    const panel = $('login-chat-panel');
+    if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'flex' : 'none';
+  }
+
+  (function() {
+    function initDraggable(btnId, panelId) {
+      const btn = $(btnId);
+      if (!btn) return;
+      let isDragging = false, startX, startY, initialX, initialY;
+      const chatPanel = panelId ? $(panelId) : null;
+      
+      function savePosition(x, y, key) {
+        try { localStorage.setItem(key, JSON.stringify({ x, y })); } catch (e) {}
+      }
+      function loadPosition(key) {
+        try { 
+          const pos = JSON.parse(localStorage.getItem(key));
+          if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
+            btn.style.left = pos.x + 'px';
+            btn.style.right = 'auto';
+            btn.style.bottom = 'auto';
+            btn.style.top = pos.y + 'px';
+            if (chatPanel) {
+              chatPanel.style.right = 'auto';
+              chatPanel.style.bottom = 'auto';
+              chatPanel.style.left = pos.x + 'px';
+              chatPanel.style.top = (pos.y + 64) + 'px';
+            }
+          }
+        } catch (e) {}
+      }
+      
+      loadPosition(btnId === 'ai-chat-btn' ? 'chatFabPos' : 'loginChatFabPos');
+      
+      const storageKey = btnId === 'ai-chat-btn' ? 'chatFabPos' : 'loginChatFabPos';
+      
+      btn.addEventListener('mousedown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        isDragging = true;
+        btn.style.transition = 'none';
+        startX = e.clientX;
+        startY = e.clientY;
+        const rect = btn.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+        e.preventDefault();
+      });
+      
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        let newX = initialX + dx;
+        let newY = initialY + dy;
+        newX = Math.max(0, Math.min(window.innerWidth - 56, newX));
+        newY = Math.max(0, Math.min(window.innerHeight - 56, newY));
+        btn.style.left = newX + 'px';
+        btn.style.right = 'auto';
+        btn.style.bottom = 'auto';
+        btn.style.top = newY + 'px';
+        if (chatPanel) {
+          chatPanel.style.left = newX + 'px';
+          chatPanel.style.right = 'auto';
+          chatPanel.style.bottom = 'auto';
+          chatPanel.style.top = (newY + 64) + 'px';
+        }
+      });
+      
+      document.addEventListener('mouseup', function() {
+        if (!isDragging) return;
+        isDragging = false;
+        btn.style.transition = '';
+        const rect = btn.getBoundingClientRect();
+        savePosition(rect.left, rect.top, storageKey);
+      });
+      
+      btn.addEventListener('touchstart', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        isDragging = true;
+        btn.style.transition = 'none';
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        const rect = btn.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+      }, { passive: true });
+      
+      document.addEventListener('touchmove', function(e) {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
+        let newX = initialX + dx;
+        let newY = initialY + dy;
+        newX = Math.max(0, Math.min(window.innerWidth - 56, newX));
+        newY = Math.max(0, Math.min(window.innerHeight - 56, newY));
+        btn.style.left = newX + 'px';
+        btn.style.right = 'auto';
+        btn.style.bottom = 'auto';
+        btn.style.top = newY + 'px';
+        if (chatPanel) {
+          chatPanel.style.left = newX + 'px';
+          chatPanel.style.right = 'auto';
+          chatPanel.style.bottom = 'auto';
+          chatPanel.style.top = (newY + 64) + 'px';
+        }
+      }, { passive: true });
+      
+      document.addEventListener('touchend', function() {
+        if (!isDragging) return;
+        isDragging = false;
+        btn.style.transition = '';
+        const rect = btn.getBoundingClientRect();
+        savePosition(rect.left, rect.top, storageKey);
+      });
+    }
+    
+    initDraggable('ai-chat-btn', 'chat-panel');
+    initDraggable('login-chat-btn', 'login-chat-panel');
+  })();
 
   async function sendChat() {
     const input = $('chat-input');
@@ -1521,7 +1644,7 @@
     renderMsgs, markMsgRead, deleteMsg,
     renderChild, openContactModal, sendMsg, sendFeedback,
     showNotifications, updateNotificationBadge,
-    setAIModule, setAISuggestion, sendAIQuery, toggleChatbot, sendChatMessage, toggleChat, sendChat,
+    setAIModule, setAISuggestion, sendAIQuery, toggleChatbot, sendChatMessage, toggleChat, toggleLoginChat, sendChat,
     toggleTheme, closeModals, openModal, previewFile,
     generateReportPDF, exportData, toast, $
   };
