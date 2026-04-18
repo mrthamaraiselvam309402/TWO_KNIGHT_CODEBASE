@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "Comprehensive chess academy management system with AI assistant, payment processing, and Supabase cloud database",
   "scripts": {
-    "dev": "npx vercel dev",
+    "dev-local": "vercel dev",
     "build": "echo 'No build step required - static site'",
     "start": "npx vercel dev",
     "test": "echo 'No tests configured'",

@@ -110,9 +110,15 @@
       <div style="margin-bottom: 32px;">
         <button class="btn btn-gold" onclick="generateReportPDF()">📄 Download Financial Report (PDF)</button>
       </div>
+      <!-- Financial Analytics Cards -->
       <div class="dash-grid" style="margin-bottom:32px">
-        <div class="card"><div class="stat-label">Total Spending</div><div class="stat-value text-danger" id="s-spend">—</div></div>
-        <div class="card"><div class="stat-label">Net Profit</div><div class="stat-value" id="s-profit">—</div></div>
+        <div class="card"><div class="stat-label">Total Potential Revenue</div><div class="stat-value" style="color:var(--blue)" id="s-total-revenue">—</div></div>
+        <div class="card"><div class="stat-label">Total Coach Cost</div><div class="stat-value" style="color:var(--danger)" id="s-total-cost">—</div></div>
+        <div class="card"><div class="stat-label">Net Profit Potential</div><div class="stat-value" style="color:var(--success)" id="s-profit">—</div></div>
+      </div>
+      <div class="dash-grid" style="margin-bottom:32px">
+        <div class="card"><div class="stat-label">Group Sessions</div><div class="stat-value" id="s-group">—</div></div>
+        <div class="card"><div class="stat-label">Single Sessions</div><div class="stat-value" id="s-single">—</div></div>
         <div class="card"><div class="stat-label">Collection Rate</div><div class="stat-value" style="color:var(--blue)" id="s-rate">—</div></div>
       </div>
       <div class="dash-charts">
@@ -121,7 +127,17 @@
       </div>
       <div class="dash-charts">
         <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Payment Status</h3><canvas id="chartPayment" height="160"></canvas></div>
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Batch Distribution</h3><canvas id="chartBatch" height="160"></canvas></div>
+        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Session Distribution</h3><canvas id="chartSession" height="160"></canvas></div>
+      </div>
+      <!-- Coach Financial Table -->
+      <div style="margin-top:32px">
+        <h3 style="color:var(--gold);margin-bottom:18px">Coach Financial Analytics</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Coach</th><th>Students</th><th>Revenue</th><th>Pending</th><th>Salary Cost</th><th>Net Profit</th><th>ROI</th></tr></thead>
+            <tbody id="coach-finance-body"><tr><td colspan="7"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -137,7 +153,7 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Student</th><th>Level / ELO</th><th>Join Date</th><th>Coach</th><th>Fee Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Student</th><th>Level / ELO</th><th>Join Date</th><th>Session</th><th>Timing</th><th>Fee</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="stud-body"><tr><td colspan="6"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
         </table>
       </div>
@@ -443,6 +459,51 @@
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
       <button class="btn btn-gold" style="flex:1" onclick="updateStudent()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance Marking Modal -->
+<div class="modal" id="attendance-modal">
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-title">Mark Attendance</div>
+    <div class="modal-sub" id="att-modal-sub">Session Date: <input type="date" id="att-date" style="display:inline;width:auto;padding:4px"></div>
+    <div class="table-wrap" style="max-height:300px;overflow-y:auto;margin:16px 0">
+      <table style="font-size:13px">
+        <thead><tr><th>Student</th><th>Status</th><th>Notes</th></tr></thead>
+        <tbody id="att-marking-body"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveBatchAttendance()">Save Attendance</button>
+    </div>
+  </div>
+</div>
+
+<!-- Promotion Modal -->
+<div class="modal" id="promote-modal">
+  <div class="modal-box">
+    <div class="modal-title">Promote Student</div>
+    <div class="modal-sub">Upgrading <strong id="promote-name" style="color:var(--gold)">—</strong></div>
+    <input type="hidden" id="promote-id">
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;color:var(--ivory-dim);margin-bottom:6px">Current Level: <span id="promote-curr-level" style="color:var(--ivory)">—</span></label>
+      <select id="promote-new-level">
+        <option>Beginner</option>
+        <option>Intermediate</option>
+        <option>Advanced</option>
+        <option>Elite</option>
+      </select>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;color:var(--ivory-dim);margin-bottom:6px">New ELO Bonus</label>
+      <input type="number" id="promote-elo-bonus" value="100" placeholder="ELO Jump">
+    </div>
+    <textarea id="promote-notes" placeholder="Congratulations message / Admin notes..." rows="3"></textarea>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="executePromotion()">Confirm Promotion</button>
     </div>
   </div>
 </div>
