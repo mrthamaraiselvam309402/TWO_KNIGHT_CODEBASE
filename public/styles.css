@@ -1411,16 +1411,15 @@ body.admin-mode .master-only { display: none !important; }
   background: linear-gradient(135deg, var(--gold), var(--gold2));
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  cursor: grab;
+  cursor: pointer;
   z-index: 4000;
   box-shadow: 0 8px 24px rgba(232,168,48,0.4);
   font-size: 22px;
-  transition: box-shadow 0.3s;
+  transition: all 0.3s;
   border: none;
-  touch-action: none;
 }
-.chat-fab:active { cursor: grabbing; }
 .chat-fab:hover {
+  transform: scale(1.1) rotate(10deg);
   box-shadow: 0 12px 32px rgba(232,168,48,0.5);
 }
 
