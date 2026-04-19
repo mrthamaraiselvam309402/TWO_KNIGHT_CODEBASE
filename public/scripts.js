@@ -282,7 +282,7 @@
   function toast(msg, type = 'info') {
     const el = document.createElement('div');
     el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${msg`;
+    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${msg}`;
     const container = $('toast-container');
     if (container) container.appendChild(el);
     setTimeout(() => el.remove(), 3800);
@@ -317,6 +317,7 @@
   document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModals(); }));
   
   window.executeDelete = async function() {
+    console.log('Executing Delete...');
     const id = $('delete-item-id').value;
     const type = $('delete-type').value;
     const isHardDelete = $('hard-delete').checked;
@@ -329,17 +330,22 @@
     
     try {
       if (type === 'event') {
-        await apiCall(`/api/events?id=${id}`, { method: 'DELETE' });
+        const deleteUrl = '/api/events?id=' + id;
+        await apiCall(deleteUrl, { method: 'DELETE' });
         logAudit('events', id, 'hard_delete', { id }, null);
         toast('Event permanently deleted!', 'success');
       } else if (type === 'achievement') {
-        await apiCall(`/api/achievements?id=${id}`, { method: 'DELETE' });
+        const deleteUrl = '/api/achievements?id=' + id;
+        await apiCall(deleteUrl, { method: 'DELETE' });
         logAudit('achievements', id, 'hard_delete', { id }, null);
         toast('Achievement permanently deleted!', 'success');
       }
       closeModals();
       loadAllData(true);
-    } catch (e) { toast('Failed to delete', 'error'); }
+    } catch (e) { 
+      console.error('Delete failed:', e);
+      toast('Failed to delete', 'error'); 
+    }
   };
 
   function previewFile(inp, previewId) {
