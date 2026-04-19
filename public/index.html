@@ -67,8 +67,6 @@
 
     <div class="footer-links">
       <a class="footer-link" onclick="toast('Please contact administrator for reset','info')">Forgot Password?</a>
-      <span style="color: var(--surface3)">|</span>
-      <a class="footer-link" onclick="openModal('fb-modal')">Request Access</a>
     </div>
   </div>
 </div>
@@ -142,6 +140,14 @@
         <div class="card"><div class="stat-label">Group Sessions</div><div class="stat-value" id="s-group">—</div></div>
         <div class="card"><div class="stat-label">Single Sessions</div><div class="stat-value" id="s-single">—</div></div>
         <div class="card"><div class="stat-label">Collection Rate</div><div class="stat-value" style="color:var(--blue)" id="s-rate">—</div></div>
+      </div>
+      
+      <!-- Golden State: Attendance Insights -->
+      <h3 style="color:var(--gold);margin-bottom:18px;font-family:var(--font-head);letter-spacing:1px">Today's Attendance Insights</h3>
+      <div class="dash-grid" style="margin-bottom:32px">
+        <div class="card"><div class="stat-label">Present Today</div><div class="stat-value text-success" id="s-att-present">0</div></div>
+        <div class="card"><div class="stat-label">Absent Today</div><div class="stat-value text-danger" id="s-att-absent">0</div></div>
+        <div class="card"><div class="stat-label">Class Pending</div><div class="stat-value" style="color:var(--surface3)" id="s-att-pending">0</div></div>
       </div>
       <div class="dash-charts">
         <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Revenue Analysis</h3><canvas id="chartRevenue" height="160"></canvas></div>
