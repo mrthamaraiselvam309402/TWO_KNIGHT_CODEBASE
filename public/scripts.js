@@ -619,7 +619,7 @@
           <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">🗓️ Batch Attendance</button>
           <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
         `;
-        if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openModal('ev-modal')">+ Create Event</button>`;
+        if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEventModal()">+ Create Event</button>`;
       }
     }
 
@@ -1569,7 +1569,7 @@
 
   function renderFame() {
     const gridEl = $('fame-grid');
-    const loadingEl = $('fame-loading');
+    const loadingEl = $('ach-loading');
     if (!gridEl) return;
     
     if (loadingEl) loadingEl.style.display = 'none';
@@ -2367,6 +2367,7 @@
   window.saveCoach = saveCoach;
   window.deleteCoach = deleteCoach;
   window.renderEvents = renderEvents;
+  window.openEventModal = openEventModal;
   window.saveEvent = saveEvent;
   window.deleteEvent = deleteEvent;
   window.editEvent = editEvent;
