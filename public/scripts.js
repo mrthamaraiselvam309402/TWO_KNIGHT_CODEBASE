@@ -262,7 +262,10 @@
       ...options.headers
     };
     console.log('API Call:', options.method || 'GET', url);
-    const response = fetch(url, { ...options, headers });
+    const response = await fetch(url, { ...options, headers });
+    if (!response.ok) {
+      console.warn(`API Error: ${options.method || 'GET'} ${endpoint} -> ${response.status} ${response.statusText}`);
+    }
     return response;
   }
 
@@ -501,9 +504,9 @@
         eventsData = events || [];
         allMessages = messages || [];
         
-        console.log('Data loaded - Coaches:', allCoaches?.length, 'Students:', allStudents?.length);
-        console.log('Sample student:', allStudents[0]);
-        console.log('Sample coach:', allCoaches[0]);
+        console.log('Data loaded - Coaches:', allCoaches?.length, 'Students:', allStudents?.length, 'Achievements:', achievementsData?.length, 'Events:', eventsData?.length);
+        if (allStudents.length > 0) console.log('Sample student:', allStudents[0]);
+        if (allCoaches.length > 0) console.log('Sample coach:', allCoaches[0]);
         
         dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, timestamp: now };
         syncCoachDropdowns();

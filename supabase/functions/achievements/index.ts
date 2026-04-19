@@ -15,8 +15,13 @@ Deno.serve(async (req) => {
 
   async function getStudentName(studentId) {
     if (!studentId) return null;
-    const { data } = await supabase.from('students').select('full_name, name').eq('id', studentId).single();
-    return data?.full_name || data?.name || null;
+    try {
+      const { data, error } = await supabase.from('students').select('full_name, name').eq('id', studentId).maybeSingle();
+      if (error) return null;
+      return data?.full_name || data?.name || null;
+    } catch (e) {
+      return null;
+    }
   }
 
   async function transformAchievement(a) {

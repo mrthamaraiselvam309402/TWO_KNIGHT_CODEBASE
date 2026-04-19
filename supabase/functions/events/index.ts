@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
+    console.log(`${req.method} ${url.pathname}`);
     const id = url.searchParams.get('id');
     const body = req.method !== 'GET' ? await req.json().catch(() => ({})) : {};
 
