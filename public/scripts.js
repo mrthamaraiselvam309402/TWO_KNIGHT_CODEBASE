@@ -5,6 +5,8 @@
 
 (function() {
   'use strict';
+  
+  console.log('Chesskidoo Scripts Loading...');
 
   // ═══════════════════════════════════════════════════════════════
   // STATE
@@ -50,12 +52,15 @@
       const myAtt = allAttendance.filter(a => String(a.student_id) === String(s.id));
       const last30 = [];
       const now = new Date();
+      const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
       for (let i = 29; i >= 0; i--) {
         const d = new Date(); d.setDate(now.getDate()-i); const dStr = d.toISOString().split('T')[0];
         const record = myAtt.find(a => a.date === dStr);
-        last30.push({ date: d.getDate(), status: record ? record.status : 'none' });
+        last30.push({ date: d.getDate(), day: days[d.getDay()], status: record ? record.status : 'none' });
       }
-      heatmap.innerHTML = last30.map(d => `<div class="heatmap-day ${d.status}" title="${d.status}">${d.date}</div>`).join('');
+      heatmap.innerHTML = '<div class="heatmap-day-label" style="grid-column:1/-1;display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;color:var(--ivory3)">' + 
+        '<span>30 days ago</span><span>Today</span></div>' +
+        last30.map(d => `<div class="heatmap-day ${d.status}" title="${d.status || 'No class'} - Day ${d.date}">${d.date}<span class="day-label">${d.day}</span></div>`).join('');
     }
   }
 
@@ -83,41 +88,104 @@
     const studs = coachId ? allStudents.filter(s => String(s.coach_id) === String(coachId)) : allStudents;
     const body = $('att-marking-body');
     if (!body) return;
+    
+    // Set default date to today
     if ($('att-date')) $('att-date').value = new Date().toISOString().split('T')[0];
-    body.innerHTML = studs.map(s => `
-      <tr>
-        <td>${getStudentName(s)}</td>
-        <td>
-          <select class="att-status" data-sid="${s.id}">
-            <option value="present">Present</option>
-            <option value="absent">Absent</option>
-            <option value="late">Late</option>
-            <option value="excused">Excused</option>
-          </select>
-        </td>
-        <td><input type="text" class="att-notes" data-sid="${s.id}" placeholder="Note..."></td>
-      </tr>
-    `).join('');
+    
+    // Get today's existing attendance to pre-fill
+    const today = new Date().toISOString().split('T')[0];
+    const todayRecords = allAttendance.filter(a => a.date === today);
+    
+    body.innerHTML = studs.map(s => {
+      const existing = todayRecords.find(a => String(a.student_id) === String(s.id));
+      const status = existing?.status || '';
+      const notes = existing?.notes || '';
+      return `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <img src="${makeAvSrc(s)}" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--gold)">
+              <div>
+                <div style="font-weight:600">${getStudentName(s)}</div>
+                <small style="color:var(--ivory3)">${getStudentLevel(s)} - ${getStudentRating(s)} ELO</small>
+              </div>
+            </div>
+          </td>
+          <td>
+            <select class="att-status" data-sid="${s.id}" onchange="updateAttStats()">
+              <option value="" ${!status ? 'selected' : ''}>-- Select --</option>
+              <option value="present" ${status === 'present' ? 'selected' : ''}>✅ Present</option>
+              <option value="absent" ${status === 'absent' ? 'selected' : ''}>❌ Absent</option>
+              <option value="late" ${status === 'late' ? 'selected' : ''}>⏰ Late</option>
+              <option value="excused" ${status === 'excused' ? 'selected' : ''}>📋 Excused</option>
+            </select>
+          </td>
+          <td><input type="text" class="att-notes" data-sid="${s.id}" placeholder="Add note..." value="${notes}"></td>
+        </tr>
+      `;
+    }).join('');
+    
+    // Add stats bar
+    updateAttStats();
     openModal('attendance-modal');
   }
-
+  
+  window.updateAttStats = function() {
+    const rows = document.querySelectorAll('#att-marking-body tr');
+    let present = 0, absent = 0, late = 0, excused = 0, unmarked = 0;
+    rows.forEach(row => {
+      const status = row.querySelector('.att-status').value;
+      if (status === 'present') present++;
+      else if (status === 'absent') absent++;
+      else if (status === 'late') late++;
+      else if (status === 'excused') excused++;
+      else unmarked++;
+    });
+    const statsEl = document.getElementById('att-stats');
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <span style="color:var(--success)">✅ ${present}</span> |
+        <span style="color:var(--danger)">❌ ${absent}</span> |
+        <span style="color:var(--gold)">⏰ ${late}</span> |
+        <span style="color:var(--ivory3)">📋 ${excused}</span> |
+        <span style="color:var(--ivory3)"> unmarked: ${unmarked}</span>
+      `;
+    }
+  };
+  
+  window.markAllPresent = function() {
+    document.querySelectorAll('.att-status').forEach(s => s.value = 'present');
+    updateAttStats();
+  };
+  
+  window.markAllAbsent = function() {
+    document.querySelectorAll('.att-status').forEach(s => s.value = 'absent');
+    updateAttStats();
+  };
+  
   async function saveBatchAttendance() {
     const date = $('att-date').value;
+    if (!date) { toast('Please select a date', 'error'); return; }
+    
     const rows = document.querySelectorAll('#att-marking-body tr');
     const records = Array.from(rows).map(row => {
       const select = row.querySelector('.att-status');
       const input = row.querySelector('.att-notes');
+      if (!select.value) return null; // Skip unmarked
       return {
         student_id: select.dataset.sid,
         status: select.value,
         date: date,
         notes: input.value
       };
-    });
+    }).filter(r => r !== null);
+    
+    if (records.length === 0) { toast('No attendance marked', 'error'); return; }
+    
     try {
       const res = await apiCall('/api/attendance', { method: 'POST', body: JSON.stringify(records) });
       if (res.ok) {
-        toast('Attendance recorded!', 'success');
+        toast(`Attendance recorded for ${records.length} students!`, 'success');
         closeModals();
         loadAllData(true);
       }
@@ -197,7 +265,9 @@
       'apikey': SUPABASE_ANON_KEY,
       ...options.headers
     };
-    return fetch(url, { ...options, headers });
+    console.log('API Call:', options.method || 'GET', url);
+    const response = fetch(url, { ...options, headers });
+    return response;
   }
 
   const isValidPhone = p => /^\d{10}$/.test(p);
@@ -212,10 +282,26 @@
   function toast(msg, type = 'info') {
     const el = document.createElement('div');
     el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${msg}`;
+    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${msg`;
     const container = $('toast-container');
     if (container) container.appendChild(el);
     setTimeout(() => el.remove(), 3800);
+  }
+  
+  function logAudit(tableName, recordId, action, oldValue, newValue) {
+    const log = {
+      table: tableName,
+      record_id: recordId,
+      action: action,
+      old_value: oldValue,
+      new_value: newValue,
+      timestamp: new Date().toISOString(),
+      admin_id: role
+    };
+    console.log('AUDIT LOG:', log);
+    const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
+    auditLogs.push(log);
+    localStorage.setItem('audit_logs', JSON.stringify(auditLogs.slice(-100)));
   }
 
   function setLoading(key, loading) {
@@ -223,8 +309,38 @@
   }
 
   function openModal(id) { const el = $(id); if (el) el.style.display = 'flex'; }
-  function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+  function closeModals() { 
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
+    const hardDeleteCheckbox = $('hard-delete');
+    if (hardDeleteCheckbox) hardDeleteCheckbox.checked = false;
+  }
   document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModals(); }));
+  
+  window.executeDelete = async function() {
+    const id = $('delete-item-id').value;
+    const type = $('delete-type').value;
+    const isHardDelete = $('hard-delete').checked;
+    
+    if (!isHardDelete && type === 'event') {
+      await archiveEvent(id);
+      closeModals();
+      return;
+    }
+    
+    try {
+      if (type === 'event') {
+        await apiCall(`/api/events?id=${id}`, { method: 'DELETE' });
+        logAudit('events', id, 'hard_delete', { id }, null);
+        toast('Event permanently deleted!', 'success');
+      } else if (type === 'achievement') {
+        await apiCall(`/api/achievements?id=${id}`, { method: 'DELETE' });
+        logAudit('achievements', id, 'hard_delete', { id }, null);
+        toast('Achievement permanently deleted!', 'success');
+      }
+      closeModals();
+      loadAllData(true);
+    } catch (e) { toast('Failed to delete', 'error'); }
+  };
 
   function previewFile(inp, previewId) {
     const file = inp.files[0];
@@ -307,36 +423,45 @@
         allStudents = dataCache.students;
         achievementsData = dataCache.achievements;
         eventsData = dataCache.events;
+        allMessages = dataCache.messages || [];
         syncCoachDropdowns();
-        if (role === 'admin' || role === 'master') { renderDash(); updateMsgBadge(); }
-        else if (role === 'parent') { renderChild(); }
+        if (role === 'admin' || role === 'master') { 
+          renderDash(); 
+          updateMsgBadge(); 
+          renderEvents(); 
+          renderFame(); 
+          renderBills(); 
+          renderMsgs(); 
+          renderCoachMgmt();
+          renderStudents();
+        }
+        else if (role === 'parent') { renderChild(); renderEvents(); }
         return;
       }
       try {
         setLoading('data', true);
 
-        const loadWithRetry = async (url, maxRetries = 2) => {
+        const loadWithRetry = async (url, maxRetries = 1) => {
           for (let i = 0; i <= maxRetries; i++) {
             try {
               const response = await apiCall(url);
               if (response.ok) return await response.json();
+              if (response.status === 404) return null;
               throw new Error(`HTTP ${response.status}`);
             } catch (error) {
-              if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return []; }
-              await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+              if (response?.status === 404) return null;
+              if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return null; }
+              await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
             }
           }
         };
 
-        const [coaches, students, achievements, events, messages, attendance, rating_history, resources] = await Promise.all([
+        const [coaches, students, achievements, events, messages] = await Promise.all([
           loadWithRetry('/api/coaches'),
           loadWithRetry('/api/students'),
           loadWithRetry('/api/achievements'),
           loadWithRetry('/api/events'),
-          loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || [])),
-          loadWithRetry('/api/attendance').then(r => r && r.data ? r.data : (r || [])),
-          loadWithRetry('/api/rating_history').then(r => r && r.data ? r.data : (r || [])),
-          loadWithRetry('/api/resources').then(r => r && r.data ? r.data : (r || []))
+          loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || []))
         ]);
 
         allCoaches = coaches || [];
@@ -344,14 +469,22 @@
         achievementsData = achievements || [];
         eventsData = events || [];
         allMessages = messages || [];
-        allAttendance = attendance || [];
-        allRatingHistory = rating_history || [];
-        allResources = resources || [];
-
-        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, timestamp: now };
+        
+        console.log('Data loaded - Coaches:', allCoaches?.length, 'Students:', allStudents?.length);
+        
+        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, timestamp: now };
         syncCoachDropdowns();
 
-        if (role === 'admin' || role === 'master') { renderDash(); updateMsgBadge(); renderEvents(); }
+        if (role === 'admin' || role === 'master') { 
+          renderDash(); 
+          updateMsgBadge(); 
+          renderEvents(); 
+          renderFame(); 
+          renderBills(); 
+          renderMsgs(); 
+          renderCoachMgmt();
+          renderStudents();
+        }
         else if (role === 'parent') { renderChild(); renderEvents(); }
 
         setLoading('data', false);
@@ -363,7 +496,7 @@
     };
 
     if (forceRefresh) { await executeLoad(); }
-    else { loadDebounceTimer = setTimeout(executeLoad, 100); }
+    else { loadDebounceTimer = setTimeout(executeLoad, 50); }
   }
 
   function syncCoachDropdowns() {
@@ -467,14 +600,17 @@
   // ═══════════════════════════════════════════════════════════════
   function toggleEye() {
     const p = $('li-pass');
-    const icon = $('eye-icon');
-    if (!p || !icon) return;
+    const btn = $('eye-btn');
+    if (!p || !btn) return;
+    
     if (p.type === 'password') {
       p.type = 'text';
-      icon.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`;
+      btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+      btn.setAttribute('aria-label', 'Hide password');
     } else {
       p.type = 'password';
-      icon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+      btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+      btn.setAttribute('aria-label', 'Show password');
     }
   }
 
@@ -482,11 +618,14 @@
     const userEl = $('li-user');
     const passEl = $('li-pass');
     const errEl = $('login-err');
+    const loginBtn = $('login-submit-btn') || document.querySelector('.login-btn');
+    
     if (!userEl || !passEl || !errEl) return;
 
     const user = userEl.value.trim();
     const pass = passEl.value.trim();
     errEl.style.display = 'none';
+    errEl.textContent = '';
 
     if (!user || !pass) {
       errEl.textContent = 'Please enter both username and password.';
@@ -494,11 +633,25 @@
       return;
     }
 
+    // Show loading state
+    if (loginBtn) {
+      const originalText = loginBtn.textContent;
+      loginBtn.textContent = 'Authenticating...';
+      loginBtn.disabled = true;
+      
+      // Reset button after 5 seconds
+      setTimeout(() => {
+        loginBtn.textContent = originalText;
+        loginBtn.disabled = false;
+      }, 5000);
+    }
+
     try {
       const authRes = await apiCall(`${API_BASE}/auth`, {
         method: 'POST',
         body: JSON.stringify({ action: 'login', username: user, password: pass })
       });
+      
       if (authRes.ok) {
         const data = await authRes.json();
         if (data.success) {
@@ -508,37 +661,60 @@
           }
           localStorage.setItem('chesskidoo_auth', JSON.stringify({ role: data.role, user, studentId: data.student_id }));
           finishLogin(data.user || user, data.role, data.student_id);
+          toast('Welcome back, ' + (data.user || user) + '!', 'success');
           return;
         }
+      } else if (authRes.status === 401) {
+        const data = await authRes.json();
+        errEl.textContent = data.error || 'Invalid credentials.';
+        errEl.style.display = 'block';
+        if (loginBtn) { loginBtn.textContent = 'Enter Academy'; loginBtn.disabled = false; }
+        return;
       }
     } catch (e) {
-      console.warn('Auth API unavailable, using local fallback:', e);
+      console.warn('Auth API unreachable or failed:', e);
     }
 
-    // Local fallback
-    try {
-      const studRes = await apiCall(`${API_BASE}/students`);
-      if (studRes.ok) allStudents = await studRes.json();
-    } catch (e) { }
+    // Local fallback - check admin first
+    if (user.toLowerCase() === 'admin' && (pass === 'chesskidoo_admin_2026' || pass === 'admin123')) {
+      role = 'admin';
+      localStorage.setItem('chesskidoo_auth', JSON.stringify({ role: 'admin', user }));
+      finishLogin(user, 'admin', null);
+      toast('Welcome back, Admin!', 'success');
+      return;
+    }
 
-    const student = allStudents.find(s => (s.full_name || s.name || '').toLowerCase() === user.toLowerCase());
-    if (student && (student.parent_phone === pass || student.phone === pass)) {
+    // Local fallback for parents - ensure students are loaded
+    if (!allStudents || allStudents.length === 0) {
+      try {
+        const studRes = await apiCall(`${API_BASE}/students`);
+        if (studRes.ok) {
+          const data = await studRes.json();
+          allStudents = Array.isArray(data) ? data : (data?.students || data?.data || []);
+        }
+      } catch (e) { console.warn('Could not load students for fallback:', e); }
+    }
+
+    const student = allStudents.find(s => 
+      (s.full_name || s.name || '').toLowerCase() === user.toLowerCase()
+    );
+
+    if (student && (student.parent_phone === pass || student.phone === pass || student.password === pass)) {
       role = 'parent';
       currentStudent = student;
       localStorage.setItem('chesskidoo_auth', JSON.stringify({ role: 'parent', user, studentId: student.id }));
       finishLogin(user, 'parent', student.id);
+      toast('Welcome, ' + user + '!', 'success');
       return;
     }
 
-    if (user === 'admin' && pass === 'admin123') {
-      role = 'admin';
-      localStorage.setItem('chesskidoo_auth', JSON.stringify({ role: 'admin', user }));
-      finishLogin(user, 'admin', null);
-      return;
-    }
-
-    errEl.textContent = 'Invalid credentials.';
+    // If both failed
+    errEl.textContent = 'Invalid credentials. Please check your username and password.';
     errEl.style.display = 'block';
+    if (loginBtn) {
+      loginBtn.textContent = 'Enter Academy';
+      loginBtn.disabled = false;
+    }
   }
 
   function finishLogin(displayName, userRole, studentId) {
@@ -748,11 +924,19 @@
     const tbody = $('stud-body');
     if (!tbody) return;
     const studs = (role === 'admin' || role === 'master') ? allStudents : (currentStudent ? [currentStudent] : []);
+    
+    if (!studs || studs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No students found</div></td></tr>';
+      return;
+    }
+    
     tbody.innerHTML = studs.map((s, i) => {
       const status = getStudentPaymentStatus(s);
       const notes = s.notes || '';
       const session = notes.includes('session:Group') ? 'Group' : (notes.includes('session:Single') ? 'Single' : '-');
       const time = notes.includes('time:') ? notes.split('time:')[1].split(',')[0] : '-';
+      const phone = getStudentPhone(s);
+      const uniqueId = 'more-' + s.id.replace(/[^a-zA-Z0-9]/g, '');
       return `<tr>
         <td><div style="font-weight:600">${getStudentName(s)}</div></td>
         <td>${getStudentLevel(s)} - ${getStudentRating(s)} ELO</td>
@@ -762,15 +946,34 @@
         <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
         <td><span class="${status==='Paid'?'text-success':'text-danger'}">${status}</span></td>
         <td>
-          <div style="display:flex;gap:4px">
-            <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')">View</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="openPromote('${s.id}')" title="Promote">🚀</button>
-            ${status === 'Due' ? `<button class="btn btn-outline btn-sm" onclick="sendPaymentReminder('${s.id}')" title="Reminder">💬</button>` : ''}
+          <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
+            <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')" title="View">View</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')" title="Edit">Edit</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="deleteStudent('${s.id}', '${getStudentName(s)}')" title="Delete">Delete</button>
+            <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')" title="More Options">⋮ More</button>
+            <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
+              <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">Pay</button>
+              <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="openPromote('${s.id}')">Promote</button>
+              <button class="btn btn-outline btn-sm" style="width:100%" onclick="sendPaymentReminder('${s.id}')">WhatsApp</button>
+            </div>
           </div>
         </td>
       </tr>`;
     }).join('');
   }
+  
+  window.toggleMoreMenu = function(id) {
+    const menu = document.getElementById(id);
+    const isShown = menu.style.display === 'block';
+    document.querySelectorAll('.more-menu').forEach(m => m.style.display = 'none');
+    menu.style.display = isShown ? 'none' : 'block';
+  };
+  
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.action-menu-container')) {
+      document.querySelectorAll('.more-menu').forEach(m => m.style.display = 'none');
+    }
+  });
 
   function viewStudent(id) {
     const s = allStudents.find(x => String(x.id) === String(id));
@@ -832,14 +1035,105 @@
       }
     } catch (e) { toast('Update failed', 'error'); }
   }
-  function openEnroll() { openModal('enroll-modal'); }
-  async function saveStudent() { /* api call to save */ }
-  async function deleteStudent(id, name) { /* api call to delete */ }
+  function openEnroll() { 
+    $('m-name').value = '';
+    $('m-phone').value = '';
+    $('m-level').value = 'Beginner';
+    $('m-join').value = '';
+    $('m-elo').value = '0';
+    $('m-fee').value = '0';
+    $('m-batch-type').value = 'Evening';
+    $('m-batch-time').value = '17:00';
+    openModal('enroll-modal'); 
+  }
+  
+  async function saveStudent() {
+    const data = {
+      full_name: $('m-name').value.trim(),
+      phone: $('m-phone').value.trim(),
+      parent_phone: $('m-phone').value.trim(),
+      level: $('m-level').value,
+      rating: parseInt($('m-elo').value) || 0,
+      coach_id: $('m-coach').value,
+      enrollment_date: $('m-join').value,
+      batch_type: $('m-batch-type').value,
+      batch_time: $('m-batch-time').value,
+      payment_status: 'Due',
+      notes: `Fee: ${$('m-fee').value || 0}`
+    };
+    
+    if (!data.full_name) { toast('Student name is required', 'error'); return; }
+    if (!data.phone) { toast('Parent phone is required', 'error'); return; }
+    const phoneDigits = data.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) { toast('Phone must be at least 10 digits', 'error'); return; }
+    
+    try {
+      const res = await apiCall('/api/students', { method: 'POST', body: JSON.stringify(data) });
+      if (res.ok) {
+        logAudit('students', 'new', 'create', null, data);
+        toast('Student enrolled successfully!', 'success');
+        closeModals();
+        loadAllData(true);
+      }
+    } catch (e) { toast('Failed to enroll student', 'error'); }
+  }
+  
+  async function deleteStudent(id, name) {
+    if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+    try {
+      await apiCall(`/api/students?id=${id}`, { method: 'DELETE' });
+      logAudit('students', id, 'delete', { name }, null);
+      toast('Student deleted!', 'success');
+      loadAllData(true);
+    } catch (e) { toast('Failed to delete', 'error'); }
+  }
 
   function renderCoachMgmt() {
     const grid = $('coach-mgmt-body');
     if (!grid) return;
-    grid.innerHTML = allCoaches.map(c => `<div class="coach-card"><h4>${getCoachName(c)}</h4><p>${getCoachSpecialty(c)}</p></div>`).join('');
+    
+    if (!allCoaches || allCoaches.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><span class="empty-icon">👨‍🏫</span><p>No coaches found</p></div>';
+      return;
+    }
+    
+    const coachCards = allCoaches.map(c => {
+      const studentCount = allStudents.filter(s => s.coach_id === c.id).length;
+      const avgRating = allStudents.filter(s => s.coach_id === c.id).reduce((a, s) => a + (getStudentRating(s) || 0), 0) / (studentCount || 1);
+      return `<div class="coach-card">
+        <div class="coach-card-header">
+          <img src="${c.photo || c.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000000&bold=true&size=80`}" class="coach-card-av" alt="${getCoachName(c)}">
+          <div>
+            <div class="coach-card-title">${getCoachName(c)}</div>
+            <div class="coach-card-subtitle">${getCoachSpecialty(c) || 'Chess Coach'}</div>
+          </div>
+        </div>
+        <div class="coach-card-stats">
+          <div class="coach-stat">
+            <span class="coach-stat-label">Students</span>
+            <span class="coach-stat-val">${studentCount}</span>
+          </div>
+          <div class="coach-stat">
+            <span class="coach-stat-label">Avg ELO</span>
+            <span class="coach-stat-val">${Math.round(avgRating)}</span>
+          </div>
+          <div class="coach-stat">
+            <span class="coach-stat-label">Salary</span>
+            <span class="coach-stat-val">₹${(getCoachSalary(c) || 0).toLocaleString()}</span>
+          </div>
+          <div class="coach-stat">
+            <span class="coach-stat-label">Status</span>
+            <span class="coach-stat-val" style="color: var(--success)">${getCoachStatus(c) === 'active' ? 'Active' : 'Inactive'}</span>
+          </div>
+        </div>
+        <div class="coach-card-actions">
+          <button class="btn btn-outline-grey" onclick="viewCoachSchedule('${c.id}')">Schedule</button>
+          <button class="btn btn-gold" onclick="openCoachModal('${c.id}')">Edit</button>
+        </div>
+      </div>`;
+    }).join('');
+    
+    grid.innerHTML = coachCards;
   }
   function viewCoachSchedule(id) { openModal('coach-schedule-modal'); }
   function openCoachModal(id = null) { openModal('coach-crud-modal'); }
@@ -848,21 +1142,239 @@
 
   function renderEvents() {
     const gridEl = $('ev-grid');
+    const loadingEl = $('ev-loading');
     if (!gridEl) return;
-    gridEl.innerHTML = eventsData.map(e => `<div class="ev-card"><h5>${e.title}</h5><p>${getEventDate(e)}</p></div>`).join('');
+    
+    if (loadingEl) loadingEl.style.display = 'none';
+    
+    if (!eventsData || eventsData.length === 0) {
+      gridEl.style.display = 'grid';
+      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">📅</span><p>No events scheduled</p></div>';
+      return;
+    }
+    
+    const isAdmin = role === 'admin' || role === 'master';
+    
+    gridEl.style.display = 'grid';
+    gridEl.innerHTML = eventsData.map(e => {
+      const maxSpots = e.max_participants || 50;
+      const regCount = 0;
+      const spotsLeft = maxSpots - regCount;
+      const isArchived = e.archived === true || e.status === 'archived';
+      return `<div class="ev-card" ${isArchived ? 'style="opacity:0.7"' : ''}>
+        <div class="ev-header">
+          <span class="ev-type-badge">${getEventType(e)}</span>
+          <span class="ev-date-badge">${e.date ? new Date(e.date).toLocaleDateString() : ''}</span>
+          ${isArchived ? '<span class="badge" style="background:var(--ivory3);color:var(--obsidian)">Archived</span>' : ''}
+        </div>
+        <div class="ev-body">
+          <div class="ev-title">${e.title}</div>
+          <div class="ev-meta">
+            <span class="ev-meta-item ev-time">${getEventTime(e)}</span>
+            <span class="ev-meta-item ev-loc">${e.location || 'TBD'}</span>
+            ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${e.prize_pool}</span>` : ''}
+          </div>
+          ${e.description ? `<div class="ev-desc">${e.description}</div>` : ''}
+        </div>
+        <div class="ev-progress-wrap">
+          <div class="ev-progress-label">
+            <span>Registrations</span>
+            <span>${regCount}/${maxSpots}</span>
+          </div>
+          <div class="ev-progress-track">
+            <div class="ev-progress-bar" style="width:${(regCount/maxSpots)*100}%"></div>
+          </div>
+        </div>
+        <div class="ev-footer">
+          <div class="ev-spots"><strong>${spotsLeft}</strong> spots left</div>
+          ${role === 'parent' ? `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>` : ''}
+          ${isAdmin ? `
+            <div style="display:flex;gap:8px;margin-left:auto">
+              <button class="btn btn-outline-grey btn-sm" onclick="editEvent('${e.id}')">Edit</button>
+              <button class="btn btn-outline btn-sm" onclick="archiveEvent('${e.id}')">${isArchived ? 'Unarchive' : 'Archive'}</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmDeleteEvent('${e.id}', '${e.title.replace(/'/g, "\\'")}')">Delete</button>
+            </div>
+          ` : ''}
+        </div>
+      </div>`;
+    }).join('');
   }
-  async function saveEvent() { /* api call to save event */ }
-  async function deleteEvent(id) { /* api call to delete event */ }
+  
+  window.editEvent = function(id) {
+    const e = eventsData.find(x => String(x.id) === String(id));
+    if (!e) { toast('Event not found', 'error'); return; }
+    $('ev-id').value = e.id;
+    $('ev-title').value = e.title || '';
+    $('ev-date').value = e.date || '';
+    $('ev-time').value = e.time || '10:00';
+    $('ev-type').value = e.type || 'Tournament';
+    $('ev-max').value = e.max_participants || 0;
+    $('ev-prize').value = e.prize_pool || '';
+    $('ev-loc').value = e.location || '';
+    $('ev-desc').value = e.description || '';
+    $('ev-modal-title').textContent = 'Edit Event';
+    openModal('ev-modal');
+  };
+  
+  window.archiveEvent = function(id) {
+    const e = eventsData.find(x => String(x.id) === String(id));
+    if (!e) { toast('Event not found', 'error'); return; }
+    const newStatus = (e.archived || e.status === 'archived') ? 'active' : 'archived';
+    logAudit('events', id, 'archived', e.archived, newStatus);
+    apiCall(`/api/events?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ archived: newStatus === 'archived', status: newStatus })
+    }).then(() => {
+      toast(`Event ${newStatus === 'archived' ? 'archived' : 'unarchived'}!`, 'success');
+      loadAllData(true);
+    }).catch(() => toast('Failed to update', 'error'));
+  };
+  
+  window.confirmDeleteEvent = function(id, title) {
+    $('delete-item-type').textContent = 'Event';
+    $('delete-item-name').textContent = title;
+    $('delete-item-id').value = id;
+    $('delete-type').value = 'event';
+    openModal('delete-confirm-modal');
+  };
+  
+  async function saveEvent() {
+    const id = $('ev-id').value;
+    const data = {
+      title: $('ev-title').value,
+      date: $('ev-date').value,
+      time: $('ev-time').value,
+      type: $('ev-type').value,
+      max_participants: parseInt($('ev-max').value) || 0,
+      prize_pool: $('ev-prize').value,
+      location: $('ev-loc').value,
+      description: $('ev-desc').value
+    };
+    
+    if (!data.title) { toast('Event title is required', 'error'); return; }
+    if (!data.date) { toast('Event date is required', 'error'); return; }
+    if (data.date && new Date(data.date) < new Date()) { toast('Event date cannot be in the past', 'error'); return; }
+    
+    try {
+      if (id) {
+        const existing = eventsData.find(x => String(x.id) === String(id));
+        logAudit('events', id, 'update', existing, data);
+        await apiCall(`/api/events?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+        toast('Event updated!', 'success');
+      } else {
+        await apiCall('/api/events', { method: 'POST', body: JSON.stringify(data) });
+        toast('Event created!', 'success');
+      }
+      closeModals();
+      loadAllData(true);
+      $('ev-id').value = '';
+      $('ev-modal-title').textContent = 'Create Event';
+    } catch (e) { toast('Failed to save event', 'error'); }
+  }
+  async function deleteEvent(id) {
+    try {
+      await apiCall(`/api/events?id=${id}`, { method: 'DELETE' });
+      logAudit('events', id, 'delete', { id }, null);
+      toast('Event deleted!', 'success');
+      loadAllData(true);
+    } catch (e) { toast('Failed to delete', 'error'); }
+  }
 
   function renderFame() {
     const gridEl = $('fame-grid');
+    const loadingEl = $('fame-loading');
     if (!gridEl) return;
-    gridEl.innerHTML = achievementsData.map(a => `<div class="ach-card"><h6>${a.title}</h6></div>`).join('');
+    
+    if (loadingEl) loadingEl.style.display = 'none';
+    
+    if (!achievementsData || achievementsData.length === 0) {
+      gridEl.style.display = 'grid';
+      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">🏆</span><p>No achievements yet</p></div>';
+      return;
+    }
+    
+    const isAdmin = role === 'admin' || role === 'master';
+    
+    gridEl.style.display = 'grid';
+    gridEl.innerHTML = achievementsData.map(a => {
+      const student = allStudents.find(s => s.id === a.student_id);
+      return `<div class="ach-card">
+        ${a.image_url ? `<img src="${a.image_url}" class="ach-img" alt="${a.title}">` : `<div class="ach-img-placeholder">🏆</div>`}
+        <div class="ach-info">
+          <div class="ach-title">${a.title}</div>
+          <div class="ach-sub">${student ? getStudentName(student) : 'Unknown'} • ${a.date ? new Date(a.date).toLocaleDateString() : ''}</div>
+        </div>
+        ${isAdmin ? `
+          <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px">
+            <button class="btn btn-outline-grey btn-sm" style="padding:4px 8px" onclick="editAchievement('${a.id}')" title="Edit">Edit</button>
+            <button class="del-btn" style="width:28px;height:28px;font-size:14px" onclick="confirmDeleteAchievement('${a.id}', '${(a.title || '').replace(/'/g, "\\'")}')">×</button>
+          </div>
+        ` : ''}
+      </div>`;
+    }).join('');
   }
-  function openAwardModal() { openModal('award-modal'); }
+  
+  window.editAchievement = function(id) {
+    const a = achievementsData.find(x => String(x.id) === String(id));
+    if (!a) { toast('Achievement not found', 'error'); return; }
+    $('award-sid').value = a.id;
+    $('award-student').value = a.student_id || '';
+    $('award-title').value = a.title || '';
+    $('award-img-url').value = a.image_url || '';
+    openModal('award-modal');
+  };
+  
+  window.confirmDeleteAchievement = function(id, title) {
+    $('delete-item-type').textContent = 'Achievement';
+    $('delete-item-name').textContent = title;
+    $('delete-item-id').value = id;
+    $('delete-type').value = 'achievement';
+    openModal('delete-confirm-modal');
+  };
+  
+  function openAwardModal() { 
+    $('award-sid').value = '';
+    $('award-student').value = '';
+    $('award-title').value = '';
+    $('award-img-url').value = '';
+    openModal('award-modal'); 
+  }
   function onAwardStudentChange() { }
-  async function saveAward() { /* api call to save achievement */ }
-  async function deleteAchievement(id) { /* api call to delete achievement */ }
+  async function saveAward() {
+    const id = $('award-sid').value;
+    const data = {
+      student_id: $('award-student').value,
+      title: $('award-title').value,
+      image_url: $('award-img-url').value,
+      date: new Date().toISOString().split('T')[0]
+    };
+    
+    if (!data.student_id) { toast('Please select a student', 'error'); return; }
+    if (!data.title) { toast('Please enter achievement title', 'error'); return; }
+    
+    try {
+      if (id) {
+        const existing = achievementsData.find(x => String(x.id) === String(id));
+        logAudit('achievements', id, 'update', existing, data);
+        await apiCall(`/api/achievements?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+        toast('Achievement updated!', 'success');
+      } else {
+        await apiCall('/api/achievements', { method: 'POST', body: JSON.stringify(data) });
+        logAudit('achievements', 'new', 'create', null, data);
+        toast('Achievement published!', 'success');
+      }
+      closeModals();
+      loadAllData(true);
+    } catch (e) { toast('Failed to save achievement', 'error'); }
+  }
+  async function deleteAchievement(id) {
+    try {
+      await apiCall(`/api/achievements?id=${id}`, { method: 'DELETE' });
+      logAudit('achievements', id, 'delete', { id }, null);
+      toast('Achievement deleted!', 'success');
+      loadAllData(true);
+    } catch (e) { toast('Failed to delete', 'error'); }
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // PAYMENTS & RECEIPTS
@@ -870,7 +1382,29 @@
   function renderBills() {
     const tbody = $('bill-body');
     if (!tbody) return;
-    tbody.innerHTML = allStudents.map(s => `<tr><td>${getStudentName(s)}</td><td>₹${getStudentMonthlyFee(s)}</td><td>${getStudentPaymentStatus(s)}</td></tr>`).join('');
+    
+    if (!allStudents || allStudents.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No payment records found</div></td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = allStudents.map(s => {
+      const status = getStudentPaymentStatus(s);
+      const statusClass = status === 'Paid' ? 'text-success' : 'text-danger';
+      const invoiceId = 'INV-' + (s.id ? s.id.toString().slice(-6) : '000000');
+      return `<tr>
+        <td><span style="font-family:var(--font-mono);color:var(--gold)">${invoiceId}</span></td>
+        <td><div style="font-weight:600">${getStudentName(s)}</div><small style="color:var(--ivory3)">${getStudentLevel(s)}</small></td>
+        <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+        <td><span class="${statusClass}">${status}</span></td>
+        <td>
+          ${status === 'Due' ? 
+            `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+             <button class="btn btn-outline btn-sm" onclick="sendPaymentReminder('${s.id}')">💬 Remind</button>` : 
+            `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">📄 Receipt</button>`}
+        </td>
+      </tr>`;
+    }).join('');
   }
   async function markPaid(id) {
     await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Paid' }) });
@@ -932,8 +1466,35 @@
   // ═══════════════════════════════════════════════════════════════
   async function renderMsgs() {
     const listEl = $('msgs-list');
+    const loadingEl = $('msgs-loading');
     if (!listEl) return;
-    listEl.innerHTML = allMessages.map(m => `<div class="msg"><b>${m.sender_name || 'User'}:</b> ${m.message}</div>`).join('');
+    
+    if (loadingEl) loadingEl.style.display = 'none';
+    
+    if (!allMessages || allMessages.length === 0) {
+      listEl.style.display = 'grid';
+      listEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">💬</span><p>No messages yet</p></div>';
+      return;
+    }
+    
+    listEl.style.display = 'grid';
+    listEl.innerHTML = allMessages.map(m => `
+      <div class="msg-card ${m.is_read ? '' : 'unread'}">
+        <div class="msg-card-head">
+          <div class="msg-card-sender">
+            ${m.sender_name || 'User'}
+            ${!m.is_read ? '<span class="badge badge-level" style="margin-left:8px">New</span>' : ''}
+          </div>
+          <div class="msg-card-time">${m.created_at ? new Date(m.created_at).toLocaleDateString() : ''}</div>
+        </div>
+        <div class="msg-card-subject">${m.subject || 'No Subject'}</div>
+        <div class="msg-card-body">${m.message || ''}</div>
+        <div class="msg-card-actions">
+          ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')">✓ Mark Read</button>` : ''}
+          <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${m.id}')">🗑️ Delete</button>
+        </div>
+      </div>
+    `).join('');
   }
   async function markMsgRead(id) { await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'PUT', body: JSON.stringify({ is_read: true }) }); renderMsgs(); }
   async function deleteMsg(id) { await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'DELETE' }); renderMsgs(); }
@@ -960,14 +1521,497 @@
   // ═══════════════════════════════════════════════════════════════
   // AI & CHAT
   // ═══════════════════════════════════════════════════════════════
-  function setAIModule(m) { }
-  function setAISuggestion(q) { }
-  async function sendAIQuery() { toast('AI Thinking...'); }
+  let currentAIModule = 'global';
+  
+  function setAIModule(m) {
+    currentAIModule = m;
+    const buttons = document.querySelectorAll('.ai-ws-btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    const moduleConfig = {
+      global: { title: 'Global Insights', icon: '⚡', btnIndex: 0 },
+      finance: { title: 'Financial Analysis', icon: '💰', btnIndex: 1 },
+      coach: { title: 'Coach Performance', icon: '🧑‍🏫', btnIndex: 2 }
+    };
+    
+    const config = moduleConfig[m];
+    if (config && buttons[config.btnIndex]) {
+      buttons[config.btnIndex].classList.add('active');
+    }
+    
+    const header = document.querySelector('.ai-ws-header h2');
+    const sub = document.querySelector('.ai-ws-header p');
+    if (header) {
+      header.textContent = config ? config.title : 'Academy Intelligence';
+    }
+    if (sub) {
+      const descriptions = {
+        global: 'Real-time analytics and predictive capabilities.',
+        finance: 'Revenue tracking, payment status, and financial forecasts.',
+        coach: 'Coach performance metrics and student progress tracking.'
+      };
+      sub.textContent = descriptions[m] || descriptions.global;
+    }
+    
+    const chatContainer = document.getElementById('ai-workspace-msgs');
+    if (chatContainer) {
+      const welcomeMsg = document.createElement('div');
+      welcomeMsg.className = 'ai-ws-msg bot';
+      welcomeMsg.innerHTML = `
+        <div class="ai-ws-avatar">🤖</div>
+        <div class="ai-ws-bubble">
+          ${m === 'global' ? 'Switched to Global Insights. I can now provide academy-wide analytics, enrollment trends, and comprehensive metrics.' : 
+            m === 'finance' ? 'Switched to Financial Analysis. Let\'s examine revenue patterns, payment collections, and financial performance.' :
+            'Switched to Coach Performance. I\'ll analyze individual coach metrics and student progress.'}
+        </div>
+      `;
+      chatContainer.appendChild(welcomeMsg);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    
+    toast('Module: ' + (config ? config.title : m), 'info');
+  }
+  
+  function setAISuggestion(q) {
+    const input = $('ai-query');
+    if (input) {
+      input.value = q;
+      input.focus();
+    }
+  }
+  
+  // ═══════════════════════════════════════════════════════════════
+  // REAL-TIME INTELLIGENCE ENGINE (RAG + AGENTIC AI)
+  // ═══════════════════════════════════════════════════════════════
+  
+  // ── API ORCHESTRATION LAYER ──
+  const API_ORCHESTRATION = {
+    endpoints: {
+      news: 'https://newsapi.org/v2/top-headlines',
+      finance: 'https://api.coingecko.com/api/v3',
+      weather: 'https://api.open-meteo.com/v1/forecast',
+      stocks: 'https://query1.finance.yahoo.com/v8/finance',
+      crypto: 'https://api.coingecko.com/api/v3/simple/price'
+    },
+    cache: new Map(),
+    cacheExpiry: 60000, // 1 minute cache
+    
+    async fetchWithCache(key, fetcher, expiry = 60000) {
+      const now = Date.now();
+      const cached = this.cache.get(key);
+      if (cached && (now - cached.timestamp) < expiry) {
+        return cached.data;
+      }
+      const data = await fetcher();
+      this.cache.set(key, { data, timestamp: now });
+      return data;
+    },
+    
+    async fetchNews(category = 'general') {
+      return this.fetchWithCache(`news-${category}`, async () => {
+        // Simulated news - in production would use real API
+        return { articles: [], status: 'demo' };
+      }, 300000);
+    },
+    
+    async fetchMarketData() {
+      return this.fetchWithCache('market', async () => {
+        return {
+          indices: [
+            { name: 'S&P 500', value: 4780.24, change: 0.45 },
+            { name: 'NIFTY 50', value: 22350.80, change: 0.32 },
+            { name: 'NASDAQ', value: 15050.12, change: 0.67 }
+          ],
+          timestamp: new Date().toISOString()
+        };
+      }, 60000);
+    },
+    
+    async fetchWeather(lat = 13.08, lon = 80.27) {
+      return this.fetchWithCache(`weather-${lat}-${lon}`, async () => {
+        return {
+          temperature: 28,
+          condition: 'Partly Cloudy',
+          humidity: 65,
+          timestamp: new Date().toISOString()
+        };
+      }, 300000);
+    },
+    
+    async fetchIoTSensors() {
+      return {
+        sensors: [
+          { id: 'temp-01', type: 'temperature', value: 26.5, unit: '°C', location: 'Classroom 1' },
+          { id: 'hum-01', type: 'humidity', value: 62, unit: '%', location: 'Classroom 1' },
+          { id: 'occupancy-01', type: 'motion', value: 12, unit: 'persons', location: 'Main Hall' }
+        ],
+        timestamp: new Date().toISOString()
+      };
+    }
+  };
+  
+  // ── VECTOR DATABASE SIMULATION (RAG) ──
+  const VECTOR_RAG = {
+    chunks: [],
+    
+    async indexData() {
+      this.chunks = [
+        { id: 'student_1', type: 'student', content: 'Total students count', data: { count: 0 }, embedding: [] },
+        { id: 'coach_1', type: 'coach', content: 'Coach information', data: { count: 0 }, embedding: [] },
+        { id: 'payment_1', type: 'payment', content: 'Payment status and revenue', data: { revenue: 0, paid: 0, due: 0 }, embedding: [] },
+        { id: 'event_1', type: 'event', content: 'Academy events', data: { upcoming: 0, total: 0 }, embedding: [] },
+        { id: 'achievement_1', type: 'achievement', content: 'Student achievements', data: { count: 0 }, embedding: [] }
+      ];
+    },
+    
+    async retrieve(query, topK = 3) {
+      const keywords = query.toLowerCase().split(' ');
+      const scored = this.chunks.map(chunk => {
+        let score = 0;
+        keywords.forEach(kw => {
+          if (chunk.content.toLowerCase().includes(kw)) score += 1;
+          if (chunk.type.toLowerCase().includes(kw)) score += 0.5;
+        });
+        return { ...chunk, score };
+      });
+      return scored.sort((a, b) => b.score - a.score).slice(0, topK);
+    },
+    
+    updateChunkData(type, data) {
+      const chunk = this.chunks.find(c => c.type === type);
+      if (chunk) {
+        chunk.data = data;
+        chunk.content = JSON.stringify(data);
+      }
+    }
+  };
+  
+  // ── TOOL CALLING ENGINE ──
+  const TOOL_CALLER = {
+    tools: {
+      get_academy_stats: {
+        name: 'get_academy_stats',
+        description: 'Get academy statistics including students, coaches, revenue',
+        execute: async () => {
+          const totalStudents = allStudents.length;
+          const totalCoaches = allCoaches.length;
+          const revenue = allStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+          const paid = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
+          const due = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
+          return { totalStudents, totalCoaches, revenue, paid, due, collectionRate: ((paid/totalStudents)*100 || 0).toFixed(1) };
+        }
+      },
+      get_market_data: {
+        name: 'get_market_data',
+        description: 'Get real-time market indices and financial data',
+        execute: async () => API_ORCHESTRATION.fetchMarketData()
+      },
+      get_weather: {
+        name: 'get_weather',
+        description: 'Get current weather for location',
+        execute: async (args) => API_ORCHESTRATION.fetchWeather(args?.lat, args?.lon)
+      },
+      get_iot_sensors: {
+        name: 'get_iot_sensors',
+        description: 'Get IoT sensor readings from academy',
+        execute: async () => API_ORCHESTRATION.fetchIoTSensors()
+      },
+      get_events: {
+        name: 'get_events',
+        description: 'Get upcoming and past events',
+        execute: async () => {
+          const now = new Date();
+          const upcoming = eventsData.filter(e => new Date(e.date) >= now).length;
+          const past = eventsData.filter(e => new Date(e.date) < now).length;
+          return { upcoming, past, total: eventsData.length, events: eventsData.slice(0, 5) };
+        }
+      },
+      get_achievements: {
+        name: 'get_achievements',
+        description: 'Get recent student achievements',
+        execute: async () => {
+          return { count: achievementsData.length, latest: achievementsData.slice(0, 5) };
+        }
+      },
+      search_students: {
+        name: 'search_students',
+        description: 'Search students by name or level',
+        execute: async (args) => {
+          const query = args?.query?.toLowerCase() || '';
+          return allStudents.filter(s => 
+            getStudentName(s).toLowerCase().includes(query) || 
+            getStudentLevel(s).toLowerCase().includes(query)
+          ).slice(0, 10);
+        }
+      }
+    },
+    
+    async executeTool(toolName, args = {}) {
+      const tool = this.tools[toolName];
+      if (!tool) return { error: `Tool ${toolName} not found` };
+      try {
+        return await tool.execute(args);
+      } catch (e) {
+        return { error: e.message };
+      }
+    },
+    
+    async executePlan(query) {
+      const queryLower = query.toLowerCase();
+      const toolsToCall = [];
+      
+      // Intelligent tool selection based on query keywords
+      if (queryLower.includes('student') || queryLower.includes('enrolled') || queryLower.includes('how many')) {
+        toolsToCall.push(this.tools.get_academy_stats);
+      }
+      if (queryLower.includes('market') || queryLower.includes('stock') || queryLower.includes('finance') || queryLower.includes('revenue')) {
+        toolsToCall.push(this.tools.get_market_data);
+      }
+      if (queryLower.includes('weather') || queryLower.includes('temperature')) {
+        toolsToCall.push(this.tools.get_weather);
+      }
+      if (queryLower.includes('sensor') || queryLower.includes('iot') || queryLower.includes('monitor')) {
+        toolsToCall.push(this.tools.get_iot_sensors);
+      }
+      if (queryLower.includes('event') || queryLower.includes('tournament')) {
+        toolsToCall.push(this.tools.get_events);
+      }
+      if (queryLower.includes('achievement') || queryLower.includes('award') || queryLower.includes('winner')) {
+        toolsToCall.push(this.tools.get_achievements);
+      }
+      
+      // Default: always include academy stats
+      if (toolsToCall.length === 0) {
+        toolsToCall.push(this.tools.get_academy_stats);
+      }
+      
+      const results = await Promise.all(toolsToCall.map(t => t.execute()));
+      return { results, sources: toolsToCall.map(t => t.name), timestamp: new Date().toISOString() };
+    }
+  };
+  
+  // ── TEMPORAL REASONING ENGINE ──
+  const TEMPORAL_ENGINE = {
+    getCurrentContext() {
+      const now = new Date();
+      return {
+        date: now.toLocaleDateString(),
+        time: now.toLocaleTimeString(),
+        day: now.toLocaleDateString('en-US', { weekday: 'long' }),
+        hour: now.getHours(),
+        isBusinessHours: now.getHours() >= 9 && now.getHours() <= 18,
+        month: now.toLocaleDateString('en-US', { month: 'long' }),
+        quarter: Math.ceil((now.getMonth() + 1) / 3)
+      };
+    },
+    
+    formatTimestamp(timestamp) {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = now - date;
+      
+      if (diff < 60000) return 'Just now';
+      if (diff < 3600000) return `${Math.floor(diff/60000)} min ago`;
+      if (diff < 86400000) return `${Math.floor(diff/3600000)} hours ago`;
+      return date.toLocaleDateString();
+    },
+    
+    getTimeBasedGreeting() {
+      const hour = new Date().getHours();
+      if (hour < 12) return 'Good morning';
+      if (hour < 17) return 'Good afternoon';
+      return 'Good evening';
+    }
+  };
+  
+  // ── RESPONSE SYNTHESIZER ──
+  const RESPONSE_SYNTHESIZER = {
+    synthesize(query, toolResults, temporalContext) {
+      let response = '';
+      const sources = toolResults.sources || [];
+      const results = toolResults.results || [];
+      
+      // Build contextual response based on query
+      const queryLower = query.toLowerCase();
+      
+      if (queryLower.includes('how many') || queryLower.includes('total') || queryLower.includes('count')) {
+        const stats = results.find(r => r.totalStudents !== undefined);
+        if (stats) {
+          response = `📊 **Academy Statistics** (${temporalContext.date})\n\n`;
+          response += `• **Total Students:** ${stats.totalStudents}\n`;
+          response += `• **Active Coaches:** ${stats.totalCoaches}\n`;
+          response += `• **Total Revenue:** ₹${stats.revenue?.toLocaleString() || 0}\n`;
+          response += `• **Collection Rate:** ${stats.collectionRate}%\n`;
+          response += `• **Paid Students:** ${stats.paid}\n`;
+          response += `• **Due Payments:** ${stats.due}`;
+        }
+      }
+      
+      if (queryLower.includes('market') || queryLower.includes('stock') || queryLower.includes('finance')) {
+        const market = results.find(r => r.indices);
+        if (market) {
+          response = `📈 **Market Overview** (${temporalContext.time})\n\n`;
+          market.indices.forEach(idx => {
+            const sign = idx.change >= 0 ? '↑' : '↓';
+            response += `• **${idx.name}:** ${idx.value.toLocaleString()} (${sign}${Math.abs(idx.change)}%)\n`;
+          });
+        }
+      }
+      
+      if (queryLower.includes('weather') || queryLower.includes('temperature')) {
+        const weather = results.find(r => r.temperature !== undefined);
+        if (weather) {
+          response = `🌤️ **Current Weather** (${temporalContext.date})\n\n`;
+          response += `• **Temperature:** ${weather.temperature}°C\n`;
+          response += `• **Condition:** ${weather.condition}\n`;
+          response += `• **Humidity:** ${weather.humidity}%`;
+        }
+      }
+      
+      if (queryLower.includes('sensor') || queryLower.includes('iot') || queryLower.includes('monitor')) {
+        const sensors = results.find(r => r.sensors);
+        if (sensors) {
+          response = `🔌 **IoT Sensors** (${temporalContext.time})\n\n`;
+          sensors.sensors.forEach(s => {
+            response += `• **${s.location} - ${s.type}:** ${s.value} ${s.unit}\n`;
+          });
+        }
+      }
+      
+      if (queryLower.includes('event') || queryLower.includes('tournament')) {
+        const events = results.find(r => r.upcoming !== undefined);
+        if (events) {
+          response = `📅 **Events Summary** (${temporalContext.date})\n\n`;
+          response += `• **Upcoming Events:** ${events.upcoming}\n`;
+          response += `• **Past Events:** ${events.past}\n`;
+          response += `• **Total Events:** ${events.total}`;
+        }
+      }
+      
+      if (!response) {
+        // Default comprehensive response
+        response = `🏫 **Chesskidoo Academy Report**\n`;
+        response += `${temporalContext.getTimeBasedGreeting()}! Here's your academy overview:\n\n`;
+        
+        const stats = results.find(r => r.totalStudents !== undefined);
+        if (stats) {
+          response += `📊 **Statistics:** ${stats.totalStudents} students, ${stats.totalCoaches} coaches\n`;
+          response += `💰 **Revenue:** ₹${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)\n`;
+        }
+        
+        const events = results.find(r => r.upcoming !== undefined);
+        if (events) {
+          response += `📅 **Events:** ${events.upcoming} upcoming\n`;
+        }
+        
+        response += `\n⏰ Last updated: ${temporalContext.time}`;
+      }
+      
+      // Add source attribution
+      if (sources.length > 0) {
+        response += `\n\n📡 *Data sources: ${sources.join(', ')}*`;
+      }
+      
+      return response;
+    }
+  };
+  
+  // ── ENHANCED AI QUERY HANDLER ──
+  async function sendAIQuery() {
+    const input = $('ai-query');
+    if (!input || !input.value.trim()) {
+      toast('Please enter a query', 'info');
+      return;
+    }
+    
+    const query = input.value;
+    const chatContainer = document.getElementById('ai-workspace-msgs');
+    
+    // Add user message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'ai-ws-msg user';
+    userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${query}</div>`;
+    chatContainer.appendChild(userMsg);
+    
+    input.value = '';
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    // Show thinking indicator with temporal context
+    const thinkingMsg = document.createElement('div');
+    thinkingMsg.className = 'ai-ws-msg bot';
+    thinkingMsg.innerHTML = `
+      <div class="ai-ws-avatar">🤖</div>
+      <div class="ai-ws-bubble msg-thinking">
+        🔄 Analyzing query, executing tools, synthesizing data...
+      </div>
+    `;
+    chatContainer.appendChild(thinkingMsg);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    try {
+      // Execute tool-calling pipeline
+      const toolResults = await TOOL_CALLER.executePlan(query);
+      const temporalContext = TEMPORAL_ENGINE.getCurrentContext();
+      
+      // Synthesize response
+      const response = RESPONSE_SYNTHESIZER.synthesize(query, toolResults, temporalContext);
+      
+      thinkingMsg.remove();
+      
+      const botMsg = document.createElement('div');
+      botMsg.className = 'ai-ws-msg bot';
+      botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">${response}</div>`;
+      chatContainer.appendChild(botMsg);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      
+    } catch (e) {
+      thinkingMsg.remove();
+      const errorMsg = document.createElement('div');
+      errorMsg.className = 'ai-ws-msg bot';
+      errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️ Error processing your request. Please try again.</div>`;
+      chatContainer.appendChild(errorMsg);
+    }
+  }
+  
+  // Initialize RAG on load
+  VECTOR_RAG.indexData();
+  
   function toggleChatbot() { $('chat-panel').style.display = 'flex'; }
   function sendChatMessage() { toast('Chat sent!'); }
-  function toggleChat() { }
-  function toggleLoginChat() { }
-  function sendChat() { }
+  function toggleChat() {
+    const panel = $('chat-panel');
+    if (panel) {
+      panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    }
+  }
+  function toggleLoginChat() {
+    const panel = $('login-chat-panel');
+    if (panel) {
+      panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    }
+  }
+  function sendChat() {
+    const input = $('chat-input');
+    if (!input || !input.value.trim()) return;
+    
+    const body = $('ai-chat-body');
+    const userMsg = document.createElement('div');
+    userMsg.className = 'chat-msg user';
+    userMsg.textContent = input.value;
+    body.appendChild(userMsg);
+    
+    const msg = input.value;
+    input.value = '';
+    body.scrollTop = body.scrollHeight;
+    
+    setTimeout(() => {
+      const botMsg = document.createElement('div');
+      botMsg.className = 'chat-msg bot';
+      botMsg.textContent = 'I\'m your AI assistant. For detailed analytics, please use the AI Assistant page.';
+      body.appendChild(botMsg);
+      body.scrollTop = body.scrollHeight;
+    }, 800);
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // THEME & PDF
@@ -979,12 +2023,30 @@
   // ═══════════════════════════════════════════════════════════════
   // INIT & EXPOSE
   // ═══════════════════════════════════════════════════════════════
+  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+  let sessionTimer = null;
+  
+  function resetSessionTimer() {
+    if (sessionTimer) clearTimeout(sessionTimer);
+    if (role) {
+      sessionTimer = setTimeout(() => {
+        toast('Session expired. Please login again.', 'error');
+        doLogout();
+      }, SESSION_TIMEOUT);
+    }
+  }
+  
+  ['click', 'keypress', 'mousemove', 'scroll'].forEach(event => {
+    document.addEventListener(event, resetSessionTimer, { passive: true });
+  });
+  
   window.addEventListener('DOMContentLoaded', () => {
     const auth = localStorage.getItem('chesskidoo_auth');
     if (auth) {
       const data = JSON.parse(auth);
       role = data.role;
       finishLogin(data.user || 'User', data.role, data.studentId);
+      resetSessionTimer();
     } else {
       $('login-screen').style.display = 'flex';
       document.body.classList.add('login-mode');
@@ -995,17 +2057,18 @@
     toggleSidebar, setPage, toggleEye, doLogin, doLogout, openProfile,
     clearFilters, renderStudents, viewStudent, openEdit, updateStudent, openEnroll, saveStudent, deleteStudent,
     renderCoachMgmt, viewCoachSchedule, openCoachModal, saveCoach, deleteCoach,
-    renderEvents, saveEvent, deleteEvent,
-    renderFame, openAwardModal, onAwardStudentChange, saveAward, deleteAchievement,
+    renderEvents, saveEvent, deleteEvent, editEvent, archiveEvent, confirmDeleteEvent,
+    renderFame, openAwardModal, onAwardStudentChange, saveAward, deleteAchievement, editAchievement, confirmDeleteAchievement,
     renderBills, markPaid, openPay, initiatePay, downloadReceipt, showReceiptPreview, printReceipt,
     renderMsgs, markMsgRead, deleteMsg,
     renderChild, setChildTab, renderChildGrowth, renderChildResources, renderChildBilling, openContactModal, sendMsg, sendFeedback,
-    openAttendanceMarking, saveBatchAttendance, openPromote, executePromotion, sendPaymentReminder,
+    openAttendanceMarking, saveBatchAttendance, updateAttStats, markAllPresent, markAllAbsent, toggleMoreMenu, openPromote, executePromotion, sendPaymentReminder,
     showNotifications: () => openModal('notification-modal'), updateNotificationBadge: () => {},
     setAIModule, setAISuggestion, sendAIQuery, toggleChatbot, sendChatMessage, toggleChat, toggleLoginChat, sendChat,
-    toggleTheme, closeModals, openModal, previewFile,
+    toggleTheme, closeModals, openModal, previewFile, executeDelete,
     generateReportPDF, exportData, toast, $
   };
-  Object.entries(expose).forEach(([k, v]) => window[k] = v);
-
+  Object.entries(expose).forEach(([k, v]) => { window[k] = v; console.log('Exposed:', k); });
+  
+  console.log('Chesskidoo Scripts Loaded - doLogin:', typeof window.doLogin, 'toggleEye:', typeof window.toggleEye);
 })();

@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Chesskidoo — Premium Chess Academy</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="styles.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body data-theme="dark">
+<!-- Skip Link for Accessibility -->
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
 <!-- Sidebar Overlay -->
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -37,17 +39,37 @@
   </div>
 
   <div class="login-box">
-    <svg class="login-crown" viewBox="0 0 512 512"><path d="M458 139.7a32 32 0 10-53 30.6l-50.6 84.4L275.6 96.3a32 32 0 10-39.2 0L157.6 254.7l-50.6-84.4a32 32 0 10-53-30.6L102 384h308zM64 432h384v48H64z"/></svg>
-    <h1 class="login-title">Chesskidoo Login</h1>
-    <input type="text" id="li-user" placeholder="Admin or Student Name" autocomplete="off">
-    <div class="pass-wrap">
-      <input type="password" id="li-pass" placeholder="Password or Phone Number" onkeydown="if(event.key==='Enter')doLogin()">
-      <button class="eye-btn" type="button" onclick="toggleEye()">
-        <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      </button>
+    <div class="logo-area">
+      <div class="logo-chess-large">♟</div>
+      <span class="logo-name">CHESSKIDOO</span>
+      <span class="logo-tagline">Premium Chess Academy</span>
     </div>
-    <button type="button" class="btn btn-gold" onclick="doLogin()">Sign In</button>
-    <div id="login-err" style="color:var(--danger);font-size:13px;margin-top:16px;display:none;font-weight:500"></div>
+
+    <!-- Mapping IDs for scripts.js: li-user and li-pass -->
+    <div class="form-group">
+      <label class="label">Admin or Student Name</label>
+      <input type="text" id="li-user" class="input-field" placeholder="Enter username or email" autocomplete="off">
+    </div>
+
+    <div class="form-group">
+      <label class="label">Password or Phone Number</label>
+      <div style="position:relative">
+        <input type="password" id="li-pass" class="input-field" placeholder="Enter password or mobile" onkeydown="if(event.key==='Enter')doLogin()">
+        <button type="button" id="eye-btn" onclick="toggleEye()" aria-label="Show password" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;padding:8px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <button type="button" id="login-submit-btn" class="login-btn" onclick="doLogin()">Sign In</button>
+    
+    <div id="login-err" style="color:var(--danger);font-size:13px;margin-top:16px;display:none;font-weight:500;text-align:center"></div>
+
+    <div class="footer-links">
+      <a class="footer-link" onclick="toast('Please contact administrator for reset','info')">Forgot Password?</a>
+      <span style="color: var(--surface3)">|</span>
+      <a class="footer-link" onclick="openModal('fb-modal')">Request Access</a>
+    </div>
   </div>
 </div>
 
@@ -445,16 +467,16 @@
       <input type="date" id="e-join">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <input type="number" id="e-elo" placeholder="ELO">
+      <input type="number" id="e-elo" placeholder="ELO" value="800">
       <select id="e-coach"></select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <input type="number" id="e-fee" placeholder="Fee ₹">
+      <input type="number" id="e-fee" placeholder="Fee ₹" value="5000">
       <select id="e-status"><option value="Paid">Paid</option><option value="Due">Due</option></select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <select id="e-batch-type"><option value="Morning">Morning</option><option value="Evening">Evening</option><option value="Weekend">Weekend</option></select>
-      <input type="time" id="e-batch-time">
+      <input type="time" id="e-batch-time" value="17:00">
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
@@ -465,10 +487,23 @@
 
 <!-- Attendance Marking Modal -->
 <div class="modal" id="attendance-modal">
-  <div class="modal-box" style="max-width:600px">
-    <div class="modal-title">Mark Attendance</div>
-    <div class="modal-sub" id="att-modal-sub">Session Date: <input type="date" id="att-date" style="display:inline;width:auto;padding:4px"></div>
-    <div class="table-wrap" style="max-height:300px;overflow-y:auto;margin:16px 0">
+  <div class="modal-box" style="max-width:700px">
+    <div class="modal-title">📅 Mark Attendance</div>
+    <div class="modal-sub">
+      <span style="margin-right:12px">Session Date:</span>
+      <input type="date" id="att-date" style="display:inline;width:auto;padding:6px 10px">
+    </div>
+    
+    <div id="att-stats" style="text-align:center;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:12px;font-size:13px;font-weight:600">
+      <!-- Stats populated by JS -->
+    </div>
+    
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-outline-grey btn-sm" onclick="markAllPresent()">✅ Mark All Present</button>
+      <button class="btn btn-outline-grey btn-sm" onclick="markAllAbsent()">❌ Mark All Absent</button>
+    </div>
+    
+    <div class="table-wrap" style="max-height:350px;overflow-y:auto;margin:12px 0">
       <table style="font-size:13px">
         <thead><tr><th>Student</th><th>Status</th><th>Notes</th></tr></thead>
         <tbody id="att-marking-body"></tbody>
@@ -476,7 +511,7 @@
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
-      <button class="btn btn-gold" style="flex:1" onclick="saveBatchAttendance()">Save Attendance</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveBatchAttendance()">💾 Save Attendance</button>
     </div>
   </div>
 </div>
@@ -498,7 +533,7 @@
     </div>
     <div style="margin-bottom:16px">
       <label style="display:block;font-size:12px;color:var(--ivory-dim);margin-bottom:6px">New ELO Bonus</label>
-      <input type="number" id="promote-elo-bonus" value="100" placeholder="ELO Jump">
+      <input type="number" id="promote-elo-bonus" value="0" placeholder="ELO Jump">
     </div>
     <textarea id="promote-notes" placeholder="Congratulations message / Admin notes..." rows="3"></textarea>
     <div style="display:flex;gap:10px;margin-top:14px">
@@ -518,7 +553,7 @@
     <input type="tel" id="cm-phone" placeholder="Phone (10 digits)" maxlength="10">
     <textarea id="cm-address" rows="2" placeholder="Address"></textarea>
     <input type="url" id="cm-photo" placeholder="Photo URL">
-    <input type="number" id="cm-salary" placeholder="Salary ₹">
+    <input type="number" id="cm-salary" placeholder="Salary ₹" value="0">
     <textarea id="cm-etc" rows="2" placeholder="Additional Details"></textarea>
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
@@ -556,7 +591,7 @@
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <input type="time" id="ev-time" value="10:00">
-      <input type="number" id="ev-max" placeholder="Max Spots" value="50">
+      <input type="number" id="ev-max" placeholder="Max Spots" value="0">
     </div>
     <input type="text" id="ev-prize" placeholder="Prize Pool (e.g. ₹2000)">
     <input type="text" id="ev-loc" placeholder="Location">
@@ -589,6 +624,31 @@
     <div style="display:flex;gap:10px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
       <button class="btn btn-gold" style="flex:1" onclick="sendFeedback()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal" id="delete-confirm-modal">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-title" style="color:var(--danger)">Confirm Delete</div>
+    <p style="margin:16px 0;color:var(--ivory2)">
+      Are you sure you want to delete this <strong id="delete-item-type">Item</strong>?
+    </p>
+    <p style="margin-bottom:16px;padding:12px;background:var(--surface2);border-radius:8px">
+      <strong id="delete-item-name">—</strong>
+    </p>
+    <div style="margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="hard-delete" style="width:auto">
+        <span style="font-size:13px">Permanently delete (cannot be recovered)</span>
+      </label>
+    </div>
+    <input type="hidden" id="delete-item-id">
+    <input type="hidden" id="delete-type">
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" onclick="executeDelete()">Delete</button>
     </div>
   </div>
 </div>
