@@ -13,6 +13,7 @@
   // ═══════════════════════════════════════════════════════════════
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
   const API_BASE = '/api';
+  const $ = id => document.getElementById(id);
   
   // ═══════════════════════════════════════════════════════════════
   // STATE
@@ -251,12 +252,6 @@
     const msg = `Hi! This is a friendly reminder from Chesskidoo Academy regarding ${name}'s tuition fee balance of ₹${fee}. You can pay via the portal or reach out if you have questions. Thank you!`;
     window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
-
-  const $ = id => document.getElementById(id);
-
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
-  const API_BASE = '/api';
-
   async function apiCall(url, options = {}) {
     const headers = {
       'Content-Type': 'application/json',
