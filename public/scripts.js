@@ -899,12 +899,15 @@
     if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
     if ($('s-profit')) $('s-profit').textContent = '₹' + netProfit.toLocaleString();
     
-    // Session counts - use session_mode field with case-insensitive check
+    // Session counts - check all possible session fields
     let groupCount = 0, singleCount = 0;
     allStudents.forEach(s => {
-      const sessionMode = (s.session_mode || '').toLowerCase();
-      if (sessionMode === 'group') groupCount++;
-      else if (sessionMode === 'single') singleCount++;
+      const session = s.session_mode || s.session_type || s.session || '';
+      const sessionLower = session.toLowerCase();
+      const notes = s.notes || '';
+      if (sessionLower === 'group' || notes.includes('session:Group')) groupCount++;
+      else if (sessionLower === 'single' || notes.includes('session:Single')) singleCount++;
+      else groupCount++; // Default to group if not specified
     });
     if ($('s-group')) $('s-group').textContent = groupCount;
     if ($('s-single')) $('s-single').textContent = singleCount;
