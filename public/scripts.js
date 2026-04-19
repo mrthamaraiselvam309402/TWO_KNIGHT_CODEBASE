@@ -471,7 +471,6 @@
               if (response.status === 404) return null;
               throw new Error(`HTTP ${response.status}`);
             } catch (error) {
-              if (response?.status === 404) return null;
               if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return null; }
               await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
             }
@@ -1583,7 +1582,7 @@
 
   function renderFame() {
     const gridEl = $('fame-grid');
-    const loadingEl = $('ach-loading');
+    const loadingEl = $('fame-loading');
     if (!gridEl) return;
     
     if (loadingEl) loadingEl.style.display = 'none';
