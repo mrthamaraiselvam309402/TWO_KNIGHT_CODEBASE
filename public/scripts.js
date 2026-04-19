@@ -1256,52 +1256,176 @@
     if (!grid) return;
     
     if (!allCoaches || allCoaches.length === 0) {
-      grid.innerHTML = '<div class="empty-state"><span class="empty-icon">👨‍🏫</span><p>No coaches found</p></div>';
+      grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="empty-icon">👨‍🏫</span><p>No coaches found in the academy</p></div>';
       return;
     }
     
-    const coachCards = allCoaches.map(c => {
-      const studentCount = allStudents.filter(s => s.coach_id === c.id).length;
-      const avgRating = allStudents.filter(s => s.coach_id === c.id).reduce((a, s) => a + (getStudentRating(s) || 0), 0) / (studentCount || 1);
-      return `<div class="coach-card">
-        <div class="coach-card-header">
-          <img src="${c.photo || c.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000000&bold=true&size=80`}" class="coach-card-av" alt="${getCoachName(c)}">
-          <div>
-            <div class="coach-card-title">${getCoachName(c)}</div>
-            <div class="coach-card-subtitle">${getCoachSpecialty(c) || 'Chess Coach'}</div>
+    grid.innerHTML = allCoaches.map(c => {
+      const studs = allStudents.filter(s => String(s.coach_id) === String(c.id));
+      const studentCount = studs.length;
+      const avgRating = studs.length ? Math.round(studs.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / studs.length) : 800;
+      const photo = c.photo_url || c.photo || c.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000000&bold=true&size=120`;
+      
+      return `
+        <div class="coach-card">
+          <div class="coach-card-header">
+            <img src="${photo}" class="coach-card-av" alt="${getCoachName(c)}">
+            <div>
+              <div class="coach-card-title">${getCoachName(c)}</div>
+              <div class="coach-card-subtitle">${getCoachSpecialty(c) || 'Chess Coach'}</div>
+            </div>
           </div>
+          <div class="coach-card-stats">
+            <div class="coach-stat">
+              <span class="coach-stat-label">Students</span>
+              <span class="coach-stat-val">${studentCount}</span>
+            </div>
+            <div class="coach-stat">
+              <span class="coach-stat-label">Avg ELO</span>
+              <span class="coach-stat-val">${avgRating}</span>
+            </div>
+            <div class="coach-stat">
+              <span class="coach-stat-label">Salary</span>
+              <span class="coach-stat-val">₹${(getCoachSalary(c) || 0).toLocaleString()}</span>
+            </div>
+            <div class="coach-stat">
+              <span class="coach-stat-label">Status</span>
+              <span class="coach-stat-val ${getCoachStatus(c) === 'active' ? 'text-success' : 'text-danger'}">${getCoachStatus(c) === 'active' ? 'Active' : 'Inactive'}</span>
+            </div>
+          </div>
+          <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+            <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️ Edit</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${getCoachName(c).replace(/'/g, "\\'")}')" title="Delete Coach">🗑️</button>
+          </div>
+          <button class="btn btn-gold btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
         </div>
-        <div class="coach-card-stats">
-          <div class="coach-stat">
-            <span class="coach-stat-label">Students</span>
-            <span class="coach-stat-val">${studentCount}</span>
-          </div>
-          <div class="coach-stat">
-            <span class="coach-stat-label">Avg ELO</span>
-            <span class="coach-stat-val">${Math.round(avgRating)}</span>
-          </div>
-          <div class="coach-stat">
-            <span class="coach-stat-label">Salary</span>
-            <span class="coach-stat-val">₹${(getCoachSalary(c) || 0).toLocaleString()}</span>
-          </div>
-          <div class="coach-stat">
-            <span class="coach-stat-label">Status</span>
-            <span class="coach-stat-val" style="color: var(--success)">${getCoachStatus(c) === 'active' ? 'Active' : 'Inactive'}</span>
-          </div>
-        </div>
-        <div class="coach-card-actions">
-          <button class="btn btn-outline-grey" onclick="viewCoachSchedule('${c.id}')">Schedule</button>
-          <button class="btn btn-gold" onclick="openCoachModal('${c.id}')">Edit</button>
-        </div>
-      </div>`;
+      `;
     }).join('');
-    
-    grid.innerHTML = coachCards;
   }
-  function viewCoachSchedule(id) { openModal('coach-schedule-modal'); }
-  function openCoachModal(id = null) { openModal('coach-crud-modal'); }
-  async function saveCoach() { /* api call to save coach */ }
-  async function deleteCoach(id) { /* api call to delete coach */ }
+
+  window.viewCoach = function(id) {
+    const c = allCoaches.find(x => String(x.id) === String(id));
+    if (!c) return;
+    
+    const studs = allStudents.filter(s => String(s.coach_id) === String(c.id));
+    const avgRating = studs.length ? Math.round(studs.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / studs.length) : 800;
+    
+    $('cv-name').innerText = getCoachName(c);
+    $('cv-spec').innerText = getCoachSpecialty(c) || 'General Coach';
+    $('cv-phone').innerText = c.phone || 'N/A';
+    $('cv-email').innerText = c.email || 'N/A';
+    $('cv-salary').innerText = (getCoachSalary(c) || 0).toLocaleString();
+    $('cv-status').innerText = capitalizeFirst(getCoachStatus(c));
+    $('cv-address').innerText = c.address || 'No address provided';
+    $('cv-avail').innerText = c.availability || 'N/A';
+    $('cv-bio').innerText = c.bio || c.additional_details || 'No biography available.';
+    $('cv-stud-count').innerText = studs.length;
+    $('cv-avg-elo').innerText = avgRating;
+    $('cv-exp').innerText = (c.experience || 0) + 'y';
+    $('cv-av').src = c.photo_url || c.photo || c.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000000&bold=true&size=200`;
+    
+    $('cv-edit-btn').onclick = () => { closeModals(); openCoachModal(id); };
+    
+    openModal('coach-view-modal');
+  };
+
+  function viewCoachSchedule(id) { 
+    const c = allCoaches.find(x => String(x.id) === String(id));
+    if (c) $('sched-coach-name').innerText = getCoachName(c);
+    openModal('coach-schedule-modal'); 
+  }
+
+  function openCoachModal(id = null) { 
+    if (id) {
+      const c = allCoaches.find(x => String(x.id) === String(id));
+      if (!c) return;
+      $('coach-modal-title').innerText = 'Edit Coach';
+      $('cm-id').value = c.id;
+      $('cm-name').value = getCoachName(c);
+      $('cm-spec').value = getCoachSpecialty(c);
+      $('cm-phone').value = c.phone || '';
+      $('cm-email').value = c.email || '';
+      $('cm-address').value = c.address || '';
+      $('cm-photo').value = c.photo_url || c.photo || '';
+      $('cm-salary').value = getCoachSalary(c);
+      $('cm-exp').value = c.experience || 0;
+      $('cm-status').value = getCoachStatus(c) || 'active';
+      $('cm-avail').value = c.availability || '';
+      $('cm-etc').value = c.bio || c.additional_details || '';
+    } else {
+      $('coach-modal-title').innerText = 'Add Coach';
+      $('cm-id').value = '';
+      $('cm-name').value = '';
+      $('cm-spec').value = '';
+      $('cm-phone').value = '';
+      $('cm-email').value = '';
+      $('cm-address').value = '';
+      $('cm-photo').value = '';
+      $('cm-salary').value = '0';
+      $('cm-exp').value = '0';
+      $('cm-status').value = 'active';
+      $('cm-avail').value = '';
+      $('cm-etc').value = '';
+    }
+    openModal('coach-crud-modal'); 
+  }
+
+  async function saveCoach() { 
+    const id = $('cm-id').value;
+    const data = {
+      name: $('cm-name').value.trim(),
+      specialty: $('cm-spec').value.trim(),
+      phone: $('cm-phone').value.trim(),
+      email: $('cm-email').value.trim(),
+      address: $('cm-address').value.trim(),
+      photo_url: $('cm-photo').value.trim(),
+      salary: parseInt($('cm-salary').value) || 0,
+      experience: parseInt($('cm-exp').value) || 0,
+      status: $('cm-status').value,
+      availability: $('cm-avail').value.trim(),
+      bio: $('cm-etc').value.trim()
+    };
+
+    if (!data.name) { toast('Coach name is required', 'error'); return; }
+
+    try {
+      let res;
+      if (id) {
+        res = await apiCall(`/api/coaches?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+        toast('Coach updated successfully!', 'success');
+      } else {
+        res = await apiCall('/api/coaches', { method: 'POST', body: JSON.stringify(data) });
+        toast('Coach added successfully!', 'success');
+      }
+
+      if (res.ok) {
+        closeModals();
+        loadAllData(true);
+      }
+    } catch (e) {
+      console.error('Save coach error:', e);
+      toast('Failed to save coach', 'error');
+    }
+  }
+
+  window.confirmDeleteCoach = function(id, name) {
+    if (confirm(`Are you sure you want to delete coach ${name}? This will affect student assignments.`)) {
+      deleteCoach(id);
+    }
+  };
+
+  async function deleteCoach(id) { 
+    try {
+      const res = await apiCall(`/api/coaches?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast('Coach deleted from academy', 'success');
+        loadAllData(true);
+      }
+    } catch (e) {
+      toast('Delete failed', 'error');
+    }
+  }
 
   function renderEvents() {
     const gridEl = $('ev-grid');
@@ -1462,10 +1586,10 @@
     gridEl.innerHTML = achievementsData.map(a => {
       const student = allStudents.find(s => s.id === a.student_id);
       return `<div class="ach-card">
-        ${a.image_url ? `<img src="${a.image_url}" class="ach-img" alt="${a.title}">` : `<div class="ach-img-placeholder">🏆</div>`}
+        ${a.img_url ? `<img src="${a.img_url}" class="ach-img" alt="${a.title}">` : `<div class="ach-img-placeholder">🏆</div>`}
         <div class="ach-info">
           <div class="ach-title">${a.title}</div>
-          <div class="ach-sub">${student ? getStudentName(student) : 'Unknown'} • ${a.date ? new Date(a.date).toLocaleDateString() : ''}</div>
+          <div class="ach-sub">${student ? getStudentName(student) : 'Unknown'} • ${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : 'N/A'}</div>
         </div>
         ${isAdmin ? `
           <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px">
@@ -1483,7 +1607,7 @@
     $('award-sid').value = a.id;
     $('award-student').value = a.student_id || '';
     $('award-title').value = a.title || '';
-    $('award-img-url').value = a.image_url || '';
+    $('award-img-url').value = a.img_url || '';
     openModal('award-modal');
   };
   
@@ -1508,8 +1632,8 @@
     const data = {
       student_id: $('award-student').value,
       title: $('award-title').value,
-      image_url: $('award-img-url').value,
-      date: new Date().toISOString().split('T')[0]
+      img_url: $('award-img-url').value,
+      date_achieved: new Date().toISOString().split('T')[0]
     };
     
     if (!data.student_id) { toast('Please select a student', 'error'); return; }

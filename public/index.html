@@ -556,15 +556,70 @@
     <div class="modal-title" id="coach-modal-title">Add Coach</div>
     <input type="hidden" id="cm-id">
     <input type="text" id="cm-name" placeholder="Coach Name">
-    <input type="text" id="cm-spec" placeholder="Specialty">
-    <input type="tel" id="cm-phone" placeholder="Phone (10 digits)" maxlength="10">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <input type="text" id="cm-spec" placeholder="Specialty (e.g. Endgames)">
+      <input type="number" id="cm-exp" placeholder="Experience (Years)">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <input type="tel" id="cm-phone" placeholder="Phone (10 digits)" maxlength="10">
+      <input type="email" id="cm-email" placeholder="Email Address">
+    </div>
     <textarea id="cm-address" rows="2" placeholder="Address"></textarea>
-    <input type="url" id="cm-photo" placeholder="Photo URL">
-    <input type="number" id="cm-salary" placeholder="Salary ₹" value="0">
-    <textarea id="cm-etc" rows="2" placeholder="Additional Details"></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <input type="url" id="cm-photo" placeholder="Photo URL">
+      <input type="number" id="cm-salary" placeholder="Salary ₹" value="0">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <select id="cm-status">
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+      <input type="text" id="cm-avail" placeholder="Availability (e.g. Weekends)">
+    </div>
+    <textarea id="cm-etc" rows="2" placeholder="Additional Details / Bio"></textarea>
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
-      <button class="btn btn-gold" style="flex:1" onclick="saveCoach()">Save</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveCoach()">Save Coach</button>
+    </div>
+  </div>
+</div>
+
+<!-- Coach View Modal -->
+<div class="modal" id="coach-view-modal">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:20px">
+      <img id="cv-av" src="" style="width:90px;height:90px;border-radius:12px;border:3px solid var(--gold);object-fit:cover;box-shadow:var(--shadow)">
+      <div>
+        <h2 id="cv-name" style="font-family:var(--font-head);color:var(--gold);font-size:28px;margin-bottom:4px">—</h2>
+        <span id="cv-spec" class="badge" style="background:var(--bg3);color:var(--gold)">—</span>
+      </div>
+    </div>
+    <div class="dash-grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:var(--ivory-dim);text-transform:uppercase">Students</div>
+        <div id="cv-stud-count" style="font-size:20px;font-weight:700;color:var(--ivory)">0</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:var(--ivory-dim);text-transform:uppercase">Avg ELO</div>
+        <div id="cv-avg-elo" style="font-size:20px;font-weight:700;color:var(--ivory)">0</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-size:10px;color:var(--ivory-dim);text-transform:uppercase">Exp.</div>
+        <div id="cv-exp" style="font-size:20px;font-weight:700;color:var(--ivory)">0y</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:14px;line-height:1.6;color:var(--ivory-dim)">
+      <div><b style="color:var(--ivory)">Phone:</b> <span id="cv-phone"></span></div>
+      <div><b style="color:var(--ivory)">Email:</b> <span id="cv-email"></span></div>
+      <div><b style="color:var(--ivory)">Salary:</b> ₹<span id="cv-salary"></span></div>
+      <div><b style="color:var(--ivory)">Status:</b> <span id="cv-status"></span></div>
+      <div style="grid-column:1/-1"><b style="color:var(--ivory)">Address:</b> <span id="cv-address"></span></div>
+      <div style="grid-column:1/-1"><b style="color:var(--ivory)">Availability:</b> <span id="cv-avail"></span></div>
+      <div style="grid-column:1/-1;margin-top:10px"><b style="color:var(--ivory)">Bio:</b><p id="cv-bio" style="margin-top:4px;font-size:13px;font-style:italic"></p></div>
+    </div>
+    <div style="margin-top:28px;display:flex;gap:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Close</button>
+      <button class="btn btn-gold" id="cv-edit-btn" style="flex:1">Edit Profile</button>
     </div>
   </div>
 </div>
