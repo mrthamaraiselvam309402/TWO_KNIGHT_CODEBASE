@@ -73,6 +73,8 @@ Deno.serve(async (req) => {
       rating: s.rating || 800,
       current_rating: s.rating || 800,         // alias
       notes: s.notes || '',
+      session_mode: s.session_mode || null,
+      session_time: s.session_time || null,
       created_at: s.created_at,
       updated_at: s.updated_at
     }
