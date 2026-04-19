@@ -31,6 +31,8 @@
   let role = null;
   let chartInstances = {};
   let dataCache = { timestamp: 0 };
+  let loadDebounceTimer = null;
+  let loadingStates = {};
   const CACHE_DURATION = 5000;
 
   // ── NEW ADVANCED LOGIC ──
@@ -364,7 +366,7 @@
     }
     return 5000;
   }
-  function getStudentPaymentStatus(s) { return (s.status === 'active' || s.payment_status === 'Paid') ? 'Paid' : 'Due'; }
+  function getStudentPaymentStatus(s) { if (s.status === 'pending') return 'Pending'; return (s.status === 'active' || s.payment_status === 'Paid') ? 'Paid' : 'Due'; }
   function getStudentBatchType(s) { return s.batch_type || 'Evening'; }
   function getStudentBatchTime(s) { return s.batch_time || '17:00'; }
   function getStudentStatus(s) { return s.status || 'pending'; }
@@ -481,6 +483,8 @@
         allMessages = messages || [];
         
         console.log('Data loaded - Coaches:', allCoaches?.length, 'Students:', allStudents?.length);
+        console.log('Sample student:', allStudents[0]);
+        console.log('Sample coach:', allCoaches[0]);
         
         dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, timestamp: now };
         syncCoachDropdowns();
@@ -500,6 +504,17 @@
         setLoading('data', false);
       } catch (err) {
         console.error('Load error:', err);
+        console.error('Error stack:', err.stack);
+        // Try to get more details from failed requests
+        console.error('Trying direct API call...');
+        try {
+          const test = await fetch('/api/students');
+          console.error('Direct /api/students status:', test.status);
+          const data = await test.json();
+          console.error('Direct API returned:', data.length, 'students');
+        } catch(e2) {
+          console.error('Direct API also failed:', e2);
+        }
         toast('Failed to load data - please refresh', 'error');
         setLoading('data', false);
       }
@@ -726,8 +741,11 @@
     if (userRole === 'parent') setPage('child');
     else setPage('dash');
 
-    // Load data in background
+    // Load data in background - force refresh to get latest
+    console.log('finishLogin called, loading data...');
+    dataCache = { timestamp: 0 }; // Reset cache to ensure fresh load
     loadAllData(true).then(() => {
+      console.log('Data load complete, students:', allStudents.length, 'coaches:', allCoaches.length);
       if (userRole === 'parent' && studentId) {
         currentStudent = allStudents.find(s => String(s.id) === String(studentId));
         if (currentStudent) renderChild();
@@ -830,8 +848,17 @@
   }
 
   function renderDash() {
+    console.log('renderDash called, allStudents:', allStudents.length, 'allCoaches:', allCoaches.length);
+    
+    // Skip if data hasn't loaded yet - this prevents the first call with empty data from setting UI to 0
+    if (allStudents.length === 0 && allCoaches.length === 0) {
+      console.log('renderDash skipped - no data yet');
+      return;
+    }
+    
+    console.log('renderDash executing with data');
+    
     const paidStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid');
-    const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
     
     // Basic stats
     if ($('s-total')) $('s-total').textContent = allStudents.length;
@@ -849,29 +876,35 @@
     if ($('s-att-absent')) $('s-att-absent').textContent = absentCount;
     if ($('s-att-pending')) $('s-att-pending').textContent = Math.max(0, pendingCount);
     
-    // Revenue stats
+    // Revenue stats - Amount Paid = all fees from students with 'active' or 'Paid' payment_status
     const paidRevenue = paidStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-    const dueRevenue = dueStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    // Amount Due = all fees from students with 'pending' status (not yet paid)
+    const pendingStudents = allStudents.filter(s => s.status === 'pending');
+    const dueRevenue = pendingStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
     if ($('s-due')) $('s-due').textContent = '₹' + dueRevenue.toLocaleString();
     
     // Coach expenses
-    const totalCoachCost = allCoaches.reduce((a, c) => a + (c.salary || 0), 0);
+    const totalCoachCost = allCoaches.reduce((a, c) => a + (c.salary || c.hourly_rate || 0), 0);
     if ($('s-coach-exp')) $('s-coach-exp').textContent = '₹' + totalCoachCost.toLocaleString();
     if ($('s-total-cost')) $('s-total-cost').textContent = '₹' + totalCoachCost.toLocaleString();
     
     // Financial analytics
-    const totalPotential = paidRevenue + dueRevenue;
+    // Total Potential Revenue = All students' fees (both paid and pending)
+    const totalPotential = allStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    // Net Profit = Collected Revenue - Coach Expenses (cash flow)
     const netProfit = paidRevenue - totalCoachCost;
+    // Potential Net Profit = Total Potential Revenue - Coach Expenses (projected)
+    const potentialNetProfit = totalPotential - totalCoachCost;
     if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
     if ($('s-profit')) $('s-profit').textContent = '₹' + netProfit.toLocaleString();
     
-    // Session counts
+    // Session counts - use session_mode field with case-insensitive check
     let groupCount = 0, singleCount = 0;
     allStudents.forEach(s => {
-      const notes = s.notes || '';
-      if (notes.includes('session:Group')) groupCount++;
-      else if (notes.includes('session:Single')) singleCount++;
+      const sessionMode = (s.session_mode || '').toLowerCase();
+      if (sessionMode === 'group') groupCount++;
+      else if (sessionMode === 'single') singleCount++;
     });
     if ($('s-group')) $('s-group').textContent = groupCount;
     if ($('s-single')) $('s-single').textContent = singleCount;
@@ -898,9 +931,9 @@
       coachData[c.id] = {
         name: c.name || c.full_name || 'Unknown',
         students: 0,
-        revenue: 0,
-        pending: 0,
-        cost: c.salary || 0
+        revenue: 0,      // Collected (Paid)
+        pending: 0,      // Pending/Due
+        cost: c.salary || c.hourly_rate || 0
       };
     });
     
@@ -918,25 +951,30 @@
       }
     });
     
-    // Sort by profit (descending)
+    // Sort by potential profit (descending)
     const sorted = Object.entries(coachData).sort((a, b) => {
-      const profitA = a[1].revenue - a[1].cost;
-      const profitB = b[1].revenue - b[1].cost;
+      const profitA = (a[1].revenue + a[1].pending) - a[1].cost;
+      const profitB = (b[1].revenue + b[1].pending) - b[1].cost;
       return profitB - profitA;
     });
     
     tbody.innerHTML = sorted.map(([id, d]) => {
-      const profit = d.revenue - d.cost;
+      const potentialRevenue = d.revenue + d.pending;
+      const netProfit = d.revenue - d.cost;  // Current cash flow
+      const potentialNetProfit = potentialRevenue - d.cost;  // Projected
       const roi = d.cost > 0 ? ((d.revenue / d.cost) * 100).toFixed(1) : 0;
-      const profitClass = profit >= 0 ? 'text-success' : 'text-danger';
+      const potentialRoi = d.cost > 0 ? ((potentialRevenue / d.cost) * 100).toFixed(1) : 0;
+      const profitClass = netProfit >= 0 ? 'text-success' : 'text-danger';
+      const potentialProfitClass = potentialNetProfit >= 0 ? 'text-success' : 'text-danger';
       return `<tr>
         <td><b>${d.name}</b></td>
         <td>${d.students}</td>
         <td>₹${d.revenue.toLocaleString()}</td>
         <td>₹${d.pending.toLocaleString()}</td>
         <td>₹${d.cost.toLocaleString()}</td>
-        <td class="${profitClass}">₹${profit.toLocaleString()}</td>
-        <td>${roi}%</td>
+        <td class="${profitClass}">₹${netProfit.toLocaleString()}</td>
+        <td class="${potentialProfitClass}">₹${potentialNetProfit.toLocaleString()}</td>
+        <td>${roi}% / ${potentialRoi}%</td>
       </tr>`;
     }).join('');
   }
@@ -955,26 +993,32 @@
     const studs = (role === 'admin' || role === 'master') ? allStudents : (currentStudent ? [currentStudent] : []);
     
     if (!studs || studs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No students found</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No students found</div></td></tr>';
       return;
     }
     
     tbody.innerHTML = studs.map((s, i) => {
       const status = getStudentPaymentStatus(s);
       
-      // Prefer actual columns from Golden State migration
-      const session = s.session_type || (s.notes?.includes('session:Group') ? 'Group' : (s.notes?.includes('session:Single') ? 'Single' : 'Group'));
-      const time = s.class_time ? formatTime(s.class_time) : (s.batch_time ? formatTime(s.batch_time) : (s.notes?.includes('time:') ? s.notes.split('time:')[1].split(',')[0] : '17:00'));
-      const phone = getStudentPhone(s);
+      // Use session_mode and session_time from database (Golden State fields)
+      const session = s.session_mode || s.session_type || (s.notes?.includes('session:Group') ? 'Group' : (s.notes?.includes('session:Single') ? 'Single' : 'Group'));
+      const time = s.session_time || s.class_time || s.batch_time || '17:00';
+      
+      // Get coach name
+      const coachId = s.coach_id;
+      const coach = allCoaches.find(c => String(c.id) === String(coachId));
+      const coachName = coach ? getCoachName(coach) : '-';
+      
       const uniqueId = 'more-' + s.id.replace(/[^a-zA-Z0-9]/g, '');
       return `<tr>
         <td><div style="font-weight:600">${getStudentName(s)}</div></td>
         <td>${getStudentLevel(s)} - ${getStudentRating(s)} ELO</td>
+        <td>${coachName}</td>
         <td>${getStudentDate(s) || '-'}</td>
         <td>${session}</td>
         <td>${time}</td>
         <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-        <td><span class="${status==='Paid'?'text-success':'text-danger'}">${status}</span></td>
+        <td><span class="${status==='Paid'?'text-success':status==='Pending'?'text-warning':'text-danger'}">${status}</span></td>
         <td>
           <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
             <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')" title="View">View</button>
@@ -2053,6 +2097,8 @@
   // ═══════════════════════════════════════════════════════════════
   // INIT & EXPOSE
   // ═══════════════════════════════════════════════════════════════
+  // INIT & EXPOSE
+  // ═══════════════════════════════════════════════════════════════
   const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
   let sessionTimer = null;
   
@@ -2073,32 +2119,101 @@
   window.addEventListener('DOMContentLoaded', () => {
     const auth = localStorage.getItem('chesskidoo_auth');
     if (auth) {
-      const data = JSON.parse(auth);
-      role = data.role;
-      finishLogin(data.user || 'User', data.role, data.studentId);
-      resetSessionTimer();
+      try {
+        const data = JSON.parse(auth);
+        role = data.role;
+        finishLogin(data.user || 'User', data.role, data.studentId);
+        resetSessionTimer();
+      } catch (e) {
+        localStorage.removeItem('chesskidoo_auth');
+        $('login-screen').style.display = 'flex';
+        document.body.classList.add('login-mode');
+      }
     } else {
       $('login-screen').style.display = 'flex';
       document.body.classList.add('login-mode');
     }
   });
 
-  const expose = {
-    toggleSidebar, setPage, toggleEye, doLogin, doLogout, openProfile,
-    clearFilters, renderStudents, viewStudent, openEdit, updateStudent, openEnroll, saveStudent, deleteStudent,
-    renderCoachMgmt, viewCoachSchedule, openCoachModal, saveCoach, deleteCoach,
-    renderEvents, saveEvent, deleteEvent, editEvent, archiveEvent, confirmDeleteEvent,
-    renderFame, openAwardModal, onAwardStudentChange, saveAward, deleteAchievement, editAchievement, confirmDeleteAchievement,
-    renderBills, markPaid, openPay, initiatePay, downloadReceipt, showReceiptPreview, printReceipt,
-    renderMsgs, markMsgRead, deleteMsg,
-    renderChild, setChildTab, renderChildGrowth, renderChildResources, renderChildBilling, openContactModal, sendMsg, sendFeedback,
-    openAttendanceMarking, saveBatchAttendance, updateAttStats, markAllPresent, markAllAbsent, toggleMoreMenu, openPromote, executePromotion, sendPaymentReminder,
-    showNotifications: () => openModal('notification-modal'), updateNotificationBadge: () => {},
-    setAIModule, setAISuggestion, sendAIQuery, toggleChatbot, sendChatMessage, toggleChat, toggleLoginChat, sendChat,
-    toggleTheme, closeModals, openModal, previewFile, executeDelete,
-    generateReportPDF, exportData, toast, $
-  };
-  Object.entries(expose).forEach(([k, v]) => { window[k] = v; console.log('Exposed:', k); });
-  
+  // Expose functions to window - ensure they're always accessible
+  window.toggleEye = toggleEye;
+  window.doLogin = doLogin;
+  window.doLogout = doLogout;
+  window.openProfile = openProfile;
+  window.clearFilters = clearFilters;
+  window.renderStudents = renderStudents;
+  window.viewStudent = viewStudent;
+  window.openEdit = openEdit;
+  window.updateStudent = updateStudent;
+  window.openEnroll = openEnroll;
+  window.saveStudent = saveStudent;
+  window.deleteStudent = deleteStudent;
+  window.renderCoachMgmt = renderCoachMgmt;
+  window.viewCoachSchedule = viewCoachSchedule;
+  window.openCoachModal = openCoachModal;
+  window.saveCoach = saveCoach;
+  window.deleteCoach = deleteCoach;
+  window.renderEvents = renderEvents;
+  window.saveEvent = saveEvent;
+  window.deleteEvent = deleteEvent;
+  window.editEvent = editEvent;
+  window.archiveEvent = archiveEvent;
+  window.confirmDeleteEvent = confirmDeleteEvent;
+  window.renderFame = renderFame;
+  window.openAwardModal = openAwardModal;
+  window.onAwardStudentChange = onAwardStudentChange;
+  window.saveAward = saveAward;
+  window.deleteAchievement = deleteAchievement;
+  window.editAchievement = editAchievement;
+  window.confirmDeleteAchievement = confirmDeleteAchievement;
+  window.renderBills = renderBills;
+  window.markPaid = markPaid;
+  window.openPay = openPay;
+  window.initiatePay = initiatePay;
+  window.downloadReceipt = downloadReceipt;
+  window.showReceiptPreview = showReceiptPreview;
+  window.printReceipt = printReceipt;
+  window.renderMsgs = renderMsgs;
+  window.markMsgRead = markMsgRead;
+  window.deleteMsg = deleteMsg;
+  window.renderChild = renderChild;
+  window.setChildTab = setChildTab;
+  window.renderChildGrowth = renderChildGrowth;
+  window.renderChildResources = renderChildResources;
+  window.renderChildBilling = renderChildBilling;
+  window.openContactModal = openContactModal;
+  window.sendMsg = sendMsg;
+  window.sendFeedback = sendFeedback;
+  window.openAttendanceMarking = openAttendanceMarking;
+  window.saveBatchAttendance = saveBatchAttendance;
+  window.updateAttStats = updateAttStats;
+  window.markAllPresent = markAllPresent;
+  window.markAllAbsent = markAllAbsent;
+  window.toggleMoreMenu = toggleMoreMenu;
+  window.openPromote = openPromote;
+  window.executePromotion = executePromotion;
+  window.sendPaymentReminder = sendPaymentReminder;
+  window.showNotifications = () => openModal('notification-modal');
+  window.updateNotificationBadge = () => {};
+  window.setAIModule = setAIModule;
+  window.setAISuggestion = setAISuggestion;
+  window.sendAIQuery = sendAIQuery;
+  window.toggleChatbot = toggleChatbot;
+  window.sendChatMessage = sendChatMessage;
+  window.toggleChat = toggleChat;
+  window.toggleLoginChat = toggleLoginChat;
+  window.sendChat = sendChat;
+  window.toggleTheme = toggleTheme;
+  window.closeModals = closeModals;
+  window.openModal = openModal;
+  window.previewFile = previewFile;
+  window.executeDelete = executeDelete;
+  window.generateReportPDF = generateReportPDF;
+  window.exportData = exportData;
+  window.toast = toast;
+  window.$ = $;
+  window.toggleSidebar = toggleSidebar;
+  window.setPage = setPage;
+
   console.log('Chesskidoo Scripts Loaded - doLogin:', typeof window.doLogin, 'toggleEye:', typeof window.toggleEye);
 })();
