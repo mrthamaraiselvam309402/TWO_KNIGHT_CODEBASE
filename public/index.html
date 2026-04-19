@@ -172,6 +172,7 @@
     <!-- Students -->
     <div id="page-stud" class="page admin-only">
       <div class="filter-bar">
+        <input type="text" id="f-search" placeholder="Search Student Name..." oninput="renderStudents()" style="flex:1;min-width:200px">
         <select id="f-coach" onchange="renderStudents()"><option value="">All Coaches</option></select>
         <select id="f-status" onchange="renderStudents()"><option value="">All Payment Status</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
         <input type="number" id="f-min-fee" placeholder="Min Fee ₹" oninput="renderStudents()">
@@ -182,7 +183,7 @@
       <div class="table-wrap">
         <table>
           <thead><tr><th>Student</th><th>Level / ELO</th><th>Coach</th><th>Join Date</th><th>Session</th><th>Timing</th><th>Fee</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="stud-body"><tr><td colspan="6"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
+          <tbody id="stud-body"><tr><td colspan="9"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -478,7 +479,7 @@
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <input type="number" id="e-fee" placeholder="Fee ₹" value="5000">
-      <select id="e-status"><option value="Paid">Paid</option><option value="Due">Due</option></select>
+      <select id="e-status"><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <select id="e-batch-type"><option value="Morning">Morning</option><option value="Evening">Evening</option><option value="Weekend">Weekend</option></select>
@@ -765,6 +766,6 @@
   </div>
 </div>
 
-<script src="scripts.js?v=2"></script>
+<script src="scripts.js?v=2.1"></script>
 </body>
 </html>

@@ -51,34 +51,39 @@ Deno.serve(async (req) => {
   //            address, enrollment_date, status, coach_id, rating, notes,
   //            created_at, updated_at
 
-  // Transform DB row to API response (add convenience aliases the frontend expects)
-  function transformStudent(s: Record<string, unknown>) {
-    return {
-      id: s.id,
-      name: s.name || '',
-      full_name: s.name || '',    // alias for frontend compatibility
-      email: s.email || '',
-      phone: s.phone || '',
-      parent_phone: s.parent_phone || s.phone || '',
-      parent_name: s.parent_name || '',
-      age: s.age || null,
-      grade: s.grade || null,
-      level: s.grade || 'Beginner',           // alias
-      enrollment_date: s.enrollment_date || '',
-      join_date: s.enrollment_date || '',      // alias
-      address: s.address || '',
-      status: s.status || 'pending',
-      payment_status: s.status === 'active' ? 'Paid' : 'Due', // computed
-      coach_id: s.coach_id || null,
-      rating: s.rating || 800,
-      current_rating: s.rating || 800,         // alias
-      notes: s.notes || '',
-      session_mode: s.session_mode || null,
-      session_time: s.session_time || null,
-      created_at: s.created_at,
-      updated_at: s.updated_at
-    }
-  }
+   // Transform DB row to API response (add convenience aliases the frontend expects)
+   function transformStudent(s: Record<string, unknown>) {
+     const status = s.status || 'pending';
+     return {
+       id: s.id,
+       name: s.name || '',
+       full_name: s.name || '',    // alias for frontend compatibility
+       email: s.email || '',
+       phone: s.phone || '',
+       parent_phone: s.parent_phone || s.phone || '',
+       parent_name: s.parent_name || '',
+       age: s.age || null,
+       grade: s.grade || null,
+       level: s.grade || 'Beginner',           // alias
+       enrollment_date: s.enrollment_date || '',
+       join_date: s.enrollment_date || '',      // alias
+       address: s.address || '',
+       status: status,
+       payment_status: status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due'),
+       coach_id: s.coach_id || null,
+       rating: s.rating || 800,
+       current_rating: s.rating || 800,         // alias
+       notes: s.notes || '',
+       // New canonical fields
+       session_mode: s.session_mode || null,
+       session_time: s.session_time || null,
+       // Backwards-compatible aliases (old field names map to new ones)
+       batch_type: s.session_mode || null,
+       batch_time: s.session_time || null,
+       created_at: s.created_at,
+       updated_at: s.updated_at
+     }
+   }
 
   try {
     const url = new URL(req.url)
@@ -131,6 +136,10 @@ Deno.serve(async (req) => {
         status: validateStatus(rawBody.status),
         coach_id: rawBody.coach_id ? sanitizeString(rawBody.coach_id, 50) : null,
         rating: validateRating(rawBody.rating || rawBody.current_rating),
+        // Accept both legacy batch_type and new session_mode
+        session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
+        // Accept both legacy batch_time and new session_time
+        session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
         notes: sanitizeString(rawBody.notes, 2000),
         created_at: new Date().toISOString()
       }
@@ -169,32 +178,44 @@ Deno.serve(async (req) => {
       const updateData: Record<string, unknown> = {}
       
       if (rawBody.name !== undefined || rawBody.full_name !== undefined) {
-        updateData.name = sanitizeString(rawBody.name || rawBody.full_name, 100)
+        updateData.name = sanitizeString(rawBody.name || rawBody.full_name, 100);
       }
-      if (rawBody.phone !== undefined) updateData.phone = validatePhone(rawBody.phone)
-      if (rawBody.parent_phone !== undefined) updateData.parent_phone = validatePhone(rawBody.parent_phone)
-      if (rawBody.email !== undefined) updateData.email = sanitizeString(rawBody.email, 254)
-      if (rawBody.age !== undefined) updateData.age = parseInt(String(rawBody.age)) || null
+      if (rawBody.phone !== undefined) updateData.phone = validatePhone(rawBody.phone);
+      if (rawBody.parent_phone !== undefined) updateData.parent_phone = validatePhone(rawBody.parent_phone);
+      if (rawBody.email !== undefined) updateData.email = sanitizeString(rawBody.email, 254);
+      if (rawBody.age !== undefined) updateData.age = parseInt(String(rawBody.age)) || null;
       if (rawBody.grade !== undefined || rawBody.level !== undefined) {
-        updateData.grade = sanitizeString(rawBody.grade || rawBody.level, 50)
+        updateData.grade = sanitizeString(rawBody.grade || rawBody.level, 50);
       }
-      if (rawBody.parent_name !== undefined) updateData.parent_name = sanitizeString(rawBody.parent_name, 100)
-      if (rawBody.address !== undefined) updateData.address = sanitizeString(rawBody.address, 500)
+      if (rawBody.parent_name !== undefined) updateData.parent_name = sanitizeString(rawBody.parent_name, 100);
+      if (rawBody.address !== undefined) updateData.address = sanitizeString(rawBody.address, 500);
       if (rawBody.enrollment_date !== undefined || rawBody.join_date !== undefined) {
-        updateData.enrollment_date = sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10)
+        updateData.enrollment_date = sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10);
       }
-      if (rawBody.status !== undefined) updateData.status = validateStatus(rawBody.status)
+      if (rawBody.status !== undefined) updateData.status = validateStatus(rawBody.status);
       if (rawBody.payment_status !== undefined) {
-        // Map payment_status to DB status field
-        updateData.status = rawBody.payment_status === 'Paid' ? 'active' : 'pending'
+        // Map frontend payment_status to DB status field
+        // "Paid" -> "active", "Due"/"Pending" -> "pending"
+        const pstatus = String(rawBody.payment_status).toLowerCase();
+        if (pstatus === 'paid') updateData.status = 'active';
+        else if (pstatus === 'pending') updateData.status = 'pending';
+        else updateData.status = 'pending'; // Default to pending for Due etc.
       }
-      if (rawBody.coach_id !== undefined) updateData.coach_id = rawBody.coach_id ? sanitizeString(rawBody.coach_id, 50) : null
+      if (rawBody.coach_id !== undefined) updateData.coach_id = rawBody.coach_id ? sanitizeString(rawBody.coach_id, 50) : null;
       if (rawBody.rating !== undefined || rawBody.current_rating !== undefined) {
-        updateData.rating = validateRating(rawBody.rating || rawBody.current_rating)
+        updateData.rating = validateRating(rawBody.rating || rawBody.current_rating);
       }
-      if (rawBody.notes !== undefined) updateData.notes = sanitizeString(rawBody.notes, 2000)
+      if (rawBody.notes !== undefined) updateData.notes = sanitizeString(rawBody.notes, 2000);
+      // Accept both legacy batch_type and new session_mode
+      if (rawBody.session_mode !== undefined || rawBody.batch_type !== undefined) {
+        updateData.session_mode = sanitizeString(rawBody.session_mode || rawBody.batch_type, 50);
+      }
+      // Accept both legacy batch_time and new session_time
+      if (rawBody.session_time !== undefined || rawBody.batch_time !== undefined) {
+        updateData.session_time = sanitizeString(rawBody.session_time || rawBody.batch_time, 100);
+      }
       
-      updateData.updated_at = new Date().toISOString()
+      updateData.updated_at = new Date().toISOString();
       
       const { data: updatedStudent, error: updateError } = await supabase
         .from('students')

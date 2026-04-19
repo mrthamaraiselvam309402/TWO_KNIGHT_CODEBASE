@@ -366,7 +366,15 @@
     }
     return 5000;
   }
-  function getStudentPaymentStatus(s) { if (s.status === 'pending') return 'Pending'; return (s.status === 'active' || s.payment_status === 'Paid') ? 'Paid' : 'Due'; }
+  function getStudentPaymentStatus(s) { 
+    if (!s) return 'Due';
+    const status = (s.status || '').toLowerCase();
+    const payStatus = (s.payment_status || '').toLowerCase();
+    
+    if (status === 'active' || payStatus === 'paid') return 'Paid';
+    if (status === 'pending' || payStatus === 'pending') return 'Pending';
+    return 'Due'; 
+  }
   function getStudentBatchType(s) { return s.batch_type || 'Evening'; }
   function getStudentBatchTime(s) { return s.batch_time || '17:00'; }
   function getStudentStatus(s) { return s.status || 'pending'; }
@@ -795,10 +803,18 @@
     const paymentCtx = $('chartPayment');
     if (paymentCtx) {
       const paid = studs.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
+      const pending = studs.filter(s => getStudentPaymentStatus(s) === 'Pending').length;
       const due = studs.filter(s => getStudentPaymentStatus(s) === 'Due').length;
       chartInstances.payment = new Chart(paymentCtx, {
         type: 'doughnut',
-        data: { labels: ['Paid', 'Due'], datasets: [{ data: [paid, due], backgroundColor: ['#2e7d32', '#d32f2f'], borderWidth: 0 }] },
+        data: { 
+          labels: ['Paid', 'Pending', 'Due'], 
+          datasets: [{ 
+            data: [paid, pending, due], 
+            backgroundColor: ['#52c41a', '#e8a830', '#ff4d4f'], 
+            borderWidth: 0 
+          }] 
+        },
         options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
       });
     }
@@ -876,11 +892,14 @@
     if ($('s-att-absent')) $('s-att-absent').textContent = absentCount;
     if ($('s-att-pending')) $('s-att-pending').textContent = Math.max(0, pendingCount);
     
-    // Revenue stats - Amount Paid = all fees from students with 'active' or 'Paid' payment_status
-    const paidRevenue = paidStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-    // Amount Due = all fees from students with 'pending' status (not yet paid)
-    const pendingStudents = allStudents.filter(s => s.status === 'pending');
-    const dueRevenue = pendingStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    // Revenue stats - Amount Paid = all fees from students with 'Paid' status
+    const paidRevenue = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    // Amount Due = all fees from students with 'Pending' or 'Due' status (not yet paid)
+    const dueRevenue = allStudents.filter(s => {
+      const ps = getStudentPaymentStatus(s);
+      return ps === 'Pending' || ps === 'Due';
+    }).reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
     if ($('s-due')) $('s-due').textContent = '₹' + dueRevenue.toLocaleString();
     
@@ -986,15 +1005,34 @@
   // STUDENTS, COACHES, EVENTS, ACHIEVEMENTS
   // ═══════════════════════════════════════════════════════════════
   function clearFilters() {
-    ['f-coach', 'f-status', 'f-min-fee', 'f-max-fee'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+    ['f-coach', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search'].forEach(id => { const el = $(id); if (el) el.value = ''; });
     renderStudents();
   }
 
   function renderStudents() {
     const tbody = $('stud-body');
     if (!tbody) return;
-    const studs = (role === 'admin' || role === 'master') ? allStudents : (currentStudent ? [currentStudent] : []);
     
+    let studs = (role === 'admin' || role === 'master') ? allStudents : (currentStudent ? [currentStudent] : []);
+    
+    // Apply Filters
+    if (role === 'admin' || role === 'master') {
+      const fSearch = ($('f-search')?.value || '').toLowerCase().trim();
+      const fCoach = $('f-coach')?.value;
+      const fStatus = $('f-status')?.value;
+      const fMin = parseInt($('f-min-fee')?.value) || 0;
+      const fMax = parseInt($('f-max-fee')?.value) || 999999;
+
+      studs = studs.filter(s => {
+        const nameMatch = !fSearch || getStudentName(s).toLowerCase().includes(fSearch);
+        const coachMatch = !fCoach || String(s.coach_id) === String(fCoach);
+        const statusMatch = !fStatus || getStudentPaymentStatus(s) === fStatus;
+        const fee = getStudentMonthlyFee(s);
+        const feeMatch = fee >= fMin && fee <= fMax;
+        return nameMatch && coachMatch && statusMatch && feeMatch;
+      });
+    }
+
     if (!studs || studs.length === 0) {
       tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No students found</div></td></tr>';
       return;
@@ -1055,7 +1093,35 @@
   function viewStudent(id) {
     const s = allStudents.find(x => String(x.id) === String(id));
     if (!s) return;
+    
     if ($('sv-name')) $('sv-name').textContent = getStudentName(s);
+    if ($('sv-level')) $('sv-level').textContent = getStudentLevel(s);
+    if ($('sv-elo')) $('sv-elo').textContent = getStudentRating(s);
+    if ($('sv-join')) $('sv-join').textContent = getStudentDate(s) || '-';
+    
+    if ($('sv-coach')) {
+      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+      $('sv-coach').textContent = coach ? getCoachName(coach) : '-';
+    }
+    
+    if ($('sv-batch')) {
+      const mode = s.session_mode || s.batch_type || 'Group';
+      const time = s.session_time || s.batch_time || '';
+      $('sv-batch').textContent = time ? `${mode} (${time})` : mode;
+    }
+    
+    if ($('sv-fee')) $('sv-fee').textContent = '₹' + getStudentMonthlyFee(s).toLocaleString();
+    
+    const statusEl = $('sv-status');
+    if (statusEl) {
+      const status = getStudentPaymentStatus(s);
+      statusEl.textContent = status;
+      statusEl.className = `badge ${status === 'Paid' ? 'badge-paid' : (status === 'Pending' ? 'text-warning' : 'badge-due')}`;
+    }
+    
+    if ($('sv-phone')) $('sv-phone').textContent = getStudentPhone(s);
+    if ($('sv-av')) $('sv-av').src = makeAvSrc(s);
+    
     openModal('student-view-modal');
   }
 
@@ -1467,7 +1533,7 @@
     
     tbody.innerHTML = allStudents.map(s => {
       const status = getStudentPaymentStatus(s);
-      const statusClass = status === 'Paid' ? 'text-success' : 'text-danger';
+      const statusClass = status === 'Paid' ? 'text-success' : (status === 'Pending' ? 'text-warning' : 'text-danger');
       const invoiceId = 'INV-' + (s.id ? s.id.toString().slice(-6) : '000000');
       return `<tr>
         <td><span style="font-family:var(--font-mono);color:var(--gold)">${invoiceId}</span></td>

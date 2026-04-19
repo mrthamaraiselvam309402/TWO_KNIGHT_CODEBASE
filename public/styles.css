@@ -349,6 +349,7 @@ tbody tr:hover { background: var(--gold-mist); }
 .text-gold { color: var(--gold); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
 .text-success { color: var(--success); font-weight: 700; }
 .text-danger { color: var(--danger); font-weight: 700; }
+.text-warning, .text-pending { color: var(--amber); font-weight: 700; }
 
 /* ── BUTTONS ── */
 .btn {
