@@ -95,14 +95,17 @@ Deno.serve(async (req) => {
       }
       
       const newAchievement = { 
-        id: 'a' + Date.now(), 
+        id: crypto.randomUUID().replace(/-/g, ''), 
         student_id: studentId,
-        title: body.title || '',
-        description: body.description || '',
+        title: body.title || body.achievement_title || '',
+        achievement_title: body.title || body.achievement_title || '',
+        description: body.description || body.notes || '',
+        notes: body.description || body.notes || '',
         date_achieved: body.date_achieved || new Date().toISOString().split('T')[0],
         category: body.category || '',
         level: body.level || '',
         img_url: body.img_url || '',
+        account_status: 'active',
         created_at: new Date().toISOString()
       };
       

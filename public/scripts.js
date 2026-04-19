@@ -264,7 +264,8 @@
     console.log('API Call:', options.method || 'GET', url);
     const response = await fetch(url, { ...options, headers });
     if (!response.ok) {
-      console.warn(`API Error: ${options.method || 'GET'} ${endpoint} -> ${response.status} ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      console.warn(`API Error: ${options.method || 'GET'} ${url} -> ${response.status} ${response.statusText}`, errorData);
     }
     return response;
   }
@@ -328,22 +329,43 @@
     }
     
     try {
+      let endpoint = '';
+      let auditTarget = '';
+      let successMsg = '';
+
       if (type === 'event') {
-        const deleteUrl = '/api/events?id=' + id;
-        await apiCall(deleteUrl, { method: 'DELETE' });
-        logAudit('events', id, 'hard_delete', { id }, null);
-        toast('Event permanently deleted!', 'success');
+          endpoint = '/api/events?id=' + id;
+          auditTarget = 'events';
+          successMsg = 'Event permanently deleted!';
       } else if (type === 'achievement') {
-        const deleteUrl = '/api/achievements?id=' + id;
-        await apiCall(deleteUrl, { method: 'DELETE' });
-        logAudit('achievements', id, 'hard_delete', { id }, null);
-        toast('Achievement permanently deleted!', 'success');
+          endpoint = '/api/achievements?id=' + id;
+          auditTarget = 'achievements';
+          successMsg = 'Achievement permanently deleted!';
+      } else if (type === 'coach') {
+          endpoint = '/api/coaches?id=' + id;
+          auditTarget = 'coaches';
+          successMsg = 'Coach removed from academy!';
+      } else if (type === 'student') {
+          endpoint = '/api/students?id=' + id;
+          auditTarget = 'students';
+          successMsg = 'Student enrollment deleted!';
+      }
+
+      if (endpoint) {
+          const res = await apiCall(endpoint, { method: 'DELETE' });
+          if (res.ok) {
+              logAudit(auditTarget, id, 'delete', { id }, null);
+              toast(successMsg, 'success');
+          } else {
+              const err = await res.json().catch(() => ({}));
+              toast('Delete failed: ' + (err.error || 'Server error'), 'error');
+          }
       }
       closeModals();
       loadAllData(true);
     } catch (e) { 
       console.error('Delete failed:', e);
-      toast('Failed to delete', 'error'); 
+      toast('Technical error: ' + e.message, 'error'); 
     }
   };
 
@@ -1244,13 +1266,11 @@
   }
   
   async function deleteStudent(id, name) {
-    if (!confirm(`Are you sure you want to delete ${name}?`)) return;
-    try {
-      await apiCall(`/api/students?id=${id}`, { method: 'DELETE' });
-      logAudit('students', id, 'delete', { name }, null);
-      toast('Student deleted!', 'success');
-      loadAllData(true);
-    } catch (e) { toast('Failed to delete', 'error'); }
+    $('delete-item-type').textContent = 'Student';
+    $('delete-item-name').textContent = name;
+    $('delete-item-id').value = id;
+    $('delete-type').value = 'student';
+    openModal('delete-confirm-modal');
   }
 
   function renderCoachMgmt() {
@@ -1395,26 +1415,37 @@
       let res;
       if (id) {
         res = await apiCall(`/api/coaches?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
-        toast('Coach updated successfully!', 'success');
+        if (res.ok) {
+          toast('Coach updated successfully!', 'success');
+          closeModals();
+          loadAllData(true);
+        } else {
+          const err = await res.json().catch(() => ({}));
+          toast('Update failed: ' + (err.error || 'Server error'), 'error');
+        }
       } else {
         res = await apiCall('/api/coaches', { method: 'POST', body: JSON.stringify(data) });
-        toast('Coach added successfully!', 'success');
-      }
-
-      if (res.ok) {
-        closeModals();
-        loadAllData(true);
+        if (res.ok) {
+          toast('Coach added successfully!', 'success');
+          closeModals();
+          loadAllData(true);
+        } else {
+          const err = await res.json().catch(() => ({}));
+          toast('Failed to add coach: ' + (err.error || 'Server error'), 'error');
+        }
       }
     } catch (e) {
       console.error('Save coach error:', e);
-      toast('Failed to save coach', 'error');
+      toast('Technical error: ' + e.message, 'error');
     }
   }
 
   window.confirmDeleteCoach = function(id, name) {
-    if (confirm(`Are you sure you want to delete coach ${name}? This will affect student assignments.`)) {
-      deleteCoach(id);
-    }
+    $('delete-item-type').textContent = 'Coach';
+    $('delete-item-name').textContent = name;
+    $('delete-item-id').value = id;
+    $('delete-type').value = 'coach';
+    openModal('delete-confirm-modal');
   };
 
   async function deleteCoach(id) { 
@@ -1500,7 +1531,7 @@
     $('ev-loc').value = '';
     $('ev-desc').value = '';
     $('ev-modal-title').textContent = 'Create Event';
-    openModal('event-crud-modal');
+    openModal('ev-modal');
   }
 
   window.editEvent = function(id) {
@@ -1559,20 +1590,27 @@
     if (data.date && new Date(data.date) < new Date()) { toast('Event date cannot be in the past', 'error'); return; }
     
     try {
+      let res;
       if (id) {
         const existing = eventsData.find(x => String(x.id) === String(id));
         logAudit('events', id, 'update', existing, data);
-        await apiCall(`/api/events?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
-        toast('Event updated!', 'success');
+        res = await apiCall(`/api/events?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
       } else {
-        await apiCall('/api/events', { method: 'POST', body: JSON.stringify(data) });
-        toast('Event created!', 'success');
+        res = await apiCall('/api/events', { method: 'POST', body: JSON.stringify(data) });
       }
-      closeModals();
-      loadAllData(true);
-      $('ev-id').value = '';
-      $('ev-modal-title').textContent = 'Create Event';
-    } catch (e) { toast('Failed to save event', 'error'); }
+
+      if (res.ok) {
+        toast(id ? 'Event updated!' : 'Event created!', 'success');
+        closeModals();
+        loadAllData(true);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast('Failed to save event: ' + (err.error || 'Server error'), 'error');
+      }
+    } catch (e) { 
+      console.error('Save event error:', e);
+      toast('Technical error: ' + e.message, 'error'); 
+    }
   }
   async function deleteEvent(id) {
     try {

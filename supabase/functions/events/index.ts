@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
       event_time: e.event_time || '',
       type: e.type || 'Tournament',
       location: e.location || '',
-      prize: e.prize || '',
+      prize: e.prize || e.prize_pool || '',
+      prize_pool: e.prize || e.prize_pool || '',
       registrations_count: e.current_participants || 0,
       max_participants: e.max_participants,
       status: e.status || 'upcoming',
@@ -75,16 +76,22 @@ Deno.serve(async (req) => {
       const { title, date, type, location, increment_registrations, ...rest } = body;
       
       let newEvent = { 
-        id: 'e' + Date.now(), 
+        id: crypto.randomUUID().replace(/-/g, ''), 
         title: title || '',
         event_date: date || body.event_date || '',
+        date: date || body.event_date || '',
         event_time: body.event_time || '',
+        time: body.event_time || '',
         type: type || body.event_type || 'Tournament',
+        event_type: type || body.event_type || 'Tournament',
         location: location || '',
         description: body.description || '',
         status: 'upcoming',
+        account_status: 'active',
         max_participants: body.max_participants || null,
         current_participants: 0,
+        prize: body.prize_pool || body.prize || '',
+        prize_pool: body.prize_pool || body.prize || '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -108,7 +115,8 @@ Deno.serve(async (req) => {
         headers: { 'Content-Type': 'application/json' }
       });
       
-      const { increment_registrations, ...updateData } = body;
+      const { increment_registrations, ...bodyData } = body;
+      const updateData: any = { ...bodyData };
       
       if (body.increment_registrations) {
         const { data: current } = await supabase
@@ -120,6 +128,28 @@ Deno.serve(async (req) => {
         if (current) {
           updateData.current_participants = (current.current_participants || 0) + 1;
         }
+      }
+
+      // Sync redundant columns in PUT
+      if (updateData.date !== undefined || updateData.event_date !== undefined) {
+          const dVal = updateData.date || updateData.event_date;
+          updateData.date = dVal;
+          updateData.event_date = dVal;
+      }
+      if (updateData.type !== undefined || updateData.event_type !== undefined) {
+          const tVal = updateData.type || updateData.event_type;
+          updateData.type = tVal;
+          updateData.event_type = tVal;
+      }
+      if (updateData.prize !== undefined || updateData.prize_pool !== undefined) {
+          const pVal = updateData.prize || updateData.prize_pool;
+          updateData.prize = pVal;
+          updateData.prize_pool = pVal;
+      }
+      if (updateData.time !== undefined || updateData.event_time !== undefined) {
+          const tmVal = updateData.time || updateData.event_time;
+          updateData.time = tmVal;
+          updateData.event_time = tmVal;
       }
       
       updateData.updated_at = new Date().toISOString();

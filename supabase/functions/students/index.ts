@@ -47,10 +47,6 @@ Deno.serve(async (req) => {
     return valid.includes(String(status)) ? String(status) : 'pending'
   }
 
-  // DB SCHEMA: id, name, email, phone, age, grade, parent_name, parent_phone,
-  //            address, enrollment_date, status, coach_id, rating, notes,
-  //            created_at, updated_at
-
    // Transform DB row to API response (add convenience aliases the frontend expects)
    function transformStudent(s: Record<string, unknown>) {
      const status = s.status || 'pending';
@@ -74,12 +70,11 @@ Deno.serve(async (req) => {
        rating: s.rating || 800,
        current_rating: s.rating || 800,         // alias
        notes: s.notes || '',
-       // New canonical fields
        session_mode: s.session_mode || null,
        session_time: s.session_time || null,
-       // Backwards-compatible aliases (old field names map to new ones)
        batch_type: s.session_mode || null,
        batch_time: s.session_time || null,
+       account_status: s.account_status || 'active',
        created_at: s.created_at,
        updated_at: s.updated_at
      }
@@ -112,7 +107,6 @@ Deno.serve(async (req) => {
       let rawBody: Record<string, unknown> = {}
       try { rawBody = await req.json() } catch (_e) {}
       
-      // Accept both name and full_name from frontend
       const name = sanitizeString(rawBody.name || rawBody.full_name, 100)
       if (!name || name.length < 2) {
         return new Response(JSON.stringify({ error: 'Name is required (2-100 characters)' }), {
@@ -121,7 +115,6 @@ Deno.serve(async (req) => {
         })
       }
 
-      // Build INSERT object using ONLY actual DB columns
       const newStudent: Record<string, unknown> = {
         id: 's' + Date.now() + Math.random().toString(36).slice(2, 8),
         name: name,
@@ -134,13 +127,12 @@ Deno.serve(async (req) => {
         address: sanitizeString(rawBody.address, 500),
         enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0],
         status: validateStatus(rawBody.status),
-        coach_id: rawBody.coach_id ? sanitizeString(rawBody.coach_id, 50) : null,
+        coach_id: rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null,
         rating: validateRating(rawBody.rating || rawBody.current_rating),
-        // Accept both legacy batch_type and new session_mode
         session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
-        // Accept both legacy batch_time and new session_time
         session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
         notes: sanitizeString(rawBody.notes, 2000),
+        account_status: 'active',
         created_at: new Date().toISOString()
       }
       
@@ -174,7 +166,6 @@ Deno.serve(async (req) => {
       let rawBody: Record<string, unknown> = {}
       try { rawBody = await req.json() } catch (_e) {}
       
-      // Build UPDATE object using ONLY actual DB columns
       const updateData: Record<string, unknown> = {}
       
       if (rawBody.name !== undefined || rawBody.full_name !== undefined) {
@@ -192,25 +183,25 @@ Deno.serve(async (req) => {
       if (rawBody.enrollment_date !== undefined || rawBody.join_date !== undefined) {
         updateData.enrollment_date = sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10);
       }
-      if (rawBody.status !== undefined) updateData.status = validateStatus(rawBody.status);
+      if (rawBody.status !== undefined) {
+        updateData.status = validateStatus(rawBody.status);
+        updateData.account_status = validateStatus(rawBody.status);
+      }
       if (rawBody.payment_status !== undefined) {
-        // Map frontend payment_status to DB status field
-        // "Paid" -> "active", "Due"/"Pending" -> "pending"
         const pstatus = String(rawBody.payment_status).toLowerCase();
         if (pstatus === 'paid') updateData.status = 'active';
         else if (pstatus === 'pending') updateData.status = 'pending';
-        else updateData.status = 'pending'; // Default to pending for Due etc.
+        else updateData.status = 'pending';
+        updateData.account_status = updateData.status;
       }
-      if (rawBody.coach_id !== undefined) updateData.coach_id = rawBody.coach_id ? sanitizeString(rawBody.coach_id, 50) : null;
+      if (rawBody.coach_id !== undefined) updateData.coach_id = rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null;
       if (rawBody.rating !== undefined || rawBody.current_rating !== undefined) {
         updateData.rating = validateRating(rawBody.rating || rawBody.current_rating);
       }
       if (rawBody.notes !== undefined) updateData.notes = sanitizeString(rawBody.notes, 2000);
-      // Accept both legacy batch_type and new session_mode
       if (rawBody.session_mode !== undefined || rawBody.batch_type !== undefined) {
         updateData.session_mode = sanitizeString(rawBody.session_mode || rawBody.batch_type, 50);
       }
-      // Accept both legacy batch_time and new session_time
       if (rawBody.session_time !== undefined || rawBody.batch_time !== undefined) {
         updateData.session_time = sanitizeString(rawBody.session_time || rawBody.batch_time, 100);
       }

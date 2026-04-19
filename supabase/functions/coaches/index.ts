@@ -79,19 +79,27 @@ Deno.serve(async (req) => {
       console.log('POST /coaches body:', JSON.stringify(body));
       
       const newCoach = { 
-        id: 'c' + Date.now(), 
+        id: crypto.randomUUID().replace(/-/g, ''), 
         name: body.name || body.full_name || '',
+        full_name: body.name || body.full_name || '',
         email: body.email || null,
         phone: body.phone || '',
         specialization: body.specialization || body.specialty || '',
+        specialty: body.specialization || body.specialty || '',
         experience: body.experience || null,
         rating: body.rating || 0,
         bio: body.bio || body.additional_details || '',
         status: body.status || 'active',
+        account_status: body.status || 'active',
         hourly_rate: body.hourly_rate || body.salary || 0,
+        salary: body.hourly_rate || body.salary || 0,
         availability: body.availability || '',
         photo_url: body.photo_url || '',
         address: body.address || '',
+        monthly_fee: 0,
+        batch_count: 0,
+        pay_level: 'standard',
+        role: 'coach',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -128,33 +136,45 @@ Deno.serve(async (req) => {
       const updateData: Record<string, unknown> = {};
       
       if (body.name !== undefined || body.full_name !== undefined) {
-          updateData.name = body.name || body.full_name;
+          const nameVal = body.name || body.full_name;
+          updateData.name = nameVal;
+          updateData.full_name = nameVal;
       }
       if (body.email !== undefined) updateData.email = body.email;
       if (body.phone !== undefined) updateData.phone = body.phone;
       if (body.specialization !== undefined || body.specialty !== undefined) {
-          updateData.specialization = body.specialization || body.specialty;
+          const specVal = body.specialization || body.specialty;
+          updateData.specialization = specVal;
+          updateData.specialty = specVal;
       }
       if (body.experience !== undefined) updateData.experience = body.experience;
       if (body.rating !== undefined && body.rating !== null) {
         const ratingNum = Number(body.rating);
         if (!isNaN(ratingNum) && isFinite(ratingNum)) updateData.rating = Math.floor(ratingNum);
       }
-      if (body.bio !== undefined || body.additional_details !== undefined) {
-          updateData.bio = body.bio || body.additional_details;
+      if (body.bio !== undefined || body.additional_details || body.etc !== undefined) {
+          updateData.bio = body.bio || body.additional_details || body.etc;
       }
       if (body.status !== undefined) updateData.status = body.status;
       
       if (body.hourly_rate !== undefined || body.salary !== undefined) {
           const rateVal = body.hourly_rate !== undefined ? body.hourly_rate : body.salary;
           const rateNum = Number(rateVal);
-          if (!isNaN(rateNum) && isFinite(rateNum)) updateData.hourly_rate = Math.floor(rateNum);
+          if (!isNaN(rateNum) && isFinite(rateNum)) {
+              const finalRate = Math.floor(rateNum);
+              updateData.hourly_rate = finalRate;
+              updateData.salary = finalRate;
+          }
       }
       
       if (body.availability !== undefined) updateData.availability = body.availability;
       if (body.address !== undefined) updateData.address = body.address;
       if (body.photo_url !== undefined) updateData.photo_url = body.photo_url;
       
+      if (updateData.status) {
+          updateData.account_status = updateData.status;
+      }
+
       updateData.updated_at = new Date().toISOString();
       
       console.log('PUT updateData:', JSON.stringify(updateData));
