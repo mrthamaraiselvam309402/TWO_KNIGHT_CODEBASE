@@ -902,12 +902,13 @@
     // Session counts - check session_mode field (case insensitive)
     let groupCount = 0, singleCount = 0;
     allStudents.forEach(s => {
-      const session = s.session_mode || '';
-      const sessionLower = session.toLowerCase().trim();
-      if (sessionLower === 'group') groupCount++;
-      else if (sessionLower === 'single' || sessionLower === 'one_to_one') singleCount++;
+      const session = (s.session_mode || '').toLowerCase().trim();
+      console.log('Student:', s.name || s.full_name, 'session_mode:', session);
+      if (session === 'group') groupCount++;
+      else if (session === 'single' || session === 'one_to_one') singleCount++;
       else groupCount++; // Default to group if not specified
     });
+    console.log('Session counts - Group:', groupCount, 'Single:', singleCount);
     if ($('s-group')) $('s-group').textContent = groupCount;
     if ($('s-single')) $('s-single').textContent = singleCount;
     
