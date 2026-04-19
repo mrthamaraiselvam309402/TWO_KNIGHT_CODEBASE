@@ -1751,7 +1751,13 @@
     await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Paid' }) });
     loadAllData(true);
   }
-  function openPay(id, name, fee) { openModal('pay-modal'); }
+  function openPay(id, name, fee) { 
+    const nameEl = $('pay-student-name');
+    const feeEl = $('pay-amount');
+    if (nameEl) nameEl.textContent = name;
+    if (feeEl) feeEl.innerHTML = `Amount: <span style="color:var(--gold);font-weight:bold">₹${fee}</span>`;
+    openModal('pay-modal'); 
+  }
   function initiatePay(provider) { toast('Processing ' + provider); setTimeout(() => { closeModals(); loadAllData(true); }, 2000); }
   function downloadReceipt(id, name, fee) {
     const { jsPDF } = window.jspdf;
