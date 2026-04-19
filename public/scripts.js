@@ -1003,9 +1003,9 @@
     tbody.innerHTML = studs.map((s, i) => {
       const status = getStudentPaymentStatus(s);
       
-      // Use session_mode and session_time from database (Golden State fields)
+      // Use session_mode and session_time from database
       const session = s.session_mode || s.session_type || (s.notes?.includes('session:Group') ? 'Group' : (s.notes?.includes('session:Single') ? 'Single' : 'Group'));
-      const time = s.session_time || s.class_time || s.batch_time || '17:00';
+      const time = s.session_time || s.class_time || s.batch_time || '';
       
       // Get coach name
       const coachId = s.coach_id;
