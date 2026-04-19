@@ -1487,6 +1487,20 @@
     }).join('');
   }
   
+  function openEventModal() {
+    $('ev-id').value = '';
+    $('ev-title').value = '';
+    $('ev-date').value = '';
+    $('ev-time').value = '10:00';
+    $('ev-type').value = 'Tournament';
+    $('ev-max').value = '50';
+    $('ev-prize').value = '';
+    $('ev-loc').value = '';
+    $('ev-desc').value = '';
+    $('ev-modal-title').textContent = 'Create Event';
+    openModal('event-crud-modal');
+  }
+
   window.editEvent = function(id) {
     const e = eventsData.find(x => String(x.id) === String(id));
     if (!e) { toast('Event not found', 'error'); return; }
