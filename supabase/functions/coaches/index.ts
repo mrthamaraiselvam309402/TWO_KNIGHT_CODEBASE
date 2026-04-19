@@ -80,19 +80,16 @@ Deno.serve(async (req) => {
       
       const newCoach = { 
         id: crypto.randomUUID().replace(/-/g, ''), 
-        name: body.name || body.full_name || '',
-        full_name: body.name || body.full_name || '',
+        name: body.name || '',
         email: body.email || null,
         phone: body.phone || '',
-        specialization: body.specialization || body.specialty || '',
-        specialty: body.specialization || body.specialty || '',
+        specialty: body.specialty || '',
         experience: body.experience || null,
         rating: body.rating || 0,
-        bio: body.bio || body.additional_details || '',
+        bio: body.bio || '',
         status: body.status || 'active',
         account_status: body.status || 'active',
-        hourly_rate: body.hourly_rate || body.salary || 0,
-        salary: body.hourly_rate || body.salary || 0,
+        salary: body.salary || 0,
         availability: body.availability || '',
         photo_url: body.photo_url || '',
         address: body.address || '',
@@ -135,10 +132,8 @@ Deno.serve(async (req) => {
       
       const updateData: Record<string, unknown> = {};
       
-      if (body.name !== undefined || body.full_name !== undefined) {
-          const nameVal = body.name || body.full_name;
-          updateData.name = nameVal;
-          updateData.full_name = nameVal;
+      if (body.name !== undefined) {
+          updateData.name = body.name;
       }
       if (body.email !== undefined) updateData.email = body.email;
       if (body.phone !== undefined) updateData.phone = body.phone;

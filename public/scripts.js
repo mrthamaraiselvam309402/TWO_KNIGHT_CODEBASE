@@ -425,8 +425,8 @@
     };
   }
 
-  function getCoachName(c) { return c.full_name || c.name || ''; }
-  function getCoachSpecialty(c) { return c.specialty || c.specialization || ''; }
+  function getCoachName(c) { return c.name || ''; }
+  function getCoachSpecialty(c) { return c.specialty || ''; }
   function getCoachEmail(c) { return c.email || ''; }
   function getCoachExperience(c) { return c.experience || 0; }
   function getCoachRating(c) { return c.rating || 0; }
@@ -1752,10 +1752,10 @@
     loadAllData(true);
   }
   function openPay(id, name, fee) { 
-    const nameEl = $('pay-student-name');
-    const feeEl = $('pay-amount');
+    const nameEl = $('pay-name');
+    const feeEl = $('pay-amt');
     if (nameEl) nameEl.textContent = name;
-    if (feeEl) feeEl.innerHTML = `Amount: <span style="color:var(--gold);font-weight:bold">₹${fee}</span>`;
+    if (feeEl) feeEl.textContent = `₹${fee}`;
     openModal('pay-modal'); 
   }
   function initiatePay(provider) { toast('Processing ' + provider); setTimeout(() => { closeModals(); loadAllData(true); }, 2000); }
