@@ -1048,6 +1048,9 @@
         const feeMatch = fee >= fMin && fee <= fMax;
         return nameMatch && coachMatch && statusMatch && feeMatch;
       });
+
+      // Sort alphabetically by name
+      studs.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
     }
 
     if (!studs || studs.length === 0) {
