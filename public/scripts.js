@@ -375,7 +375,19 @@
     if (status === 'pending' || payStatus === 'pending') return 'Pending';
     return 'Due'; 
   }
-  function getStudentBatchType(s) { return s.batch_type || 'Evening'; }
+  function getStudentBatchType(s) { 
+    if (!s) return 'Group';
+    const mode = (s.session_mode || s.batch_type || s.session_type || '').toLowerCase();
+    if (mode.includes('group')) return 'Group';
+    if (mode.includes('single') || mode.includes('one_to_one')) return 'Single';
+    
+    // Fallback to notes parsing for legacy data
+    const notes = (s.notes || '').toLowerCase();
+    if (notes.includes('session:group')) return 'Group';
+    if (notes.includes('session:single')) return 'Single';
+    
+    return 'Group'; // Default
+  }
   function getStudentBatchTime(s) { return s.batch_time || '17:00'; }
   function getStudentStatus(s) { return s.status || 'pending'; }
   function getStudentCoachNotes(s) { return s.notes || ''; }
@@ -824,13 +836,20 @@
     if (sessionCtx) {
       let groupCount = 0, singleCount = 0;
       studs.forEach(s => {
-        const notes = s.notes || '';
-        if (notes.includes('session:Group')) groupCount++;
-        else if (notes.includes('session:Single')) singleCount++;
+        const type = getStudentBatchType(s);
+        if (type === 'Group') groupCount++;
+        else singleCount++;
       });
       chartInstances.session = new Chart(sessionCtx, {
         type: 'doughnut',
-        data: { labels: ['Group', 'Single'], datasets: [{ data: [groupCount, singleCount], backgroundColor: ['#dca33e', '#5a9fff'], borderWidth: 0 }] },
+        data: { 
+          labels: ['Group', 'Single'], 
+          datasets: [{ 
+            data: [groupCount, singleCount], 
+            backgroundColor: ['#dca33e', '#5a9fff'], 
+            borderWidth: 0 
+          }] 
+        },
         options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
       });
     }
@@ -918,14 +937,12 @@
     if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
     if ($('s-profit')) $('s-profit').textContent = '₹' + netProfit.toLocaleString();
     
-    // Session counts - check session_mode field (case insensitive)
+    // Session counts
     let groupCount = 0, singleCount = 0;
     allStudents.forEach(s => {
-      const session = (s.session_mode || '').toLowerCase().trim();
-      console.log('Student:', s.name || s.full_name, 'session_mode:', session);
-      if (session === 'group') groupCount++;
-      else if (session === 'single' || session === 'one_to_one') singleCount++;
-      else groupCount++; // Default to group if not specified
+      const type = getStudentBatchType(s);
+      if (type === 'Group') groupCount++;
+      else singleCount++;
     });
     console.log('Session counts - Group:', groupCount, 'Single:', singleCount);
     if ($('s-group')) $('s-group').textContent = groupCount;
@@ -1041,8 +1058,8 @@
     tbody.innerHTML = studs.map((s, i) => {
       const status = getStudentPaymentStatus(s);
       
-      // Use session_mode and session_time from database
-      const session = s.session_mode || s.session_type || (s.notes?.includes('session:Group') ? 'Group' : (s.notes?.includes('session:Single') ? 'Single' : 'Group'));
+      // Use centralized helper for session detection
+      const session = getStudentBatchType(s);
       const time = s.session_time || s.class_time || s.batch_time || '';
       
       // Get coach name
