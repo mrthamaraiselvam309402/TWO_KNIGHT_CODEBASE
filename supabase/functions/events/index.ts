@@ -78,20 +78,15 @@ Deno.serve(async (req) => {
       let newEvent = { 
         id: crypto.randomUUID().replace(/-/g, ''), 
         title: title || '',
-        event_date: date || body.event_date || '',
         date: date || body.event_date || '',
-        event_time: body.event_time || '',
-        time: body.event_time || '',
+        time: body.time || body.event_time || '',
         type: type || body.event_type || 'Tournament',
-        event_type: type || body.event_type || 'Tournament',
         location: location || '',
         description: body.description || '',
         status: 'upcoming',
-        account_status: 'active',
         max_participants: body.max_participants || null,
         current_participants: 0,
         prize: body.prize_pool || body.prize || '',
-        prize_pool: body.prize_pool || body.prize || '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };

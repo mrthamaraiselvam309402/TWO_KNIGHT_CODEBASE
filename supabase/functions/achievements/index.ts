@@ -103,7 +103,6 @@ Deno.serve(async (req) => {
         category: body.category || '',
         level: body.level || '',
         img_url: body.img_url || '',
-        account_status: 'active',
         created_at: new Date().toISOString()
       };
       

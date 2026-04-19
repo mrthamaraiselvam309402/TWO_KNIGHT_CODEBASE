@@ -83,15 +83,14 @@ Deno.serve(async (req) => {
         name: body.name || '',
         email: body.email || null,
         phone: body.phone || '',
-        specialty: body.specialty || '',
+        specialization: body.specialty || body.specialization || '',
         experience: body.experience || null,
         rating: body.rating || 0,
         bio: body.bio || '',
         status: body.status || 'active',
         account_status: body.status || 'active',
-        salary: body.salary || 0,
+        hourly_rate: body.salary || body.hourly_rate || 0,
         availability: body.availability || '',
-        photo_url: body.photo_url || '',
         address: body.address || '',
         monthly_fee: 0,
         batch_count: 0,
@@ -132,44 +131,25 @@ Deno.serve(async (req) => {
       
       const updateData: Record<string, unknown> = {};
       
-      if (body.name !== undefined) {
-          updateData.name = body.name;
-      }
+      if (body.name !== undefined) updateData.name = body.name;
       if (body.email !== undefined) updateData.email = body.email;
       if (body.phone !== undefined) updateData.phone = body.phone;
-      if (body.specialization !== undefined || body.specialty !== undefined) {
-          const specVal = body.specialization || body.specialty;
-          updateData.specialization = specVal;
-          updateData.specialty = specVal;
+      if (body.specialty !== undefined || body.specialization !== undefined) {
+          updateData.specialization = body.specialty || body.specialization;
       }
       if (body.experience !== undefined) updateData.experience = body.experience;
-      if (body.rating !== undefined && body.rating !== null) {
-        const ratingNum = Number(body.rating);
-        if (!isNaN(ratingNum) && isFinite(ratingNum)) updateData.rating = Math.floor(ratingNum);
+      if (body.rating !== undefined) updateData.rating = body.rating;
+      if (body.bio !== undefined) updateData.bio = body.bio;
+      if (body.status !== undefined) {
+        updateData.status = body.status;
+        updateData.account_status = body.status;
       }
-      if (body.bio !== undefined || body.additional_details || body.etc !== undefined) {
-          updateData.bio = body.bio || body.additional_details || body.etc;
+      if (body.salary !== undefined || body.hourly_rate !== undefined) {
+          updateData.hourly_rate = body.salary || body.hourly_rate;
       }
-      if (body.status !== undefined) updateData.status = body.status;
-      
-      if (body.hourly_rate !== undefined || body.salary !== undefined) {
-          const rateVal = body.hourly_rate !== undefined ? body.hourly_rate : body.salary;
-          const rateNum = Number(rateVal);
-          if (!isNaN(rateNum) && isFinite(rateNum)) {
-              const finalRate = Math.floor(rateNum);
-              updateData.hourly_rate = finalRate;
-              updateData.salary = finalRate;
-          }
-      }
-      
       if (body.availability !== undefined) updateData.availability = body.availability;
       if (body.address !== undefined) updateData.address = body.address;
-      if (body.photo_url !== undefined) updateData.photo_url = body.photo_url;
       
-      if (updateData.status) {
-          updateData.account_status = updateData.status;
-      }
-
       updateData.updated_at = new Date().toISOString();
       
       console.log('PUT updateData:', JSON.stringify(updateData));

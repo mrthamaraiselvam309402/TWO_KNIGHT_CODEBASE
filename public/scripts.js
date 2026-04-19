@@ -426,12 +426,8 @@
   }
 
   function getCoachName(c) { return c.name || ''; }
-  function getCoachSpecialty(c) { return c.specialty || ''; }
-  function getCoachEmail(c) { return c.email || ''; }
-  function getCoachExperience(c) { return c.experience || 0; }
-  function getCoachRating(c) { return c.rating || 0; }
-  function getCoachStatus(c) { return c.status || 'active'; }
-  function getCoachSalary(c) { return c.salary || c.hourly_rate || 0; }
+  function getCoachSpecialty(c) { return c.specialization || ''; }
+  function getCoachSalary(c) { return c.hourly_rate || 0; }
   function getCoachAvailability(c) { return c.availability || ''; }
 
   function getEventDate(e) { return e.date || e.event_date || ''; }
@@ -1193,16 +1189,17 @@
     const newElo = parseInt($('e-elo').value);
     
     const data = {
-      full_name: $('e-name').value,
+      name: $('e-name').value,
       phone: $('e-phone').value,
       parent_phone: $('e-phone').value,
-      level: $('e-level').value,
+      grade: $('e-level').value,
       rating: newElo,
       coach_id: $('e-coach').value,
+      status: $('e-status').value === 'Paid' ? 'active' : 'pending',
       payment_status: $('e-status').value,
       enrollment_date: $('e-join').value,
-      batch_type: $('e-batch-type').value,
-      batch_time: $('e-batch-time').value,
+      session_mode: $('e-batch-type').value,
+      session_time: $('e-batch-time').value,
       notes: `Fee: ${$('e-fee').value}`
     };
 
@@ -1348,7 +1345,6 @@
     $('cv-av').src = c.photo_url || c.photo || c.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000000&bold=true&size=200`;
     
     $('cv-edit-btn').onclick = () => { closeModals(); openCoachModal(id); };
-    
     openModal('coach-view-modal');
   };
 
@@ -1369,7 +1365,7 @@
       $('cm-phone').value = c.phone || '';
       $('cm-email').value = c.email || '';
       $('cm-address').value = c.address || '';
-      $('cm-photo').value = c.photo_url || c.photo || '';
+      $('cm-photo').value = (c.photo_url || c.photo || '');
       $('cm-salary').value = getCoachSalary(c);
       $('cm-exp').value = c.experience || 0;
       $('cm-status').value = getCoachStatus(c) || 'active';
@@ -1397,12 +1393,11 @@
     const id = $('cm-id').value;
     const data = {
       name: $('cm-name').value.trim(),
-      specialty: $('cm-spec').value.trim(),
+      specialization: $('cm-spec').value.trim(),
       phone: $('cm-phone').value.trim(),
       email: $('cm-email').value.trim(),
       address: $('cm-address').value.trim(),
-      photo_url: $('cm-photo').value.trim(),
-      salary: parseInt($('cm-salary').value) || 0,
+      hourly_rate: parseInt($('cm-salary').value) || 0,
       experience: parseInt($('cm-exp').value) || 0,
       status: $('cm-status').value,
       availability: $('cm-avail').value.trim(),
