@@ -2926,7 +2926,50 @@
   window.openPromote = openPromote;
   window.executePromotion = executePromotion;
   window.sendPaymentReminder = sendPaymentReminder;
-  window.showNotifications = () => openModal('notification-modal');
+  window.showNotifications = () => {
+    const content = $('notification-content');
+    if (!content) return;
+    const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin');
+    const due = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+    const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
+    const failedLogins = auditLogs.filter(l => l.action === 'login_failed').slice(-10).reverse();
+    
+    let html = '';
+    
+    if (unread.length > 0) {
+      html += `<div style="padding:12px;background:var(--gold-glow);border-radius:8px;margin-bottom:12px">
+        <div style="font-weight:600;color:var(--gold)">📬 Unread Messages (${unread.length})</div>
+        ${unread.slice(0,3).map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:13px">${m.subject || 'No Subject'}</div>
+          <div style="font-size:11px;color:var(--ivory-dim)">${m.sender_name || 'User'} • ${new Date(m.created_at).toLocaleDateString()}</div>
+        </div>`).join('')}
+      </div>`;
+    }
+    
+    if (due.length > 0) {
+      html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
+        <div style="font-weight:600;color:var(--danger)">💰 Due Payments (${due.length})</div>
+        <div style="font-size:12px;color:var(--ivory-dim)">Students with pending fees</div>
+      </div>`;
+    }
+    
+    if (failedLogins.length > 0) {
+      html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
+        <div style="font-weight:600;color:var(--danger)">🚫 Failed Logins (${failedLogins.length})</div>
+        ${failedLogins.slice(0,5).map(l => `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span>${l.user || 'Unknown'}</span>
+          <span style="color:var(--ivory-dim);float:right">${new Date(l.timestamp).toLocaleString('en-IN')}</span>
+        </div>`).join('')}
+      </div>`;
+    }
+    
+    if (!html) {
+      html = '<div style="text-align:center;padding:30px;color:var(--ivory-dim)">No new notifications</div>';
+    }
+    
+    content.innerHTML = html;
+    openModal('notification-modal');
+  };
   window.updateNotificationBadge = () => { try { updateNotificationBadge(); } catch(e) {} };
   window.toggleAllStud = toggleAllStud;
   window.setAIModule = setAIModule;
