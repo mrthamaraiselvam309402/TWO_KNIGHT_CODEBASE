@@ -86,30 +86,19 @@ Deno.serve(async (req) => {
     if (req.method === 'POST') {
       console.log('POST /coaches body:', JSON.stringify(body));
       
-      const coachName = body.name || '';
-      const coachSpecialty = body.specialty || body.specialization || '';
-      const coachRate = body.salary || body.hourly_rate || 0;
-      
-      const newCoach = { 
+      const newCoach: Record<string, unknown> = {
         id: generateId(), 
-        name: coachName,
-        full_name: coachName,
+        name: body.name || '',
         email: body.email || null,
         phone: body.phone || '',
-        specialization: coachSpecialty,
-        specialty: coachSpecialty,
+        specialization: body.specialization || body.specialty || '',
         experience: body.experience || null,
         rating: body.rating || 0,
         bio: body.bio || '',
         status: body.status || 'active',
-        account_status: body.status || 'active',
-        hourly_rate: coachRate,
-        salary: coachRate,
+        hourly_rate: body.hourly_rate || body.salary || 0,
         availability: body.availability || '',
         address: body.address || '',
-        monthly_fee: 0,
-        batch_count: 0,
-        pay_level: 1,
         role: 'coach',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
