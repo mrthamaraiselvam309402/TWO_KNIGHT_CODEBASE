@@ -2822,7 +2822,7 @@
         method: 'POST',
         body: JSON.stringify({
           message: query,
-          role: currentUser?.userRole || 'admin',
+          role: role || 'admin',
           context: context
         })
       });
