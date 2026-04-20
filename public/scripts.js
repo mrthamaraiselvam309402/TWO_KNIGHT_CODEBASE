@@ -1856,48 +1856,164 @@
   function downloadReceipt(id, name, fee) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    const date = new Date().toLocaleDateString();
+    const date = new Date().toLocaleDateString('en-IN');
     const receiptId = 'CK-' + Math.floor(Math.random()*1000000);
+    const student = allStudents.find(s => String(s.id) === String(id));
+    const studentName = name;
+    const amount = parseInt(fee) || 0;
+    const amountWords = numberToWords(amount);
     
+    //Header - Gold gradient bar
     doc.setFillColor(220, 163, 62);
-    doc.rect(0, 0, 210, 40, 'F');
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(24);
-    doc.text('CHESSKIDOO ACADEMY', 105, 25, { align: 'center' });
+    doc.rect(0, 0, 210, 45, 'F');
     
-    doc.setTextColor(100, 100, 100);
+    //Academy name
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(26);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CHESSKIDOO ACADEMY', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Building Champions, One Move at a Time', 105, 28, { align: 'center' });
+    doc.setFontSize(9);
+    doc.text('📞 +91 99622 99622 | ✉️ info@chesskidoo.com', 105, 35, { align: 'center' });
+    
+    //Receipt title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('OFFICIAL RECEIPT', 105, 55, { align: 'center' });
+    
+    //Receipt info box
+    doc.setDrawColor(220, 163, 62);
+    doc.setLineWidth(0.5);
+    doc.line(20, 60, 190, 60);
+    
     doc.setFontSize(10);
-    doc.text(`Receipt ID: ${receiptId}`, 20, 50);
-    doc.text(`Date: ${date}`, 190, 50, { align: 'right' });
-    
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text('Receipt No:', 20, 70);
+    doc.text('Date:', 120, 70);
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(14);
-    doc.text('OFFICIAL PAYMENT RECEIPT', 105, 65, { align: 'center' });
+    doc.text(receiptId, 55, 70);
+    doc.text(date, 190, 70, { align: 'right' });
     
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 75, 190, 75);
+    //Student details section
+    doc.setFillColor(250, 250, 250);
+    doc.rect(20, 78, 170, 35, 'F');
+    doc.setDrawColor(230, 230, 230);
+    doc.rect(20, 78, 170, 35, 'S');
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(220, 163, 62);
+    doc.text('STUDENT DETAILS', 25, 86);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    
+    let yPos = 94;
+    doc.text('Name:', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text(studentName, 55, yPos);
+    
+    yPos += 7;
+    doc.setTextColor(60, 60, 60);
+    doc.text('Level:', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text(student ? getStudentLevel(student) : 'N/A', 55, yPos);
+    
+    yPos += 7;
+    doc.setTextColor(60, 60, 60);
+    doc.text('ELO Rating:', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text(student ? String(getStudentRating(student)) : 'N/A', 55, yPos);
+    
+    yPos += 7;
+    doc.setTextColor(60, 60, 60);
+    doc.text('Coach:', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    const coach = student ? allCoaches.find(c => String(c.id) === String(student.coach_id)) : null;
+    doc.text(coach ? getCoachName(coach) : 'Not Assigned', 55, yPos);
+    
+    //Payment details
+    doc.setFillColor(245, 245, 245);
+    doc.rect(20, 118, 170, 45, 'F');
+    doc.setDrawColor(230, 230, 230);
+    doc.rect(20, 118, 170, 45, 'S');
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(220, 163, 62);
+    doc.text('PAYMENT DETAILS', 25, 126);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    yPos = 134;
+    doc.setTextColor(60, 60, 60);
+    doc.text('Tuition Fee (Monthly):', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text('₹' + amount.toLocaleString('en-IN'), 85, yPos, { align: 'right' });
+    
+    yPos += 7;
+    doc.setTextColor(60, 60, 60);
+    doc.text('Payment Mode:', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Online Transfer', 85, yPos, { align: 'right' });
+    
+    yPos += 7;
+    doc.setTextColor(60, 60, 60);
+    doc.text('Status:', 25, yPos);
+    doc.setTextColor(46, 125, 50);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAID', 85, yPos, { align: 'right' });
+    
+    //Total
+    doc.setDrawColor(220, 163, 62);
+    doc.setLineWidth(0.5);
+    doc.line(20, 168, 190, 168);
     
     doc.setFontSize(12);
-    doc.text('Student Name:', 20, 90);
-    doc.text(name, 190, 90, { align: 'right' });
-    
-    doc.text('Amount Paid:', 20, 105);
-    doc.text('INR ' + fee, 190, 105, { align: 'right' });
-    
-    doc.text('Payment Status:', 20, 120);
-    doc.setTextColor(46, 125, 50);
-    doc.text('PAID', 190, 120, { align: 'right' });
-    
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    doc.line(20, 130, 190, 130);
+    doc.text('Total Paid:', 25, 176);
+    doc.setTextColor(46, 125, 50);
+    doc.text('₹' + amount.toLocaleString('en-IN'), 190, 176, { align: 'right' });
     
-    doc.setFontSize(10);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(120, 120, 120);
+    doc.text(`(${amountWords} Rupees Only)`, 25, 182);
+    
+    //Footer
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, 190, 190, 190);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(150, 150, 150);
-    doc.text('This is a computer-generated receipt.', 105, 150, { align: 'center' });
-    doc.text('Thank you for being part of Chesskidoo!', 105, 155, { align: 'center' });
+    doc.text('This is a computer-generated receipt. No signature required.', 105, 196, { align: 'center' });
+    doc.text('For queries, contact info@chesskidoo.com', 105, 201, { align: 'center' });
+    doc.text('Thank you for your patronage! 🏆', 105, 206, { align: 'center' });
+    
+    //Watermark
+    doc.setFontSize(40);
+    doc.setTextColor(230, 230, 230);
+    doc.text('PAID', 105, 140, { align: 'center', rotate: 45 });
     
     doc.save(`Receipt_${name.replace(/\s+/g, '_')}.pdf`);
     toast('Receipt downloaded!', 'success');
+  }
+  
+  function numberToWords(n) {
+    const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    if (n < 20) return a[n];
+    if (n < 100) return b[Math.floor(n/10)] + (n%10 ? ' ' + a[n%10] : '');
+    if (n < 1000) return a[Math.floor(n/100)] + ' Hundred' + (n%100 ? ' ' + numberToWords(n%100) : '');
+    if (n < 100000) return numberToWords(Math.floor(n/1000)) + ' Thousand' + (n%1000 ? ' ' + numberToWords(n%1000) : '');
+    return numberToWords(Math.floor(n/100000)) + ' Lakh' + (n%100000 ? ' ' + numberToWords(n%100000) : '');
   }
   function showReceiptPreview() { openModal('receipt-preview-modal'); }
   function printReceipt() { window.print(); }
