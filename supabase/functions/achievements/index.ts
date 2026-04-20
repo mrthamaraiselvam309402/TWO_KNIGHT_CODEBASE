@@ -92,7 +92,10 @@ Deno.serve(async (req) => {
     if (req.method === 'POST') {
       console.log('POST /achievements body:', JSON.stringify(body));
       
-      let studentId = body.student_id;
+      const { id, student_id, ...rest } = body;
+      const eventId = id || generateId();
+      
+      let studentId = student_id;
       if (!studentId && body.students?.full_name) {
         const { data: student } = await supabase
           .from('students')
@@ -103,7 +106,7 @@ Deno.serve(async (req) => {
       }
       
       const newAchievement = { 
-        id: generateId(), 
+        id: eventId, 
         student_id: studentId,
         title: body.title || '',
         description: body.description || '',

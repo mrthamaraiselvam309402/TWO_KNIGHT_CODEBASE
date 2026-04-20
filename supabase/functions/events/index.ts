@@ -81,12 +81,14 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-      const { title, date, type, location, increment_registrations, ...rest } = body;
+      const { title, date, type, location, increment_registrations, id, ...rest } = body;
       
       console.log('Creating event with body:', JSON.stringify(body));
       
+      const eventId = id || generateId();
+      
       let newEvent = { 
-        id: generateId(), 
+        id: eventId, 
         title: title || '',
         event_date: date || body.event_date || '',
         event_time: body.time || body.event_time || '',
