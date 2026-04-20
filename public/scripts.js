@@ -2246,50 +2246,15 @@
   function generateReportPDF() {
     console.log('generateReportPDF clicked');
     toast('Generating PDF...', 'info');
-    try {
-      generateReportPDFContent();
-    } catch (e) {
-      console.error('PDF error:', e);
-      alert('Error: ' + e.message);
-    }
-  }
-  
-  // Attach event listener immediately and on DOM ready
-  var pdfBtn = document.getElementById('download-pdf-btn');
-  if (pdfBtn) {
-    pdfBtn.onclick = generateReportPDF;
-    console.log('PDF button attached immediately');
-  } else {
-    console.log('PDF button not found, will attach on DOMContentLoaded');
-    document.addEventListener('DOMContentLoaded', function() {
-      var btn = document.getElementById('download-pdf-btn');
-      if (btn) {
-        btn.onclick = generateReportPDF;
-        console.log('PDF button attached on DOMContentLoaded');
-      }
-    });
+    generateReportPDFContent();
   }
   
   function generateReportPDFContent() {
-    console.log('=== GENERATE REPORT PDF STARTED ===');
-    console.log('allStudents:', allStudents ? allStudents.length : 0);
-    console.log('allCoaches:', allCoaches ? allCoaches.length : 0);
-    console.log('window.jspdf:', typeof window.jspdf);
-    console.log('window.jsPDF:', typeof window.jsPDF);
-    
     let jsPDF;
-    // Better jsPDF detection - check both possible locations
     if (window.jspdf && window.jspdf.jsPDF) {
       jsPDF = window.jspdf.jsPDF;
-      console.log('Using window.jspdf.jsPDF');
-    } else if (window.jsPDF) {
-      jsPDF = window.jsPDF;
-      console.log('Using window.jsPDF');
-    } else {
-      console.log('jsPDF NOT FOUND - will use fallback');
     }
     
-    // === METHOD A: DIRECT PDF DOWNLOAD (PREFERRED) ===
     if (jsPDF) {
       try {
         const doc = new jsPDF();
