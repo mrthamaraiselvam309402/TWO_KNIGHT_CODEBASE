@@ -628,6 +628,7 @@
         const studsData = studs.data || studs || [];
         if (studsData.length > lastStudCount) {
           toast('🎓 New student enrolled!', 'success');
+          logAudit('students', 'new', null, { count: studsData.length });
           lastStudCount = studsData.length;
           loadAllData(true);
         }
