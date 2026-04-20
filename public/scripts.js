@@ -632,15 +632,29 @@
           loadAllData(true);
         }
         
-        // 3. Check for failed login attempts in audit logs
-        const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
-        const failedLogins = auditLogs.filter(l => l.action === 'login_failed');
-        if (failedLogins.length > 0) {
-          const recentFailed = failedLogins.slice(-3);
-          recentFailed.forEach(log => {
-            const time = new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-            toast(`🚫 Failed login: ${log.user} at ${time}`, 'error');
-          });
+        // 3. Check for failed login attempts in audit logs from Supabase
+        try {
+          const auditRes = await apiCall('/api/audit?limit=20');
+          const auditData = await auditRes.json();
+          const failedLogins = (auditData.data || auditData || []).filter(l => l.action === 'login_failed');
+          if (failedLogins.length > 0) {
+            const recentFailed = failedLogins.slice(0, 3);
+            recentFailed.forEach(log => {
+              const time = new Date(log.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+              toast(`🚫 Failed login: ${log.user_name} at ${time}`, 'error');
+            });
+          }
+        } catch (e) {
+          // Fallback to localStorage
+          const localLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
+          const localFailed = localLogs.filter(l => l.action === 'login_failed');
+          if (localFailed.length > 0) {
+            const recentFailed = localFailed.slice(-3);
+            recentFailed.forEach(log => {
+              const time = new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+              toast(`🚫 Failed login: ${log.user_name} at ${time}`, 'error');
+            });
+          }
         }
         
         // 4. Due payments notification
@@ -943,17 +957,28 @@
   }
 
   function logAudit(table, recordId, action, oldValue, newValue) {
-    const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
-    auditLogs.push({
-      table,
+    // Save to Supabase database
+    const auth = JSON.parse(localStorage.getItem('chesskidoo_auth') || '{}');
+    const data = {
+      table_name: table,
       record_id: recordId,
-      action,
+      action: action,
       old_value: oldValue,
       new_value: newValue,
-      timestamp: new Date().toISOString(),
-      role: JSON.parse(localStorage.getItem('chesskidoo_auth') || '{}').role || 'system'
-    });
+      user_name: auth.user || 'system',
+      user_role: auth.role || 'system'
+    };
+    
+    // Save to localStorage as backup
+    const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
+    auditLogs.push({ ...data, timestamp: new Date().toISOString() });
     localStorage.setItem('audit_logs', JSON.stringify(auditLogs.slice(-100)));
+    
+    // Try to save to Supabase
+    apiCall('/api/audit', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }).catch(e => console.log('Audit log saved locally only'));
   }
 
   function openProfile() {

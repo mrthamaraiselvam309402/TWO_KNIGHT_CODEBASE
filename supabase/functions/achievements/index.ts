@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
       if (body.description) newAchievement.description = body.description;
       if (body.category) newAchievement.category = body.category;
       if (body.level) newAchievement.level = body.level;
-      if (body.img_url) newAchievement.image_url = body.img_url;
+      if (body.img_url) newAchievement.img_url = body.img_url;
       newAchievement.created_at = new Date().toISOString();
       
       console.log('POST newAchievement:', JSON.stringify(newAchievement));
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
       if (body.description) updateData.description = body.description;
       if (body.category) updateData.category = body.category;
       if (body.level) updateData.level = body.level;
-      if (body.img_url) updateData.image_url = body.img_url;
+      if (body.img_url) updateData.img_url = body.img_url;
       if (body.date_achieved) updateData.date_achieved = body.date_achieved;
       if (body.student_id) updateData.student_id = body.student_id;
       
