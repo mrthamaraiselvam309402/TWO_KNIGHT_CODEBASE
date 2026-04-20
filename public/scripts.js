@@ -1916,15 +1916,17 @@
   }
   function initiatePay(provider) { toast('Processing ' + provider); setTimeout(() => { closeModals(); loadAllData(true); }, 2000); }
   function downloadReceipt(id, name, fee) {
+    console.log('downloadReceipt called:', id, name, fee);
+    try {
     const date = new Date().toLocaleDateString('en-GB').split('/').reverse().join(' / ');
     const receiptId = 'CK-' + Math.floor(100000 + Math.random()*900000);
-    const student = allStudents.find(s => String(s.id) === String(id));
+    const student = allStudents ? allStudents.find(s => String(s.id) === String(id)) : null;
     const amount = parseInt(fee) || 0;
-    const amountWords = numberToWords(amount);
-    const studentLevel = student ? getStudentLevel(student) : 'N/A';
-    const studentRating = student ? getStudentRating(student) : 'N/A';
-    const coach = student && student.coach_id ? allCoaches.find(c => String(c.id) === String(student.coach_id)) : null;
-    const coachName = coach ? getCoachName(coach) : 'Not Assigned';
+    const amountWords = numberToWords ? numberToWords(amount) : (amount + ' rupees');
+    const studentName = name || 'Student';
+    const studentLevel = student ? (getStudentLevel ? getStudentLevel(student) : 'N/A') : 'N/A';
+    const studentRating = student ? (getStudentRating ? getStudentRating(student) : '800') : '800';
+    const coachName = (student && student.coach_id && allCoaches) ? (getCoachName ? getCoachName(allCoaches.find(c => String(c.id) === String(student.coach_id))) : 'Not Assigned';
     
     const receiptHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -2020,10 +2022,10 @@ try {
       }
       printWindow.document.write(receiptHtml);
       printWindow.document.close();
-      toast('Receipt opened! Print or save as PDF', 'success');
+toast('Receipt opened! Print or save as PDF', 'success');
     } catch (e) {
       console.error('Receipt error:', e);
-      toast('Error generating receipt', 'error');
+      toast('Error generating receipt: ' + e.message, 'error');
     }
   }
   
