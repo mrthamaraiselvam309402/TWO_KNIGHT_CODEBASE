@@ -369,6 +369,12 @@
     }
   };
 
+  function toggleAllStud(ctrl) {
+    document.querySelectorAll('.stud-check').forEach(ck => {
+      if (!ck.disabled) ck.checked = ctrl.checked;
+    });
+  }
+
   function previewFile(inp, previewId) {
     const file = inp.files[0];
     if (!file) return;
@@ -2393,6 +2399,151 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // NAVIGATION & CORE UI
+  // ═══════════════════════════════════════════════════════════════
+  function toggleSidebar() {
+    const sidebar = $('sidebar');
+    const overlay = $('sidebar-overlay');
+    const main = document.querySelector('.main');
+    if (!sidebar) return;
+    if (window.innerWidth <= 768) {
+      sidebar.classList.toggle('open');
+      if (overlay) {
+        if (sidebar.classList.contains('open')) overlay.classList.add('active');
+        else overlay.classList.remove('active');
+      }
+    } else {
+      sidebar.classList.toggle('collapsed');
+      if (main) main.classList.toggle('expanded');
+    }
+  }
+
+  const PAGE_TITLES = {
+    dash: 'Academy Overview', stud: 'Student Registry', 'coach-mgmt': 'Coach Management',
+    child: 'My Child', fame: 'Wall of Fame', events: 'Events', bills: 'Payments',
+    msgs: 'Messages', ai: 'AI Assistant'
+  };
+
+  function setPage(p) {
+    document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
+    const pageEl = $('page-' + p);
+    if (pageEl) pageEl.classList.add('active');
+    const navEl = $('nav-' + p);
+    if (navEl) navEl.classList.add('active');
+    if ($('p-title')) $('p-title').textContent = PAGE_TITLES[p] || '';
+
+    const btnArea = $('top-btn-area');
+    if (btnArea) {
+      btnArea.innerHTML = '';
+      if (role === 'admin' || role === 'master') {
+        if (p === 'dash') btnArea.innerHTML = `<button class="btn btn-outline" onclick="generateReportPDF()">📄 Financial Report</button>`;
+        if (p === 'stud') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>`;
+        if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openModal('ev-modal')">+ Create Event</button>`;
+      }
+    }
+
+    if (window.innerWidth <= 768) {
+      $('sidebar')?.classList.remove('open');
+      $('sidebar-overlay')?.classList.remove('active');
+    }
+
+    setTimeout(() => {
+      if (p === 'dash') renderDash();
+      if (p === 'stud') renderStudents();
+      if (p === 'coach-mgmt') renderCoachMgmt();
+      if (p === 'fame') renderFame();
+      if (p === 'events') renderEvents();
+      if (p === 'bills') renderBills();
+      if (p === 'msgs') renderMsgs();
+      if (p === 'child') renderChild();
+    }, 10);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUTHENTICATION
+  // ═══════════════════════════════════════════════════════════════
+  function toggleEye() {
+    const p = $('li-pass');
+    const icon = $('eye-icon');
+    if (!p || !icon) return;
+    if (p.type === 'password') {
+      p.type = 'text';
+      icon.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`;
+    } else {
+      p.type = 'password';
+      icon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+    }
+  }
+
+  async function doLogin() {
+    const user = $('li-user')?.value.trim();
+    const pass = $('li-pass')?.value.trim();
+    const err = $('login-err');
+    if (!user || !pass) { if (err) { err.textContent = 'Enter username/password'; err.style.display='block'; } return; }
+    
+    try {
+      // 1. Check Master/Admin Fallbacks
+      if ((user === 'admin' && pass === 'chesskidoo_admin_2026') || (user === 'master' && pass === 'chesskidoo_master_2026')) {
+        role = user;
+        localStorage.setItem('chesskidoo_auth', JSON.stringify({ role, user }));
+        finishLogin(user === 'master' ? 'Master Admin' : 'Academy Admin', role);
+        return;
+      }
+
+      // 2. Parent Check
+      const student = allStudents.find(s => getStudentName(s).toLowerCase() === user.toLowerCase());
+      if (student && (getStudentPhone(student) === pass)) {
+        role = 'parent';
+        currentStudent = student;
+        localStorage.setItem('chesskidoo_auth', JSON.stringify({ role: 'parent', user, studentId: student.id }));
+        finishLogin(user, 'parent', student.id);
+        return;
+      }
+      
+      if (err) { err.textContent = 'Invalid credentials'; err.style.display='block'; }
+    } catch(e) { console.error('Login error', e); }
+  }
+
+  function finishLogin(displayName, userRole, studentId) {
+    if ($('login-screen')) $('login-screen').style.display = 'none';
+    document.body.classList.remove('login-mode', 'admin-mode', 'parent-mode', 'master-mode');
+    
+    // Set Profile UI
+    if ($('top-profile')) $('top-profile').style.display = 'flex';
+    if ($('top-profile-name')) $('top-profile-name').textContent = displayName;
+    
+    if (userRole === 'master') {
+      document.body.classList.add('admin-mode', 'master-mode');
+      document.querySelectorAll('.master-only').forEach(el => el.style.setProperty('display', 'flex', 'important'));
+    } else if (userRole === 'admin') {
+      document.body.classList.add('admin-mode');
+    } else {
+      document.body.classList.add('parent-mode');
+    }
+
+    loadAllData(true).then(() => {
+      if (userRole === 'parent') {
+        if (studentId) currentStudent = allStudents.find(s => String(s.id) === String(studentId));
+        setPage('child');
+      } else {
+        setPage('dash');
+      }
+      console.log('finishLogin called, loading data...');
+    });
+  }
+
+  function doLogout() {
+    role = null;
+    currentStudent = null;
+    localStorage.removeItem('chesskidoo_auth');
+    document.body.classList.remove('admin-mode', 'parent-mode', 'master-mode');
+    document.body.classList.add('login-mode');
+    if ($('login-screen')) $('login-screen').style.display = 'flex';
+    if ($('top-profile')) $('top-profile').style.display = 'none';
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // THEME & PDF
   // ═══════════════════════════════════════════════════════════════
   function toggleTheme() { document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark'; }
@@ -2521,6 +2672,9 @@
   window.$ = $;
   window.toggleSidebar = toggleSidebar;
   window.setPage = setPage;
+  window.doLogin = doLogin;
+  window.doLogout = doLogout;
+  window.finishLogin = finishLogin;
 
   console.log('Chesskidoo Scripts Loaded - doLogin:', typeof window.doLogin, 'toggleEye:', typeof window.toggleEye);
 })();
