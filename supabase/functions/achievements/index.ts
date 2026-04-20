@@ -105,17 +105,18 @@ Deno.serve(async (req) => {
         studentId = student?.id || null;
       }
       
-      const newAchievement = { 
+      const newAchievement: Record<string, unknown> = { 
         id: eventId, 
         student_id: studentId,
         title: body.title || '',
-        description: body.description || '',
-        date_achieved: body.date_achieved || new Date().toISOString().split('T')[0],
-        category: body.category || '',
-        level: body.level || '',
-        img_url: body.img_url || '',
-        created_at: new Date().toISOString()
+        date_achieved: body.date_achieved || new Date().toISOString().split('T')[0]
       };
+      
+      if (body.description) newAchievement.description = body.description;
+      if (body.category) newAchievement.category = body.category;
+      if (body.level) newAchievement.level = body.level;
+      if (body.img_url) newAchievement.image_url = body.img_url;
+      newAchievement.created_at = new Date().toISOString();
       
       console.log('POST newAchievement:', JSON.stringify(newAchievement));
       

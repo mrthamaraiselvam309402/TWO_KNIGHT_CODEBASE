@@ -107,21 +107,22 @@ Deno.serve(async (req) => {
       const eventPrize = prize_pool || body.prize || '';
       const eventDesc = description || '';
       
-      let newEvent = { 
+      let newEvent: Record<string, unknown> = { 
         id: eventId, 
         title: title,
         event_date: eventDate,
         event_time: eventTime,
-        type: eventType,
-        location: location || '',
-        description: eventDesc,
-        status: 'upcoming',
-        max_participants: maxParticipants,
-        current_participants: 0,
-        prize: eventPrize,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        type: eventType
       };
+      
+      if (location) newEvent.location = location;
+      if (eventDesc) newEvent.description = eventDesc;
+      if (maxParticipants) newEvent.max_participants = maxParticipants;
+      if (eventPrize) newEvent.prize = eventPrize;
+      newEvent.status = 'upcoming';
+      newEvent.current_participants = 0;
+      newEvent.created_at = new Date().toISOString();
+      newEvent.updated_at = new Date().toISOString();
       
       console.log('Inserting event:', JSON.stringify(newEvent));
       
