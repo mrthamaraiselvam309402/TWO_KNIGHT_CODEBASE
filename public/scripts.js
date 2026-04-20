@@ -2309,7 +2309,6 @@ ${coachTable}
     }
     
     const doc = new jsPDF();
-    const doc = new jsPDF();
     const date = new Date().toLocaleDateString('en-GB').replace(/\//g, ' / ');
     
     // Header
