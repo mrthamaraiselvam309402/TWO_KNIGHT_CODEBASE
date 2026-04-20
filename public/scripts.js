@@ -596,6 +596,8 @@
   let notificationPolling = null;
   let lastMsgCount = 0;
   let lastStudCount = 0;
+  let lastDueCount = 0;
+  let lastSessionCount = 0;
   
   function initRealtimeNotifications() {
     if (notificationPolling) return;
@@ -603,9 +605,12 @@
     
     lastMsgCount = allMessages.length;
     lastStudCount = allStudents.length;
+    const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+    lastDueCount = dueStudents.length;
     
     notificationPolling = setInterval(async () => {
       try {
+        // 1. New messages notification
         const res = await apiCall('/api/messages');
         const msgs = await res.json();
         const newMsgs = msgs.data || msgs || [];
@@ -617,13 +622,39 @@
           updateMsgBadge();
         }
         
+        // 2. New student enrolled
         const studsRes = await apiCall('/api/students');
         const studs = await studsRes.json();
         const studsData = studs.data || studs || [];
         if (studsData.length > lastStudCount) {
           toast('🎓 New student enrolled!', 'success');
           lastStudCount = studsData.length;
+          loadAllData(true);
         }
+        
+        // 3. Check for failed login attempts in audit logs
+        const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
+        const failedLogins = auditLogs.filter(l => l.action === 'login_failed');
+        if (failedLogins.length > 0) {
+          const recentFailed = failedLogins.slice(-3);
+          recentFailed.forEach(log => {
+            const time = new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            toast(`🚫 Failed login: ${log.user} at ${time}`, 'error');
+          });
+        }
+        
+        // 4. Due payments notification
+        const due = studsData.filter(s => {
+          const status = (s.status || '').toLowerCase();
+          const payStatus = (s.payment_status || '').toLowerCase();
+          return status !== 'active' && payStatus !== 'paid';
+        });
+        if (due.length > lastDueCount && lastDueCount > 0) {
+          const newDue = due.length - lastDueCount;
+          toast(`💰 ${newDue} payment${newDue > 1 ? 's' : ''} due!`, 'warning');
+        }
+        lastDueCount = due.length;
+        
       } catch (e) {
         console.error('Notification polling error:', e);
       }
@@ -802,10 +833,11 @@
 
       errEl.textContent = 'Invalid credentials.';
       errEl.style.display = 'block';
+      logAudit('auth', user, 'login_failed', null, { username: user, time: new Date().toISOString() });
     } catch (e) {
       console.error('Login error:', e);
       errEl.textContent = 'Connection error. Try again.';
-      errEl.style.display = 'block';
+      logAudit('auth', user, 'login_failed', null, { username: user, error: e.message });
     } finally {
       setBtnLoading(false);
     }
@@ -813,8 +845,12 @@
 
   function finishLogin(displayName, userRole, studentId) {
     recordSession('login');
+    logAudit('auth', userRole, 'login_success', null, { user: displayName, role: userRole });
     if (userRole === 'admin' || userRole === 'master') {
       initRealtimeNotifications();
+    }
+    if (userRole === 'parent') {
+      toast(`👤 ${displayName} logged in`, 'info');
     }
     const loginScreen = $('login-screen');
     if (loginScreen) loginScreen.style.display = 'none';
