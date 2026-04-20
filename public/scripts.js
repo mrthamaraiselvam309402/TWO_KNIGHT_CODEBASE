@@ -603,14 +603,25 @@
     if (notificationPolling) return;
     if (role !== 'admin' && role !== 'master') return;
     
-    lastMsgCount = allMessages.length;
-    lastStudCount = allStudents.length;
-    const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+    // Initialize counts AFTER data is loaded - will be set in loadAllData callback
+    console.log('Real-time notifications initialized');
+  }
+  
+  function setupNotificationCounts() {
+    // Call this AFTER data is loaded to set initial counts
+    lastMsgCount = allMessages ? allMessages.length : 0;
+    lastStudCount = allStudents ? allStudents.length : 0;
+    const dueStudents = allStudents ? allStudents.filter(s => getStudentPaymentStatus(s) === 'Due') : [];
     lastDueCount = dueStudents.length;
+    console.log('Notification counts set - Students:', lastStudCount, 'Messages:', lastMsgCount);
+  }
+    
+    function startNotificationPolling() {
+    if (notificationPolling) return;
     
     notificationPolling = setInterval(async () => {
       try {
-        // 1. New messages notification
+        // 1. New messages
         const res = await apiCall('/api/messages');
         const msgs = await res.json();
         const newMsgs = msgs.data || msgs || [];
@@ -622,7 +633,7 @@
           updateMsgBadge();
         }
         
-        // 2. New student enrolled
+        // 2. New student enrolled check
         const studsRes = await apiCall('/api/students');
         const studs = await studsRes.json();
         const studsData = studs.data || studs || [];
@@ -633,7 +644,7 @@
           loadAllData(true);
         }
         
-        // 3. Check for failed login attempts in audit logs from Supabase
+        // 3. Failed login from Supabase
         try {
           const auditRes = await apiCall('/api/audit?limit=20');
           const auditData = await auditRes.json();
@@ -646,7 +657,6 @@
             });
           }
         } catch (e) {
-          // Fallback to localStorage
           const localLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
           const localFailed = localLogs.filter(l => l.action === 'login_failed');
           if (localFailed.length > 0) {
@@ -658,7 +668,7 @@
           }
         }
         
-        // 4. Due payments notification
+        // 4. Due payments
         const due = studsData.filter(s => {
           const status = (s.status || '').toLowerCase();
           const payStatus = (s.payment_status || '').toLowerCase();
@@ -674,6 +684,9 @@
         console.error('Notification polling error:', e);
       }
     }, 15000);
+    
+    console.log('Real-time notifications polling started (15s interval)');
+  }
     
     console.log('Real-time notifications enabled (polling every 15s)');
   }
@@ -897,6 +910,12 @@
     dataCache = { timestamp: 0 }; // Reset cache to ensure fresh load
     loadAllData(true).then(() => {
       console.log('Data load complete, students:', allStudents.length, 'coaches:', allCoaches.length);
+      
+      // Set up notification counts after data loads
+      setupNotificationCounts();
+      
+      // Start polling after counts are set
+      startNotificationPolling();
       if (userRole === 'parent' && studentId) {
         currentStudent = allStudents.find(s => String(s.id) === String(studentId));
         if (currentStudent) renderChild();
