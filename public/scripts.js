@@ -2672,10 +2672,13 @@
   // THEME & PDF
   // ═══════════════════════════════════════════════════════════════
   function toggleTheme() { 
+    console.log('toggleTheme called');
     const current = document.body.dataset.theme || 'dark';
     const next = current === 'dark' ? 'light' : 'dark';
+    console.log('Switching theme:', current, '->', next);
     document.body.dataset.theme = next;
     localStorage.setItem('chesskidoo_theme', next);
+    console.log('Theme after switch:', document.body.dataset.theme);
   }
   function initTheme() {
     const saved = localStorage.getItem('chesskidoo_theme');
