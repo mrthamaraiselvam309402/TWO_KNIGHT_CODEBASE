@@ -2012,10 +2012,19 @@
 </body>
 </html>`;
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(receiptHtml);
-    printWindow.document.close();
-toast('Receipt downloaded!', 'success');
+try {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast('Please allow popups to download receipt', 'error');
+        return;
+      }
+      printWindow.document.write(receiptHtml);
+      printWindow.document.close();
+      toast('Receipt opened! Print or save as PDF', 'success');
+    } catch (e) {
+      console.error('Receipt error:', e);
+      toast('Error generating receipt', 'error');
+    }
   }
   
   function numberToWords(n) {
