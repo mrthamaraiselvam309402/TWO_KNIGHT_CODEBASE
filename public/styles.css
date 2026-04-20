@@ -62,22 +62,53 @@
   --surface2: #fafafa;
   --surface3: #eeeeee;
   --gold: #b8910f;
-  --gold-glow: rgba(184,145,15,0.15);
+  --gold-dim: #9a7209;
+  --gold-glow: rgba(184,145,15,0.25);
   --ivory: #1a1a2e;
   --ivory2: #4a4a5e;
   --ivory3: #8888a0;
-  --glass: rgba(0,0,0,0.03);
-  --border: rgba(0,0,0,0.08);
-  --shadow: 0 10px 30px rgba(0,0,0,0.08);
+  --glass: rgba(255,255,255,0.8);
+  --border: rgba(0,0,0,0.12);
+  --shadow: 0 10px 30px rgba(0,0,0,0.1);
   --dark: #ffffff;
   --darker: #f5f7fa;
   --accent: #1a1a2e;
-  background-image: none;
 }
 
-[data-theme="light"] body {
-  background-image: none;
-  background-color: #f5f7fa;
+/* Light theme body overrides with high specificity */
+html[data-theme="light"] body,
+body[data-theme="light"] {
+  background: #f5f7fa !important;
+  background-image: none !important;
+  color: #1a1a2e !important;
+}
+
+html[data-theme="light"] body::before,
+body[data-theme="light"]::before {
+  display: none !important;
+}
+
+/* Light theme sidebar */
+html[data-theme="light"] .sidebar,
+body[data-theme="light"] .sidebar {
+  background: #ffffff !important;
+  border-right: 1px solid rgba(0,0,0,0.1) !important;
+}
+
+html[data-theme="light"] .nav-item:hover,
+body[data-theme="light"] .nav-item:hover {
+  background: rgba(0,0,0,0.05) !important;
+}
+
+html[data-theme="light"] .top-bar,
+body[data-theme="light"] .top-bar {
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(0,0,0,0.1) !important;
+}
+
+html[data-theme="light"] .main,
+body[data-theme="light"] .main {
+  background: #f5f7fa !important;
 }
 
 /* ── RESET & BASE ── */

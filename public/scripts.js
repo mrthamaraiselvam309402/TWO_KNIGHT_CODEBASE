@@ -2677,6 +2677,23 @@
     document.body.dataset.theme = next;
     document.documentElement.dataset.theme = next;
     localStorage.setItem('chesskidoo_theme', next);
+    // Override all CSS variables
+    const root = document.documentElement;
+    if (next === 'light') {
+      root.style.setProperty('--obsidian', '#f5f7fa');
+      root.style.setProperty('--night', '#ffffff');
+      root.style.setProperty('--surface', '#ffffff');
+      root.style.setProperty('--ivory', '#1a1a2e');
+      root.style.setProperty('--glass', 'rgba(255,255,255,0.8)');
+      root.style.setProperty('--border', 'rgba(0,0,0,0.12)');
+    } else {
+      root.style.setProperty('--obsidian', '#080810');
+      root.style.setProperty('--night', '#0e0e1a');
+      root.style.setProperty('--surface', '#181824');
+      root.style.setProperty('--ivory', '#e8e8f0');
+      root.style.setProperty('--glass', 'rgba(0,0,0,0.025)');
+      root.style.setProperty('--border', 'rgba(255,255,255,0.06)');
+    }
   }
   function initTheme() {
     const saved = localStorage.getItem('chesskidoo_theme');
