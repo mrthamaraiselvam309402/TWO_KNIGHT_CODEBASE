@@ -2244,21 +2244,25 @@
   function printReceipt() { window.print(); }
 
   function generateReportPDF() {
-    console.log('generateReportPDF clicked!!!');
-    alert('Button clicked! Checking...');
-    if (typeof generateReportPDFContent !== 'function') {
-      alert('generateReportPDFContent is NOT a function');
-      return;
-    }
+    console.log('generateReportPDF clicked');
+    alert('Button works!');
     toast('Generating PDF...', 'info');
     try {
       generateReportPDFContent();
-      alert('generateReportPDFContent executed');
+      alert('Done!');
     } catch (e) {
-      console.error('PDF error:', e);
       alert('Error: ' + e.message);
     }
   }
+  
+  // Add event listener when DOM ready
+  document.addEventListener('DOMContentLoaded', function() {
+    var pdfBtn = document.getElementById('download-pdf-btn');
+    if (pdfBtn) {
+      pdfBtn.onclick = generateReportPDF;
+      console.log('PDF button event listener attached');
+    }
+  });
   
   function generateReportPDFContent() {
     let jsPDF;
