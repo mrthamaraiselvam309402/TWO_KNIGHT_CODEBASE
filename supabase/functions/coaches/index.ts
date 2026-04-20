@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
         address: body.address || '',
         monthly_fee: 0,
         batch_count: 0,
-        pay_level: 'standard',
+        pay_level: 1,
         role: 'coach',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

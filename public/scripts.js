@@ -1577,8 +1577,8 @@
     const id = $('ev-id').value;
     const data = {
       title: $('ev-title').value,
-      date: $('ev-date').value,
-      time: $('ev-time').value,
+      event_date: $('ev-date').value,
+      event_time: $('ev-time').value,
       type: $('ev-type').value,
       max_participants: parseInt($('ev-max').value) || 0,
       prize_pool: $('ev-prize').value,
@@ -1587,7 +1587,7 @@
     };
     
     if (!data.title) { toast('Event title is required', 'error'); return; }
-    if (!data.date) { toast('Event date is required', 'error'); return; }
+    if (!data.event_date) { toast('Event date is required', 'error'); return; }
     if (data.date && new Date(data.date) < new Date()) { toast('Event date cannot be in the past', 'error'); return; }
     
     try {
