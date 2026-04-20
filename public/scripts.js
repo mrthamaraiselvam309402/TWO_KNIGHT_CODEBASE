@@ -2244,13 +2244,19 @@
   function printReceipt() { window.print(); }
 
   function generateReportPDF() {
-    console.log('generateReportPDF called');
+    console.log('generateReportPDF clicked!!!');
+    alert('Button clicked! Checking...');
+    if (typeof generateReportPDFContent !== 'function') {
+      alert('generateReportPDFContent is NOT a function');
+      return;
+    }
     toast('Generating PDF...', 'info');
     try {
       generateReportPDFContent();
+      alert('generateReportPDFContent executed');
     } catch (e) {
       console.error('PDF error:', e);
-      toast('Error: ' + e.message, 'error');
+      alert('Error: ' + e.message);
     }
   }
   
