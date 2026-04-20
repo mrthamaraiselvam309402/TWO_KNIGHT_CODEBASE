@@ -939,6 +939,7 @@ body.admin-mode .master-only { display: none !important; }
   border-radius: var(--radius-lg);
   overflow: hidden;
   transition: all 0.25s;
+  min-height: 280px;
 }
 .ach-card:hover, .fame-card:hover {
   border-color: rgba(232,168,48,0.25);
