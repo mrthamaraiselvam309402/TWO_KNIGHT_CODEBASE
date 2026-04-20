@@ -2271,37 +2271,130 @@
   }
   
   function generateReportPDFContent() {
+    console.log('=== GENERATE REPORT PDF STARTED ===');
+    console.log('allStudents:', allStudents ? allStudents.length : 0);
+    console.log('allCoaches:', allCoaches ? allCoaches.length : 0);
+    console.log('window.jspdf:', typeof window.jspdf);
+    console.log('window.jsPDF:', typeof window.jsPDF);
+    
     let jsPDF;
-    // Better jsPDF detection
+    // Better jsPDF detection - check both possible locations
     if (window.jspdf && window.jspdf.jsPDF) {
       jsPDF = window.jspdf.jsPDF;
+      console.log('Using window.jspdf.jsPDF');
     } else if (window.jsPDF) {
       jsPDF = window.jsPDF;
+      console.log('Using window.jsPDF');
+    } else {
+      console.log('jsPDF NOT FOUND - will use fallback');
     }
     
-    console.log('jsPDF:', jsPDF);
-    
-    if (!jsPDF) {
-      console.log('Using fallback print method');
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        alert('Please allow popups to generate the report, then try again');
+    // === METHOD A: DIRECT PDF DOWNLOAD (PREFERRED) ===
+    if (jsPDF) {
+      try {
+        const doc = new jsPDF();
+        const date = new Date().toLocaleDateString('en-GB').replace(/\//g, ' / ');
+        
+        // Header - gold background
+        doc.setFillColor(220, 163, 62);
+        doc.rect(0, 0, 210, 35, 'F');
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(22);
+        doc.text('Chesskidoo Academy', 105, 20, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text('Financial Report', 105, 28, { align: 'center' });
+        
+        // Report date
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(10);
+        doc.text('Generated: ' + date, 190, 42, { align: 'right' });
+        
+        // Financial Overview
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(14);
+        doc.text('Financial Overview', 14, 52);
+        
+        // Calculate metrics
+        const totalStudents = allStudents ? allStudents.length : 0;
+        const paidStudents = allStudents ? allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length : 0;
+        const dueStudents = allStudents ? allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length : 0;
+        const pendingStudents = allStudents ? allStudents.filter(s => getStudentPaymentStatus(s) === 'Pending').length : 0;
+        
+        let totalRevenue = 0;
+        if (allStudents) {
+          allStudents.forEach(s => { totalRevenue += getStudentMonthlyFee(s); });
+        }
+        
+        doc.setFontSize(11);
+        doc.text('Total Students: ' + totalStudents, 14, 62);
+        doc.text('Paid: ' + paidStudents, 14, 70);
+        doc.text('Due: ' + dueStudents, 14, 78);
+        doc.text('Pending: ' + pendingStudents, 14, 86);
+        doc.text('Total Monthly Revenue: ₹' + totalRevenue.toLocaleString(), 14, 96);
+        
+        // Coach Breakdown
+        doc.setFontSize(14);
+        doc.text('Coach-wise Revenue', 14, 112);
+        
+        let yPos = 122;
+        if (allCoaches) {
+          allCoaches.forEach(coach => {
+            const coachStudents = allStudents ? allStudents.filter(s => String(s.coach_id) === String(coach.id)) : [];
+            const coachRevenue = coachStudents.reduce((sum, s) => sum + getStudentMonthlyFee(s), 0);
+            const coachSalary = (coach.hourly_rate || 0) * 40 * 4;
+            
+            doc.setFontSize(10);
+            doc.text(getCoachName(coach) + ': ₹' + coachRevenue.toLocaleString() + ' (Salary: ₹' + coachSalary.toLocaleString() + ')', 14, yPos);
+            yPos += 8;
+            
+            if (yPos > 270) {
+              doc.addPage();
+              yPos = 20;
+            }
+          });
+        }
+        
+        // Footer
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(9);
+        doc.text('Chesskidoo Academy - Financial Report', 105, 290, { align: 'center' });
+        
+        // AUTO-DOWNLOAD
+        doc.save('Chesskidoo_Financial_Report_' + date.replace(/\//g, '-') + '.pdf');
+        console.log('PDF downloaded successfully!');
+        toast('Financial Report downloaded!', 'success');
         return;
+      } catch (e) {
+        console.error('jsPDF method error:', e);
       }
-      const date = new Date().toLocaleDateString('en-GB').replace(/\//g, ' / ');
-      
-      const totalStudents = allStudents.length;
-      const paidStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
-      const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
-      let totalRevenue = 0;
+    }
+    
+    // === METHOD B: BROWSER PRINT FALLBACK ===
+    console.log('Using fallback print method');
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to generate the report, then try again');
+      return;
+    }
+    const date = new Date().toLocaleDateString('en-GB').replace(/\//g, ' / ');
+    
+    const totalStudents = allStudents ? allStudents.length : 0;
+    const paidStudents = allStudents ? allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length : 0;
+    const dueStudents = allStudents ? allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length : 0;
+    let totalRevenue = 0;
+    if (allStudents) {
       allStudents.forEach(s => { totalRevenue += getStudentMonthlyFee(s); });
-      
-      let coachTable = '';
+    }
+    
+    let coachTable = '';
+    if (allCoaches && allStudents) {
       allCoaches.forEach(coach => {
         const coachStudents = allStudents.filter(s => String(s.coach_id) === String(coach.id));
         const coachRevenue = coachStudents.reduce((sum, s) => sum + getStudentMonthlyFee(s), 0);
         coachTable += '<tr><td>' + getCoachName(coach) + '</td><td>' + coachStudents.length + '</td><td>₹' + coachRevenue.toLocaleString() + '</td></tr>';
       });
+    }
       
       const html = '<!DOCTYPE html>' +
         '<html><head><title>Chesskidoo Financial Report</title>' +
