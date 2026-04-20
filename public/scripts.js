@@ -1739,8 +1739,8 @@
         loadAllData(true);
       } else {
         const err = await res.json().catch(() => ({}));
-        console.error('Event save error:', err);
-        toast('Failed to save event: ' + (err.error || 'Server error'), 'error');
+        console.error('Event save error:', res.status, err);
+        toast('Failed: ' + (err.error || 'Server error'), 'error');
       }
     } catch (e) { 
       console.error('Save event error:', e);

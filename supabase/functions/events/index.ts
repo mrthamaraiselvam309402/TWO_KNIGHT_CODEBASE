@@ -81,24 +81,44 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-      const { title, date, type, location, increment_registrations, id, ...rest } = body;
+      const { title, date, type, location, increment_registrations, id, event_date, event_time, event_type, prize_pool, max_participants, description } = body;
       
       console.log('Creating event with body:', JSON.stringify(body));
       
+      if (!title) {
+        return new Response(JSON.stringify({ error: 'Title is required' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+      
+      if (!event_date && !date) {
+        return new Response(JSON.stringify({ error: 'Date is required' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+      
       const eventId = id || generateId();
+      const eventDate = event_date || date;
+      const eventTime = event_time || body.time || '10:00';
+      const eventType = event_type || type || 'Tournament';
+      const maxParticipants = parseInt(max_participants) || 50;
+      const eventPrize = prize_pool || body.prize || '';
+      const eventDesc = description || '';
       
       let newEvent = { 
         id: eventId, 
-        title: title || '',
-        event_date: date || body.event_date || '',
-        event_time: body.time || body.event_time || '',
-        type: type || body.event_type || 'Tournament',
+        title: title,
+        event_date: eventDate,
+        event_time: eventTime,
+        type: eventType,
         location: location || '',
-        description: body.description || '',
+        description: eventDesc,
         status: 'upcoming',
-        max_participants: body.max_participants || null,
+        max_participants: maxParticipants,
         current_participants: 0,
-        prize: body.prize_pool || body.prize || '',
+        prize: eventPrize,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -113,7 +133,10 @@ Deno.serve(async (req) => {
       
       if (insertError) {
         console.error('Event insert error:', JSON.stringify(insertError));
-        throw insertError;
+        return new Response(JSON.stringify({ error: insertError.message, details: insertError }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
       }
       return new Response(JSON.stringify(insertedEvent ? transformEvent(insertedEvent) : null), {
         status: 201,
