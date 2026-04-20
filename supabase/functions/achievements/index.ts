@@ -157,6 +157,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (req.method === 'PUT') {
+      if (!id) return new Response(JSON.stringify({ error: 'ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const updateData: Record<string, unknown> = {};
+      if (body.title) updateData.title = body.title;
+      if (body.description) updateData.description = body.description;
+      if (body.category) updateData.category = body.category;
+      if (body.level) updateData.level = body.level;
+      if (body.img_url) updateData.image_url = body.img_url;
+      if (body.date_achieved) updateData.date_achieved = body.date_achieved;
+      if (body.student_id) updateData.student_id = body.student_id;
+      
+      const { data: updated, error: updateError } = await supabase
+        .from('achievements')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error('Update error:', JSON.stringify(updateError));
+        return new Response(JSON.stringify({ error: updateError.message }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+      
+      const transformed = await transformAchievement(updated);
+      return new Response(JSON.stringify(transformed), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json' }
