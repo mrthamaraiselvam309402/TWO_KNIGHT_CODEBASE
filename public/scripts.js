@@ -771,6 +771,7 @@
   }
 
   function finishLogin(displayName, userRole, studentId) {
+    logLoginSession('login', displayName);
     const loginScreen = $('login-screen');
     if (loginScreen) loginScreen.style.display = 'none';
 
@@ -809,6 +810,12 @@
   }
 
   function doLogout() {
+    const currentUser = localStorage.getItem('chesskidoo_auth');
+    let userName = 'User';
+    if (currentUser) {
+      try { userName = JSON.parse(currentUser).user || 'User'; } catch(e) {}
+    }
+    logLoginSession('logout', userName);
     closeModals();
     role = null; currentStudent = null;
     localStorage.removeItem('chesskidoo_auth');
@@ -827,6 +834,61 @@
     const parentView = $('prof-parent-view');
     if (adminView) adminView.style.display = (role === 'admin' || role === 'master') ? 'block' : 'none';
     if (parentView) parentView.style.display = role === 'parent' ? 'block' : 'none';
+    
+    // Load login history
+    loadLoginHistory();
+  }
+  
+  function loadLoginHistory() {
+    const history = JSON.parse(localStorage.getItem('login_history') || '[]');
+    const currentUser = localStorage.getItem('chesskidoo_auth');
+    let userName = 'Unknown';
+    if (currentUser) {
+      try { userName = JSON.parse(currentUser).user || 'Admin'; } catch(e) {}
+    }
+    
+    const historyList = $('admin-history-list') || $('parent-history-list');
+    if (!historyList) return;
+    
+    if (!history || history.length === 0) {
+      historyList.innerHTML = '<div style="color:var(--ivory3);font-size:12px">No login history yet</div>';
+      return;
+    }
+    
+    const recentHistory = history.slice(-10).reverse();
+    historyList.innerHTML = recentHistory.map(h => {
+      const time = new Date(h.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      const statusIcon = h.action === 'login' ? '✅' : '❌';
+      const statusClass = h.action === 'login' ? 'text-success' : 'text-danger';
+      return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span>${statusIcon} ${h.user}</span>
+        <span class="${statusClass}">${time}</span>
+      </div>`;
+    }).join('');
+    
+    // Currently online (simulated)
+    const onlineList = $('active-users-list');
+    if (onlineList) {
+      const now = Date.now();
+      const activeSessions = history.filter(h => now - h.timestamp < 30*60*1000);
+      if (activeSessions.length > 0) {
+        const uniqueUsers = [...new Set(activeSessions.map(h => h.user))];
+        onlineList.innerHTML = uniqueUsers.map(u => `<span style="display:inline-block;background:var(--success);color:#000;padding:2px 8px;border-radius:12px;font-size:11px;margin-right:4px">${u}</span>`).join('');
+      } else {
+        onlineList.innerHTML = '<span style="color:var(--ivory3);font-size:12px">No active sessions</span>';
+      }
+    }
+  }
+  
+  function logLoginSession(action, user) {
+    const history = JSON.parse(localStorage.getItem('login_history') || '[]');
+    history.push({
+      user: user || 'Admin',
+      action: action,
+      timestamp: Date.now()
+    });
+    // Keep last 50 entries
+    localStorage.setItem('login_history', JSON.stringify(history.slice(-50)));
   }
 
   // ═══════════════════════════════════════════════════════════════
