@@ -14,6 +14,7 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
   const API_BASE = '/api';
   const IMGBB_API_KEY = '241cb8bd893bf11e571f404052021896';
+  const SUPABASE_URL = 'https://vseombfkrvpffnpgbsnk.supabase.co';
   const $ = id => document.getElementById(id);
   
   // ═══════════════════════════════════════════════════════════════
@@ -592,6 +593,45 @@
     }
   }
 
+  let notificationPolling = null;
+  let lastMsgCount = 0;
+  let lastStudCount = 0;
+  
+  function initRealtimeNotifications() {
+    if (notificationPolling) return;
+    if (role !== 'admin' && role !== 'master') return;
+    
+    lastMsgCount = allMessages.length;
+    lastStudCount = allStudents.length;
+    
+    notificationPolling = setInterval(async () => {
+      try {
+        const res = await apiCall('/api/messages');
+        const msgs = await res.json();
+        const newMsgs = msgs.data || msgs || [];
+        if (newMsgs.length > lastMsgCount) {
+          const newCount = newMsgs.length - lastMsgCount;
+          toast(`📬 ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
+          lastMsgCount = newMsgs.length;
+          allMessages = newMsgs;
+          updateMsgBadge();
+        }
+        
+        const studsRes = await apiCall('/api/students');
+        const studs = await studsRes.json();
+        const studsData = studs.data || studs || [];
+        if (studsData.length > lastStudCount) {
+          toast('🎓 New student enrolled!', 'success');
+          lastStudCount = studsData.length;
+        }
+      } catch (e) {
+        console.error('Notification polling error:', e);
+      }
+    }, 15000);
+    
+    console.log('Real-time notifications enabled (polling every 15s)');
+  }
+
   async function updateMsgBadge() {
     try {
       const res = await apiCall('/api/messages');
@@ -773,6 +813,9 @@
 
   function finishLogin(displayName, userRole, studentId) {
     recordSession('login');
+    if (userRole === 'admin' || userRole === 'master') {
+      initRealtimeNotifications();
+    }
     const loginScreen = $('login-screen');
     if (loginScreen) loginScreen.style.display = 'none';
 
