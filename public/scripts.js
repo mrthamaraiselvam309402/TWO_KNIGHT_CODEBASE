@@ -1740,8 +1740,9 @@
         <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
         <td><span class="${statusClass}">${status}</span></td>
         <td>
-          ${status === 'Due' ? 
+          ${status === 'Due' || status === 'Pending' ? 
             `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+             <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
              <button class="btn btn-outline btn-sm" onclick="sendPaymentReminder('${s.id}')">💬 Remind</button>` : 
             `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">📄 Receipt</button>`}
         </td>
@@ -1755,8 +1756,14 @@
   function openPay(id, name, fee) { 
     const nameEl = $('pay-name');
     const feeEl = $('pay-amt');
+    
+    // Harden fee input: strip currency symbols and commas
+    const finalFee = typeof fee === 'string' 
+      ? parseInt(fee.replace(/[^\d]/g, ''), 10) || 500 
+      : (fee || 500);
+
     if (nameEl) nameEl.textContent = name;
-    if (feeEl) feeEl.textContent = `₹${fee}`;
+    if (feeEl) feeEl.textContent = `₹${finalFee}`;
     openModal('pay-modal'); 
   }
   function initiatePay(provider) { toast('Processing ' + provider); setTimeout(() => { closeModals(); loadAllData(true); }, 2000); }
@@ -2297,18 +2304,42 @@
     chatContainer.scrollTop = chatContainer.scrollHeight;
     
     try {
+      // Gather Academy Context
+      const studentsCount = allStudents.length;
+      const coachesCount = allCoaches.length;
+      const totalRevenue = allStudents.reduce((acc, s) => acc + (getStudentMonthlyFee(s) || 0), 0);
+      const activeTab = document.querySelector('.nav-item.active')?.dataset.page || 'Dashboard';
+      
+      const context = {
+        students: studentsCount,
+        coaches: coachesCount,
+        revenue: totalRevenue,
+        moduleFocus: activeTab,
+        user: currentUser?.displayName || 'Admin'
+      };
+
       // Execute tool-calling pipeline
       const toolResults = await TOOL_CALLER.executePlan(query);
       const temporalContext = TEMPORAL_ENGINE.getCurrentContext();
       
-      // Synthesize response
-      const response = RESPONSE_SYNTHESIZER.synthesize(query, toolResults, temporalContext);
+      // Call Edge Function with context
+      const aiResponse = await apiCall(`${API_BASE}/ai`, {
+        method: 'POST',
+        body: JSON.stringify({
+          message: query,
+          role: currentUser?.userRole || 'admin',
+          context: context
+        })
+      });
+      
+      const aiData = await aiResponse.json();
+      const botResponse = aiData.message || RESPONSE_SYNTHESIZER.synthesize(query, toolResults, temporalContext);
       
       thinkingMsg.remove();
       
       const botMsg = document.createElement('div');
       botMsg.className = 'ai-ws-msg bot';
-      botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">${response}</div>`;
+      botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">${botResponse}</div>`;
       chatContainer.appendChild(botMsg);
       chatContainer.scrollTop = chatContainer.scrollHeight;
       
@@ -2469,7 +2500,8 @@
   window.executePromotion = executePromotion;
   window.sendPaymentReminder = sendPaymentReminder;
   window.showNotifications = () => openModal('notification-modal');
-  window.updateNotificationBadge = () => {};
+  window.updateNotificationBadge = () => { try { updateNotificationBadge(); } catch(e) {} };
+  window.toggleAllStud = toggleAllStud;
   window.setAIModule = setAIModule;
   window.setAISuggestion = setAISuggestion;
   window.sendAIQuery = sendAIQuery;
