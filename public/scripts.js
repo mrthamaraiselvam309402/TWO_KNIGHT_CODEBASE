@@ -94,7 +94,7 @@
     if (!tbody || !currentStudent) return;
     const status = getStudentPaymentStatus(currentStudent);
     const fee = getStudentMonthlyFee(currentStudent);
-    tbody.innerHTML = `<tr><td>${new Date().toLocaleDateString()}</td><td>Current Month</td><td>₹${fee}</td><td class="${status==='Paid'?'text-success':'text-danger'}">${status}</td><td>${status === 'Due' ? `<button class="btn btn-gold btn-sm" onclick="openPay('${currentStudent.id}','${getStudentName(currentStudent)}','${fee}')">Pay</button>` : `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${currentStudent.id}','${getStudentName(currentStudent)}','${fee}')">Receipt</button>`}</td></tr>`;
+    tbody.innerHTML = `<tr><td>${new Date().toLocaleDateString()}</td><td>Current Month</td><td>₹${fee}</td><td class="${status==='Paid'?'text-success':'text-danger'}">${status}</td><td>${status === 'Due' ? `<button class="btn btn-gold btn-sm" onclick="openPay('${currentStudent.id}','${getStudentName(currentStudent)}','${fee}')">Pay</button>` : `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${currentStudent.id}','${getStudentName(currentStudent)}','${fee}','${getStudentLevel(currentStudent)}','${getStudentRating(currentStudent)}','${(function(){ var c=allCoaches.find(c => String(c.id) === String(currentStudent.coach_id)); return c ? getCoachName(c) : 'N/A'; })()}')">Receipt</button>`}</td></tr>`;
   }
 
   // ── ADMIN EXPANSION LOGIC ──
@@ -771,6 +771,7 @@
   }
 
   function finishLogin(displayName, userRole, studentId) {
+    recordSession('login');
     const loginScreen = $('login-screen');
     if (loginScreen) loginScreen.style.display = 'none';
 
@@ -809,6 +810,7 @@
   }
 
   function doLogout() {
+    recordSession('logout');
     closeModals();
     role = null; currentStudent = null;
     localStorage.removeItem('chesskidoo_auth');
@@ -821,12 +823,145 @@
     if (profile) profile.style.display = 'none';
   }
 
+  function recordSession(action) {
+    const auth = JSON.parse(localStorage.getItem('chesskidoo_auth') || '{}');
+    if (!auth.role) return;
+    
+    const sessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
+    const now = new Date().toISOString();
+    const sessionId = 'sess_' + Date.now();
+    
+    if (action === 'login') {
+      sessions.push({
+        id: sessionId,
+        user: auth.user || 'Unknown',
+        role: auth.role,
+        studentId: auth.studentId || null,
+        loginAt: now,
+        logoutAt: null,
+        active: true
+      });
+    } else if (action === 'logout') {
+      const currentSession = sessions.find(s => s.active && s.user === auth.user);
+      if (currentSession) {
+        currentSession.active = false;
+        currentSession.logoutAt = now;
+      }
+    }
+    
+    localStorage.setItem('user_sessions', JSON.stringify(sessions.slice(-50)));
+  }
+
+  function getActiveSessions() {
+    const sessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
+    return sessions.filter(s => s.active);
+  }
+
+  function getLoginHistory() {
+    const sessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
+    return sessions.sort((a, b) => new Date(b.loginAt) - new Date(a.loginAt)).slice(0, 20);
+  }
+
   function openProfile() {
     openModal('profile-modal');
+    renderAccountActivity();
     const adminView = $('prof-admin-view');
     const parentView = $('prof-parent-view');
     if (adminView) adminView.style.display = (role === 'admin' || role === 'master') ? 'block' : 'none';
     if (parentView) parentView.style.display = role === 'parent' ? 'block' : 'none';
+  }
+
+  function renderAccountActivity() {
+    const activeList = $('active-users-list');
+    const adminHistoryList = $('admin-history-list');
+    const parentHistoryList = $('parent-history-list');
+    const auth = JSON.parse(localStorage.getItem('chesskidoo_auth') || '{}');
+    const currentUser = auth.user || 'Unknown';
+    const sessions = getLoginHistory();
+    const activeSessions = getActiveSessions();
+    
+    if (activeList && (role === 'admin' || role === 'master')) {
+      if (activeSessions.length === 0) {
+        activeList.innerHTML = '<div style="color:var(--ivory-dim);text-align:center;padding:10px">No users online</div>';
+      } else {
+        const currentUserActive = activeSessions.find(s => s.user === currentUser);
+        const others = activeSessions.filter(s => s.user !== currentUser);
+        
+        let html = '';
+        if (currentUserActive) {
+          html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span><span style="color:var(--emerald)">●</span> ${currentUser} <span style="color:var(--gold)">(You)</span></span>
+            <span style="color:var(--ivory-dim);font-size:11px">${formatTimeAgo(currentUserActive.loginAt)}</span>
+          </div>`;
+        }
+        others.forEach(s => {
+          html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span><span style="color:var(--emerald)">●</span> ${s.user} <span class="badge badge-level" style="font-size:9px;margin-left:4px">${s.role}</span></span>
+            <span style="color:var(--ivory-dim);font-size:11px">${formatTimeAgo(s.loginAt)}</span>
+          </div>`;
+        });
+        activeList.innerHTML = html;
+      }
+    }
+    
+    if (adminHistoryList && (role === 'admin' || role === 'master')) {
+      if (sessions.length === 0) {
+        adminHistoryList.innerHTML = '<div style="color:var(--ivory-dim);text-align:center;padding:10px">No login history</div>';
+      } else {
+        let html = '';
+        sessions.forEach(s => {
+          const loginTime = new Date(s.loginAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
+          const status = s.active 
+            ? '<span style="color:var(--emerald)">● Active</span>' 
+            : s.logoutAt 
+              ? '<span style="color:var(--ivory-dim)">Logged out</span>'
+              : '<span style="color:var(--danger)">Session ended</span>';
+          html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+            <span>${s.user} <span style="color:var(--ivory-dim)">(${s.role})</span></span>
+            <span>${loginTime}</span>
+          </div>`;
+          html += `<div style="text-align:right;padding:2px 0 6px;font-size:10px;color:var(--ivory-dim)">${status}</div>`;
+        });
+        adminHistoryList.innerHTML = html;
+      }
+    }
+    
+    if (parentHistoryList && role === 'parent') {
+      const mySessions = sessions.filter(s => s.user === currentUser);
+      if (mySessions.length === 0) {
+        parentHistoryList.innerHTML = '<div style="color:var(--ivory-dim);text-align:center;padding:10px">No login history</div>';
+      } else {
+        let html = '';
+        mySessions.forEach(s => {
+          const loginTime = new Date(s.loginAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
+          const status = s.active 
+            ? '<span style="color:var(--emerald)">Currently Active</span>' 
+            : '<span style="color:var(--ivory-dim)">Session Ended</span>';
+          html += `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span>Login</span>
+              <span>${loginTime}</span>
+            </div>
+            <div style="font-size:10px;color:var(--ivory-dim);margin-top:2px">${status}</div>
+          </div>`;
+        });
+        parentHistoryList.innerHTML = html;
+      }
+    }
+  }
+
+  function formatTimeAgo(dateStr) {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1824,7 +1959,7 @@
             `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
              <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
              <button class="btn btn-outline btn-sm" onclick="sendPaymentReminder('${s.id}')">💬 Remind</button>` : 
-            `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">📄 Receipt</button>
+            `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}', '${getStudentLevel(s)}', '${getStudentRating(s)}', '${(function(){ var c=allCoaches.find(c => String(c.id) === String(s.coach_id)); return c ? getCoachName(c) : 'N/A'; })()}')">📄 Receipt</button>
              <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>`}
         </td>
       </tr>`;
@@ -1848,52 +1983,146 @@
     openModal('pay-modal'); 
   }
   function initiatePay(provider) { toast('Processing ' + provider); setTimeout(() => { closeModals(); loadAllData(true); }, 2000); }
-  function downloadReceipt(id, name, fee) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const date = new Date().toLocaleDateString();
-    const receiptId = 'CK-' + Math.floor(Math.random()*1000000);
+  
+  function downloadReceipt(id, name, fee, level = 'Beginner', rating = 800, coach = 'N/A', paymentMode = 'Online Transfer') {
+    const receiptId = 'CK-' + Math.floor(Math.random() * 1000000);
+    const date = new Date();
+    const formattedDate = date.toLocaleDateString('en-GB').replace(/\//g, ' / ');
+    const feeNum = typeof fee === 'string' ? parseInt(fee.replace(/[^\d]/g, ''), 10) : fee;
+    const inWords = numberToWords(feeNum);
     
-    doc.setFillColor(220, 163, 62);
-    doc.rect(0, 0, 210, 40, 'F');
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(24);
-    doc.text('CHESSKIDOO ACADEMY', 105, 25, { align: 'center' });
+    const receiptHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chesskidoo Receipt</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Mono:wght@400;500&family=Syne:wght@500;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f0ece4; font-family: 'Cormorant Garamond', Georgia, serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 40px 16px; }
+    .receipt { background: #ffffff; width: 100%; max-width: 620px; border-radius: 4px; box-shadow: 0 8px 40px rgba(0,0,0,0.13); overflow: hidden; position: relative; }
+    .receipt-header { background: linear-gradient(135deg, #c9960c 0%, #daa520 50%, #b8860b 100%); padding: 32px 36px 28px; text-align: center; position: relative; }
+    .receipt-header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: repeating-linear-gradient(90deg, #fff2 0px, #fff2 8px, transparent 8px, transparent 16px); }
+    .academy-name { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 700; color: #1a0e00; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 6px; }
+    .academy-tagline { font-size: 13px; color: #3a2800; letter-spacing: 1px; margin-bottom: 10px; font-style: italic; }
+    .academy-contact { font-family: 'DM Mono', monospace; font-size: 11.5px; color: #2a1a00; display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .academy-contact span { display: flex; align-items: center; gap: 5px; }
+    .receipt-title-bar { padding: 18px 36px; text-align: center; border-bottom: 1px solid #e8e0d0; }
+    .receipt-title-bar h2 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 4px; color: #1a0e00; text-transform: uppercase; }
+    .receipt-meta { display: flex; justify-content: space-between; padding: 14px 36px; border-bottom: 1px solid #e8e0d0; font-size: 13px; color: #5a4a35; }
+    .receipt-meta .label { color: #9a8a70; margin-right: 8px; }
+    .receipt-meta .value { font-family: 'DM Mono', monospace; color: #1a0e00; font-weight: 500; }
+    .receipt-section { padding: 22px 36px; border-bottom: 1px solid #e8e0d0; }
+    .section-title { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: #c9960c; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #f0e8d0; }
+    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 15px; }
+    .detail-row:not(:last-child) { border-bottom: 1px dashed #ede5d4; }
+    .detail-label { color: #7a6a55; font-size: 13px; }
+    .detail-value { color: #1a0e00; font-weight: 600; font-size: 14px; text-align: right; }
+    .detail-value.mono { font-family: 'DM Mono', monospace; }
+    .status-paid { display: inline-block; background: #e8f5e9; color: #2e7d32; border: 1.5px solid #81c784; border-radius: 4px; padding: 3px 14px; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+    .paid-stamp { position: absolute; right: 36px; top: 50%; transform: translateY(-50%) rotate(-18deg); font-family: 'Syne', sans-serif; font-size: 52px; font-weight: 700; color: rgba(46,125,50,0.08); border: 5px solid rgba(46,125,50,0.08); border-radius: 8px; padding: 4px 16px; letter-spacing: 4px; pointer-events: none; user-select: none; }
+    .receipt-total { display: flex; justify-content: space-between; align-items: center; padding: 20px 36px; background: #faf6ee; border-top: 2px solid #daa520; }
+    .total-label { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #1a0e00; letter-spacing: 1px; }
+    .total-amount { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 500; color: #1a0e00; }
+    .total-amount .currency { font-size: 18px; color: #c9960c; margin-right: 2px; }
+    .total-words { padding: 0 36px 18px; background: #faf6ee; font-size: 12px; color: #9a8a70; font-style: italic; border-bottom: 2px solid #e8e0d0; }
+    .receipt-footer { padding: 20px 36px; text-align: center; background: #fdfbf7; }
+    .receipt-footer p { font-size: 11.5px; color: #b0a090; line-height: 1.9; }
+    .receipt-footer .thank-you { font-family: 'Cormorant Garamond', serif; font-size: 14px; font-style: italic; color: #c9960c; margin-top: 6px; }
+    .chess-deco { font-size: 22px; color: #c9960c; opacity: 0.5; }
+    @media print { body { background: white; padding: 0; } .receipt { box-shadow: none; max-width: 100%; } }
+  </style>
+</head>
+<body>
+<div class="receipt">
+  <div class="receipt-header">
+    <div class="academy-name">Chesskidoo Academy</div>
+    <div class="academy-tagline">Building Champions, One Move at a Time</div>
+    <div class="academy-contact">
+      <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2a1a00" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14z"/></svg>+91 99622 99622</span>
+      <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2a1a00" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>info@chesskidoo.com</span>
+    </div>
+  </div>
+  <div class="receipt-title-bar"><h2>Official Receipt</h2></div>
+  <div class="receipt-meta">
+    <div><span class="label">Receipt No:</span><span class="value">${receiptId}</span></div>
+    <div><span class="label">Date:</span><span class="value">${formattedDate}</span></div>
+  </div>
+  <div class="receipt-section" style="position:relative">
+    <div class="paid-stamp">PAID</div>
+    <div class="section-title">Student Details</div>
+    <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value">${name}</span></div>
+    <div class="detail-row"><span class="detail-label">Level</span><span class="detail-value">${level || 'Beginner'}</span></div>
+    <div class="detail-row"><span class="detail-label">ELO Rating</span><span class="detail-value mono">${rating || 800}</span></div>
+    <div class="detail-row"><span class="detail-label">Coach</span><span class="detail-value">${coach}</span></div>
+  </div>
+  <div class="receipt-section">
+    <div class="section-title">Payment Details</div>
+    <div class="detail-row"><span class="detail-label">Tuition Fee (Monthly)</span><span class="detail-value mono">&#8377; ${feeNum.toLocaleString()}</span></div>
+    <div class="detail-row"><span class="detail-label">Payment Mode</span><span class="detail-value">${paymentMode}</span></div>
+    <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="status-paid">&#10003; Paid</span></span></div>
+  </div>
+  <div class="receipt-total"><span class="total-label">Total Paid</span><span class="total-amount"><span class="currency">&#8377;</span>${feeNum.toLocaleString()}</span></div>
+  <div class="total-words">${inWords}</div>
+  <div class="receipt-footer">
+    <p>This is a computer-generated receipt. No signature required.</p>
+    <p>For queries, contact info@chesskidoo.com</p>
+    <p class="thank-you">&#9820; &nbsp; Thank you for your patronage! &nbsp; &#9820;</p>
+  </div>
+</div>
+</body>
+</html>`;
     
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(10);
-    doc.text(`Receipt ID: ${receiptId}`, 20, 50);
-    doc.text(`Date: ${date}`, 190, 50, { align: 'right' });
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(14);
-    doc.text('OFFICIAL PAYMENT RECEIPT', 105, 65, { align: 'center' });
-    
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 75, 190, 75);
-    
-    doc.setFontSize(12);
-    doc.text('Student Name:', 20, 90);
-    doc.text(name, 190, 90, { align: 'right' });
-    
-    doc.text('Amount Paid:', 20, 105);
-    doc.text('INR ' + fee, 190, 105, { align: 'right' });
-    
-    doc.text('Payment Status:', 20, 120);
-    doc.setTextColor(46, 125, 50);
-    doc.text('PAID', 190, 120, { align: 'right' });
-    
-    doc.setTextColor(0, 0, 0);
-    doc.line(20, 130, 190, 130);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(150, 150, 150);
-    doc.text('This is a computer-generated receipt.', 105, 150, { align: 'center' });
-    doc.text('Thank you for being part of Chesskidoo!', 105, 155, { align: 'center' });
-    
-    doc.save(`Receipt_${name.replace(/\s+/g, '_')}.pdf`);
-    toast('Receipt downloaded!', 'success');
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast('Please allow popups to print receipt', 'error');
+      return;
+    }
+    printWindow.document.write(receiptHTML);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+    toast('Receipt opened for printing!', 'success');
   }
+  
+  function numberToWords(num) {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const scales = ['', 'Thousand', 'Lakh', 'Crore'];
+    
+    if (num === 0) return 'Zero Rupees Only';
+    
+    let words = '';
+    let n = num;
+    let scaleIndex = 0;
+    
+    const getChunk = (n) => {
+      if (n < 20) return ones[n];
+      if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+      return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + getChunk(n % 100) : '');
+    };
+    
+    if (n >= 10000000) {
+      words += getChunk(Math.floor(n / 10000000)) + ' Crore ';
+      n %= 10000000;
+    }
+    if (n >= 100000) {
+      words += getChunk(Math.floor(n / 100000)) + ' Lakh ';
+      n %= 100000;
+    }
+    if (n >= 1000) {
+      words += getChunk(Math.floor(n / 1000)) + ' Thousand ';
+      n %= 1000;
+    }
+    if (n > 0) {
+      words += getChunk(n);
+    }
+    
+    return words + ' Rupees Only';
+  }
+  
   function showReceiptPreview() { openModal('receipt-preview-modal'); }
   function printReceipt() { window.print(); }
 
