@@ -615,8 +615,8 @@
     lastDueCount = dueStudents.length;
     console.log('Notification counts set - Students:', lastStudCount, 'Messages:', lastMsgCount);
   }
-    
-    function startNotificationPolling() {
+  
+  function startNotificationPolling() {
     if (notificationPolling) return;
     
     notificationPolling = setInterval(async () => {
@@ -687,9 +687,8 @@
     
     console.log('Real-time notifications polling started (15s interval)');
   }
-    
-    console.log('Real-time notifications enabled (polling every 15s)');
-  }
+
+
 
   async function updateMsgBadge() {
     try {
@@ -3054,6 +3053,7 @@
   window.toast = toast;
   window.$ = $;
   window.toggleSidebar = toggleSidebar;
+  window.toggleEye = toggleEye;
   window.setPage = setPage;
   window.doLogin = doLogin;
   window.doLogout = doLogout;
