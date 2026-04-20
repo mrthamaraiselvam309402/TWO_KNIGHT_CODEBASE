@@ -429,6 +429,10 @@
   function getCoachSpecialty(c) { return c.specialization || ''; }
   function getCoachSalary(c) { return c.hourly_rate || 0; }
   function getCoachAvailability(c) { return c.availability || ''; }
+  function getCoachStatus(c) { return c.status || c.account_status || 'active'; }
+  function getCoachEmail(c) { return c.email || ''; }
+  function getCoachExperience(c) { return c.experience || 0; }
+  function getCoachRating(c) { return c.rating || 0; }
 
   function getEventDate(e) { return e.date || e.event_date || ''; }
   function getEventType(e) { return e.type || e.event_type || 'Tournament'; }
@@ -1208,10 +1212,12 @@
       if (res.ok) {
         // Log rating history if changed
         if (newElo !== oldElo) {
-          await apiCall('/api/rating_history', {
-            method: 'POST',
-            body: JSON.stringify({ student_id: id, rating: newElo, change_type: 'manual', notes: 'Manual adjustment' })
-          });
+          try {
+            await apiCall('/api/rating_history', {
+              method: 'POST',
+              body: JSON.stringify({ student_id: id, rating: newElo, change_type: 'manual', notes: 'Manual adjustment' })
+            });
+          } catch (e) { console.warn('Rating history table missing, skipping log.'); }
         }
         toast('Student updated!', 'success');
         closeModals();
