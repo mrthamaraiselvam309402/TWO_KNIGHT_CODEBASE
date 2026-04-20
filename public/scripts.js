@@ -2257,6 +2257,10 @@
     if (!jsPDF) {
       // Create PDF without external library - use browser print
       const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        alert('Please allow popups to generate the report, then try again');
+        return;
+      }
       const date = new Date().toLocaleDateString('en-GB').replace(/\//g, ' / ');
       
       const totalStudents = allStudents.length;
