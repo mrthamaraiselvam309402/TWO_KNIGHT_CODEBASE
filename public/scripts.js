@@ -942,6 +942,20 @@
     return sessions.sort((a, b) => new Date(b.loginAt) - new Date(a.loginAt)).slice(0, 20);
   }
 
+  function logAudit(table, recordId, action, oldValue, newValue) {
+    const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
+    auditLogs.push({
+      table,
+      record_id: recordId,
+      action,
+      old_value: oldValue,
+      new_value: newValue,
+      timestamp: new Date().toISOString(),
+      role: JSON.parse(localStorage.getItem('chesskidoo_auth') || '{}').role || 'system'
+    });
+    localStorage.setItem('audit_logs', JSON.stringify(auditLogs.slice(-100)));
+  }
+
   function openProfile() {
     openModal('profile-modal');
     renderAccountActivity();
