@@ -13,7 +13,7 @@
   // ═══════════════════════════════════════════════════════════════
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
   const API_BASE = '/api';
-  const IMGBB_API_KEY = 'a4437c0a8e92e0d9c0f0c8c2c3e6e0a';
+  const IMGBB_API_KEY = '241cb8bd893bf11e571f404052021896';
   const $ = id => document.getElementById(id);
   
   // ═══════════════════════════════════════════════════════════════
