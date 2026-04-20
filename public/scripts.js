@@ -1916,117 +1916,156 @@
   }
   function initiatePay(provider) { toast('Processing ' + provider); setTimeout(() => { closeModals(); loadAllData(true); }, 2000); }
   function downloadReceipt(id, name, fee) {
-    console.log('downloadReceipt called:', id, name, fee);
-    try {
-    const date = new Date().toLocaleDateString('en-GB').split('/').reverse().join(' / ');
-    const receiptId = 'CK-' + Math.floor(100000 + Math.random()*900000);
-    const student = allStudents ? allStudents.find(s => String(s.id) === String(id)) : null;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const date = new Date().toLocaleDateString('en-IN');
+    const receiptId = 'CK-' + Math.floor(Math.random()*1000000);
+    const student = allStudents.find(s => String(s.id) === String(id));
+    const studentName = name;
     const amount = parseInt(fee) || 0;
-    const amountWords = numberToWords ? numberToWords(amount) : (amount + ' rupees');
-    const studentName = name || 'Student';
-    const studentLevel = student ? (getStudentLevel ? getStudentLevel(student) : 'N/A') : 'N/A';
-    const studentRating = student ? (getStudentRating ? getStudentRating(student) : '800') : '800';
-    const coachName = (student && student.coach_id && allCoaches) ? (getCoachName ? getCoachName(allCoaches.find(c => String(c.id) === String(student.coach_id))) : 'Not Assigned';
+    const amountWords = numberToWords(amount);
     
-    const receiptHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Chesskidoo Receipt</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Mono:wght@400;500&family=Syne:wght@500;700&display=swap" rel="stylesheet"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #f0ece4; font-family: 'Cormorant Garamond', Georgia, serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 40px 16px; }
-    .receipt { background: #ffffff; width: 100%; max-width: 620px; border-radius: 4px; box-shadow: 0 8px 40px rgba(0,0,0,0.13); overflow: hidden; position: relative; }
-    .receipt-header { background: linear-gradient(135deg, #c9960c 0%, #daa520 50%, #b8860b 100%); padding: 32px 36px 28px; text-align: center; position: relative; }
-    .receipt-header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: repeating-linear-gradient(90deg, #fff2 0px, #fff2 8px, transparent 8px, transparent 16px); }
-    .academy-name { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 700; color: #1a0e00; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 6px; }
-    .academy-tagline { font-size: 13px; color: #3a2800; letter-spacing: 1px; margin-bottom: 10px; font-style: italic; }
-    .academy-contact { font-family: 'DM Mono', monospace; font-size: 11.5px; color: #2a1a00; display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap; }
-    .academy-contact span { display: flex; align-items: center; gap: 5px; }
-    .receipt-title-bar { padding: 18px 36px; text-align: center; border-bottom: 1px solid #e8e0d0; }
-    .receipt-title-bar h2 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 4px; color: #1a0e00; text-transform: uppercase; }
-    .receipt-meta { display: flex; justify-content: space-between; padding: 14px 36px; border-bottom: 1px solid #e8e0d0; font-size: 13px; color: #5a4a35; }
-    .receipt-meta .label { color: #9a8a70; margin-right: 8px; }
-    .receipt-meta .value { font-family: 'DM Mono', monospace; color: #1a0e00; font-weight: 500; }
-    .receipt-section { padding: 22px 36px; border-bottom: 1px solid #e8e0d0; position: relative; }
-    .section-title { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: #c9960c; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #f0e8d0; }
-    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 15px; }
-    .detail-row:not(:last-child) { border-bottom: 1px dashed #ede5d4; }
-    .detail-label { color: #7a6a55; font-size: 13px; }
-    .detail-value { color: #1a0e00; font-weight: 600; font-size: 14px; text-align: right; }
-    .detail-value.mono { font-family: 'DM Mono', monospace; }
-    .status-paid { display: inline-block; background: #e8f5e9; color: #2e7d32; border: 1.5px solid #81c784; border-radius: 4px; padding: 3px 14px; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-    .paid-stamp { position: absolute; right: 36px; top: 50%; transform: translateY(-50%) rotate(-18deg); font-family: 'Syne', sans-serif; font-size: 52px; font-weight: 700; color: rgba(46,125,50,0.08); border: 5px solid rgba(46,125,50,0.08); border-radius: 8px; padding: 4px 16px; letter-spacing: 4px; pointer-events: none; user-select: none; }
-    .receipt-total { display: flex; justify-content: space-between; align-items: center; padding: 20px 36px; background: #faf6ee; border-top: 2px solid #daa520; }
-    .total-label { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #1a0e00; letter-spacing: 1px; }
-    .total-amount { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 500; color: #1a0e00; }
-    .total-amount .currency { font-size: 18px; color: #c9960c; margin-right: 2px; }
-    .total-words { padding: 0 36px 18px; background: #faf6ee; font-size: 12px; color: #9a8a70; font-style: italic; border-bottom: 2px solid #e8e0d0; }
-    .receipt-footer { padding: 20px 36px; text-align: center; background: #fdfbf7; }
-    .receipt-footer p { font-size: 11.5px; color: #b0a090; line-height: 1.9; }
-    .receipt-footer .thank-you { font-family: 'Cormorant Garamond', serif; font-size: 14px; font-style: italic; color: #c9960c; margin-top: 6px; }
-    @media print { body { background: white; padding: 0; } .receipt { box-shadow: none; max-width: 100%; } }
-  </style>
-</head>
-<body>
-<div class="receipt">
-  <div class="receipt-header">
-    <div class="academy-name">Chesskidoo Academy</div>
-    <div class="academy-tagline">Building Champions, One Move at a Time</div>
-    <div class="academy-contact">
-      <span>📞 +91 99622 99622</span>
-      <span>✉️ info@chesskidoo.com</span>
-    </div>
-  </div>
-  <div class="receipt-title-bar"><h2>Official Receipt</h2></div>
-  <div class="receipt-meta">
-    <div><span class="label">Receipt No:</span><span class="value">${receiptId}</span></div>
-    <div><span class="label">Date:</span><span class="value">${date}</span></div>
-  </div>
-  <div class="receipt-section" style="position:relative">
-    <div class="paid-stamp">PAID</div>
-    <div class="section-title">Student Details</div>
-    <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value">${studentName}</span></div>
-    <div class="detail-row"><span class="detail-label">Level</span><span class="detail-value">${studentLevel}</span></div>
-    <div class="detail-row"><span class="detail-label">ELO Rating</span><span class="detail-value mono">${studentRating}</span></div>
-    <div class="detail-row"><span class="detail-label">Coach</span><span class="detail-value">${coachName}</span></div>
-  </div>
-  <div class="receipt-section">
-    <div class="section-title">Payment Details</div>
-    <div class="detail-row"><span class="detail-label">Tuition Fee (Monthly)</span><span class="detail-value mono">₹ ${amount.toLocaleString('en-IN')}</span></div>
-    <div class="detail-row"><span class="detail-label">Payment Mode</span><span class="detail-value">Online Transfer</span></div>
-    <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="status-paid">✓ Paid</span></span></div>
-  </div>
-  <div class="receipt-total">
-    <span class="total-label">Total Paid</span>
-    <span class="total-amount"><span class="currency">₹</span>${amount.toLocaleString('en-IN')}</span>
-  </div>
-  <div class="total-words">${amountWords} Rupees Only</div>
-  <div class="receipt-footer">
-    <p>This is a computer-generated receipt. No signature required.</p>
-    <p>For queries, contact info@chesskidoo.com</p>
-    <p class="thank-you">♔ &nbsp; Thank you for your patronage! &nbsp; ♔</p>
-  </div>
-</div>
-<script>window.onload = function() { window.print(); }</script>
-</body>
-</html>`;
-
-try {
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        toast('Please allow popups to download receipt', 'error');
-        return;
-      }
-      printWindow.document.write(receiptHtml);
-      printWindow.document.close();
-toast('Receipt opened! Print or save as PDF', 'success');
-    } catch (e) {
-      console.error('Receipt error:', e);
-      toast('Error generating receipt: ' + e.message, 'error');
-    }
+    //Header - Gold gradient bar
+    doc.setFillColor(220, 163, 62);
+    doc.rect(0, 0, 210, 45, 'F');
+    
+    //Academy name
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(26);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CHESSKIDOO ACADEMY', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Building Champions, One Move at a Time', 105, 28, { align: 'center' });
+    doc.setFontSize(9);
+    doc.text('📞 +91 99622 99622 | ✉️ info@chesskidoo.com', 105, 35, { align: 'center' });
+    
+    //Receipt title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('OFFICIAL RECEIPT', 105, 55, { align: 'center' });
+    
+    //Receipt info box
+    doc.setDrawColor(220, 163, 62);
+    doc.setLineWidth(0.5);
+    doc.line(20, 60, 190, 60);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text('Receipt No:', 20, 70);
+    doc.text('Date:', 120, 70);
+    doc.setTextColor(0, 0, 0);
+    doc.text(receiptId, 55, 70);
+    doc.text(date, 190, 70, { align: 'right' });
+    
+    //Student details section
+    doc.setFillColor(250, 250, 250);
+    doc.rect(20, 78, 170, 35, 'F');
+    doc.setDrawColor(230, 230, 230);
+    doc.rect(20, 78, 170, 35, 'S');
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(220, 163, 62);
+    doc.text('STUDENT DETAILS', 25, 86);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    
+    let yPos = 94;
+    doc.text('Name:', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text(studentName, 55, yPos);
+    
+    yPos += 7;
+    doc.setTextColor(60, 60, 60);
+    doc.text('Level:', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text(student ? getStudentLevel(student) : 'N/A', 55, yPos);
+    
+    yPos += 7;
+    doc.setTextColor(60, 60, 60);
+    doc.text('ELO Rating:', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text(student ? String(getStudentRating(student)) : 'N/A', 55, yPos);
+    
+    yPos += 7;
+    doc.setTextColor(60, 60, 60);
+    doc.text('Coach:', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    const coach = student ? allCoaches.find(c => String(c.id) === String(student.coach_id)) : null;
+    doc.text(coach ? getCoachName(coach) : 'Not Assigned', 55, yPos);
+    
+    //Payment details
+    doc.setFillColor(245, 245, 245);
+    doc.rect(20, 118, 170, 45, 'F');
+    doc.setDrawColor(230, 230, 230);
+    doc.rect(20, 118, 170, 45, 'S');
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(220, 163, 62);
+    doc.text('PAYMENT DETAILS', 25, 126);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    yPos = 134;
+    doc.setTextColor(60, 60, 60);
+    doc.text('Tuition Fee (Monthly):', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text('₹' + amount.toLocaleString('en-IN'), 85, yPos, { align: 'right' });
+    
+    yPos += 7;
+    doc.setTextColor(60, 60, 60);
+    doc.text('Payment Mode:', 25, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Online Transfer', 85, yPos, { align: 'right' });
+    
+    yPos += 7;
+    doc.setTextColor(60, 60, 60);
+    doc.text('Status:', 25, yPos);
+    doc.setTextColor(46, 125, 50);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAID', 85, yPos, { align: 'right' });
+    
+    //Total
+    doc.setDrawColor(220, 163, 62);
+    doc.setLineWidth(0.5);
+    doc.line(20, 168, 190, 168);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Total Paid:', 25, 176);
+    doc.setTextColor(46, 125, 50);
+    doc.text('₹' + amount.toLocaleString('en-IN'), 190, 176, { align: 'right' });
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(120, 120, 120);
+    doc.text(`(${amountWords} Rupees Only)`, 25, 182);
+    
+    //Footer
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, 190, 190, 190);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    doc.text('This is a computer-generated receipt. No signature required.', 105, 196, { align: 'center' });
+    doc.text('For queries, contact info@chesskidoo.com', 105, 201, { align: 'center' });
+    doc.text('Thank you for your patronage! 🏆', 105, 206, { align: 'center' });
+    
+    //Watermark
+    doc.setFontSize(40);
+    doc.setTextColor(230, 230, 230);
+    doc.text('PAID', 105, 140, { align: 'center', rotate: 45 });
+    
+    doc.save(`Receipt_${name.replace(/\s+/g, '_')}.pdf`);
+    toast('Receipt downloaded!', 'success');
   }
   
   function numberToWords(n) {
