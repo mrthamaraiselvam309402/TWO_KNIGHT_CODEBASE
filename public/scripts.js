@@ -2794,18 +2794,23 @@
     chatContainer.scrollTop = chatContainer.scrollHeight;
     
     try {
-      // Gather Academy Context
+      // Gather Academy Context - Real-time data
       const studentsCount = allStudents.length;
       const coachesCount = allCoaches.length;
       const totalRevenue = allStudents.reduce((acc, s) => acc + (getStudentMonthlyFee(s) || 0), 0);
+      const activeStudents = allStudents.filter(s => getStudentStatus(s) === 'active').length;
+      const pendingPayments = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
       const activeTab = document.querySelector('.nav-item.active')?.dataset.page || 'Dashboard';
       
       const context = {
         students: studentsCount,
+        activeStudents: activeStudents,
         coaches: coachesCount,
         revenue: totalRevenue,
+        pendingPayments: pendingPayments,
         moduleFocus: activeTab,
-        user: currentUser?.displayName || 'Admin'
+        user: role || 'Admin',
+        timestamp: new Date().toISOString()
       };
 
       // Execute tool-calling pipeline
@@ -2835,10 +2840,12 @@
       
     } catch (e) {
       thinkingMsg.remove();
+      console.error('AI Query Error:', e);
       const errorMsg = document.createElement('div');
       errorMsg.className = 'ai-ws-msg bot';
-      errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️ Error processing your request. Please try again.</div>`;
+      errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️ Sorry, I encountered an error: ${e.message}. Try again or check your connection.</div>`;
       chatContainer.appendChild(errorMsg);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
     }
   }
   
@@ -2859,6 +2866,45 @@
       panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
     }
   }
+  
+  window.sendLoginChat = async function() {
+    const input = $('login-chat-input');
+    if (!input || !input.value.trim()) return;
+    
+    const msg = input.value.trim();
+    input.value = '';
+    
+    const container = $('login-chat-msgs');
+    if (container) {
+      container.innerHTML += `<div class="chat-msg user">${escapeHtml(msg)}</div>`;
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    try {
+      const res = await apiCall('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, role: 'visitor', context: {} })
+      });
+      
+      const data = await res.json();
+      if (container) {
+        container.innerHTML += `<div class="chat-msg bot">${data.message || 'AI is thinking...'}</div>`;
+        container.scrollTop = container.scrollHeight;
+      }
+    } catch (e) {
+      if (container) {
+        container.innerHTML += `<div class="chat-msg bot" style="color:var(--danger)">Error: ${e.message}</div>`;
+      }
+    }
+  };
+  
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
   function sendChat() {
     const input = $('chat-input');
     if (!input || !input.value.trim()) return;
@@ -3043,6 +3089,7 @@
   window.toggleChat = toggleChat;
   window.toggleLoginChat = toggleLoginChat;
   window.sendChat = sendChat;
+  window.sendLoginChat = sendLoginChat;
   window.toggleTheme = toggleTheme;
   window.closeModals = closeModals;
   window.openModal = openModal;

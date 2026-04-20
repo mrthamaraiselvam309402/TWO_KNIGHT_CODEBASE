@@ -12,20 +12,27 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const message = body.message || '';
     const userRole = body.role || 'admin';
-    const studentsData = body.context?.students ? `Academy has ${body.context.students} students.` : '';
+    const ctx = body.context || {};
+    const studentsData = ctx.students ? `Academy has ${ctx.students} students, ${ctx.activeStudents || 0} active.` : '';
+    const revenueData = ctx.revenue ? `Current revenue: ₹${ctx.revenue.toLocaleString()}` : '';
+    const pendingData = ctx.pendingPayments ? `${ctx.pendingPayments} payments pending` : '';
     
     const API_KEY = Deno.env.get('GEMINI_API_KEY');
     
-    // Fallback if no key is set yet
+    // Fallback if no key is set yet - use context data
     if (!API_KEY) {
       const lowerMessage = message.toLowerCase();
-      let reply = "Hi! I am the Chesskidoo AI Assistant. (Note: Gemini API key is currently missing, so I am running in offline mode).";
+      let reply = `Hi! I'm the Chesskidoo AI Assistant. 📊 ${studentsData} ${revenueData}`;
       if (lowerMessage.includes('student') || lowerMessage.includes('enroll')) {
-        reply = "You can add new students using the 'Enroll' option in the Students tab.";
-      } else if (lowerMessage.includes('payment') || lowerMessage.includes('fee')) {
-        reply = "Check the Payments tab to see outstanding dues and mark cadets as paid.";
-      } else if (lowerMessage.includes('revenue')) {
-        reply = "I don't have the exact numbers, but your Dashboard provides a full Revenue Analysis.";
+        reply = `You have ${ctx.students || 0} students. ${ctx.activeStudents || 0} are active. Add new students via the 'Enroll' button in the Students tab.`;
+      } else if (lowerMessage.includes('payment') || lowerMessage.includes('fee') || lowerMessage.includes('due')) {
+        reply = `You have ${ctx.pendingPayments || 0} pending payments. Check the Payments tab to see dues and mark cadets as paid.`;
+      } else if (lowerMessage.includes('revenue') || lowerMessage.includes('income')) {
+        reply = `Your monthly revenue is approximately ₹${(ctx.revenue || 0).toLocaleString()}. The Dashboard provides detailed revenue analysis.`;
+      } else if (lowerMessage.includes('coach') || lowerMessage.includes('teacher')) {
+        reply = `You have ${ctx.coaches || 0} coaches. Manage them in the Coach Management tab.`;
+      } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('help')) {
+        reply = `Hello! I can help with student info, payments, revenue, and coach management. ${studentsData} ${pendingData}. What would you like to know?`;
       }
       return new Response(JSON.stringify({ message: reply }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -40,9 +47,10 @@ Expertise:
 - Culture: Knowledge of Indian prodigies, major local tournaments, and parent communication styles.
 
 Context Data:
-- Academy Stats: ${body.context?.students || '0'} students | ${body.context?.coaches || '0'} coaches | ₹${body.context?.revenue || '0'} revenue
-- Current Focus: ${body.context?.moduleFocus || 'Dashboard'}
-- AI State: RAG-Augmented retrieval from Academy DB.
+- Academy Stats: ${ctx.students || '0'} students | ${ctx.activeStudents || 0} active | ${ctx.coaches || '0'} coaches | ₹${(ctx.revenue || 0).toLocaleString()} revenue
+- Payments: ${ctx.pendingPayments || 0} pending
+- Current Focus: ${ctx.moduleFocus || 'Dashboard'}
+- AI State: Real-time data from Academy DB.
 
 Objectives:
 - Provide high-level business strategy. 
