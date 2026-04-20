@@ -1781,8 +1781,8 @@
           <div class="ach-sub">${student ? getStudentName(student) : 'Unknown'} • ${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : 'N/A'}</div>
         </div>
         ${isAdmin ? `
-          <div style="position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:10">
-            <button class="btn btn-outline-grey btn-sm" style="padding:4px 8px" onclick="editAchievement('${a.id}')" title="Edit">Edit</button>
+          <div style="position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;z-index:10">
+            <button class="btn btn-outline-grey btn-sm" style="padding:3px 8px" onclick="editAchievement('${a.id}')" title="Edit">Edit</button>
             <button class="del-btn" style="width:24px;height:24px;font-size:12px;line-height:1" onclick="confirmDeleteAchievement('${a.id}', '${(a.title || '').replace(/'/g, "\\'")}')">×</button>
           </div>
         ` : ''}
