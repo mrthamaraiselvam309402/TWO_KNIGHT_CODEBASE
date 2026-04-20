@@ -2245,24 +2245,30 @@
 
   function generateReportPDF() {
     console.log('generateReportPDF clicked');
-    alert('Button works!');
     toast('Generating PDF...', 'info');
     try {
       generateReportPDFContent();
-      alert('Done!');
     } catch (e) {
+      console.error('PDF error:', e);
       alert('Error: ' + e.message);
     }
   }
   
-  // Add event listener when DOM ready
-  document.addEventListener('DOMContentLoaded', function() {
-    var pdfBtn = document.getElementById('download-pdf-btn');
-    if (pdfBtn) {
-      pdfBtn.onclick = generateReportPDF;
-      console.log('PDF button event listener attached');
-    }
-  });
+  // Attach event listener immediately and on DOM ready
+  var pdfBtn = document.getElementById('download-pdf-btn');
+  if (pdfBtn) {
+    pdfBtn.onclick = generateReportPDF;
+    console.log('PDF button attached immediately');
+  } else {
+    console.log('PDF button not found, will attach on DOMContentLoaded');
+    document.addEventListener('DOMContentLoaded', function() {
+      var btn = document.getElementById('download-pdf-btn');
+      if (btn) {
+        btn.onclick = generateReportPDF;
+        console.log('PDF button attached on DOMContentLoaded');
+      }
+    });
+  }
   
   function generateReportPDFContent() {
     let jsPDF;
