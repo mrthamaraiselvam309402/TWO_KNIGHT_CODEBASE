@@ -2672,13 +2672,14 @@
   // THEME & PDF
   // ═══════════════════════════════════════════════════════════════
   function toggleTheme() { 
+    console.log('toggleTheme clicked');
     const current = document.body.dataset.theme || 'dark';
     const next = current === 'dark' ? 'light' : 'dark';
     document.body.dataset.theme = next;
+    document.documentElement.dataset.theme = next;
     localStorage.setItem('chesskidoo_theme', next);
-    // Force CSS recalc
-    document.documentElement.style.setProperty('--test', Math.random());
-    alert('Theme switched to: ' + next);
+    console.log('Theme is now:', next, 'bodyTheme:', document.body.dataset.theme);
+    window.location.reload();
   }
   function initTheme() {
     const saved = localStorage.getItem('chesskidoo_theme');
