@@ -13,6 +13,7 @@
   // ═══════════════════════════════════════════════════════════════
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
   const API_BASE = '/api';
+  const IMGBB_API_KEY = 'a4437c0a8e92e0d9c0f0c8c2c3e6e0a';
   const $ = id => document.getElementById(id);
   
   // ═══════════════════════════════════════════════════════════════
@@ -1882,13 +1883,52 @@
     openModal('award-modal'); 
   }
   function onAwardStudentChange() { }
+
+  async function uploadToImgbb(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      if (data.success) {
+        return data.data.url;
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (e) {
+      console.error('Imgbb upload error:', e);
+      return null;
+    }
+  }
+
   async function saveAward() {
     const id = $('award-sid').value;
+    const fileInput = $('award-img-file');
+    const urlInput = $('award-img-url');
+    
+    let img_url = urlInput ? urlInput.value : '';
+    
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      const file = fileInput.files[0];
+      toast('Uploading image...', 'info');
+      const uploadedUrl = await uploadToImgbb(file);
+      if (uploadedUrl) {
+        img_url = uploadedUrl;
+        if (urlInput) urlInput.value = img_url;
+      } else {
+        toast('Image upload failed, please try URL instead', 'error');
+        return;
+      }
+    }
+    
     const data = {
       id: id || generateClientId(),
       student_id: $('award-student').value,
       title: $('award-title').value,
-      img_url: $('award-img-url').value,
+      img_url: img_url,
       date_achieved: new Date().toISOString().split('T')[0]
     };
     
