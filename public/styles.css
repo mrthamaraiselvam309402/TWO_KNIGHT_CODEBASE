@@ -111,6 +111,85 @@ body[data-theme="light"] .main {
   background: #f5f7fa !important;
 }
 
+/* Light theme cards */
+html[data-theme="light"] .card,
+body[data-theme="light"] .card {
+  background: #ffffff !important;
+  border-color: rgba(0,0,0,0.1) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+}
+
+/* Light theme inputs */
+html[data-theme="light"] input,
+body[data-theme="light"] input,
+html[data-theme="light"] select,
+body[data-theme="light"] select,
+html[data-theme="light"] textarea,
+body[data-theme="light"] textarea {
+  background: #ffffff !important;
+  border-color: rgba(0,0,0,0.15) !important;
+  color: #1a1a2e !important;
+}
+
+/* Light theme tables */
+html[data-theme="light"] .table-wrap,
+body[data-theme="light"] .table-wrap {
+  background: #ffffff !important;
+  border-color: rgba(0,0,0,0.1) !important;
+}
+
+html[data-theme="light"] th,
+body[data-theme="light"] th {
+  background: #f5f7fa !important;
+  color: #4a4a5e !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+html[data-theme="light"] td,
+body[data-theme="light"] td {
+  border-color: rgba(0,0,0,0.06) !important;
+  color: #1a1a2e !important;
+}
+
+/* Light theme modals */
+html[data-theme="light"] .modal-box,
+body[data-theme="light"] .modal-box {
+  background: #ffffff !important;
+  border: 1px solid rgba(0,0,0,0.1) !important;
+}
+
+/* Light theme login box */
+html[data-theme="light"] .login-box,
+body[data-theme="light"] .login-box {
+  background: #ffffff !important;
+  border: 1px solid rgba(0,0,0,0.1) !important;
+}
+
+/* Light theme buttons */
+html[data-theme="light"] .btn-outline,
+body[data-theme="light"] .btn-outline {
+  border-color: rgba(0,0,0,0.15) !important;
+  color: #1a1a2e !important;
+}
+
+/* Light theme profile */
+html[data-theme="light"] .top-profile-info,
+body[data-theme="light"] .top-profile-info {
+  background: transparent !important;
+}
+
+/* Light theme logo text */
+html[data-theme="light"] .logo-text,
+body[data-theme="light"] .logo-text {
+  color: #b8910f !important;
+}
+
+/* Light theme pages */
+html[data-theme="light"] .page,
+body[data-theme="light"] .page {
+  background: #f5f7fa !important;
+}
+
 /* ── RESET & BASE ── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
