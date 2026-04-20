@@ -13,6 +13,14 @@ Deno.serve(async (req) => {
   
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  function generateId() {
+    return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   function transformEvent(e) {
     return {
       id: e.id,
@@ -75,8 +83,10 @@ Deno.serve(async (req) => {
     if (req.method === 'POST') {
       const { title, date, type, location, increment_registrations, ...rest } = body;
       
+      console.log('Creating event with body:', JSON.stringify(body));
+      
       let newEvent = { 
-        id: crypto.randomUUID().replace(/-/g, ''), 
+        id: generateId(), 
         title: title || '',
         event_date: date || body.event_date || '',
         event_time: body.time || body.event_time || '',
@@ -91,13 +101,18 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString()
       };
       
+      console.log('Inserting event:', JSON.stringify(newEvent));
+      
       const { data: insertedEvent, error: insertError } = await supabase
         .from('events')
         .insert(newEvent)
         .select()
         .single();
       
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Event insert error:', JSON.stringify(insertError));
+        throw insertError;
+      }
       return new Response(JSON.stringify(insertedEvent ? transformEvent(insertedEvent) : null), {
         status: 201,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -200,7 +215,8 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Events error:', error);
+    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });

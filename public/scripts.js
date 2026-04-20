@@ -263,9 +263,9 @@
     };
     console.log('API Call:', options.method || 'GET', url);
     const response = await fetch(url, { ...options, headers });
+    const responseBody = await response.clone().json().catch(() => null);
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.warn(`API Error: ${options.method || 'GET'} ${url} -> ${response.status} ${response.statusText}`, errorData);
+      console.warn(`API Error: ${options.method || 'GET'} ${url} -> ${response.status} ${response.statusText}`, responseBody);
     }
     return response;
   }
@@ -1368,6 +1368,52 @@
   function viewCoachSchedule(id) { 
     const c = allCoaches.find(x => String(x.id) === String(id));
     if (c) $('sched-coach-name').innerText = getCoachName(c);
+    
+    const assignedStudents = allStudents.filter(s => String(s.coach_id) === String(id));
+    const container = $('schedule-container');
+    
+    if (!container) { openModal('coach-schedule-modal'); return; }
+    
+    if (assignedStudents.length === 0) {
+      container.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No students assigned to this coach</p></div>';
+    } else {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const timeSlots = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+      
+      const studentSchedules = {};
+      assignedStudents.forEach(s => {
+        const batchTime = s.batch_time || s.session_time || '';
+        const batchDay = s.batch_day || s.session_day || s.preferred_day || '';
+        if (batchTime || batchDay) {
+          const key = `${getStudentName(s)}`;
+          studentSchedules[key] = {
+            time: batchTime || '17:00',
+            day: batchDay || 'Sat',
+            level: getStudentLevel(s),
+            rating: getStudentRating(s)
+          };
+        }
+      });
+      
+      let scheduleHtml = '<table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="text-align:left;padding:8px;background:var(--surface);color:var(--gold)">Day</th><th style="text-align:left;padding:8px;background:var(--surface);color:var(--gold)">Time</th><th style="text-align:left;padding:8px;background:var(--surface);color:var(--gold)">Student</th><th style="text-align:left;padding:8px;background:var(--surface);color:var(--gold)">Level</th></tr>';
+      
+      Object.entries(studentSchedules).forEach(([name, data]) => {
+        scheduleHtml += `<tr>
+          <td style="padding:8px;border-bottom:1px solid var(--border)">${data.day}</td>
+          <td style="padding:8px;border-bottom:1px solid var(--border)">${formatTime(data.time)}</td>
+          <td style="padding:8px;border-bottom:1px solid var(--border);font-weight:600">${name}</td>
+          <td style="padding:8px;border-bottom:1px solid var(--border)">${data.level} (${data.rating})</td>
+        </tr>`;
+      });
+      scheduleHtml += '</table>';
+      
+      if (Object.keys(studentSchedules).length === 0) {
+        container.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No batch schedules found for assigned students</p></div>';
+      } else {
+        container.innerHTML = scheduleHtml;
+      }
+    }
+    
     openModal('coach-schedule-modal'); 
   }
 
@@ -1584,9 +1630,18 @@
     openModal('delete-confirm-modal');
   };
   
+  function generateClientId() {
+    return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   async function saveEvent() {
     const id = $('ev-id').value;
     const data = {
+      id: id || generateClientId(),
       title: $('ev-title').value,
       event_date: $('ev-date').value,
       event_time: $('ev-time').value,
@@ -1617,6 +1672,7 @@
         loadAllData(true);
       } else {
         const err = await res.json().catch(() => ({}));
+        console.error('Event save error:', err);
         toast('Failed to save event: ' + (err.error || 'Server error'), 'error');
       }
     } catch (e) { 
@@ -1696,6 +1752,7 @@
   async function saveAward() {
     const id = $('award-sid').value;
     const data = {
+      id: id || generateClientId(),
       student_id: $('award-student').value,
       title: $('award-title').value,
       img_url: $('award-img-url').value,
@@ -1709,12 +1766,24 @@
       if (id) {
         const existing = achievementsData.find(x => String(x.id) === String(id));
         logAudit('achievements', id, 'update', existing, data);
-        await apiCall(`/api/achievements?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
-        toast('Achievement updated!', 'success');
+        const res = await apiCall(`/api/achievements?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
+        if (res.ok) {
+          toast('Achievement updated!', 'success');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          toast('Failed: ' + (err.error || 'Server error'), 'error');
+          return;
+        }
       } else {
-        await apiCall('/api/achievements', { method: 'POST', body: JSON.stringify(data) });
-        logAudit('achievements', 'new', 'create', null, data);
-        toast('Achievement published!', 'success');
+        const res = await apiCall('/api/achievements', { method: 'POST', body: JSON.stringify(data) });
+        if (res.ok) {
+          logAudit('achievements', 'new', 'create', null, data);
+          toast('Achievement published!', 'success');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          toast('Failed: ' + (err.error || 'Server error'), 'error');
+          return;
+        }
       }
       closeModals();
       loadAllData(true);
@@ -1750,12 +1819,13 @@
         <td><div style="font-weight:600">${getStudentName(s)}</div><small style="color:var(--ivory3)">${getStudentLevel(s)}</small></td>
         <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
         <td><span class="${statusClass}">${status}</span></td>
-        <td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">
           ${status === 'Due' || status === 'Pending' ? 
             `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
              <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
              <button class="btn btn-outline btn-sm" onclick="sendPaymentReminder('${s.id}')">💬 Remind</button>` : 
-            `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">📄 Receipt</button>`}
+            `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">📄 Receipt</button>
+             <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>`}
         </td>
       </tr>`;
     }).join('');

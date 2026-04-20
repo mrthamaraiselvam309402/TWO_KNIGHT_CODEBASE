@@ -13,6 +13,14 @@ Deno.serve(async (req) => {
   
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  function generateId() {
+    return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   async function getStudentName(studentId) {
     if (!studentId) return null;
     try {
@@ -95,7 +103,7 @@ Deno.serve(async (req) => {
       }
       
       const newAchievement = { 
-        id: crypto.randomUUID().replace(/-/g, ''), 
+        id: generateId(), 
         student_id: studentId,
         title: body.title || '',
         description: body.description || '',
@@ -150,7 +158,8 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Achievements error:', error);
+    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });

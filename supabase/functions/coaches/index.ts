@@ -13,6 +13,14 @@ Deno.serve(async (req) => {
   
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  function generateId() {
+    return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   function transformCoach(c) {
     return {
       id: c.id,
@@ -78,18 +86,25 @@ Deno.serve(async (req) => {
     if (req.method === 'POST') {
       console.log('POST /coaches body:', JSON.stringify(body));
       
+      const coachName = body.name || '';
+      const coachSpecialty = body.specialty || body.specialization || '';
+      const coachRate = body.salary || body.hourly_rate || 0;
+      
       const newCoach = { 
-        id: crypto.randomUUID().replace(/-/g, ''), 
-        name: body.name || '',
+        id: generateId(), 
+        name: coachName,
+        full_name: coachName,
         email: body.email || null,
         phone: body.phone || '',
-        specialization: body.specialty || body.specialization || '',
+        specialization: coachSpecialty,
+        specialty: coachSpecialty,
         experience: body.experience || null,
         rating: body.rating || 0,
         bio: body.bio || '',
         status: body.status || 'active',
         account_status: body.status || 'active',
-        hourly_rate: body.salary || body.hourly_rate || 0,
+        hourly_rate: coachRate,
+        salary: coachRate,
         availability: body.availability || '',
         address: body.address || '',
         monthly_fee: 0,
@@ -131,11 +146,16 @@ Deno.serve(async (req) => {
       
       const updateData: Record<string, unknown> = {};
       
-      if (body.name !== undefined) updateData.name = body.name;
+      if (body.name !== undefined) {
+        updateData.name = body.name;
+        updateData.full_name = body.name;
+      }
       if (body.email !== undefined) updateData.email = body.email;
       if (body.phone !== undefined) updateData.phone = body.phone;
       if (body.specialty !== undefined || body.specialization !== undefined) {
-          updateData.specialization = body.specialty || body.specialization;
+        const specialty = body.specialty || body.specialization;
+        updateData.specialization = specialty;
+        updateData.specialty = specialty;
       }
       if (body.experience !== undefined) updateData.experience = body.experience;
       if (body.rating !== undefined) updateData.rating = body.rating;
@@ -145,7 +165,9 @@ Deno.serve(async (req) => {
         updateData.account_status = body.status;
       }
       if (body.salary !== undefined || body.hourly_rate !== undefined) {
-          updateData.hourly_rate = body.salary || body.hourly_rate;
+        const rate = body.salary || body.hourly_rate;
+        updateData.hourly_rate = rate;
+        updateData.salary = rate;
       }
       if (body.availability !== undefined) updateData.availability = body.availability;
       if (body.address !== undefined) updateData.address = body.address;
