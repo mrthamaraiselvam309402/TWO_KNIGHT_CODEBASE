@@ -771,7 +771,6 @@
   }
 
   function finishLogin(displayName, userRole, studentId) {
-    logLoginSession('login', displayName);
     const loginScreen = $('login-screen');
     if (loginScreen) loginScreen.style.display = 'none';
 
@@ -810,12 +809,6 @@
   }
 
   function doLogout() {
-    const currentUser = localStorage.getItem('chesskidoo_auth');
-    let userName = 'User';
-    if (currentUser) {
-      try { userName = JSON.parse(currentUser).user || 'User'; } catch(e) {}
-    }
-    logLoginSession('logout', userName);
     closeModals();
     role = null; currentStudent = null;
     localStorage.removeItem('chesskidoo_auth');
@@ -834,61 +827,6 @@
     const parentView = $('prof-parent-view');
     if (adminView) adminView.style.display = (role === 'admin' || role === 'master') ? 'block' : 'none';
     if (parentView) parentView.style.display = role === 'parent' ? 'block' : 'none';
-    
-    // Load login history
-    loadLoginHistory();
-  }
-  
-  function loadLoginHistory() {
-    const history = JSON.parse(localStorage.getItem('login_history') || '[]');
-    const currentUser = localStorage.getItem('chesskidoo_auth');
-    let userName = 'Unknown';
-    if (currentUser) {
-      try { userName = JSON.parse(currentUser).user || 'Admin'; } catch(e) {}
-    }
-    
-    const historyList = $('admin-history-list') || $('parent-history-list');
-    if (!historyList) return;
-    
-    if (!history || history.length === 0) {
-      historyList.innerHTML = '<div style="color:var(--ivory3);font-size:12px">No login history yet</div>';
-      return;
-    }
-    
-    const recentHistory = history.slice(-10).reverse();
-    historyList.innerHTML = recentHistory.map(h => {
-      const time = new Date(h.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-      const statusIcon = h.action === 'login' ? '✅' : '❌';
-      const statusClass = h.action === 'login' ? 'text-success' : 'text-danger';
-      return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
-        <span>${statusIcon} ${h.user}</span>
-        <span class="${statusClass}">${time}</span>
-      </div>`;
-    }).join('');
-    
-    // Currently online (simulated)
-    const onlineList = $('active-users-list');
-    if (onlineList) {
-      const now = Date.now();
-      const activeSessions = history.filter(h => now - h.timestamp < 30*60*1000);
-      if (activeSessions.length > 0) {
-        const uniqueUsers = [...new Set(activeSessions.map(h => h.user))];
-        onlineList.innerHTML = uniqueUsers.map(u => `<span style="display:inline-block;background:var(--success);color:#000;padding:2px 8px;border-radius:12px;font-size:11px;margin-right:4px">${u}</span>`).join('');
-      } else {
-        onlineList.innerHTML = '<span style="color:var(--ivory3);font-size:12px">No active sessions</span>';
-      }
-    }
-  }
-  
-  function logLoginSession(action, user) {
-    const history = JSON.parse(localStorage.getItem('login_history') || '[]');
-    history.push({
-      user: user || 'Admin',
-      action: action,
-      timestamp: Date.now()
-    });
-    // Keep last 50 entries
-    localStorage.setItem('login_history', JSON.stringify(history.slice(-50)));
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1718,10 +1656,6 @@
     if (!data.event_date) { toast('Event date is required', 'error'); return; }
     if (data.date && new Date(data.date) < new Date()) { toast('Event date cannot be in the past', 'error'); return; }
     
-    const eventKey = 'saving_' + (id || 'new');
-    if (deleteInProgress.has(eventKey)) { toast('Already saving...', 'info'); return; }
-    deleteInProgress.add(eventKey);
-    
     try {
       let res;
       if (id) {
@@ -1731,7 +1665,6 @@
       } else {
         res = await apiCall('/api/events', { method: 'POST', body: JSON.stringify(data) });
       }
-      deleteInProgress.delete(eventKey);
 
       if (res.ok) {
         toast(id ? 'Event updated!' : 'Event created!', 'success');
@@ -1739,8 +1672,8 @@
         loadAllData(true);
       } else {
         const err = await res.json().catch(() => ({}));
-        console.error('Event save error:', res.status, err);
-        toast('Failed: ' + (err.error || 'Server error'), 'error');
+        console.error('Event save error:', err);
+        toast('Failed to save event: ' + (err.error || 'Server error'), 'error');
       }
     } catch (e) { 
       console.error('Save event error:', e);
@@ -1781,9 +1714,9 @@
           <div class="ach-sub">${student ? getStudentName(student) : 'Unknown'} • ${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : 'N/A'}</div>
         </div>
         ${isAdmin ? `
-          <div style="position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;z-index:10">
-            <button class="btn btn-outline-grey btn-sm" style="padding:3px 8px" onclick="editAchievement('${a.id}')" title="Edit">Edit</button>
-            <button class="del-btn" style="width:24px;height:24px;font-size:12px;line-height:1" onclick="confirmDeleteAchievement('${a.id}', '${(a.title || '').replace(/'/g, "\\'")}')">×</button>
+          <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px">
+            <button class="btn btn-outline-grey btn-sm" style="padding:4px 8px" onclick="editAchievement('${a.id}')" title="Edit">Edit</button>
+            <button class="del-btn" style="width:28px;height:28px;font-size:14px" onclick="confirmDeleteAchievement('${a.id}', '${(a.title || '').replace(/'/g, "\\'")}')">×</button>
           </div>
         ` : ''}
       </div>`;
@@ -1918,164 +1851,48 @@
   function downloadReceipt(id, name, fee) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    const date = new Date().toLocaleDateString('en-IN');
+    const date = new Date().toLocaleDateString();
     const receiptId = 'CK-' + Math.floor(Math.random()*1000000);
-    const student = allStudents.find(s => String(s.id) === String(id));
-    const studentName = name;
-    const amount = parseInt(fee) || 0;
-    const amountWords = numberToWords(amount);
     
-    //Header - Gold gradient bar
     doc.setFillColor(220, 163, 62);
-    doc.rect(0, 0, 210, 45, 'F');
-    
-    //Academy name
+    doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(26);
-    doc.setFont('helvetica', 'bold');
-    doc.text('CHESSKIDOO ACADEMY', 105, 20, { align: 'center' });
+    doc.setFontSize(24);
+    doc.text('CHESSKIDOO ACADEMY', 105, 25, { align: 'center' });
     
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Building Champions, One Move at a Time', 105, 28, { align: 'center' });
-    doc.setFontSize(9);
-    doc.text('📞 +91 99622 99622 | ✉️ info@chesskidoo.com', 105, 35, { align: 'center' });
-    
-    //Receipt title
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('OFFICIAL RECEIPT', 105, 55, { align: 'center' });
-    
-    //Receipt info box
-    doc.setDrawColor(220, 163, 62);
-    doc.setLineWidth(0.5);
-    doc.line(20, 60, 190, 60);
-    
+    doc.setTextColor(100, 100, 100);
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 80);
-    doc.text('Receipt No:', 20, 70);
-    doc.text('Date:', 120, 70);
+    doc.text(`Receipt ID: ${receiptId}`, 20, 50);
+    doc.text(`Date: ${date}`, 190, 50, { align: 'right' });
+    
     doc.setTextColor(0, 0, 0);
-    doc.text(receiptId, 55, 70);
-    doc.text(date, 190, 70, { align: 'right' });
+    doc.setFontSize(14);
+    doc.text('OFFICIAL PAYMENT RECEIPT', 105, 65, { align: 'center' });
     
-    //Student details section
-    doc.setFillColor(250, 250, 250);
-    doc.rect(20, 78, 170, 35, 'F');
-    doc.setDrawColor(230, 230, 230);
-    doc.rect(20, 78, 170, 35, 'S');
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(220, 163, 62);
-    doc.text('STUDENT DETAILS', 25, 86);
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-    
-    let yPos = 94;
-    doc.text('Name:', 25, yPos);
-    doc.setTextColor(0, 0, 0);
-    doc.text(studentName, 55, yPos);
-    
-    yPos += 7;
-    doc.setTextColor(60, 60, 60);
-    doc.text('Level:', 25, yPos);
-    doc.setTextColor(0, 0, 0);
-    doc.text(student ? getStudentLevel(student) : 'N/A', 55, yPos);
-    
-    yPos += 7;
-    doc.setTextColor(60, 60, 60);
-    doc.text('ELO Rating:', 25, yPos);
-    doc.setTextColor(0, 0, 0);
-    doc.text(student ? String(getStudentRating(student)) : 'N/A', 55, yPos);
-    
-    yPos += 7;
-    doc.setTextColor(60, 60, 60);
-    doc.text('Coach:', 25, yPos);
-    doc.setTextColor(0, 0, 0);
-    const coach = student ? allCoaches.find(c => String(c.id) === String(student.coach_id)) : null;
-    doc.text(coach ? getCoachName(coach) : 'Not Assigned', 55, yPos);
-    
-    //Payment details
-    doc.setFillColor(245, 245, 245);
-    doc.rect(20, 118, 170, 45, 'F');
-    doc.setDrawColor(230, 230, 230);
-    doc.rect(20, 118, 170, 45, 'S');
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(220, 163, 62);
-    doc.text('PAYMENT DETAILS', 25, 126);
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    yPos = 134;
-    doc.setTextColor(60, 60, 60);
-    doc.text('Tuition Fee (Monthly):', 25, yPos);
-    doc.setTextColor(0, 0, 0);
-    doc.text('₹' + amount.toLocaleString('en-IN'), 85, yPos, { align: 'right' });
-    
-    yPos += 7;
-    doc.setTextColor(60, 60, 60);
-    doc.text('Payment Mode:', 25, yPos);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Online Transfer', 85, yPos, { align: 'right' });
-    
-    yPos += 7;
-    doc.setTextColor(60, 60, 60);
-    doc.text('Status:', 25, yPos);
-    doc.setTextColor(46, 125, 50);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PAID', 85, yPos, { align: 'right' });
-    
-    //Total
-    doc.setDrawColor(220, 163, 62);
-    doc.setLineWidth(0.5);
-    doc.line(20, 168, 190, 168);
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, 75, 190, 75);
     
     doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('Total Paid:', 25, 176);
+    doc.text('Student Name:', 20, 90);
+    doc.text(name, 190, 90, { align: 'right' });
+    
+    doc.text('Amount Paid:', 20, 105);
+    doc.text('INR ' + fee, 190, 105, { align: 'right' });
+    
+    doc.text('Payment Status:', 20, 120);
     doc.setTextColor(46, 125, 50);
-    doc.text('₹' + amount.toLocaleString('en-IN'), 190, 176, { align: 'right' });
+    doc.text('PAID', 190, 120, { align: 'right' });
     
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(120, 120, 120);
-    doc.text(`(${amountWords} Rupees Only)`, 25, 182);
+    doc.setTextColor(0, 0, 0);
+    doc.line(20, 130, 190, 130);
     
-    //Footer
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 190, 190, 190);
-    
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
     doc.setTextColor(150, 150, 150);
-    doc.text('This is a computer-generated receipt. No signature required.', 105, 196, { align: 'center' });
-    doc.text('For queries, contact info@chesskidoo.com', 105, 201, { align: 'center' });
-    doc.text('Thank you for your patronage! 🏆', 105, 206, { align: 'center' });
-    
-    //Watermark
-    doc.setFontSize(40);
-    doc.setTextColor(230, 230, 230);
-    doc.text('PAID', 105, 140, { align: 'center', rotate: 45 });
+    doc.text('This is a computer-generated receipt.', 105, 150, { align: 'center' });
+    doc.text('Thank you for being part of Chesskidoo!', 105, 155, { align: 'center' });
     
     doc.save(`Receipt_${name.replace(/\s+/g, '_')}.pdf`);
     toast('Receipt downloaded!', 'success');
-  }
-  
-  function numberToWords(n) {
-    const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    if (n < 20) return a[n];
-    if (n < 100) return b[Math.floor(n/10)] + (n%10 ? ' ' + a[n%10] : '');
-    if (n < 1000) return a[Math.floor(n/100)] + ' Hundred' + (n%100 ? ' ' + numberToWords(n%100) : '');
-    if (n < 100000) return numberToWords(Math.floor(n/1000)) + ' Thousand' + (n%1000 ? ' ' + numberToWords(n%1000) : '');
-    return numberToWords(Math.floor(n/100000)) + ' Lakh' + (n%100000 ? ' ' + numberToWords(n%100000) : '');
   }
   function showReceiptPreview() { openModal('receipt-preview-modal'); }
   function printReceipt() { window.print(); }
@@ -2115,20 +1932,8 @@
       </div>
     `).join('');
   }
-  let deleteInProgress = new Set();
-  async function markMsgRead(id) { 
-    if (deleteInProgress.has(id)) return;
-    deleteInProgress.add(id);
-    await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'PUT', body: JSON.stringify({ is_read: true }) }); 
-    renderMsgs(); 
-    deleteInProgress.delete(id);
-  }
-  async function deleteMsg(id) { 
-    if (deleteInProgress.has(id)) return;
-    deleteInProgress.add(id);
-    await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'DELETE' }); 
-    deleteInProgress.delete(id);
-  }
+  async function markMsgRead(id) { await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'PUT', body: JSON.stringify({ is_read: true }) }); renderMsgs(); }
+  async function deleteMsg(id) { await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'DELETE' }); renderMsgs(); }
 
   // ═══════════════════════════════════════════════════════════════
   // PARENT VIEW
@@ -2671,34 +2476,7 @@
   // ═══════════════════════════════════════════════════════════════
   // THEME & PDF
   // ═══════════════════════════════════════════════════════════════
-  function toggleTheme() { 
-    const current = document.body.dataset.theme || 'dark';
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.body.dataset.theme = next;
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem('chesskidoo_theme', next);
-    // Override all CSS variables
-    const root = document.documentElement;
-    if (next === 'light') {
-      root.style.setProperty('--obsidian', '#f5f7fa');
-      root.style.setProperty('--night', '#ffffff');
-      root.style.setProperty('--surface', '#ffffff');
-      root.style.setProperty('--ivory', '#1a1a2e');
-      root.style.setProperty('--glass', 'rgba(255,255,255,0.8)');
-      root.style.setProperty('--border', 'rgba(0,0,0,0.12)');
-    } else {
-      root.style.setProperty('--obsidian', '#080810');
-      root.style.setProperty('--night', '#0e0e1a');
-      root.style.setProperty('--surface', '#181824');
-      root.style.setProperty('--ivory', '#e8e8f0');
-      root.style.setProperty('--glass', 'rgba(0,0,0,0.025)');
-      root.style.setProperty('--border', 'rgba(255,255,255,0.06)');
-    }
-  }
-  function initTheme() {
-    const saved = localStorage.getItem('chesskidoo_theme');
-    if (saved) document.body.dataset.theme = saved;
-  }
+  function toggleTheme() { document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark'; }
   async function generateReportPDF() { toast('PDF Generated!'); }
   function exportData() { toast('Data Exported!'); }
 
@@ -2725,7 +2503,6 @@
   });
   
   window.addEventListener('DOMContentLoaded', () => {
-    initTheme();
     const auth = localStorage.getItem('chesskidoo_auth');
     if (auth) {
       try {
