@@ -2243,6 +2243,88 @@
   function showReceiptPreview() { openModal('receipt-preview-modal'); }
   function printReceipt() { window.print(); }
 
+  function generateReportPDF() {
+    if (!window.jspdf) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      script.onload = () => { generateReportPDFContent(); };
+      document.head.appendChild(script);
+    } else {
+      generateReportPDFContent();
+    }
+  }
+  
+  function generateReportPDFContent() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const date = new Date().toLocaleDateString('en-GB').replace(/\//g, ' / ');
+    
+    // Header
+    doc.setFillColor(220, 163, 62);
+    doc.rect(0, 0, 210, 35, 'F');
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(22);
+    doc.text('Chesskidoo Academy', 105, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text('Financial Report', 105, 28, { align: 'center' });
+    
+    // Report date
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${date}`, 190, 42, { align: 'right' });
+    
+    // Stats
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(14);
+    doc.text('Financial Overview', 14, 52);
+    
+    const totalStudents = allStudents.length;
+    const paidStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
+    const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
+    const pendingStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Pending').length;
+    
+    let totalRevenue = 0;
+    allStudents.forEach(s => {
+      totalRevenue += getStudentMonthlyFee(s);
+    });
+    
+    doc.setFontSize(11);
+    doc.text(`Total Students: ${totalStudents}`, 14, 62);
+    doc.text(`Paid: ${paidStudents}`, 14, 70);
+    doc.text(`Due: ${dueStudents}`, 14, 78);
+    doc.text(`Pending: ${pendingStudents}`, 14, 86);
+    
+    doc.text(`Total Monthly Revenue: ₹${totalRevenue.toLocaleString()}`, 14, 96);
+    
+    // Coach breakdown
+    doc.setFontSize(14);
+    doc.text('Coach-wise Revenue', 14, 112);
+    
+    let yPos = 122;
+    allCoaches.forEach(coach => {
+      const coachStudents = allStudents.filter(s => String(s.coach_id) === String(coach.id));
+      const coachRevenue = coachStudents.reduce((sum, s) => sum + getStudentMonthlyFee(s), 0);
+      const coachSalary = (coach.hourly_rate || 0) * 40 * 4;
+      
+      doc.setFontSize(10);
+      doc.text(`${getCoachName(coach)}: ₹${coachRevenue.toLocaleString()} (Salary: ₹${coachSalary.toLocaleString()})`, 14, yPos);
+      yPos += 8;
+      
+      if (yPos > 270) {
+        doc.addPage();
+        yPos = 20;
+      }
+    });
+    
+    // Footer
+    doc.setTextColor(150, 150, 150);
+    doc.setFontSize(9);
+    doc.text('Chesskidoo Academy - Financial Report', 105, 290, { align: 'center' });
+    
+    doc.save(`Chesskidoo_Financial_Report_${date.replace(/\//g, '-')}.pdf`);
+    toast('Financial Report downloaded!', 'success');
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // MESSAGES
   // ═══════════════════════════════════════════════════════════════
