@@ -2493,7 +2493,16 @@
   // ═══════════════════════════════════════════════════════════════
   // THEME & PDF
   // ═══════════════════════════════════════════════════════════════
-  function toggleTheme() { document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark'; }
+  function toggleTheme() { 
+    const current = document.body.dataset.theme || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.body.dataset.theme = next;
+    localStorage.setItem('chesskidoo_theme', next);
+  }
+  function initTheme() {
+    const saved = localStorage.getItem('chesskidoo_theme');
+    if (saved) document.body.dataset.theme = saved;
+  }
   async function generateReportPDF() { toast('PDF Generated!'); }
   function exportData() { toast('Data Exported!'); }
 
@@ -2520,6 +2529,7 @@
   });
   
   window.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     const auth = localStorage.getItem('chesskidoo_auth');
     if (auth) {
       try {
