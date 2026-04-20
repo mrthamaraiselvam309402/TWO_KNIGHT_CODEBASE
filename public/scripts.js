@@ -2272,12 +2272,17 @@
   
   function generateReportPDFContent() {
     let jsPDF;
-    if (window.jspdf) {
+    // Better jsPDF detection
+    if (window.jspdf && window.jspdf.jsPDF) {
       jsPDF = window.jspdf.jsPDF;
+    } else if (window.jsPDF) {
+      jsPDF = window.jsPDF;
     }
     
+    console.log('jsPDF:', jsPDF);
+    
     if (!jsPDF) {
-      // Create PDF without external library - use browser print
+      console.log('Using fallback print method');
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
         alert('Please allow popups to generate the report, then try again');
