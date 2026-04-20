@@ -931,7 +931,32 @@ body.admin-mode .master-only { display: none !important; }
   .dash-grid, .dash-charts { grid-template-columns: 1fr; }
   .filter-bar select, .filter-bar input { max-width: 100%; width: 100%; }
   .ev-grid { grid-template-columns: 1fr; }
-  .ach-grid { grid-template-columns: 1fr; }
+  .ach-grid, .fame-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 22px; }
+.ach-card, .fame-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid rgba(232,168,48,0.1);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all 0.25s;
+}
+.ach-card:hover, .fame-card:hover {
+  border-color: rgba(232,168,48,0.25);
+  transform: translateY(-3px);
+}
+.ach-img, .fame-img { width: 100%; height: 180px; object-fit: cover; }
+.ach-img-placeholder, .fame-img-placeholder {
+  width: 100%; height: 180px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px; background: var(--surface2);
+}
+.ach-info, .fame-info { padding: 16px; }
+.ach-title, .fame-title {
+  font-family: var(--font-head);
+  font-size: 18px; color: var(--gold);
+  margin-bottom: 6px; font-weight: 600;
+}
+.ach-sub, .fame-sub { font-size: 12px; color: var(--ivory3); }
 }
 
 /* ── PREMIUM EVENT CARDS ── */
