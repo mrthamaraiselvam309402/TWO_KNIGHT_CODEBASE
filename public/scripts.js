@@ -1656,6 +1656,10 @@
     if (!data.event_date) { toast('Event date is required', 'error'); return; }
     if (data.date && new Date(data.date) < new Date()) { toast('Event date cannot be in the past', 'error'); return; }
     
+    const eventKey = 'saving_' + (id || 'new');
+    if (deleteInProgress.has(eventKey)) { toast('Already saving...', 'info'); return; }
+    deleteInProgress.add(eventKey);
+    
     try {
       let res;
       if (id) {
@@ -1665,6 +1669,7 @@
       } else {
         res = await apiCall('/api/events', { method: 'POST', body: JSON.stringify(data) });
       }
+      deleteInProgress.delete(eventKey);
 
       if (res.ok) {
         toast(id ? 'Event updated!' : 'Event created!', 'success');
@@ -1932,8 +1937,20 @@
       </div>
     `).join('');
   }
-  async function markMsgRead(id) { await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'PUT', body: JSON.stringify({ is_read: true }) }); renderMsgs(); }
-  async function deleteMsg(id) { await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'DELETE' }); renderMsgs(); }
+  let deleteInProgress = new Set();
+  async function markMsgRead(id) { 
+    if (deleteInProgress.has(id)) return;
+    deleteInProgress.add(id);
+    await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'PUT', body: JSON.stringify({ is_read: true }) }); 
+    renderMsgs(); 
+    deleteInProgress.delete(id);
+  }
+  async function deleteMsg(id) { 
+    if (deleteInProgress.has(id)) return;
+    deleteInProgress.add(id);
+    await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'DELETE' }); 
+    deleteInProgress.delete(id);
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // PARENT VIEW
