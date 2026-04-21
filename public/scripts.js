@@ -1123,11 +1123,54 @@
 
     const revenueCtx = $('chartRevenue');
     if (revenueCtx) {
-      const data = [120000, 150000, 140000, 180000, 210000, 250000]; // Mock trend
+      // Group students by enrollment month
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const counts = new Array(12).fill(0);
+      const currentYear = new Date().getFullYear();
+      
+      studs.forEach(s => {
+        const d = getStudentDate(s);
+        if (d) {
+          const date = new Date(d);
+          if (date.getFullYear() === currentYear) {
+            counts[date.getMonth()]++;
+          }
+        }
+      });
+
+      // Filter to show last 6 months or valid range
+      const endMonth = new Date().getMonth();
+      const startMonth = (endMonth - 5 + 12) % 12;
+      
+      const labels = [];
+      const data = [];
+      for (let i = 0; i < 6; i++) {
+        const mIdx = (startMonth + i) % 12;
+        labels.push(months[mIdx]);
+        data.push(counts[mIdx]);
+      }
+
       chartInstances.revenue = new Chart(revenueCtx, {
         type: 'line',
-        data: { labels: ['Jan','Feb','Mar','Apr','May','Jun'], datasets: [{ label: 'Revenue (₹)', data, borderColor: '#dca13e', backgroundColor: 'rgba(220, 161, 62, 0.1)', tension: 0.4 }] },
-        options: { responsive: true, plugins: { legend: { display: false } } }
+        data: { 
+          labels, 
+          datasets: [{ 
+            label: 'New Students', 
+            data, 
+            borderColor: '#5a9fff', 
+            backgroundColor: 'rgba(90, 159, 255, 0.1)', 
+            tension: 0.4,
+            pointBackgroundColor: '#5a9fff',
+            fill: true
+          }] 
+        },
+        options: { 
+          responsive: true, 
+          plugins: { legend: { display: false } },
+          scales: { 
+            y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
+          }
+        }
       });
     }
 
@@ -1242,7 +1285,7 @@
     if ($('s-due')) $('s-due').textContent = '₹' + dueRevenue.toLocaleString();
     
     // Coach expenses
-    const totalCoachCost = allCoaches.reduce((a, c) => a + (c.salary || c.hourly_rate || 0), 0);
+    const totalCoachCost = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     if ($('s-coach-exp')) $('s-coach-exp').textContent = '₹' + totalCoachCost.toLocaleString();
     if ($('s-total-cost')) $('s-total-cost').textContent = '₹' + totalCoachCost.toLocaleString();
     
@@ -1291,7 +1334,7 @@
         students: 0,
         revenue: 0,      // Collected (Paid)
         pending: 0,      // Pending/Due
-        cost: c.salary || c.hourly_rate || 0
+        cost: getCoachSalary(c) || 0
       };
     });
     
@@ -3053,6 +3096,45 @@
     doc.save(`Chesskidoo_Report_${now.toISOString().split('T')[0]}.pdf`);
     toast('Financial Report Saved!', 'success');
   }
+
+  function exportAcademyData() {
+    if (!allStudents || allStudents.length === 0) {
+      toast('No student data to export', 'error');
+      return;
+    }
+
+    const headers = ['Student Name', 'Parent Phone', 'Level', 'Rating', 'Coach', 'Monthly Fee', 'Payment Status', 'Join Date', 'Session Type', 'Session Time'];
+    const rows = allStudents.map(s => {
+      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+      return [
+        getStudentName(s),
+        getStudentPhone(s),
+        getStudentLevel(s),
+        getStudentRating(s),
+        coach ? getCoachName(coach) : 'None',
+        getStudentMonthlyFee(s),
+        getStudentPaymentStatus(s),
+        getStudentDate(s),
+        getStudentBatchType(s),
+        s.session_time || s.batch_time || ''
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`); // CSV escaping
+    });
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Chesskidoo_Academy_Data_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast('Academy Data Exported (CSV)', 'success');
+  }
+
   function exportData() { toast('Data Exported!'); }
 
   // ═══════════════════════════════════════════════════════════════

@@ -129,8 +129,9 @@
         <div class="card"><div class="stat-label">Amount Due</div><div class="stat-value text-danger" id="s-due">—</div></div>
         <div class="card"><div class="stat-label">Coach Expenses</div><div class="stat-value" style="color:var(--gold)" id="s-coach-exp">—</div></div>
       </div>
-      <div style="margin-bottom: 32px;">
+      <div style="margin-bottom: 32px; display: flex; gap: 12px; flex-wrap: wrap;">
         <button class="btn btn-gold" id="download-pdf-btn" onclick="generateReportPDF()">📄 Download Financial Report (PDF)</button>
+        <button class="btn btn-outline" onclick="exportAcademyData()">📥 Export Academy Data (Excel/CSV)</button>
       </div>
       <!-- Financial Analytics Cards -->
       <div class="dash-grid" style="margin-bottom:32px">
@@ -152,7 +153,7 @@
         <div class="card"><div class="stat-label">Class Pending</div><div class="stat-value" style="color:var(--surface3)" id="s-att-pending">0</div></div>
       </div>
       <div class="dash-charts">
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Revenue Analysis</h3><canvas id="chartRevenue" height="160"></canvas></div>
+        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Enrollment Trend</h3><canvas id="chartRevenue" height="160"></canvas></div>
         <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Coach Load</h3><canvas id="chartCoach" height="260"></canvas></div>
       </div>
       <div class="dash-charts">
