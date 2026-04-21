@@ -2290,20 +2290,42 @@
     await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Paid' }) });
     loadAllData(true);
   }
+  let currentPayId = null;
+  let currentPayAmt = 0;
+
   function openPay(id, name, fee) { 
     const nameEl = $('pay-name');
     const feeEl = $('pay-amt');
     
     // Harden fee input: strip currency symbols and commas
     const finalFee = typeof fee === 'string' 
-      ? parseInt(fee.replace(/[^\d]/g, ''), 10) || 500 
-      : (fee || 500);
+      ? parseInt(fee.replace(/[^\d]/g, ''), 10) || 5000 
+      : (fee || 5000);
+
+    currentPayId = id;
+    currentPayAmt = finalFee;
 
     if (nameEl) nameEl.textContent = name;
-    if (feeEl) feeEl.textContent = `₹${finalFee}`;
+    if (feeEl) feeEl.textContent = `₹${finalFee.toLocaleString()}`;
+    
+    // Reset payment modal view
+    if ($('pay-options')) $('pay-options').style.display = 'block';
+    if ($('pay-processing')) $('pay-processing').style.display = 'none';
+    
     openModal('pay-modal'); 
   }
-  function initiatePay(provider) { toast('Processing ' + provider); setTimeout(() => { closeModals(); loadAllData(true); }, 2000); }
+
+  function initiatePay(provider) { 
+    if ($('pay-options')) $('pay-options').style.display = 'none';
+    if ($('pay-processing')) $('pay-processing').style.display = 'block';
+    if ($('pay-provider')) $('pay-provider').textContent = 'Connecting to ' + provider + '...';
+    
+    setTimeout(async () => { 
+      await markPaid(currentPayId, currentPayAmt, provider);
+      closeModals(); 
+      loadAllData(true); 
+    }, 2000); 
+  }
   
   function downloadReceipt(id, name, fee, level = 'Beginner', rating = 800, coach = 'N/A', paymentMode = 'Online Transfer') {
     const receiptId = 'CK-' + Math.floor(Math.random() * 1000000);
@@ -3193,7 +3215,11 @@
       return;
     }
 
-    const headers = ['Student Name', 'Parent Phone', 'Level', 'Rating', 'Coach', 'Monthly Fee', 'Payment Status', 'Join Date', 'Session Type', 'Session Time'];
+    const headers = [
+      'Student Name', 'Parent Phone', 'Level', 'Rating', 'Join Date', 
+      'Fee Due Date', 'Monthly Fee', 'Payment Status', 'Session Mode', 'Session Time',
+      'Assigned Coach', 'Coach Phone', 'Coach Specialty'
+    ];
     const rows = allStudents.map(s => {
       const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
       return [
@@ -3201,13 +3227,16 @@
         getStudentPhone(s),
         getStudentLevel(s),
         getStudentRating(s),
-        coach ? getCoachName(coach) : 'None',
+        getStudentDate(s),
+        s.due_date || 'N/A',
         getStudentMonthlyFee(s),
         getStudentPaymentStatus(s),
-        getStudentDate(s),
         getStudentBatchType(s),
-        s.session_time || s.batch_time || ''
-      ].map(val => `"${String(val).replace(/"/g, '""')}"`); // CSV escaping
+        s.session_time || s.batch_time || 'TBD',
+        coach ? getCoachName(coach) : 'None',
+        coach ? (coach.phone || 'N/A') : 'N/A',
+        coach ? (getCoachSpecialty(coach) || 'N/A') : 'N/A'
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`); 
     });
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
