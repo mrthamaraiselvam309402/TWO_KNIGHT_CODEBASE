@@ -276,9 +276,15 @@
   const capitalizeFirst = str => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
   const formatTime = time24 => {
     if (!time24) return '—';
-    const [h, m] = time24.split(':');
+    // Handle cases like "12", "12:", "12:00"
+    const parts = String(time24).split(':');
+    let h = parseInt(parts[0], 10);
+    let m = parts[1] || '00';
+    if (isNaN(h)) return '—';
+    if (m.length === 1) m = '0' + m;
     const hh = h % 12 || 12;
-    return `${hh}:${m} ${h >= 12 ? 'PM' : 'AM'}`;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    return `${hh}:${m} ${ampm}`;
   };
 
   function toast(msg, type = 'info') {
@@ -1767,17 +1773,29 @@
         }
       });
       
-      let scheduleHtml = '<table style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="text-align:left;padding:8px;background:var(--surface);color:var(--gold)">Day</th><th style="text-align:left;padding:8px;background:var(--surface);color:var(--gold)">Time</th><th style="text-align:left;padding:8px;background:var(--surface);color:var(--gold)">Student</th><th style="text-align:left;padding:8px;background:var(--surface);color:var(--gold)">Level</th></tr>';
+      let scheduleHtml = `
+        <div class="table-wrap" style="margin-top:10px; border:1px solid var(--border); border-radius:8px; overflow:hidden">
+        <table style="width:100%; border-collapse:collapse; font-size:13px; background:var(--surface)">
+          <thead>
+            <tr style="background:var(--surface3)">
+              <th style="text-align:left; padding:12px; color:var(--gold); border-bottom:1px solid var(--border)">Day</th>
+              <th style="text-align:left; padding:12px; color:var(--gold); border-bottom:1px solid var(--border)">Time</th>
+              <th style="text-align:left; padding:12px; color:var(--gold); border-bottom:1px solid var(--border)">Student</th>
+              <th style="text-align:left; padding:12px; color:var(--gold); border-bottom:1px solid var(--border)">Level</th>
+            </tr>
+          </thead>
+          <tbody>`;
       
       Object.entries(studentSchedules).forEach(([name, data]) => {
-        scheduleHtml += `<tr>
-          <td style="padding:8px;border-bottom:1px solid var(--border)">${data.day}</td>
-          <td style="padding:8px;border-bottom:1px solid var(--border)">${formatTime(data.time)}</td>
-          <td style="padding:8px;border-bottom:1px solid var(--border);font-weight:600">${name}</td>
-          <td style="padding:8px;border-bottom:1px solid var(--border)">${data.level} (${data.rating})</td>
-        </tr>`;
+        scheduleHtml += `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:12px; color:var(--ivory2)">${data.day}</td>
+            <td style="padding:12px; font-family:var(--font-mono); color:var(--gold)">${formatTime(data.time)}</td>
+            <td style="padding:12px; font-weight:600; color:var(--ivory)">${name}</td>
+            <td style="padding:12px; color:var(--ivory2); font-size:12px">${data.level}</td>
+          </tr>`;
       });
-      scheduleHtml += '</table>';
+      scheduleHtml += '</tbody></table></div>';
       
       if (Object.keys(studentSchedules).length === 0) {
         container.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No batch schedules found for assigned students</p></div>';
