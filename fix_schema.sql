@@ -11,7 +11,23 @@ ADD COLUMN IF NOT EXISTS session_time TEXT;
 ALTER TABLE coaches
 ADD COLUMN IF NOT EXISTS salary INTEGER DEFAULT 0;
 
--- 3. Verify columns exist
-SELECT column_name, data_type 
-FROM information_schema.columns 
-WHERE table_name = 'students' AND column_name IN ('monthly_fee', 'session_mode', 'session_time');
+-- 3. Create Attendance Table for History
+CREATE TABLE IF NOT EXISTS attendance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'present',
+  date DATE DEFAULT CURRENT_DATE,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- 4. Enable RLS
+ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on attendance" ON attendance;
+CREATE POLICY "Allow all on attendance" ON attendance FOR ALL USING (true);
+
+-- 5. Verify tables exist
+SELECT table_name, table_type 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN ('students', 'coaches', 'payments', 'attendance');

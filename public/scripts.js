@@ -1414,7 +1414,7 @@
 
     // Map student IDs to their total payments this month
     const studentPaymentsThisMonth = {};
-    allPayments.filter(p => {
+    (allPayments || []).filter(p => {
       const pDate = new Date(p.created_at || p.payment_date);
       return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
     }).forEach(p => {
@@ -1423,6 +1423,7 @@
       studentPaymentsThisMonth[sid] += (parseFloat(p.amount) || 0);
     });
 
+    const coachData = {};
     allCoaches.forEach(c => {
       coachData[c.id] = {
         name: c.name || c.full_name || 'Unknown',
