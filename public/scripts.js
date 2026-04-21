@@ -48,6 +48,51 @@
     if (tabId === 'growth') renderChildGrowth();
     if (tabId === 'learning') renderChildResources();
     if (tabId === 'billing') renderChildBilling();
+    if (tabId === 'events') renderChildEvents();
+  }
+  
+  function renderChildEvents() {
+    const grid = document.getElementById('child-events-grid');
+    if (!grid) return;
+    
+    const now = new Date();
+    const upcoming = eventsData.filter(e => new Date(e.date) >= now).sort((a,b) => new Date(a.date) - new Date(b.date));
+    const myRegistrations = eventsData.filter(e => e.registered_students?.includes(currentStudent?.id));
+    
+    if (upcoming.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No upcoming events scheduled</p></div>';
+      return;
+    }
+    
+    grid.innerHTML = upcoming.slice(0, 10).map(e => {
+      const isRegistered = myRegistrations.some(r => r.id === e.id);
+      const eventDate = e.date ? new Date(e.date).toLocaleDateString() : 'TBD';
+      const eventTime = e.event_time || e.time || 'TBD';
+      return `
+        <div class="ev-card">
+          ${e.img_url ? `<img src="${e.img_url}" class="ev-poster" alt="${e.title}">` : ''}
+          <div class="ev-header">
+            <span class="ev-type-badge">${e.type || 'Event'}</span>
+            <span class="ev-date-badge">${eventDate}</span>
+          </div>
+          <div class="ev-body">
+            <div class="ev-title">${e.title}</div>
+            <div class="ev-meta">
+              <span class="ev-meta-item ev-time">⏰ ${eventTime}</span>
+              <span class="ev-meta-item ev-loc">${e.location || 'TBD'}</span>
+              ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${e.prize_pool}</span>` : ''}
+            </div>
+            ${e.description ? `<div class="ev-desc">${e.description}</div>` : ''}
+          </div>
+          <div class="ev-footer">
+            ${isRegistered ? 
+              `<span class="badge badge-success" style="padding:6px 12px">✅ Registered</span>` :
+              `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`
+            }
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   function renderChildGrowth() {
@@ -95,9 +140,62 @@
   function renderChildBilling() {
     const tbody = document.getElementById('child-bill-body');
     if (!tbody || !currentStudent) return;
-    const status = getStudentPaymentStatus(currentStudent);
-    const fee = getStudentMonthlyFee(currentStudent);
-    tbody.innerHTML = `<tr><td>${new Date().toLocaleDateString()}</td><td>Current Month</td><td>₹${fee}</td><td class="${status==='Paid'?'text-success':'text-danger'}">${status}</td><td>${status === 'Due' ? `<button class="btn btn-gold btn-sm" onclick="openPay('${currentStudent.id}','${getStudentName(currentStudent)}','${fee}')">Pay</button>` : `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${currentStudent.id}','${getStudentName(currentStudent)}','${fee}','${getStudentLevel(currentStudent)}','${getStudentRating(currentStudent)}','${(function(){ var c=allCoaches.find(c => String(c.id) === String(currentStudent.coach_id)); return c ? getCoachName(c) : 'N/A'; })()}')">Receipt</button>`}</td></tr>`;
+    
+    const s = currentStudent;
+    const status = getStudentPaymentStatus(s);
+    const fee = getStudentMonthlyFee(s) || 0;
+    const dueDate = s.due_date ? new Date(s.due_date).toLocaleDateString() : 'Not set';
+    const myPayments = allPayments.filter(p => String(p.student_id) === String(s.id)).slice(0, 10);
+    
+    // Current month row
+    let rows = `
+      <tr>
+        <td>${new Date().toLocaleDateString()}</td>
+        <td>Current Month</td>
+        <td>₹${fee}</td>
+        <td class="${status === 'Paid' ? 'text-success' : 'text-danger'}" style="font-weight:600">${status}</td>
+        <td>
+          ${status === 'Due' || status === 'Pending' ? 
+            `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}','${getStudentName(s)}','${fee}')">Pay Now</button>` : 
+            `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}','${getStudentName(s)}','${fee}','${getStudentLevel(s)}','${getStudentRating(s)}','N/A','Online')">Receipt</button>`
+          }
+        </td>
+      </tr>
+    `;
+    
+    // Due date info
+    rows += `
+      <tr style="background:var(--surface2)">
+        <td colspan="2"><strong>Due Date:</strong></td>
+        <td>${dueDate}</td>
+        <td colspan="2" style="font-size:12px;color:var(--ivory-dim)">Monthly tuition fee</td>
+      </tr>
+    `;
+    
+    // Payment history
+    if (myPayments.length > 0) {
+      myPayments.forEach(p => {
+        const pDate = p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '-';
+        const pAmount = p.amount || fee;
+        const pStatus = p.status === 'completed' ? 'Paid' : (p.status || 'Pending');
+        rows += `
+          <tr>
+            <td>${pDate}</td>
+            <td>Payment</td>
+            <td>₹${pAmount}</td>
+            <td class="${pStatus === 'Paid' ? 'text-success' : 'text-danger'}">${pStatus}</td>
+            <td>
+              ${pStatus === 'Paid' ? 
+                `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}','${getStudentName(s)}','${pAmount}','${getStudentLevel(s)}','${getStudentRating(s)}','N/A','${p.payment_method || 'Online'}')">Receipt</button>` : 
+                `<span style="color:var(--ivory-dim);font-size:12px">Pending</span>`
+              }
+            </td>
+          </tr>
+        `;
+      });
+    }
+    
+    tbody.innerHTML = rows;
   }
 
   // ── ADMIN EXPANSION LOGIC ──
@@ -496,7 +594,33 @@
   async function registerForEvent(eventId) {
     const e = eventsData.find(x => String(x.id) === String(eventId));
     if (!e) { toast('Event not found', 'error'); return; }
-    toast('Registration feature coming soon!', 'info');
+    
+    if (!currentStudent) { toast('Please login as a parent first', 'error'); return; }
+    
+    if (!confirm(`Register ${getStudentName(currentStudent)} for "${e.title}" on ${e.date ? new Date(e.date).toLocaleDateString()}?`)) return;
+    
+    try {
+      const res = await apiCall('/api/events', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'register',
+          event_id: eventId,
+          student_id: currentStudent.id,
+          student_name: getStudentName(currentStudent),
+          registration_date: new Date().toISOString()
+        })
+      });
+      
+      if (res.ok) {
+        toast(`Successfully registered for "${e.title}"!`, 'success');
+        loadAllData(true);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || 'Registration failed', 'error');
+      }
+    } catch (e) {
+      toast('Registration error: ' + e.message, 'error');
+    }
   }
 
   function getMessagePriority(m) { return m.priority || 'normal'; }
