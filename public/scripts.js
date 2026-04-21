@@ -3298,6 +3298,7 @@
   window.previewFile = previewFile;
   window.executeDelete = executeDelete;
   window.generateReportPDF = generateReportPDF;
+  window.exportAcademyData = exportAcademyData;
   window.exportData = exportData;
   window.toast = toast;
   window.$ = $;
