@@ -3396,12 +3396,6 @@
     toast('Premium Report Generated! ✨', 'success');
   }
 
-    addFooter(3, 3);
-
-    doc.save(`Chesskidoo_Executive_Report_${now.toISOString().split('T')[0]}.pdf`);
-    toast('Stable Financial Report Generated!', 'success');
-  }
-
 
   function exportAcademyData() {
     if (!allStudents || allStudents.length === 0) {
