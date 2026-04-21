@@ -129,10 +129,8 @@
         <div class="card"><div class="stat-label">Amount Due</div><div class="stat-value text-danger" id="s-due">—</div></div>
         <div class="card"><div class="stat-label">Coach Expenses</div><div class="stat-value" style="color:var(--gold)" id="s-coach-exp">—</div></div>
       </div>
-      <div style="margin-bottom: 32px; display: flex; gap: 12px; flex-wrap: wrap;">
-        <button class="btn btn-gold" id="download-pdf-btn" onclick="generateReportPDF()">📄 Download Financial Report (PDF)</button>
-        <button class="btn btn-outline" onclick="exportAcademyData()">📥 Export Academy Data (Excel/CSV)</button>
-      </div>
+      <!-- Consolidating buttons to top-btn-area (handled via scripts.js) -->
+      <div style="height: 20px;"></div>
       <!-- Financial Analytics Cards -->
       <div class="dash-grid" style="margin-bottom:32px">
         <div class="card"><div class="stat-label">Total Potential Revenue</div><div class="stat-value" style="color:var(--blue)" id="s-total-revenue">—</div></div>
@@ -378,6 +376,36 @@
 <!-- Toast -->
 <div id="toast-container"></div>
 
+<!-- Payment History Modal -->
+<div id="payment-history-modal" class="modal">
+  <div class="modal-box" style="max-width:800px">
+    <div class="modal-title">Payment History</div>
+    <div id="p-history-student-info" style="margin-bottom:20px;padding:15px;background:var(--bg3);border-radius:10px">
+      <h3 id="p-history-name" style="color:var(--gold);margin-bottom:5px">Student Name</h3>
+      <p id="p-history-meta" style="font-size:13px;color:var(--ivory-dim)">Current Level: -</p>
+    </div>
+    <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>ID</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody id="p-history-body">
+          <tr><td colspan="5"><div class="loading-state">Loading...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:20px">
+      <button class="btn btn-outline-grey" style="width:100%" onclick="closeModals()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Coach Schedule Modal -->
 <div class="modal" id="coach-schedule-modal">
   <div class="modal-box">
@@ -442,11 +470,20 @@
     <input type="tel" id="m-phone" placeholder="Parent Phone (10 digits)" maxlength="10">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <select id="m-level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Elite</option></select>
-      <input type="date" id="m-join">
+      <div class="form-group">
+        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Join Date</label>
+        <input type="date" id="m-join" style="margin-top:2px">
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <input type="number" id="m-elo" placeholder="Initial ELO" value="800">
-      <select id="m-coach"></select>
+      <div class="form-group">
+        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Fee Due Date</label>
+        <input type="date" id="m-due-date" style="margin-top:2px">
+      </div>
+      <div class="form-group">
+        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Initial ELO</label>
+        <input type="number" id="m-elo" placeholder="ELO" value="800" style="margin-top:2px">
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <input type="number" id="m-fee" placeholder="Monthly Fee ₹" value="5000">
@@ -469,14 +506,25 @@
     <input type="tel" id="e-phone" placeholder="Parent Phone" maxlength="10">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <select id="e-level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Elite</option></select>
-      <input type="date" id="e-join">
+      <div class="form-group">
+        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Join Date</label>
+        <input type="date" id="e-join" style="margin-top:2px">
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <input type="number" id="e-elo" placeholder="ELO" value="800">
+       <div class="form-group">
+        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Fee Due Date</label>
+        <input type="date" id="e-due-date" style="margin-top:2px">
+      </div>
+      <div class="form-group">
+        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Current ELO</label>
+        <input type="number" id="e-elo" placeholder="ELO" value="800" style="margin-top:2px">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <select id="e-coach"></select>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <input type="number" id="e-fee" placeholder="Fee ₹" value="5000">
+    </div>
       <select id="e-status"><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">

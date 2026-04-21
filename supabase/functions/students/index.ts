@@ -75,6 +75,7 @@ Deno.serve(async (req) => {
        batch_type: s.session_mode || null,
        batch_time: s.session_time || null,
        monthly_fee: s.monthly_fee || 0,
+       due_date: s.due_date || null,
        account_status: s.account_status || 'active',
        created_at: s.created_at,
        updated_at: s.updated_at
@@ -133,6 +134,7 @@ Deno.serve(async (req) => {
         session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
         session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
         monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
+        due_date: rawBody.due_date ? String(rawBody.due_date) : null,
         notes: sanitizeString(rawBody.notes, 2000),
         account_status: 'active',
         created_at: new Date().toISOString()
@@ -209,6 +211,9 @@ Deno.serve(async (req) => {
       }
       if (rawBody.monthly_fee !== undefined || rawBody.fee !== undefined) {
         updateData.monthly_fee = parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0;
+      }
+      if (rawBody.due_date !== undefined) {
+        updateData.due_date = rawBody.due_date ? String(rawBody.due_date) : null;
       }
       
       updateData.updated_at = new Date().toISOString();

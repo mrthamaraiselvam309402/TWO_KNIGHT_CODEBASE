@@ -679,12 +679,26 @@
           }
         }
         
-        // 4. Due payments
+        // 4. Due payments & Notifications
+        const now = new Date();
         const due = dedupedStuds.filter(s => {
           const status = (s.status || '').toLowerCase();
           const payStatus = (s.payment_status || '').toLowerCase();
-          return status !== 'active' && payStatus !== 'paid';
+          const isUnpaid = status !== 'active' && payStatus !== 'paid';
+          
+          // Check if passed due date
+          if (isUnpaid && s.due_date) {
+            const dueDate = new Date(s.due_date);
+            if (dueDate < now) {
+              const daysAgo = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+              if (daysAgo >= 0) {
+                toast(`⚠️ ${getStudentName(s)} fee overdue by ${daysAgo} days!`, 'error');
+              }
+            }
+          }
+          return isUnpaid;
         });
+
         if (due.length > lastDueCount && lastDueCount > 0) {
           const newDue = due.length - lastDueCount;
           toast(`💰 ${newDue} payment${newDue > 1 ? 's' : ''} due!`, 'warning');
@@ -1124,8 +1138,10 @@
   function buildCharts(studs) {
     Object.values(chartInstances).forEach(chart => { if (chart) chart.destroy(); });
     chartInstances = {};
-    Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
-
+    const isLight = document.body.dataset.theme === 'light';
+    Chart.defaults.color = isLight ? '#454545' : '#f0ede4';
+    Chart.defaults.borderColor = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
+    
     const revenueCtx = $('chartRevenue');
     if (revenueCtx) {
       // Group students by enrollment month
@@ -1243,7 +1259,7 @@
           responsive: true, 
           indexAxis: 'y', 
           plugins: { legend: { display: false } },
-          scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { precision: 0 } }, y: { grid: { display: false } } }
+          scales: { x: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { precision: 0 } }, y: { grid: { display: false } } }
         }
       });
     }
@@ -1276,7 +1292,12 @@
 
     if ($('s-att-present')) $('s-att-present').textContent = presentCount;
     if ($('s-att-absent')) $('s-att-absent').textContent = absentCount;
-    if ($('s-att-pending')) $('s-att-pending').textContent = Math.max(0, pendingCount);
+    const pendingEl = $('s-att-pending');
+    if (pendingEl) {
+      pendingEl.textContent = Math.max(0, pendingCount);
+      pendingEl.classList.add('bright');
+      pendingEl.style.color = 'var(--gold2)'; // Direct override for maximum brightness
+    }
     
     // Revenue stats - Amount Paid = all fees from students with 'Paid' status
     const paidRevenue = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
@@ -1447,16 +1468,17 @@
         <td>${time}</td>
         <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
         <td><span class="${status==='Paid'?'text-success':status==='Pending'?'text-warning':'text-danger'}">${status}</span></td>
-        <td>
+         <td>
           <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
             <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')" title="View">View</button>
             <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')" title="Edit">Edit</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="deleteStudent('${s.id}', '${getStudentName(s)}')" title="Delete">Delete</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')" title="Payments">⏳ History</button>
             <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')" title="More Options">⋮ More</button>
             <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
               <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">Pay</button>
               <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="openPromote('${s.id}')">Promote</button>
-              <button class="btn btn-outline btn-sm" style="width:100%" onclick="sendPaymentReminder('${s.id}')">WhatsApp</button>
+              <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">WhatsApp</button>
+              <button class="btn btn-danger btn-sm" style="width:100%" onclick="deleteStudent('${s.id}', '${getStudentName(s)}')">Delete</button>
             </div>
           </div>
         </td>
@@ -1526,6 +1548,8 @@
     $('e-join').value = getStudentDate(s);
     $('e-batch-type').value = getStudentBatchType(s);
     $('e-batch-time').value = getStudentBatchTime(s);
+    // Add due date if field exists
+    if ($('e-due-date')) $('e-due-date').value = s.due_date || '';
     openModal('edit-modal');
   }
 
@@ -1545,6 +1569,7 @@
       status: $('e-status').value === 'Paid' ? 'active' : 'pending',
       payment_status: $('e-status').value,
       enrollment_date: $('e-join').value,
+      due_date: $('e-due-date')?.value || null,
       session_mode: $('e-batch-type').value,
       session_time: $('e-batch-time').value,
       monthly_fee: parseInt($('e-fee').value) || 0,
@@ -1578,6 +1603,7 @@
     $('m-fee').value = '0';
     $('m-batch-type').value = 'Evening';
     $('m-batch-time').value = '17:00';
+    if ($('m-due-date')) $('m-due-date').value = '';
     openModal('enroll-modal'); 
   }
   
@@ -1590,6 +1616,7 @@
       rating: parseInt($('m-elo').value) || 0,
       coach_id: $('m-coach').value,
       enrollment_date: $('m-join').value,
+      due_date: $('m-due-date')?.value || null,
       batch_type: $('m-batch-type').value,
       batch_time: $('m-batch-time').value,
       monthly_fee: parseInt($('m-fee').value) || 0,
@@ -2170,8 +2197,66 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // PAYMENTS & RECEIPTS
-  // ═══════════════════════════════════════════════════════════════
+  async function markPaid(id, amount, method = 'Cash', desc = 'Monthly Tuition Fee') {
+    try {
+      // 1. Update Student Status
+      await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Paid' }) });
+      
+      // 2. Log History to Payments Table
+      await apiCall(`${API_BASE}/payments`, { 
+        method: 'POST', 
+        body: JSON.stringify({ 
+          student_id: id, 
+          amount: parseInt(amount) || 5000, 
+          status: 'paid', 
+          payment_method: method,
+          description: desc,
+          transaction_id: 'TXN-' + Math.floor(Math.random()*1000000)
+        }) 
+      });
+
+      toast('Payment processed and logged!', 'success');
+      loadAllData(true);
+    } catch (e) {
+      console.error('Payment processing failed:', e);
+      toast('Failed to process payment', 'error');
+    }
+  }
+
+  async function viewPaymentHistory(studentId) {
+    const s = allStudents.find(x => String(x.id) === String(studentId));
+    if (!s) return;
+
+    $('p-history-name').textContent = getStudentName(s);
+    $('p-history-meta').textContent = `Current Level: ${getStudentLevel(s)} • ID: ${s.id.slice(0,8)}`;
+    $('p-history-body').innerHTML = '<tr><td colspan="5"><div class="loading-state">Fetching history...</div></td></tr>';
+    
+    openModal('payment-history-modal');
+
+    try {
+      const res = await apiCall(`${API_BASE}/payments`);
+      const allPayments = await res.json();
+      const myPayments = allPayments.filter(p => String(p.student_id) === String(studentId));
+
+      if (myPayments.length === 0) {
+        $('p-history-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--ivory3)">No payment history found.</td></tr>';
+        return;
+      }
+
+      $('p-history-body').innerHTML = myPayments.map(p => `
+        <tr>
+          <td>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
+          <td style="color:var(--success);font-weight:600">₹${(p.amount || 0).toLocaleString()}</td>
+          <td>${p.payment_method || 'Cash'}</td>
+          <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || '-'}</td>
+          <td style="font-size:12px">${p.description || '-'}</td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      $('p-history-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--danger)">Error loading history.</td></tr>';
+    }
+  }
+
   function renderBills() {
     const tbody = $('bill-body');
     if (!tbody) return;
