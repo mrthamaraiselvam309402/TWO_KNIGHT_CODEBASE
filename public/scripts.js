@@ -389,7 +389,16 @@
   function getStudentName(s) { return s.full_name || s.name || ''; }
   function getStudentLevel(s) { return capitalizeFirst(s.level || s.grade || 'Beginner'); }
   function getStudentRating(s) { return s.rating || s.current_rating || 800; }
-  function getStudentDate(s) { return s.enrollment_date || s.join_date || ''; }
+  function getStudentDate(s) { 
+    const d = s.enrollment_date || s.join_date || s.created_at;
+    if (!d) return '';
+    try {
+      // Return simple YYYY-MM-DD format which Excel handles best
+      return new Date(d).toISOString().split('T')[0];
+    } catch (e) {
+      return String(d).split('T')[0]; // Fallback to raw string before 'T'
+    }
+  }
   function getStudentPhone(s) { return s.parent_phone || s.phone || ''; }
   function getStudentEmail(s) { return s.email || ''; }
   function getStudentMonthlyFee(s) {
