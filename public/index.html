@@ -345,9 +345,10 @@
           
           <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--ivory-dim);margin-bottom:12px;font-weight:600">Copilot Modules</div>
           <div class="ai-ws-menu" id="ai-modules">
-            <button class="ai-ws-btn active" onclick="setAIModule('global')">⚡ Global Insights</button>
-            <button class="ai-ws-btn" onclick="setAIModule('finance')">💰 Financial Analysis</button>
-            <button class="ai-ws-btn" onclick="setAIModule('coach')">🧑‍🏫 Coach Performance</button>
+            <button class="ai-ws-btn admin-only active" onclick="setAIModule('global')">⚡ Global Insights</button>
+            <button class="ai-ws-btn admin-only" onclick="setAIModule('finance')">💰 Financial Analysis</button>
+            <button class="ai-ws-btn admin-only" onclick="setAIModule('coach')">🧑‍🏫 Coach Performance</button>
+            <button class="ai-ws-btn parent-only" onclick="setAIModule('parent')" style="display:none">👶 My Child</button>
           </div>
         </div>
         
@@ -376,9 +377,12 @@
             </div>
             <div class="ai-ws-suggest">
               <button class="ai-ws-pill" onclick="setAISuggestion('How many students are enrolled?')">How many students?</button>
-              <button class="ai-ws-pill" onclick="setAISuggestion('What is the total revenue?')">Total revenue?</button>
-              <button class="ai-ws-pill" onclick="setAISuggestion('Which coach has the most students?')">Top coach?</button>
-              <button class="ai-ws-pill" onclick="setAISuggestion('Show me payment status breakdown')">Payment status breakdown</button>
+              <button class="ai-ws-pill admin-only" onclick="setAISuggestion('What is the total revenue?')">Total revenue?</button>
+              <button class="ai-ws-pill admin-only" onclick="setAISuggestion('Which coach has the most students?')">Top coach?</button>
+              <button class="ai-ws-pill admin-only" onclick="setAISuggestion('Show me payment status breakdown')">Payment status breakdown</button>
+              <button class="ai-ws-pill parent-only" onclick="setAISuggestion('How is my child progressing?')">My progress?</button>
+              <button class="ai-ws-pill parent-only" onclick="setAISuggestion('What is my child attendance?')">Attendance?</button>
+              <button class="ai-ws-pill parent-only" onclick="setAISuggestion('When are upcoming events?')">Upcoming events?</button>
             </div>
           </div>
         </div>

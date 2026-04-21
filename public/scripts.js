@@ -985,6 +985,13 @@
     if (userRole === 'master') {
       document.querySelectorAll('.master-only').forEach(el => el.style.setProperty('display', 'flex', 'important'));
     }
+    
+    // Initialize parent AI module on login
+    if (userRole === 'parent') {
+      const aiModules = $('ai-modules');
+      if (aiModules) aiModules.style.display = 'block';
+      setTimeout(() => setAIModule('parent'), 100);
+    }
 
     // Switch page immediately
     if (userRole === 'parent') setPage('child');
@@ -2726,15 +2733,128 @@
   // ═══════════════════════════════════════════════════════════════
   let currentAIModule = 'global';
   
+  // ── PRIVACY GUARDRAILS FOR PARENT AI ──
+  const BLOCKED_PATTERNS = [
+    /revenue/i, /salary/i, /profit/i, /income/i,
+    /other student/i, /other parent/i, /coach.*salary/i,
+    /academy.*financial/i, /revenue.*this.*month/i,
+    /total.*student/i, /collection.*rate/i, /payment.*records.*other/i,
+    /sensitive/i, /confidential/i, /internal/i,
+    /admin.*data/i, /backend/i, /database/i
+  ];
+
+  const ALLOWED_PARENT_QUERIES = [
+    'my child progress', 'child progress', 'my child achievements',
+    'my child attendance', 'attendance record',
+    'my payment status', 'payment history', 'fee status',
+    'my coach', 'assigned coach', 'coach name',
+    'upcoming events', 'events this month', 'event schedule',
+    'my child level', 'my child elo', 'rating history',
+    'class schedule', 'batch timing', 'session time'
+  ];
+
+  const PARENT_DENIED_MESSAGE = "I can only help with information about your child's progress, attendance, and general academy events. For detailed financial or administrative queries, please contact the academy administrator directly.";
+
+  function buildParentAIContext() {
+    if (role !== 'parent' || !currentStudent) return null;
+    
+    const coach = allCoaches.find(c => String(c.id) === String(currentStudent.coach_id));
+    const myAchievements = achievementsData.filter(a => String(a.student_id) === String(currentStudent.id));
+    const myPayments = allPayments.filter(p => String(p.student_id) === String(currentStudent.id));
+    const upcomingEvents = eventsData.filter(e => new Date(e.date) >= new Date()).slice(0, 5);
+    const myAttendance = allAttendance.filter(a => String(a.student_id) === String(currentStudent.id)).slice(-30);
+    
+    return {
+      role: 'parent',
+      student: {
+        name: currentStudent.name,
+        level: currentStudent.grade,
+        elo: currentStudent.rating,
+        payment_status: getStudentPaymentStatus(currentStudent),
+        monthly_fee: currentStudent.monthly_fee,
+        due_date: currentStudent.due_date
+      },
+      coach: coach ? {
+        name: getCoachName(coach),
+        specialty: getCoachSpecialty(coach)
+      } : null,
+      achievements: myAchievements.slice(0, 5).map(a => ({
+        title: a.title,
+        date: a.date_achieved
+      })),
+      payments: myPayments.slice(0, 5).map(p => ({
+        date: p.payment_date,
+        amount: p.amount,
+        status: p.status
+      })),
+      events: upcomingEvents.map(e => ({
+        title: e.title,
+        date: e.date,
+        type: e.type
+      })),
+      attendance: {
+        present: myAttendance.filter(a => a.status === 'present').length,
+        total: myAttendance.length
+      },
+      // NOTE: No other students, no coach salary, no revenue data
+      allowed_queries: ALLOWED_PARENT_QUERIES,
+      blocked_patterns: BLOCKED_PATTERNS.map(p => p.source)
+    };
+  }
+
+  function validateParentAIQuery(query) {
+    const queryLower = query.toLowerCase();
+    
+    // Check if query contains blocked patterns
+    for (const pattern of BLOCKED_PATTERNS) {
+      if (pattern.test(queryLower)) {
+        return { allowed: false, reason: 'sensitive_data' };
+      }
+    }
+    
+    // Check minimum allowed patterns (at least one keyword must match)
+    const minKeywords = [
+      /child/i, /my/i, /student/i, /attendance/i, /payment/i,
+      /coach/i, /event/i, /level/i, /elo/i, /rating/i,
+      /class/i, /session/i, /batch/i, /progress/i, /achievement/i
+    ];
+    
+    const hasMinKeyword = minKeywords.some(k => k.test(queryLower));
+    if (!hasMinKeyword) {
+      return { allowed: false, reason: 'unrelated_query' };
+    }
+    
+    return { allowed: true };
+  }
+
+  function validateParentAIResponse(response) {
+    if (role !== 'parent') return response;
+    
+    // Check response for sensitive data leakage
+    for (const pattern of BLOCKED_PATTERNS) {
+      if (pattern.test(response)) {
+        return PARENT_DENIED_MESSAGE;
+      }
+    }
+    
+    return response;
+  }
+
   function setAIModule(m) {
+    // Parents can only access parent module
+    if (role === 'parent' && m !== 'parent') {
+      m = 'parent';
+    }
+    
     currentAIModule = m;
     const buttons = document.querySelectorAll('.ai-ws-btn');
     buttons.forEach(btn => btn.classList.remove('active'));
     
     const moduleConfig = {
-      global: { title: 'Global Insights', icon: '⚡', btnIndex: 0 },
-      finance: { title: 'Financial Analysis', icon: '💰', btnIndex: 1 },
-      coach: { title: 'Coach Performance', icon: '🧑‍🏫', btnIndex: 2 }
+      global: { title: 'Global Insights', icon: '⚡', btnIndex: 0, roles: ['admin', 'master'] },
+      finance: { title: 'Financial Analysis', icon: '💰', btnIndex: 1, roles: ['admin', 'master'] },
+      coach: { title: 'Coach Performance', icon: '🧑‍🏫', btnIndex: 2, roles: ['admin', 'master'] },
+      parent: { title: 'My Child Progress', icon: '👶', btnIndex: 3, roles: ['parent'] }
     };
     
     const config = moduleConfig[m];
@@ -2751,13 +2871,19 @@
       const descriptions = {
         global: 'Real-time analytics and predictive capabilities.',
         finance: 'Revenue tracking, payment status, and financial forecasts.',
-        coach: 'Coach performance metrics and student progress tracking.'
+        coach: 'Coach performance metrics and student progress tracking.',
+        parent: 'Get updates about your child\'s progress, attendance, and academy events.'
       };
       sub.textContent = descriptions[m] || descriptions.global;
     }
     
     const chatContainer = document.getElementById('ai-workspace-msgs');
     if (chatContainer) {
+      // Clear existing messages for parent module
+      if (m === 'parent') {
+        chatContainer.innerHTML = '';
+      }
+      
       const welcomeMsg = document.createElement('div');
       welcomeMsg.className = 'ai-ws-msg bot';
       welcomeMsg.innerHTML = `
@@ -2765,7 +2891,8 @@
         <div class="ai-ws-bubble">
           ${m === 'global' ? 'Switched to Global Insights. I can now provide academy-wide analytics, enrollment trends, and comprehensive metrics.' : 
             m === 'finance' ? 'Switched to Financial Analysis. Let\'s examine revenue patterns, payment collections, and financial performance.' :
-            'Switched to Coach Performance. I\'ll analyze individual coach metrics and student progress.'}
+            m === 'coach' ? 'Switched to Coach Performance. I\'ll analyze individual coach metrics and student progress.' :
+            `Hello! I'm your personal assistant for ${currentStudent?.name || 'your child'}'s progress. I can help with attendance, achievements, payment status, upcoming events, and class schedules.`}
         </div>
       `;
       chatContainer.appendChild(welcomeMsg);
@@ -3130,6 +3257,24 @@
     const query = input.value;
     const chatContainer = document.getElementById('ai-workspace-msgs');
     
+    // ── PRIVACY GUARDRAIL: Validate parent queries ──
+    if (role === 'parent') {
+      const validation = validateParentAIQuery(query);
+      if (!validation.allowed) {
+        const userMsg = document.createElement('div');
+        userMsg.className = 'ai-ws-msg user';
+        userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${query}</div>`;
+        chatContainer.appendChild(userMsg);
+        
+        const botMsg = document.createElement('div');
+        botMsg.className = 'ai-ws-msg bot';
+        botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">${PARENT_DENIED_MESSAGE}</div>`;
+        chatContainer.appendChild(botMsg);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        return;
+      }
+    }
+    
     // Add user message
     const userMsg = document.createElement('div');
     userMsg.className = 'ai-ws-msg user';
@@ -3145,37 +3290,42 @@
     thinkingMsg.innerHTML = `
       <div class="ai-ws-avatar">🤖</div>
       <div class="ai-ws-bubble msg-thinking">
-        🔄 Analyzing query, executing tools, synthesizing data...
+        🔄 Analyzing query...
       </div>
     `;
     chatContainer.appendChild(thinkingMsg);
     chatContainer.scrollTop = chatContainer.scrollHeight;
     
     try {
-      // Gather Academy Context - Real-time data
-      const studentsCount = allStudents.length;
-      const coachesCount = allCoaches.length;
-      const totalRevenue = allStudents.reduce((acc, s) => acc + (getStudentMonthlyFee(s) || 0), 0);
-      const activeStudents = allStudents.filter(s => getStudentStatus(s) === 'active').length;
-      const pendingPayments = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
-      const activeTab = document.querySelector('.nav-item.active')?.dataset.page || 'Dashboard';
+      // ── BUILD ROLE-SPECIFIC CONTEXT ──
+      let context = {};
       
-      const context = {
-        students: studentsCount,
-        activeStudents: activeStudents,
-        coaches: coachesCount,
-        revenue: totalRevenue,
-        pendingPayments: pendingPayments,
-        moduleFocus: activeTab,
-        user: role || 'Admin',
-        timestamp: new Date().toISOString()
-      };
+      if (role === 'parent') {
+        // PARENT CONTEXT: Isolated, child-specific only
+        context = buildParentAIContext() || {};
+        context.moduleFocus = 'parent';
+      } else {
+        // ADMIN CONTEXT: Full academy data
+        const studentsCount = allStudents.length;
+        const coachesCount = allCoaches.length;
+        const totalRevenue = allStudents.reduce((acc, s) => acc + (getStudentMonthlyFee(s) || 0), 0);
+        const activeStudents = allStudents.filter(s => getStudentStatus(s) === 'active').length;
+        const pendingPayments = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
+        const activeTab = document.querySelector('.nav-item.active')?.dataset.page || 'Dashboard';
+        
+        context = {
+          students: studentsCount,
+          activeStudents: activeStudents,
+          coaches: coachesCount,
+          revenue: totalRevenue,
+          pendingPayments: pendingPayments,
+          moduleFocus: activeTab,
+          user: role || 'Admin',
+          timestamp: new Date().toISOString()
+        };
+      }
 
-      // Execute tool-calling pipeline
-      const toolResults = await TOOL_CALLER.executePlan(query);
-      const temporalContext = TEMPORAL_ENGINE.getCurrentContext();
-      
-      // Call Edge Function with context
+      // Call AI with role-specific context
       const aiResponse = await apiCall(`${API_BASE}/ai`, {
         method: 'POST',
         body: JSON.stringify({
@@ -3186,7 +3336,12 @@
       });
       
       const aiData = await aiResponse.json();
-      const botResponse = aiData.message || RESPONSE_SYNTHESIZER.synthesize(query, toolResults, temporalContext);
+      let botResponse = aiData.message || 'I apologize, I couldn\'t process that request. Please try again.';
+      
+      // ── PRIVACY GUARDRAIL: Validate AI response for parents ──
+      if (role === 'parent') {
+        botResponse = validateParentAIResponse(botResponse);
+      }
       
       thinkingMsg.remove();
       
