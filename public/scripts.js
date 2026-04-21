@@ -1755,24 +1755,6 @@
     if (assignedStudents.length === 0) {
       container.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No students assigned to this coach</p></div>';
     } else {
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const timeSlots = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
-      
-      const studentSchedules = {};
-      assignedStudents.forEach(s => {
-        const batchTime = s.batch_time || s.session_time || '';
-        const batchDay = s.batch_day || s.session_day || s.preferred_day || '';
-        if (batchTime || batchDay) {
-          const key = `${getStudentName(s)}`;
-          studentSchedules[key] = {
-            time: batchTime || '17:00',
-            day: batchDay || 'Sat',
-            level: getStudentLevel(s),
-            rating: getStudentRating(s)
-          };
-        }
-      });
-      
       let scheduleHtml = `
         <div class="table-wrap" style="margin-top:10px; border:1px solid var(--border); border-radius:8px; overflow:hidden">
         <table style="width:100%; border-collapse:collapse; font-size:13px; background:var(--surface)">
@@ -1786,22 +1768,24 @@
           </thead>
           <tbody>`;
       
-      Object.entries(studentSchedules).forEach(([name, data]) => {
+      assignedStudents.forEach(s => {
+        const name = getStudentName(s);
+        const batchTime = s.batch_time || s.session_time || '';
+        const batchDay = s.batch_day || s.session_day || s.preferred_day || '';
+        const level = getStudentLevel(s);
+        const rating = getStudentRating(s);
+
         scheduleHtml += `
           <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:12px; color:var(--ivory2)">${data.day}</td>
-            <td style="padding:12px; font-family:var(--font-mono); color:var(--gold)">${formatTime(data.time)}</td>
+            <td style="padding:12px; color:var(--ivory2)">${batchDay || '<span style="opacity:0.5">TBD</span>'}</td>
+            <td style="padding:12px; font-family:var(--font-mono); color:var(--gold)">${batchTime ? formatTime(batchTime) : '<span style="opacity:0.5">TBD</span>'}</td>
             <td style="padding:12px; font-weight:600; color:var(--ivory)">${name}</td>
-            <td style="padding:12px; color:var(--ivory2); font-size:12px">${data.level}</td>
+            <td style="padding:12px; color:var(--ivory2); font-size:12px">${level} <span style="color:var(--gold); font-size:10px; margin-left:4px">(${rating})</span></td>
           </tr>`;
       });
-      scheduleHtml += '</tbody></table></div>';
       
-      if (Object.keys(studentSchedules).length === 0) {
-        container.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No batch schedules found for assigned students</p></div>';
-      } else {
-        container.innerHTML = scheduleHtml;
-      }
+      scheduleHtml += '</tbody></table></div>';
+      container.innerHTML = scheduleHtml;
     }
     
     openModal('coach-schedule-modal'); 
