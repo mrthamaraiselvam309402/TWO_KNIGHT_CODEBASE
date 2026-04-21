@@ -82,7 +82,7 @@
     <div class="nav-item parent-only" id="nav-child" onclick="setPage('child')"><span class="ico">📈</span> My Child</div>
     <div class="nav-item" id="nav-fame" onclick="setPage('fame')"><span class="ico">🏆</span> Wall of Fame</div>
     <div class="nav-item" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Events</div>
-    <div class="nav-item" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
+    <div class="nav-item admin-only" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
     <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
     <div class="nav-item" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
   </div>
@@ -319,7 +319,7 @@
     </div>
 
     <!-- Payments -->
-    <div id="page-bills" class="page">
+    <div id="page-bills" class="page admin-only">
       <div class="table-wrap">
         <table>
           <thead><tr><th>Invoice</th><th>Student</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead>

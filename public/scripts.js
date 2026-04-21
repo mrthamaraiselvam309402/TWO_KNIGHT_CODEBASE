@@ -806,6 +806,12 @@
   };
 
   function setPage(p) {
+    const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'msgs'];
+    if (adminPages.includes(p) && role !== 'admin' && role !== 'master') {
+      toast('Access denied', 'error');
+      setPage(role === 'parent' ? 'child' : 'dash');
+      return;
+    }
     document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
     const pageEl = $('page-' + p);
