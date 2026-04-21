@@ -1459,7 +1459,6 @@
     }
 
     if (!studs || studs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No students found</div></td></tr>';
       return;
     }
     
@@ -1755,40 +1754,49 @@
     if (assignedStudents.length === 0) {
       container.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No students assigned to this coach</p></div>';
     } else {
-      let scheduleHtml = `
-        <div class="table-wrap" style="margin-top:10px; border:1px solid var(--border); border-radius:8px; overflow:hidden">
-        <table style="width:100%; border-collapse:collapse; font-size:13px; background:var(--surface)">
-          <thead>
-            <tr style="background:var(--surface3)">
-              <th style="text-align:left; padding:12px; color:var(--gold); border-bottom:1px solid var(--border)">Day</th>
-              <th style="text-align:left; padding:12px; color:var(--gold); border-bottom:1px solid var(--border)">Time</th>
-              <th style="text-align:left; padding:12px; color:var(--gold); border-bottom:1px solid var(--border)">Student</th>
-              <th style="text-align:left; padding:12px; color:var(--gold); border-bottom:1px solid var(--border)">Level</th>
-            </tr>
-          </thead>
-          <tbody>`;
+      // Group by Day
+      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      let scheduleHtml = `<div class="schedule-grid-premium">`;
       
-      assignedStudents.forEach(s => {
-        const name = getStudentName(s);
-        const batchTime = s.batch_time || s.session_time || '';
-        const batchDay = s.batch_day || s.session_day || s.preferred_day || '';
-        const level = getStudentLevel(s);
-        const rating = getStudentRating(s);
-
-        scheduleHtml += `
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:12px; color:var(--ivory2)">${batchDay || '<span style="opacity:0.5">TBD</span>'}</td>
-            <td style="padding:12px; font-family:var(--font-mono); color:var(--gold)">${batchTime ? formatTime(batchTime) : '<span style="opacity:0.5">TBD</span>'}</td>
-            <td style="padding:12px; font-weight:600; color:var(--ivory)">${name}</td>
-            <td style="padding:12px; color:var(--ivory2); font-size:12px">${level} <span style="color:var(--gold); font-size:10px; margin-left:4px">(${rating})</span></td>
-          </tr>`;
+      days.forEach(day => {
+        const daySlots = assignedStudents.filter(s => s.batch_day === day || s.session_day === day);
+        if (daySlots.length > 0) {
+          scheduleHtml += `
+            <div class="schedule-day-column">
+              <div class="schedule-day-header">${day}</div>
+              ${daySlots.sort((a,b) => (a.batch_time || '').localeCompare(b.batch_time || '')).map(s => `
+                <div class="schedule-slot-card">
+                  <div class="slot-time">${s.batch_time ? formatTime(s.batch_time) : 'TBD'}</div>
+                  <div class="slot-stud">${getStudentName(s)}</div>
+                  <div class="slot-lvl">${getStudentLevel(s)}</div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
       });
       
-      scheduleHtml += '</tbody></table></div>';
+      // Handle Unscheduled (TBD)
+      const unscheduled = assignedStudents.filter(s => !s.batch_day && !s.session_day);
+      if (unscheduled.length > 0) {
+        scheduleHtml += `
+          <div class="schedule-day-column tbd">
+            <div class="schedule-day-header">Unscheduled / TBD</div>
+            ${unscheduled.map(s => `
+              <div class="schedule-slot-card">
+                <div class="slot-time">TBD</div>
+                <div class="slot-stud">${getStudentName(s)}</div>
+                <div class="slot-lvl">${getStudentLevel(s)}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+      
+      scheduleHtml += `</div>`;
       container.innerHTML = scheduleHtml;
     }
-    
-    openModal('coach-schedule-modal'); 
+    openModal('coach-schedule-modal');
   }
 
   function openCoachModal(id = null) { 
@@ -2318,7 +2326,7 @@
     
     toast(`Processing ${checked.length} students...`, 'info');
     for (const cb of checked) {
-      await apiCall(`${API_BASE}/students?id=${cb.dataset.sid}`, { 
+      await apiCall(`${API_BASE}/students?id=${cb.dataset.id}`, { 
         method: 'PUT', 
         body: JSON.stringify({ payment_status: 'Paid' }) 
       });
@@ -3142,13 +3150,6 @@
   async function generateReportPDF() {
     const { jsPDF } = window.jspdf;
     if (!jsPDF) {
-      toast('PDF library not loaded', 'error');
-      return;
-    }
-
-  async function generateReportPDF() {
-    const { jsPDF } = window.jspdf;
-    if (!jsPDF) {
       toast('PDF generator not available', 'error');
       return;
     }
@@ -3234,13 +3235,11 @@
     drawMetric(gridX1, gridYStart + vSpace, 'COLLECTED', `Rs. ${collected.toLocaleString()}`, 'Revenue Received');
     drawMetric(gridX2, gridYStart + vSpace, 'PENDING', `Rs. ${pending.toLocaleString()}`, 'Outstanding Fees');
     
-    drawMetric(gridX1, gridYStart + vSpace*2, 'TOTAL POTENTIAL', `Rs. ${potential.toLocaleString()}`, 'Full Revenue Capacity');
-    drawMetric(gridX2, gridYStart + vSpace*2, 'COACH EXPENSES', `Rs. ${payroll.toLocaleString()}`, 'Monthly Payroll');
+    drawMetric(gridX1, gridYStart + vSpace * 2, 'TOTAL POTENTIAL', `Rs. ${potential.toLocaleString()}`, 'Full Revenue Capacity');
+    drawMetric(gridX2, gridYStart + vSpace * 2, 'COACH EXPENSES', `Rs. ${payroll.toLocaleString()}`, 'Monthly Payroll');
     
-    // Net Profit Highlight
-    doc.setFillColor(gold[0], gold[1], gold[2], 0.1);
-    doc.rect(20, gridYStart + vSpace*3 - 10, 170, 20, 'F');
-    drawMetric(gridX1, gridYStart + vSpace*3, 'NET PROFIT', `Rs. ${netProfit.toLocaleString()}`, 'Current Cash Profit');
+    drawMetric(gridX1, gridYStart + vSpace * 3, 'NET PROFIT', `Rs. ${netProfit.toLocaleString()}`, 'Current Cash Profit');
+    drawMetric(gridX2, gridYStart + vSpace * 3, 'COLLECTION RATE', `${collectionRate}%`, 'Academy Efficiency');
 
     // Collection Performance Table
     doc.setFontSize(14);
@@ -3648,6 +3647,7 @@
   window.toggleEye = toggleEye;
   window.setPage = setPage;
   window.doLogin = doLogin;
+  window.bulkMarkPaid = bulkMarkPaid;
   window.doLogout = doLogout;
   window.finishLogin = finishLogin;
 

@@ -2376,4 +2376,15 @@ body[data-theme="light"] .chat-input-row {
   transition: 0.2s;
 }
 
-.ai-ws-pill:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-glow); }
+.ai-ws-pill:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-glow); }
+/* -- PREMIUM COACH SCHEDULE GRID -- */
+.schedule-grid-premium { display: flex; gap: 20px; overflow-x: auto; padding: 10px 5px; scrollbar-width: thin; }
+.schedule-day-column { min-width: 200px; flex: 1; background: var(--surface2); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
+.schedule-day-column.tbd { opacity: 0.8; border-style: dashed; }
+.schedule-day-header { padding: 12px; background: var(--surface3); color: var(--gold); font-weight: 700; text-align: center; border-bottom: 1px solid var(--border); font-family: var(--font-head); letter-spacing: 1px; }
+.schedule-slot-card { padding: 12px; border-bottom: 1px solid var(--border); transition: background 0.2s; }
+.schedule-slot-card:last-child { border-bottom: none; }
+.schedule-slot-card:hover { background: var(--glass); }
+.slot-time { font-family: var(--font-mono); color: var(--gold); font-size: 11px; margin-bottom: 4px; }
+.slot-stud { color: var(--ivory); font-weight: 600; font-size: 14px; }
+.slot-lvl { color: var(--ivory3); font-size: 11px; margin-top: 2px; }

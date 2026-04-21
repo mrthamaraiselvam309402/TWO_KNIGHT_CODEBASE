@@ -178,13 +178,26 @@
         <select id="f-status" onchange="renderStudents()"><option value="">All Payment Status</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
         <input type="number" id="f-min-fee" placeholder="Min Fee ₹" oninput="renderStudents()">
         <input type="number" id="f-max-fee" placeholder="Max Fee ₹" oninput="renderStudents()">
+        <button class="btn btn-outline-amber btn-sm" onclick="bulkMarkPaid()">💳 Bulk Pay</button>
         <button class="btn btn-outline-grey btn-sm" onclick="clearFilters()">Clear</button>
-        <button class="btn btn-gold btn-sm" onclick="bulkMarkPaid()" id="bulk-pay-btn" style="display:none">Mark Selected Paid</button>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Student</th><th>Level / ELO</th><th>Coach</th><th>Join Date</th><th>Session</th><th>Timing</th><th>Fee</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody id="stud-body"><tr><td colspan="9"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
+          <thead>
+            <tr>
+              <th style="width:40px"><input type="checkbox" id="stud-check-all" onclick="window.toggleAllStudents(this.checked)"></th>
+              <th>Student</th>
+              <th>Level / ELO</th>
+              <th>Coach</th>
+              <th>Join Date</th>
+              <th>Session</th>
+              <th>Timing</th>
+              <th>Fee</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="stud-body"><tr><td colspan="10"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
         </table>
       </div>
     </div>
