@@ -409,12 +409,20 @@
   function getStudentPhone(s) { return s.parent_phone || s.phone || ''; }
   function getStudentEmail(s) { return s.email || ''; }
   function getStudentMonthlyFee(s) {
-    if (s.monthly_fee !== undefined && s.monthly_fee !== null) return parseInt(s.monthly_fee);
+    // If the database has a non-zero fee, use it
+    if (s.monthly_fee !== undefined && s.monthly_fee !== null && parseInt(s.monthly_fee) > 0) {
+      return parseInt(s.monthly_fee);
+    }
+    
+    // Fallback to notes parsing if database fee is 0 or missing
     if (s.notes) {
       const match = s.notes.match(/fee[:\s]*(\d+)/i);
       if (match) return parseInt(match[1]);
     }
-    return 5000;
+    
+    // Default fallback based on session type if notes also missing
+    const type = getStudentBatchType(s);
+    return type === 'Single' ? 2500 : 1200;
   }
   function getStudentPaymentStatus(s) { 
     if (!s) return 'Due';
@@ -1321,11 +1329,9 @@
       return;
     }
     
-    console.log('renderDash executing with data');
-    
-    const paidStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid');
-    
-    // Basic stats
+     console.log('renderDash executing with data');
+     
+     // Basic stats
     if ($('s-total')) $('s-total').textContent = allStudents.length;
     if ($('s-elo')) $('s-elo').textContent = allStudents.length ? Math.round(allStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / allStudents.length) : 0;
     if ($('s-coaches')) $('s-coaches').textContent = allCoaches.length;
@@ -1351,32 +1357,56 @@
     }
     
     // Revenue stats - Realized Revenue from actual payment records
-    // We sum all payments from the current month
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     
-    const paidRevenue = allPayments.filter(p => {
+    // Sum only payments for the current calendar month
+    // We use a robust year-month check that works across timezones
+    const monthPayments = allPayments.filter(p => {
       const pDate = new Date(p.created_at || p.payment_date);
       return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
-    }).reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
+    });
     
-    // Total Potential Revenue = All students' fees (from structured notes or monthly_fee)
-    const totalPotential = allStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+    let paidRevenue = monthPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
     
-    // Outstanding Dues = Potential - Paid
+    // Fallback logic: If no payments are found in the transactions table, 
+    // we sum the fees of students marked as 'Paid' in the student registry.
+    const paidStudents = allStudents.filter(s => {
+      const status = getStudentPaymentStatus(s);
+      return status && status.toLowerCase() === 'paid';
+    });
+    
+    const statusRevenue = paidStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+    
+    console.log(`Revenue Audit - Transactions: ₹${paidRevenue} | Status-based: ₹${statusRevenue} (${paidStudents.length} students)`);
+
+    // If transactions are missing but students are marked paid, use students as source
+    if (paidRevenue === 0 && statusRevenue > 0) {
+      console.warn(`Applying revenue fallback from student registry status.`);
+      paidRevenue = statusRevenue;
+    }
+    
+    // Total Potential Revenue = Sum of all students' active monthly fees
+    const totalPotential = allStudents.reduce((a, s) => {
+      const fee = getStudentMonthlyFee(s);
+      return a + (fee || 0);
+    }, 0);
+    
+    // Outstanding Dues
     const dueRevenue = Math.max(0, totalPotential - paidRevenue);
     
+    console.log(`Financial Pulse - Potential: ₹${totalPotential.toLocaleString()} | Collected: ₹${paidRevenue.toLocaleString()} | Outstanding: ₹${dueRevenue.toLocaleString()}`);
+
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
     if ($('s-due')) $('s-due').textContent = '₹' + dueRevenue.toLocaleString();
     
-    // Coach expenses (Sum of all coach salaries/fees)
+    // Coach expenses
     const totalCoachCost = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     if ($('s-coach-exp')) $('s-coach-exp').textContent = '₹' + totalCoachCost.toLocaleString();
     if ($('s-total-cost')) $('s-total-cost').textContent = '₹' + totalCoachCost.toLocaleString();
     
     // Financial analytics
-    // Net Profit = Collected Revenue - Coach Expenses (cash flow)
     const netProfit = paidRevenue - totalCoachCost;
     
     if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
@@ -1386,15 +1416,16 @@
     let groupCount = 0, singleCount = 0;
     allStudents.forEach(s => {
       const type = getStudentBatchType(s);
-      if (type === 'Group') groupCount++;
-      else singleCount++;
+      if (type === 'Single') singleCount++;
+      else groupCount++;
     });
-    console.log('Session counts - Group:', groupCount, 'Single:', singleCount);
+    
+    console.log(`Session stats - Group: ${groupCount}, Single: ${singleCount}, total: ${allStudents.length}`);
     if ($('s-group')) $('s-group').textContent = groupCount;
     if ($('s-single')) $('s-single').textContent = singleCount;
     
     // Collection rate
-    const collectionRate = totalPotential > 0 ? ((paidRevenue / totalPotential) * 100).toFixed(1) : 0;
+    const collectionRate = totalPotential > 0 ? ((paidRevenue / totalPotential) * 100).toFixed(1) : '0';
     if ($('s-rate')) $('s-rate').textContent = collectionRate + '%';
     
     // Build charts
