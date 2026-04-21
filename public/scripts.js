@@ -3176,11 +3176,11 @@
     doc.setFont("helvetica", "bold");
     doc.text('CHESSKIDOO ACADEMY', 105, 35, { align: 'center' });
     doc.setFontSize(12);
-    doc.text('EXECUTIVE FINANCIAL PERFORMANCE REPORT', 105, 45, { align: 'center' });
+    doc.text('PREMIUM FINANCIAL PERFORMANCE REPORT', 105, 45, { align: 'center' });
 
     doc.setTextColor(...darkGray);
     doc.setFontSize(10);
-    doc.text(`Date: ${dateStr}`, 20, 60);
+    doc.text(`REPORT DATE: ${dateStr}`, 20, 60);
 
     const totalStudents = allStudents.length;
     const collected = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
@@ -3189,26 +3189,61 @@
     const payroll = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     const netProfit = collected - payroll;
     const collectionRate = potential > 0 ? ((collected / potential) * 100).toFixed(1) : 0;
+    const profitMargin = collected > 0 ? ((netProfit / collected) * 100).toFixed(1) : 0;
 
     doc.setFontSize(14);
     doc.setTextColor(...gold);
-    doc.text('SUMMARY METRICS', 20, 75);
+    doc.text('EXECUTIVE SUMMARY', 20, 75);
     doc.line(20, 77, 190, 77);
 
-    doc.setTextColor(...darkGray);
+    // Grid of 8 Metrics
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    
+    // Column 1
+    let gy = 85;
+    const drawMetric = (label, val, sub, x) => {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 100, 100);
+      doc.text(label.toUpperCase(), x, gy);
+      doc.setFontSize(14);
+      doc.setTextColor(...darkGray);
+      doc.text(val, x, gy + 8);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(sub, x, gy + 13);
+      doc.setFontSize(9);
+    };
+
+    drawMetric('Total Cadets', String(totalStudents), 'Academy Strength', 25);
+    drawMetric('Collected', `Rs. ${collected.toLocaleString()}`, 'Revenue Received', 25); gy += 25;
+    drawMetric('Total Potential', `Rs. ${potential.toLocaleString()}`, 'Full Revenue Capacity', 25); gy += 25;
+    drawMetric('Net Profit', `Rs. ${netProfit.toLocaleString()}`, 'Current Cash Profit', 25);
+
+    // Column 2
+    gy = 85;
+    drawMetric('Active Coaches', String(allCoaches.length), 'Teaching Staff', 110);
+    drawMetric('Pending', `Rs. ${pending.toLocaleString()}`, 'Outstanding Fees', 110); gy += 25;
+    drawMetric('Coach Expenses', `Rs. ${payroll.toLocaleString()}`, 'Monthly Payroll', 110); gy += 25;
+    drawMetric('Collection Rate', `${collectionRate}%`, 'Academy Efficiency', 110);
+
+    // Summary Insights Box
+    gy += 30;
+    doc.setFillColor(250, 248, 240);
+    doc.roundedRect(20, gy, 170, 35, 3, 3, 'F');
+    doc.setTextColor(...gold);
     doc.setFontSize(11);
-    doc.text(`Total Enrolled Students: ${totalStudents}`, 25, 85);
-    doc.text(`Collection Efficiency: ${collectionRate}%`, 25, 92);
-    
-    doc.setFontSize(12);
-    doc.text(`Gross Revenue Collected: Rs. ${collected.toLocaleString()}`, 25, 105);
-    doc.text(`Outstanding Revenue: Rs. ${pending.toLocaleString()}`, 25, 112);
-    doc.text(`Total Coach Salaries: Rs. ${payroll.toLocaleString()}`, 25, 119);
-    
-    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(netProfit >= 0 ? 50 : 200, netProfit >= 0 ? 150 : 50, 50);
-    doc.text(`NET OPERATING PROFIT: Rs. ${netProfit.toLocaleString()}`, 25, 135);
+    doc.text('COLLECTION PERFORMANCE', 30, gy + 10);
+    
+    doc.setTextColor(...darkGray);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Collection Rate: ${collectionRate}%`, 30, gy + 20);
+    doc.text(`Profit Margin: ${profitMargin}%`, 30, gy + 28);
+    
+    doc.text(`Collected:      Rs. ${collected.toLocaleString()}`, 110, gy + 20);
+    doc.text(`Pending:        Rs. ${pending.toLocaleString()}`, 110, gy + 28);
 
     addFooter(1, 3);
 
@@ -3219,63 +3254,76 @@
     
     doc.setTextColor(...gold);
     doc.setFontSize(16);
-    doc.text('COACH ROI ANALYSIS', 20, 20);
+    doc.text('COACH FINANCIAL BREAKDOWN', 20, 20);
     doc.line(20, 22, 190, 22);
 
     doc.setTextColor(...darkGray);
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text('Coach Name', 25, 35);
-    doc.text('Students', 70, 35);
-    doc.text('Collected', 95, 35);
-    doc.text('Costs', 125, 35);
-    doc.text('Net Profit', 155, 35);
+    doc.text('Coach Name', 22, 35);
+    doc.text('Students', 65, 35);
+    doc.text('Revenue (Collected)', 85, 35);
+    doc.text('Salary Cost', 120, 35);
+    doc.text('Net Profit', 145, 35);
+    doc.text('ROI', 175, 35);
     doc.line(20, 37, 190, 37);
 
     doc.setFont("helvetica", "normal");
     let rowY = 45;
-    let coachData = [];
+    let coachMetrics = [];
 
     allCoaches.forEach(c => {
       const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
       const coachRev = coachStuds.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
       const coachCost = getCoachSalary(c) || 0;
       const profit = coachRev - coachCost;
-      coachData.push({ name: getCoachName(c), profit, students: coachStuds.length });
+      const roi = coachCost > 0 ? ((profit / coachCost) * 100).toFixed(0) : '0';
+      coachMetrics.push({ name: getCoachName(c), profit, students: coachStuds.length, roi });
 
-      doc.text(getCoachName(c).substring(0, 20), 25, rowY);
-      doc.text(String(coachStuds.length), 70, rowY);
-      doc.text(`Rs. ${coachRev.toLocaleString()}`, 95, rowY);
-      doc.text(`Rs. ${coachCost.toLocaleString()}`, 125, rowY);
-      doc.setTextColor(profit >= 0 ? 50 : 200, profit >= 0 ? 150 : 50, 50);
-      doc.text(`Rs. ${profit.toLocaleString()}`, 155, rowY);
-      doc.setTextColor(...darkGray);
+      doc.text(getCoachName(c).substring(0, 18), 22, rowY);
+      doc.text(String(coachStuds.length), 65, rowY);
+      doc.text(`Rs. ${coachRev.toLocaleString()}`, 85, rowY);
+      doc.text(`Rs. ${coachCost.toLocaleString()}`, 120, rowY);
+      doc.text(`Rs. ${profit.toLocaleString()}`, 145, rowY);
+      doc.text(`${roi}%`, 175, rowY);
       rowY += 10;
     });
 
-    const topCoach = coachData.sort((a,b) => b.profit - a.profit)[0];
-    const lossCoach = coachData.sort((a,b) => a.profit - b.profit)[0];
-
-    rowY += 10;
+    // Academy Total Row
     doc.setFont("helvetica", "bold");
+    doc.line(20, rowY - 5, 190, rowY - 5);
+    doc.text('ACADEMY TOTAL', 22, rowY);
+    doc.text(String(totalStudents), 65, rowY);
+    doc.text(`Rs. ${collected.toLocaleString()}`, 85, rowY);
+    doc.text(`Rs. ${payroll.toLocaleString()}`, 120, rowY);
+    doc.text(`Rs. ${netProfit.toLocaleString()}`, 145, rowY);
+    const totalRoi = payroll > 0 ? ((netProfit / payroll) * 100).toFixed(0) : '0';
+    doc.text(`${totalRoi}%`, 175, rowY);
+
+    rowY += 20;
     doc.setTextColor(...gold);
-    doc.text('PERFORMANCE INSIGHTS', 20, rowY);
+    doc.setFontSize(14);
+    doc.text('PERFORMANCE HIGHLIGHTS & INSIGHTS', 20, rowY);
     rowY += 10;
-    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
     doc.setTextColor(...darkGray);
     
+    const topCoach = coachMetrics.sort((a,b) => b.profit - a.profit)[0];
+    const lossCoach = coachMetrics.sort((a,b) => a.profit - b.profit)[0];
+
     if (topCoach && topCoach.profit > 0) {
-      doc.text(`Top Performer: ${topCoach.name} (Profit: Rs. ${topCoach.profit.toLocaleString()})`, 25, rowY);
-      rowY += 8;
+      doc.setFont("helvetica", "bold");
+      doc.text(`Top Performer: ${topCoach.name}`, 25, rowY);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Rs. ${topCoach.profit.toLocaleString()} net profit with ${topCoach.students} students — highest ROI at ${topCoach.roi}%`, 25, rowY + 6);
+      rowY += 16;
     }
     
     if (lossCoach && lossCoach.profit < 0) {
-      doc.text(`ACTION REQUIRED: ${lossCoach.name} is currently negative (Rs. ${lossCoach.profit.toLocaleString()})`, 25, rowY);
-      doc.setFontSize(8);
-      doc.setTextColor(200, 50, 50);
-      doc.text('Target: Review student attendance or increase batch density for this coach.', 25, rowY + 5);
-    } else {
-      doc.text('All coaches are currently operating at a profit.', 25, rowY);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Attention Required: ${lossCoach.name}`, 25, rowY);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Rs. ${Math.abs(lossCoach.profit).toLocaleString()} net loss — student payment pending or low batch ROI`, 25, rowY + 6);
     }
     
     addFooter(2, 3);
@@ -3287,7 +3335,7 @@
     
     doc.setTextColor(...gold);
     doc.setFontSize(16);
-    doc.text('STRATEGIC RECOMMENDATIONS', 20, 20);
+    doc.text('MONTHLY FINANCIAL WATERFALL', 20, 20);
     doc.line(20, 22, 190, 22);
     
     doc.setTextColor(...darkGray);
@@ -3310,24 +3358,43 @@
     waterY += 20;
     doc.setTextColor(...gold);
     doc.setFontSize(14);
-    doc.text('KEY ACTIONS', 20, waterY);
+    doc.text('STRATEGIC RECOMMENDATIONS', 20, waterY);
     doc.line(20, waterY + 2, 190, waterY + 2);
     
     doc.setTextColor(...darkGray);
     doc.setFontSize(10);
     waterY += 15;
     
-    const actions = [
-      `1. IMMEDIATE: Recovery of Rs. ${pending.toLocaleString()} in pending fees from students.`,
-      `2. EFFICIENCY: Target 90%+ collection rate (current: ${collectionRate}%).`,
-      `3. GROWTH: Allocate additional slots to ${topCoach ? topCoach.name : 'Top Performers'}.`,
-      `4. STRUCTURAL: Standardize fees across Beginner, Intermediate, and Advanced batches.`
+    const recommendations = [
+      ['1', 'IMMEDIATE', `Chase Rs. ${pending.toLocaleString()} in pending fees — send payment reminders via WhatsApp this week.`],
+      ['2', 'SHORT-TERM', `Review batch structures for coaches with low ROI; consider merging students to ensure breaking even.`],
+      ['3', 'MEDIUM-TERM', `Scale batches for high-performing coaches (like ${topCoach ? topCoach.name : 'Top Performers'}) — add additional slots.`],
+      ['4', 'STRUCTURAL', `Introduce a standard monthly fee band (Rs. 2,500–5,000) to reduce revenue variance across levels.`]
     ];
     
-    actions.forEach(action => {
-      doc.text(action, 25, waterY);
-      waterY += 12;
+    recommendations.forEach(rec => {
+      doc.setFont("helvetica", "bold");
+      doc.text(rec[0], 21, waterY);
+      doc.text(rec[1], 35, waterY);
+      doc.setFont("helvetica", "normal");
+      const lines = doc.splitTextToSize(rec[2], 150);
+      doc.text(lines, 35, waterY + 6);
+      waterY += 18;
     });
+
+    waterY += 10;
+    doc.setFontSize(12);
+    doc.setTextColor(...gold);
+    doc.text('CHESSKIDOO ACADEMY — Premium Chess Education', 105, waterY + 20, { align: 'center' });
+    doc.setFontSize(9);
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Generated: ${dateStr} • Confidential`, 105, waterY + 27, { align: 'center' });
+
+    addFooter(3, 3);
+
+    doc.save(`Chesskidoo_Executive_Report_${now.toISOString().split('T')[0]}.pdf`);
+    toast('Premium Report Generated! ✨', 'success');
+  }
 
     addFooter(3, 3);
 
