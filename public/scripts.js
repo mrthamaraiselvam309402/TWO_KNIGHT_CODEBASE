@@ -1636,19 +1636,20 @@
   function openEdit(id) {
     const s = allStudents.find(x => String(x.id) === String(id));
     if (!s) return;
+    const savedCoachId = s.coach_id || '';
     $('e-id').value = s.id;
     $('e-name').value = getStudentName(s);
     $('e-phone').value = getStudentPhone(s);
     $('e-level').value = getStudentLevel(s);
     $('e-elo').value = getStudentRating(s);
-    $('e-coach').value = s.coach_id || '';
     $('e-fee').value = getStudentMonthlyFee(s);
     $('e-status').value = getStudentPaymentStatus(s);
     $('e-join').value = getStudentDate(s);
     $('e-batch-type').value = getStudentBatchType(s);
     $('e-batch-time').value = getStudentBatchTime(s);
-    // Add due date if field exists
     if ($('e-due-date')) $('e-due-date').value = s.due_date || '';
+    syncCoachDropdowns();
+    $('e-coach').value = savedCoachId;
     openModal('edit-modal');
   }
 
@@ -1698,11 +1699,13 @@
     $('m-phone').value = '';
     $('m-level').value = 'Beginner';
     $('m-join').value = '';
-    $('m-elo').value = '0';
-    $('m-fee').value = '0';
+    $('m-elo').value = '800';
+    $('m-fee').value = '5000';
     $('m-batch-type').value = 'Evening';
     $('m-batch-time').value = '17:00';
     if ($('m-due-date')) $('m-due-date').value = '';
+    if ($('m-coach')) $('m-coach').value = '';
+    syncCoachDropdowns();
     openModal('enroll-modal'); 
   }
   
@@ -1929,7 +1932,8 @@
       experience: parseInt($('cm-exp').value) || 0,
       status: $('cm-status').value,
       availability: $('cm-avail').value.trim(),
-      bio: $('cm-etc').value.trim()
+      bio: $('cm-etc').value.trim(),
+      photo_url: $('cm-photo').value.trim()
     };
 
     if (!data.name) { toast('Coach name is required', 'error'); return; }

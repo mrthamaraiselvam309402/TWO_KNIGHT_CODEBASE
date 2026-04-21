@@ -504,7 +504,13 @@
       <input type="number" id="m-fee" placeholder="Monthly Fee ₹" value="5000">
       <select id="m-batch-type"><option value="Morning">Morning</option><option value="Evening">Evening</option><option value="Weekend">Weekend</option></select>
     </div>
-    <input type="time" id="m-batch-time" value="17:00">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <input type="time" id="m-batch-time" value="17:00">
+      <div class="form-group">
+        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Assigned Coach</label>
+        <select id="m-coach" style="margin-top:2px"><option value="">Loading coaches...</option></select>
+      </div>
+    </div>
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
       <button class="btn btn-gold" style="flex:1" onclick="saveStudent()">Enroll</button>
@@ -537,7 +543,10 @@
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <select id="e-coach"></select>
+      <div class="form-group">
+        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Assigned Coach</label>
+        <select id="e-coach" style="margin-top:2px"></select>
+      </div>
       <input type="number" id="e-fee" placeholder="Fee ₹" value="5000">
     </div>
     <div style="margin-bottom:12px">
@@ -889,6 +898,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="scripts.js?v=2026-04-20-v38"></script>
+<script src="scripts.js?v=2026-04-22-v39"></script>
 </body>
 </html>
