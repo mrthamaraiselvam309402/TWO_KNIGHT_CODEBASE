@@ -3152,498 +3152,187 @@
     const { jsPDF } = window.jspdf;
     if (!jsPDF) { toast('PDF generator not available', 'error'); return; }
 
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const doc = new jsPDF();
     const now = new Date();
-    const reportId = 'RPT-' + Math.floor(Math.random() * 1000000);
     const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    const gold = [179, 133, 27];
+    const darkGray = [26, 26, 26];
 
-    // ── PALETTE (matches receipt) ──────────────────────────────────
-    const GOLD       = [179, 133, 27];
-    const GOLD_LIGHT = [220, 163, 62];
-    const IVORY      = [254, 253, 251];
-    const OBSIDIAN   = [26, 26, 38];
-    const INK        = [40, 36, 28];
-    const WARM_GREY  = [120, 110, 90];
-    const SUCCESS    = [46, 125, 50];
-    const DANGER     = [200, 50, 50];
-    const CREAM      = [248, 244, 234];
-    const RULE       = [220, 200, 140];
-
-    // ── HELPER FUNCTIONS ──────────────────────────────────────────
-    const W = 210; // A4 width in mm
-    const M = 20;  // margin
-
-    function addPage() {
-      doc.addPage();
-      addPageFrame();
-    }
-
-    function addPageFrame() {
-      // Ivory background
-      doc.setFillColor(...IVORY);
-      doc.rect(0, 0, W, 297, 'F');
-
-      // Decorative border — thin double rule
-      doc.setDrawColor(...RULE);
-      doc.setLineWidth(0.3);
-      doc.rect(8, 8, W - 16, 281, 'S');
-      doc.setLineWidth(0.15);
-      doc.rect(10, 10, W - 20, 277, 'S');
-
-      // Corner chess pieces (decorative ♟)
-      doc.setTextColor(...GOLD_LIGHT);
-      doc.setFontSize(8);
-      doc.text('♟', 12, 15);
-      doc.text('♟', W - 15, 15);
-      doc.text('♟', 12, 284);
-      doc.text('♟', W - 15, 284);
-    }
-
-    function addGoldRule(y, width = W - (M * 2), x = M) {
-      doc.setDrawColor(...GOLD_LIGHT);
-      doc.setLineWidth(0.5);
-      doc.line(x, y, x + width, y);
-      doc.setLineWidth(0.1);
-      doc.setDrawColor(...RULE);
-      doc.line(x, y + 0.8, x + width, y + 0.8);
-    }
-
-    function addDashedRule(y, x = M, width = W - (M * 2)) {
-      doc.setLineDashPattern([1.5, 1.5], 0);
-      doc.setDrawColor(...RULE);
-      doc.setLineWidth(0.2);
-      doc.line(x, y, x + width, y);
-      doc.setLineDashPattern([], 0);
-    }
-
-    function sectionHeader(text, y) {
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...GOLD);
-      doc.setCharSpace(2);
-      doc.text(text.toUpperCase(), M, y);
-      doc.setCharSpace(0);
-      addGoldRule(y + 2);
-      return y + 8;
-    }
-
-    function metricBox(x, y, w, h, label, value, color = INK, subtext = '') {
-      // Box background
-      doc.setFillColor(...CREAM);
-      doc.roundedRect(x, y, w, h, 2, 2, 'F');
-      doc.setDrawColor(...RULE);
-      doc.setLineWidth(0.2);
-      doc.roundedRect(x, y, w, h, 2, 2, 'S');
-
-      // Label
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...WARM_GREY);
-      doc.setCharSpace(1);
-      doc.text(label.toUpperCase(), x + w / 2, y + 6, { align: 'center' });
-      doc.setCharSpace(0);
-
-      // Value
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...color);
-      doc.text(value, x + w / 2, y + 14, { align: 'center' });
-
-      // Subtext
-      if (subtext) {
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...WARM_GREY);
-        doc.text(subtext, x + w / 2, y + 19, { align: 'center' });
-      }
-    }
-
-    function addFooter(page, total) {
-      const y = 285;
-      doc.setFontSize(7.5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...WARM_GREY);
-      doc.text('CHESSKIDOO ACADEMY  |  Confidential & Proprietary  |  ' + reportId, W / 2, y, { align: 'center' });
-      doc.setTextColor(...GOLD);
-      doc.text(`${page} / ${total}`, W - M, y, { align: 'right' });
-      doc.setLineDashPattern([1, 1], 0);
-      doc.setDrawColor(...RULE);
-      doc.setLineWidth(0.2);
-      doc.line(M, y - 3, W - M, y - 3);
-      doc.setLineDashPattern([], 0);
-    }
-
-    // ── METRICS ───────────────────────────────────────────────────
-    const totalStudents   = allStudents.length;
-    const totalCoaches    = allCoaches.length;
-    const collected       = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-    const dueAmt          = allStudents.filter(s => getStudentPaymentStatus(s) !== 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-    const potential       = collected + dueAmt;
-    const payroll         = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
-    const netProfit       = collected - payroll;
-    const potNetProfit    = potential - payroll;
-    const collectionRate  = potential > 0 ? ((collected / potential) * 100).toFixed(1) : '0.0';
-    const profitMargin    = collected > 0 ? ((netProfit / collected) * 100).toFixed(1) : '0.0';
-    const avgFee          = totalStudents > 0 ? Math.round(potential / totalStudents) : 0;
-    const paidCount       = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
-    const dueCount        = allStudents.filter(s => getStudentPaymentStatus(s) !== 'Paid').length;
-
-    // ═══════════════════════════════════════════════════════════════
-    // PAGE 1 — COVER & EXECUTIVE SUMMARY
-    // ═══════════════════════════════════════════════════════════════
-    addPageFrame();
-
-    // Gold header bar (matches receipt)
-    doc.setFillColor(...GOLD);
-    doc.rect(0, 0, W, 46, 'F');
-    // Decorative gradient strip
-    doc.setFillColor(...GOLD_LIGHT);
-    doc.rect(0, 44, W, 3, 'F');
-
-    // Academy name
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(26);
-    doc.setFont('helvetica', 'bold');
-    doc.setCharSpace(3);
-    doc.text('CHESSKIDOO', W / 2, 18, { align: 'center' });
-    doc.setCharSpace(0);
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setCharSpace(1.5);
-    doc.text('PREMIUM CHESS ACADEMY', W / 2, 25, { align: 'center' });
-    doc.setCharSpace(0);
-
-    // Report type pill (like receipt)
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(W / 2 - 28, 30, 56, 10, 5, 5, 'F');
-    doc.setTextColor(...GOLD);
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'bold');
-    doc.setCharSpace(1);
-    doc.text('FINANCIAL REPORT', W / 2, 36.5, { align: 'center' });
-    doc.setCharSpace(0);
-
-    // ── REPORT META (matches receipt meta rows) ──
-    let y = 58;
-    doc.setFillColor(...CREAM);
-    doc.rect(M, y, W - M * 2, 14, 'F');
-    doc.setDrawColor(...RULE);
-    doc.setLineWidth(0.2);
-    doc.rect(M, y, W - M * 2, 14, 'S');
-
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...WARM_GREY);
-    doc.text('REPORT NO', M + 4, y + 5);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...INK);
-    doc.text(reportId, M + 4, y + 10);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...WARM_GREY);
-    doc.text('GENERATED', W / 2, y + 5, { align: 'center' });
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...INK);
-    doc.text(dateStr, W / 2, y + 10, { align: 'center' });
-
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...WARM_GREY);
-    doc.text('PERIOD', W - M - 4, y + 5, { align: 'right' });
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...INK);
-    doc.text('Current Month', W - M - 4, y + 10, { align: 'right' });
-
-    y = 80;
-    y = sectionHeader('Executive Summary', y);
-
-    // ── 6-UP METRIC BOXES ──
-    const bw = (W - M * 2 - 10) / 3;
-    const bh = 24;
-    const bGap = 5;
-
-    metricBox(M, y, bw, bh, 'Total Cadets', String(totalStudents), GOLD, 'Enrolled');
-    metricBox(M + bw + bGap, y, bw, bh, 'Active Coaches', String(totalCoaches), GOLD, 'Teaching Staff');
-    metricBox(M + (bw + bGap) * 2, y, bw, bh, 'Avg Monthly Fee', '₹' + avgFee.toLocaleString(), INK, 'Per Student');
-    y += bh + bGap;
-
-    metricBox(M, y, bw, bh, 'Collected', '₹' + collected.toLocaleString(), SUCCESS, `${paidCount} students paid`);
-    metricBox(M + bw + bGap, y, bw, bh, 'Outstanding', '₹' + dueAmt.toLocaleString(), DANGER, `${dueCount} students due`);
-    metricBox(M + (bw + bGap) * 2, y, bw, bh, 'Collection Rate', collectionRate + '%', collectionRate >= 70 ? SUCCESS : DANGER, 'Efficiency');
-    y += bh + bGap + 4;
-
-    y = sectionHeader('Financial Waterfall', y);
-
-    // ── WATERFALL TABLE (receipt row style) ──
-    const rows = [
-      { label: 'Gross Revenue Potential',  val: '₹' + potential.toLocaleString(),  type: 'base'     },
-      { label: 'Fees Collected (Paid)',     val: '+₹' + collected.toLocaleString(), type: 'positive' },
-      { label: 'Fees Outstanding (Due)',    val: '–₹' + dueAmt.toLocaleString(),    type: 'negative' },
-      { label: 'Total Coach Payroll',       val: '–₹' + payroll.toLocaleString(),   type: 'negative' },
-    ];
-
-    rows.forEach((row, i) => {
-      const rowY = y + i * 10;
-      if (i % 2 === 0) {
-        doc.setFillColor(250, 247, 240);
-        doc.rect(M, rowY - 4, W - M * 2, 10, 'F');
-      }
+    const addFooter = (pageNo, total) => {
       doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...INK);
-      doc.text(row.label, M + 3, rowY + 2);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(row.type === 'positive' ? SUCCESS[0] : row.type === 'negative' ? DANGER[0] : GOLD[0],
-                       row.type === 'positive' ? SUCCESS[1] : row.type === 'negative' ? DANGER[1] : GOLD[1],
-                       row.type === 'positive' ? SUCCESS[2] : row.type === 'negative' ? DANGER[2] : GOLD[2]);
-      doc.text(row.val, W - M - 3, rowY + 2, { align: 'right' });
-      addDashedRule(rowY + 5);
-    });
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Generated by Chesskidoo Admin System | Confidential & Proprietary`, 105, 285, { align: 'center' });
+      doc.text(`Page ${pageNo} of ${total}`, 190, 285, { align: 'right' });
+    };
 
-    y += rows.length * 10 + 2;
+    // --- PAGE 1: EXECUTIVE SUMMARY ---
+    doc.setFillColor(254, 253, 251);
+    doc.rect(0, 0, 210, 297, 'F');
+    
+    doc.setFillColor(...gold);
+    doc.rect(20, 20, 170, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text('CHESSKIDOO ACADEMY', 105, 35, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text('EXECUTIVE FINANCIAL PERFORMANCE REPORT', 105, 45, { align: 'center' });
 
-    // ── NET PROFIT BOX (matches receipt "Total" row) ──
-    const profitColor = netProfit >= 0 ? SUCCESS : DANGER;
-    doc.setFillColor(netProfit >= 0 ? 232 : 255, netProfit >= 0 ? 245 : 220, netProfit >= 0 ? 232 : 220);
-    doc.roundedRect(M, y, W - M * 2, 14, 2, 2, 'F');
-    doc.setDrawColor(...profitColor);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(M, y, W - M * 2, 14, 2, 2, 'S');
-
+    doc.setTextColor(...darkGray);
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...profitColor);
-    doc.text('NET OPERATING PROFIT', M + 5, y + 9);
+    doc.text(`Date: ${dateStr}`, 20, 60);
+
+    const totalStudents = allStudents.length;
+    const collected = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    const pending = allStudents.filter(s => getStudentPaymentStatus(s) !== 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    const potential = collected + pending;
+    const payroll = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
+    const netProfit = collected - payroll;
+    const collectionRate = potential > 0 ? ((collected / potential) * 100).toFixed(1) : 0;
+
     doc.setFontSize(14);
-    doc.text('₹' + netProfit.toLocaleString(), W - M - 5, y + 9, { align: 'right' });
+    doc.setTextColor(...gold);
+    doc.text('SUMMARY METRICS', 20, 75);
+    doc.line(20, 77, 190, 77);
 
-    y += 20;
-
-    // ── MARGIN INDICATORS ──
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...WARM_GREY);
-    doc.text('Profit Margin on Collected:', M, y);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(profitMargin >= 0 ? SUCCESS[0] : DANGER[0], profitMargin >= 0 ? SUCCESS[1] : DANGER[1], profitMargin >= 0 ? SUCCESS[2] : DANGER[2]);
-    doc.text(profitMargin + '%', M + 50, y);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...WARM_GREY);
-    doc.text('Potential Net Profit (all collected):', M + 80, y);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...SUCCESS);
-    doc.text('₹' + potNetProfit.toLocaleString(), W - M, y, { align: 'right' });
+    doc.setTextColor(...darkGray);
+    doc.setFontSize(11);
+    doc.text(`Total Enrolled Students: ${totalStudents}`, 25, 85);
+    doc.text(`Collection Efficiency: ${collectionRate}%`, 25, 92);
+    
+    doc.setFontSize(12);
+    doc.text(`Gross Revenue Collected: Rs. ${collected.toLocaleString()}`, 25, 105);
+    doc.text(`Outstanding Revenue: Rs. ${pending.toLocaleString()}`, 25, 112);
+    doc.text(`Total Coach Salaries: Rs. ${payroll.toLocaleString()}`, 25, 119);
+    
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(netProfit >= 0 ? 50 : 200, netProfit >= 0 ? 150 : 50, 50);
+    doc.text(`NET OPERATING PROFIT: Rs. ${netProfit.toLocaleString()}`, 25, 135);
 
     addFooter(1, 3);
 
-    // ═══════════════════════════════════════════════════════════════
-    // PAGE 2 — COACH BREAKDOWN
-    // ═══════════════════════════════════════════════════════════════
-    addPage();
-    y = 20;
-    y = sectionHeader('Coach Financial Breakdown', y);
+    // --- PAGE 2: COACH BREAKDOWN ---
+    doc.addPage();
+    doc.setFillColor(254, 253, 251);
+    doc.rect(0, 0, 210, 297, 'F');
+    
+    doc.setTextColor(...gold);
+    doc.setFontSize(16);
+    doc.text('COACH ROI ANALYSIS', 20, 20);
+    doc.line(20, 22, 190, 22);
 
-    // Table header (gold bar like receipt)
-    doc.setFillColor(...GOLD);
-    doc.rect(M, y, W - M * 2, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.setCharSpace(0.5);
-    const cols = [
-      { label: 'COACH',       x: M + 3,    align: 'left'  },
-      { label: 'STUDENTS',    x: M + 45,   align: 'center'},
-      { label: 'COLLECTED',   x: M + 70,   align: 'right' },
-      { label: 'PENDING',     x: M + 100,  align: 'right' },
-      { label: 'SALARY',      x: M + 128,  align: 'right' },
-      { label: 'NET',         x: M + 152,  align: 'right' },
-      { label: 'ROI',         x: W - M - 3,align: 'right' },
-    ];
-    cols.forEach(c => doc.text(c.label, c.x, y + 5, { align: c.align }));
-    doc.setCharSpace(0);
+    doc.setTextColor(...darkGray);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text('Coach Name', 25, 35);
+    doc.text('Students', 70, 35);
+    doc.text('Collected', 95, 35);
+    doc.text('Costs', 125, 35);
+    doc.text('Net Profit', 155, 35);
+    doc.line(20, 37, 190, 37);
 
-    y += 10;
+    doc.setFont("helvetica", "normal");
+    let rowY = 45;
+    let coachData = [];
 
-    let coachMetrics = [];
-    allCoaches.forEach((c, i) => {
-      const studs   = allStudents.filter(s => String(s.coach_id) === String(c.id));
-      const rev     = studs.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-      const pend    = studs.filter(s => getStudentPaymentStatus(s) !== 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-      const cost    = getCoachSalary(c) || 0;
-      const profit  = rev - cost;
-      const roi     = cost > 0 ? (profit / cost * 100).toFixed(0) : '∞';
-      coachMetrics.push({ name: getCoachName(c), students: studs.length, rev, pend, cost, profit, roi });
+    allCoaches.forEach(c => {
+      const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
+      const coachRev = coachStuds.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+      const coachCost = getCoachSalary(c) || 0;
+      const profit = coachRev - coachCost;
+      coachData.push({ name: getCoachName(c), profit, students: coachStuds.length });
 
-      if (i % 2 === 0) {
-        doc.setFillColor(...CREAM);
-        doc.rect(M, y - 3, W - M * 2, 9, 'F');
-      }
-
-      doc.setFontSize(8.5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...INK);
-      doc.text(getCoachName(c).substring(0, 18), M + 3, y + 2);
-      doc.text(String(studs.length), M + 45, y + 2, { align: 'center' });
-      doc.text('₹' + rev.toLocaleString(), M + 70, y + 2, { align: 'right' });
-      doc.text('₹' + pend.toLocaleString(), M + 100, y + 2, { align: 'right' });
-      doc.text('₹' + cost.toLocaleString(), M + 128, y + 2, { align: 'right' });
-
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...(profit >= 0 ? SUCCESS : DANGER));
-      doc.text('₹' + profit.toLocaleString(), M + 152, y + 2, { align: 'right' });
-
-      const roiNum = parseFloat(roi);
-      doc.setTextColor(...(roiNum >= 0 ? SUCCESS : DANGER));
-      doc.text(roi + '%', W - M - 3, y + 2, { align: 'right' });
-
-      addDashedRule(y + 5);
-      y += 9;
+      doc.text(getCoachName(c).substring(0, 20), 25, rowY);
+      doc.text(String(coachStuds.length), 70, rowY);
+      doc.text(`Rs. ${coachRev.toLocaleString()}`, 95, rowY);
+      doc.text(`Rs. ${coachCost.toLocaleString()}`, 125, rowY);
+      doc.setTextColor(profit >= 0 ? 50 : 200, profit >= 0 ? 150 : 50, 50);
+      doc.text(`Rs. ${profit.toLocaleString()}`, 155, rowY);
+      doc.setTextColor(...darkGray);
+      rowY += 10;
     });
 
-    // Totals row
-    y += 2;
-    doc.setFillColor(...GOLD);
-    doc.rect(M, y, W - M * 2, 10, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ACADEMY TOTAL', M + 3, y + 6);
-    doc.text(String(totalStudents), M + 45, y + 6, { align: 'center' });
-    doc.text('₹' + collected.toLocaleString(), M + 70, y + 6, { align: 'right' });
-    doc.text('₹' + dueAmt.toLocaleString(), M + 100, y + 6, { align: 'right' });
-    doc.text('₹' + payroll.toLocaleString(), M + 128, y + 6, { align: 'right' });
-    doc.text('₹' + netProfit.toLocaleString(), M + 152, y + 6, { align: 'right' });
-    const totalRoi = payroll > 0 ? (netProfit / payroll * 100).toFixed(0) : '∞';
-    doc.text(totalRoi + '%', W - M - 3, y + 6, { align: 'right' });
+    const topCoach = coachData.sort((a,b) => b.profit - a.profit)[0];
+    const lossCoach = coachData.sort((a,b) => a.profit - b.profit)[0];
 
-    y += 18;
-
-    // ── PERFORMANCE HIGHLIGHTS ──
-    y = sectionHeader('Performance Highlights', y);
-
-    const topCoach  = [...coachMetrics].sort((a, b) => b.profit - a.profit)[0];
-    const mostStuds = [...coachMetrics].sort((a, b) => b.students - a.students)[0];
-    const lossCoach = [...coachMetrics].filter(c => c.profit < 0).sort((a, b) => a.profit - b.profit)[0];
-
-    const highlights = [
-      { icon: '🏆', label: 'Top Performer', text: topCoach ? `${topCoach.name} — ₹${topCoach.profit.toLocaleString()} net profit (${topCoach.roi}% ROI) from ${topCoach.students} students` : 'N/A' },
-      { icon: '👥', label: 'Most Students', text: mostStuds ? `${mostStuds.name} — manages ${mostStuds.students} students, generating ₹${mostStuds.rev.toLocaleString()} monthly` : 'N/A' },
-      { icon: '⚠️', label: 'Needs Attention', text: lossCoach ? `${lossCoach.name} — ₹${Math.abs(lossCoach.profit).toLocaleString()} net loss. Review batch structure or pending collections.` : 'All coaches profitable ✓' },
-    ];
-
-    highlights.forEach((h, i) => {
-      const hy = y + i * 16;
-      doc.setFillColor(...CREAM);
-      doc.roundedRect(M, hy, W - M * 2, 14, 2, 2, 'F');
-      doc.setFontSize(9);
-      doc.text(h.icon, M + 3, hy + 9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...GOLD);
-      doc.text(h.label.toUpperCase() + ':', M + 10, hy + 5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...INK);
-      const lines = doc.splitTextToSize(h.text, W - M * 2 - 14);
-      doc.text(lines, M + 10, hy + 10);
-    });
-
+    rowY += 10;
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...gold);
+    doc.text('PERFORMANCE INSIGHTS', 20, rowY);
+    rowY += 10;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...darkGray);
+    
+    if (topCoach && topCoach.profit > 0) {
+      doc.text(`Top Performer: ${topCoach.name} (Profit: Rs. ${topCoach.profit.toLocaleString()})`, 25, rowY);
+      rowY += 8;
+    }
+    
+    if (lossCoach && lossCoach.profit < 0) {
+      doc.text(`ACTION REQUIRED: ${lossCoach.name} is currently negative (Rs. ${lossCoach.profit.toLocaleString()})`, 25, rowY);
+      doc.setFontSize(8);
+      doc.setTextColor(200, 50, 50);
+      doc.text('Target: Review student attendance or increase batch density for this coach.', 25, rowY + 5);
+    } else {
+      doc.text('All coaches are currently operating at a profit.', 25, rowY);
+    }
+    
     addFooter(2, 3);
 
-    // ═══════════════════════════════════════════════════════════════
-    // PAGE 3 — STRATEGIC RECOMMENDATIONS & SIGNED FOOTER
-    // ═══════════════════════════════════════════════════════════════
-    addPage();
-    y = 20;
-    y = sectionHeader('Strategic Recommendations', y);
-
-    const recommendations = [
-      {
-        priority: 'IMMEDIATE',
-        color: DANGER,
-        text: `Chase ₹${dueAmt.toLocaleString()} in outstanding fees across ${dueCount} students. Send WhatsApp reminders today — target 100% collection before month-end.`
-      },
-      {
-        priority: 'SHORT-TERM',
-        color: GOLD,
-        text: `Review batch structures for coaches with negative ROI. Consider merging underutilized batches or renegotiating salary tiers for coaches with <5 students.`
-      },
-      {
-        priority: 'MEDIUM-TERM',
-        color: SUCCESS,
-        text: topCoach ? `Scale ${topCoach.name}'s batches — high ROI coach. Add slots. Ideal to replicate their batch model across other coaches.` : 'Identify top coach and scale their model.'
-      },
-      {
-        priority: 'STRUCTURAL',
-        color: GOLD,
-        text: `Standardize monthly fee bands: Beginner ₹2,500 | Intermediate ₹3,500 | Advanced ₹5,000. Reduce variance and improve forecasting accuracy.`
-      },
-      {
-        priority: 'GROWTH',
-        color: [70, 100, 180],
-        text: `Current collection rate ${collectionRate}%. Target 90%+ by implementing auto-reminders + penalties for late payment. Each % point = ₹${Math.round(potential / 100).toLocaleString()} additional revenue.`
-      },
+    // --- PAGE 3: STRATEGIC RECOMMENDATIONS ---
+    doc.addPage();
+    doc.setFillColor(254, 253, 251);
+    doc.rect(0, 0, 210, 297, 'F');
+    
+    doc.setTextColor(...gold);
+    doc.setFontSize(16);
+    doc.text('STRATEGIC RECOMMENDATIONS', 20, 20);
+    doc.line(20, 22, 190, 22);
+    
+    doc.setTextColor(...darkGray);
+    doc.setFontSize(10);
+    let waterY = 35;
+    const waterItems = [
+      ['Gross Revenue Potential', `+Rs. ${potential.toLocaleString()}`],
+      ['Collected Fees', `+Rs. ${collected.toLocaleString()}`],
+      ['Pending Fees', `Rs. ${pending.toLocaleString()}`],
+      ['Total Coach Payroll', `-Rs. ${payroll.toLocaleString()}`],
+      ['Net Operating Profit', `+Rs. ${netProfit.toLocaleString()}`]
     ];
-
-    recommendations.forEach((r, i) => {
-      const ry = y + i * 22;
-      doc.setFillColor(...CREAM);
-      doc.roundedRect(M, ry, W - M * 2, 20, 2, 2, 'F');
-
-      // Priority pill
-      doc.setFillColor(...r.color);
-      doc.roundedRect(M + 2, ry + 2, 28, 8, 2, 2, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(6.5);
-      doc.setFont('helvetica', 'bold');
-      doc.setCharSpace(0.5);
-      doc.text(r.priority, M + 16, ry + 7, { align: 'center' });
-      doc.setCharSpace(0);
-
-      doc.setFontSize(8.5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...INK);
-      const lines = doc.splitTextToSize(r.text, W - M * 2 - 36);
-      doc.text(lines, M + 33, ry + 8);
-      addDashedRule(ry + 19);
+    
+    waterItems.forEach(item => {
+      doc.text(item[0], 25, waterY);
+      doc.text(item[1], 150, waterY);
+      waterY += 10;
     });
 
-    y += recommendations.length * 22 + 6;
-
-    // ── SIGNATURE SECTION (like receipt thank-you) ──
-    y = sectionHeader('Prepared & Certified', y);
-
-    doc.setFillColor(...CREAM);
-    doc.roundedRect(M, y, W - M * 2, 36, 3, 3, 'F');
-    doc.setDrawColor(...GOLD);
-    doc.setLineWidth(0.4);
-    doc.roundedRect(M, y, W - M * 2, 36, 3, 3, 'S');
-
-    doc.setTextColor(...GOLD);
-    doc.setFontSize(18);
-    doc.text('♚', W / 2, y + 12, { align: 'center' });
-
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setCharSpace(2);
-    doc.text('CHESSKIDOO ACADEMY', W / 2, y + 20, { align: 'center' });
-    doc.setCharSpace(0);
-
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...WARM_GREY);
-    doc.setCharSpace(0.8);
-    doc.text('Building Champions, One Move at a Time', W / 2, y + 26, { align: 'center' });
-    doc.setCharSpace(0);
-
-    doc.setFontSize(7.5);
-    doc.setTextColor(...GOLD_LIGHT);
-    doc.text('info@chesskidoo.com  |  +91 99622 99622', W / 2, y + 32, { align: 'center' });
+    waterY += 20;
+    doc.setTextColor(...gold);
+    doc.setFontSize(14);
+    doc.text('KEY ACTIONS', 20, waterY);
+    doc.line(20, waterY + 2, 190, waterY + 2);
+    
+    doc.setTextColor(...darkGray);
+    doc.setFontSize(10);
+    waterY += 15;
+    
+    const actions = [
+      `1. IMMEDIATE: Recovery of Rs. ${pending.toLocaleString()} in pending fees from students.`,
+      `2. EFFICIENCY: Target 90%+ collection rate (current: ${collectionRate}%).`,
+      `3. GROWTH: Allocate additional slots to ${topCoach ? topCoach.name : 'Top Performers'}.`,
+      `4. STRUCTURAL: Standardize fees across Beginner, Intermediate, and Advanced batches.`
+    ];
+    
+    actions.forEach(action => {
+      doc.text(action, 25, waterY);
+      waterY += 12;
+    });
 
     addFooter(3, 3);
 
-    // ── SAVE ──
-    doc.save(`Chesskidoo_Premium_Report_${now.toISOString().split('T')[0]}.pdf`);
-    toast('Premium Financial Report Generated! ✨', 'success');
+    doc.save(`Chesskidoo_Executive_Report_${now.toISOString().split('T')[0]}.pdf`);
+    toast('Stable Financial Report Generated!', 'success');
   }
 
 
