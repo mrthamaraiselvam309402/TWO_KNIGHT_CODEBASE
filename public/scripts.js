@@ -539,12 +539,7 @@
         // --- Golden State Deduplication ---
         const rawStudents = students || [];
         const seen = new Set();
-        allStudents = rawStudents.filter(s => {
-          const key = `${(s.full_name || s.name || '').toLowerCase().trim()}|${(s.parent_phone || s.phone || '').trim()}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
+        allStudents = rawStudents.filter(s => s && s.id && !seen.has(s.id) && seen.add(s.id));
         
         achievementsData = achievements || [];
         eventsData = events || [];
@@ -964,10 +959,14 @@
         currentStudent = allStudents.find(s => String(s.id) === String(studentId));
         if (currentStudent) renderChild();
       }
+      resetSessionTimer();
     });
   }
 
-  function doLogout() {
+    if (notificationPolling) {
+      clearInterval(notificationPolling);
+      notificationPolling = null;
+    }
     recordSession('logout');
     closeModals();
     role = null; currentStudent = null;
@@ -1151,6 +1150,7 @@
   // CHARTS & DASHBOARD
   // ═══════════════════════════════════════════════════════════════
   function buildCharts(studs) {
+    if (chartInstances.childElo) { chartInstances.childElo.destroy(); delete chartInstances.childElo; }
     Object.values(chartInstances).forEach(chart => { if (chart) chart.destroy(); });
     chartInstances = {};
     const isLight = document.body.dataset.theme === 'light';
@@ -2248,7 +2248,8 @@
 
     try {
       const res = await apiCall(`${API_BASE}/payments`);
-      const allPayments = await res.json();
+      const raw = await res.json();
+      const allPayments = Array.isArray(raw) ? raw : (raw.data || []);
       const myPayments = allPayments.filter(p => String(p.student_id) === String(studentId));
 
       if (myPayments.length === 0) {
@@ -2305,6 +2306,26 @@
     await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Paid' }) });
     loadAllData(true);
   }
+
+  async function bulkMarkPaid() {
+    const checked = document.querySelectorAll('.stud-check:checked');
+    if (checked.length === 0) {
+      toast('Please select students first', 'warning');
+      return;
+    }
+    
+    if (!confirm(`Mark ${checked.length} students as Paid?`)) return;
+    
+    toast(`Processing ${checked.length} students...`, 'info');
+    for (const cb of checked) {
+      await apiCall(`${API_BASE}/students?id=${cb.dataset.sid}`, { 
+        method: 'PUT', 
+        body: JSON.stringify({ payment_status: 'Paid' }) 
+      });
+    }
+    toast('Bulk payment marked!', 'success');
+    loadAllData(true);
+  }
   let currentPayId = null;
   let currentPayAmt = 0;
 
@@ -2343,6 +2364,7 @@
   }
   
   function downloadReceipt(id, name, fee, level = 'Beginner', rating = 800, coach = 'N/A', paymentMode = 'Online Transfer') {
+    const cleanCoach = (coach || 'N/A').replace(/'/g, "\\'");
     const receiptId = 'CK-' + Math.floor(Math.random() * 1000000);
     const date = new Date();
     const formattedDate = date.toLocaleDateString('en-GB').replace(/\//g, ' / ');
@@ -3547,6 +3569,8 @@
   window.sendMsg = sendMsg;
   window.sendFeedback = sendFeedback;
   window.openAttendanceMarking = openAttendanceMarking;
+  window.markPaid = markPaid;
+  window.bulkMarkPaid = bulkMarkPaid;
   window.saveBatchAttendance = saveBatchAttendance;
   window.updateAttStats = updateAttStats;
   window.markAllPresent = markAllPresent;
