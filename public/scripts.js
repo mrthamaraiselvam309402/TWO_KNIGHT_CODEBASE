@@ -1488,7 +1488,7 @@
           <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
             <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')" title="View">View</button>
             <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')" title="Edit">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${getStudentName(s)}')" title="Delete">🗑️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${getStudentName(s)}')" title="Delete">Delete</button>
             <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')" title="More Options">⋮ More</button>
             <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
               <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
@@ -1709,7 +1709,7 @@
           <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️ Edit</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${getCoachName(c).replace(/'/g, "\\'")}')" title="Delete Coach">🗑️</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${getCoachName(c).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
           </div>
           <button class="btn btn-gold btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
         </div>
