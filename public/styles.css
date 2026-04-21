@@ -639,6 +639,9 @@ tbody tr:hover { background: var(--gold-mist); }
   background: var(--surface);
   width: 480px;
   max-width: 94vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
   padding: 36px;
   border-radius: var(--radius-lg);
   border: 1px solid rgba(232,168,48,0.2);

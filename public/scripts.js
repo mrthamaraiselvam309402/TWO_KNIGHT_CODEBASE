@@ -1472,18 +1472,15 @@
     
     tbody.innerHTML = studs.map((s, i) => {
       const status = getStudentPaymentStatus(s);
-      
-      // Use centralized helper for session detection
       const session = getStudentBatchType(s);
       const time = s.session_time || s.class_time || s.batch_time || '';
-      
-      // Get coach name
-      const coachId = s.coach_id;
-      const coach = allCoaches.find(c => String(c.id) === String(coachId));
+      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
       const coachName = coach ? getCoachName(coach) : '-';
-      
       const uniqueId = 'more-' + s.id.replace(/[^a-zA-Z0-9]/g, '');
+      
       return `<tr>
+        <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
+        <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
         <td><div style="font-weight:600">${getStudentName(s)}</div></td>
         <td>${getStudentLevel(s)} - ${getStudentRating(s)} ELO</td>
         <td>${coachName}</td>
@@ -2323,6 +2320,10 @@
     loadAllData(true);
   }
 
+  window.toggleAllStudents = function(checked) {
+    document.querySelectorAll('.stud-check').forEach(cb => cb.checked = checked);
+  };
+
   async function bulkMarkPaid() {
     const checked = document.querySelectorAll('.stud-check:checked');
     if (checked.length === 0) {
@@ -2342,6 +2343,30 @@
     toast('Bulk payment marked!', 'success');
     loadAllData(true);
   }
+
+  window.bulkDeleteStudents = async function() {
+    const checked = document.querySelectorAll('.stud-check:checked');
+    if (checked.length === 0) {
+      toast('Please select students to delete', 'warning');
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete ${checked.length} students? This cannot be undone.`)) return;
+    
+    toast(`Deleting ${checked.length} students...`, 'info');
+    let successCount = 0;
+    for (const cb of checked) {
+      try {
+        const id = cb.dataset.id;
+        const res = await apiCall(`/api/students?id=${id}`, { method: 'DELETE' });
+        if (res.ok) successCount++;
+      } catch (e) { console.error('Bulk delete error:', e); }
+    }
+    
+    toast(`${successCount} students deleted!`, 'success');
+    loadAllData(true);
+    if ($('stud-check-all')) $('stud-check-all').checked = false;
+  };
   let currentPayId = null;
   let currentPayAmt = 0;
 
