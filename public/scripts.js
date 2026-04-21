@@ -2716,16 +2716,121 @@
     const loadingEl = $('child-loading');
     const contentEl = $('child-content');
     if (!currentStudent) { if (loadingEl) loadingEl.style.display = 'flex'; return; }
-    if ($('c-name')) $('c-name').textContent = getStudentName(currentStudent);
-    if ($('c-elo')) $('c-elo').textContent = getStudentRating(currentStudent);
-    if ($('c-level')) $('c-level').textContent = getStudentLevel(currentStudent);
-    if ($('p-av-wrap')) $('p-av-wrap').innerHTML = `<img src="${makeAvSrc(currentStudent)}" class="profile-av">`;
+    
+    const s = currentStudent;
+    
+    // Basic profile info
+    if ($('c-name')) $('c-name').textContent = getStudentName(s);
+    if ($('c-elo')) $('c-elo').textContent = getStudentRating(s);
+    if ($('c-level')) $('c-level').textContent = getStudentLevel(s);
+    if ($('p-av-wrap')) $('p-av-wrap').innerHTML = `<img src="${makeAvSrc(s)}" class="profile-av">`;
+    
+    // Coach name
+    const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+    const coachName = coach ? getCoachName(coach) : 'Not Assigned';
+    if ($('c-coach')) $('c-coach').textContent = coachName;
+    
+    // Latest coach notes/review (from student notes field or messages)
+    const latestNotes = s.notes || 'No recent review available';
+    if ($('c-notes')) $('c-notes').textContent = latestNotes;
+    
+    // Skill breakdown (based on level)
+    renderChildSkills(s);
+    
+    // Achievements
+    renderChildAchievements();
+    
+    // Billing tab
+    renderChildBilling();
+    
     if (loadingEl) loadingEl.style.display = 'none';
     if (contentEl) contentEl.style.display = 'block';
     setChildTab('overview');
   }
-  function openContactModal() { openModal('contact-modal'); }
-  async function sendMsg() { toast('Message sent!'); closeModals(); }
+  
+  function renderChildSkills(s) {
+    const skillBars = $('skill-bars');
+    if (!skillBars) return;
+    
+    const level = getStudentLevel(s);
+    const skills = {
+      'Opening Theory': { Beginner: 20, Intermediate: 40, Advanced: 60, Elite: 80 },
+      'Middle Game': { Beginner: 15, Intermediate: 35, Advanced: 55, Elite: 75 },
+      'Endgame Play': { Beginner: 10, Intermediate: 30, Advanced: 50, Elite: 70 },
+      'Tactics': { Beginner: 25, Intermediate: 45, Advanced: 65, Elite: 85 },
+      'Positional': { Beginner: 20, Intermediate: 35, Advanced: 55, Elite: 75 }
+    };
+    
+    skillBars.innerHTML = Object.entries(skills).map(([skill, levelProgs]) => {
+      const prog = levelProgs[level] || 30;
+      const color = prog >= 70 ? 'var(--success)' : prog >= 50 ? 'var(--gold)' : 'var(--blue)';
+      return `
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+            <span>${skill}</span>
+            <span style="color:${color}">${prog}%</span>
+          </div>
+          <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${prog}%;background:${color};border-radius:3px"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  function renderChildAchievements() {
+    const achGrid = $('parent-ach');
+    if (!achGrid) return;
+    
+    const myAchs = achievementsData.filter(a => String(a.student_id) === String(currentStudent.id));
+    
+    if (myAchs.length === 0) {
+      achGrid.innerHTML = '<div class="empty-state"><span class="empty-icon">🏆</span><p>No achievements yet. Keep practicing!</p></div>';
+      return;
+    }
+    
+    achGrid.innerHTML = myAchs.slice(0, 6).map(a => `
+      <div class="ach-card">
+        ${a.img_url ? `<img src="${a.img_url}" alt="${a.title}">` : '<div class="ach-icon">🏆</div>'}
+        <div class="ach-info">
+          <div class="ach-title">${a.title}</div>
+          <div class="ach-date">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  function openContactModal() { 
+    if (!currentStudent) return;
+    const coach = allCoaches.find(c => String(c.id) === String(currentStudent.coach_id));
+    const coachName = coach ? getCoachName(coach) : 'Coach';
+    if ($('contact-coach')) $('contact-coach').textContent = coachName;
+    openModal('contact-modal'); 
+  }
+  async function sendMsg() {
+    const msg = $('contact-msg')?.value?.trim();
+    if (!msg) { toast('Please enter a message', 'error'); return; }
+    if (!currentStudent) return;
+    
+    try {
+      const coach = allCoaches.find(c => String(c.id) === String(currentStudent.coach_id));
+      await apiCall('/api/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          receiver_id: currentStudent.coach_id,
+          receiver_type: 'coach',
+          sender_id: currentStudent.id,
+          sender_type: 'student',
+          message: msg,
+          subject: `Message from parent of ${getStudentName(currentStudent)}`
+        })
+      });
+      toast('Message sent to ' + (coach ? getCoachName(coach) : 'coach') + '!', 'success');
+      $('contact-msg').value = '';
+      closeModals();
+    } catch (e) {
+      toast('Failed to send message', 'error');
+    }
+  }
   async function sendFeedback() { toast('Feedback sent!'); closeModals(); }
 
   // ═══════════════════════════════════════════════════════════════
