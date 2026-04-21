@@ -120,14 +120,14 @@
     <div id="page-dash" class="page admin-only">
       <img src="https://images.unsplash.com/photo-1529699211952-734e80c4d42b?auto=format&fit=crop&w=2000&q=80" class="hero-img" alt="Chess">
       <div class="dash-grid">
-        <div class="card"><div class="stat-label">Total Cadets</div><div class="stat-value" id="s-total">—</div></div>
+        <div class="card card-clickable" onclick="setPage('stud')"><div class="stat-label">Total Cadets</div><div class="stat-value" id="s-total">—</div></div>
         <div class="card"><div class="stat-label">Avg Academy ELO</div><div class="stat-value" id="s-elo">—</div></div>
-        <div class="card"><div class="stat-label">Active Coaches</div><div class="stat-value" id="s-coaches">—</div></div>
+        <div class="card card-clickable" onclick="setPage('coach-mgmt')"><div class="stat-label">Active Coaches</div><div class="stat-value" id="s-coaches">—</div></div>
       </div>
       <div class="dash-grid" style="margin-bottom:32px">
-        <div class="card"><div class="stat-label">Amount Paid</div><div class="stat-value text-success" id="s-rev">—</div></div>
-        <div class="card"><div class="stat-label">Amount Due</div><div class="stat-value text-danger" id="s-due">—</div></div>
-        <div class="card"><div class="stat-label">Coach Expenses</div><div class="stat-value" style="color:var(--gold)" id="s-coach-exp">—</div></div>
+        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Amount Paid</div><div class="stat-value text-success" id="s-rev">—</div></div>
+        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Amount Due</div><div class="stat-value text-danger" id="s-due">—</div></div>
+        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Coach Expenses</div><div class="stat-value" style="color:var(--gold)" id="s-coach-exp">—</div></div>
       </div>
       <!-- Consolidating buttons to top-btn-area (handled via scripts.js) -->
       <div style="height: 20px;"></div>
@@ -135,7 +135,7 @@
       <div class="dash-grid" style="margin-bottom:32px">
         <div class="card"><div class="stat-label">Total Potential Revenue</div><div class="stat-value" style="color:var(--blue)" id="s-total-revenue">—</div></div>
         <div class="card"><div class="stat-label">Total Coach Cost</div><div class="stat-value" style="color:var(--danger)" id="s-total-cost">—</div></div>
-        <div class="card"><div class="stat-label">Net Profit Potential</div><div class="stat-value" style="color:var(--success)" id="s-profit">—</div></div>
+        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Net Profit Potential</div><div class="stat-value" style="color:var(--success)" id="s-profit">—</div></div>
       </div>
       <div class="dash-grid" style="margin-bottom:32px">
         <div class="card"><div class="stat-label">Group Sessions</div><div class="stat-value" id="s-group">—</div></div>
@@ -175,6 +175,7 @@
       <div class="filter-bar">
         <input type="text" id="f-search" placeholder="Search Student Name..." oninput="renderStudents()" style="flex:1;min-width:200px">
         <select id="f-coach" onchange="renderStudents()"><option value="">All Coaches</option></select>
+        <select id="f-session" onchange="renderStudents()"><option value="">All Sessions</option><option value="Group">Group</option><option value="Single">Single</option></select>
         <select id="f-status" onchange="renderStudents()"><option value="">All Payment Status</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
         <input type="number" id="f-min-fee" placeholder="Min Fee ₹" oninput="renderStudents()">
         <input type="number" id="f-max-fee" placeholder="Max Fee ₹" oninput="renderStudents()">

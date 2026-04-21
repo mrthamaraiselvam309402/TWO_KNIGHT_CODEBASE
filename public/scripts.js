@@ -1149,7 +1149,7 @@
     chartInstances = {};
     const isLight = document.body.dataset.theme === 'light';
     Chart.defaults.color = isLight ? '#454545' : '#f0ede4';
-    Chart.defaults.borderColor = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
+    Chart.defaults.borderColor = isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)';
     
     const revenueCtx = $('chartRevenue');
     if (revenueCtx) {
@@ -1419,7 +1419,7 @@
   // STUDENTS, COACHES, EVENTS, ACHIEVEMENTS
   // ═══════════════════════════════════════════════════════════════
   function clearFilters() {
-    ['f-coach', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+    ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search'].forEach(id => { const el = $(id); if (el) el.value = ''; });
     renderStudents();
   }
 
@@ -1433,6 +1433,7 @@
     if (role === 'admin' || role === 'master') {
       const fSearch = ($('f-search')?.value || '').toLowerCase().trim();
       const fCoach = $('f-coach')?.value;
+      const fSession = $('f-session')?.value;
       const fStatus = $('f-status')?.value;
       const fMin = parseInt($('f-min-fee')?.value) || 0;
       const fMax = parseInt($('f-max-fee')?.value) || 999999;
@@ -1440,10 +1441,11 @@
       studs = studs.filter(s => {
         const nameMatch = !fSearch || getStudentName(s).toLowerCase().includes(fSearch);
         const coachMatch = !fCoach || String(s.coach_id) === String(fCoach);
+        const sessionMatch = !fSession || getStudentBatchType(s) === fSession;
         const statusMatch = !fStatus || getStudentPaymentStatus(s) === fStatus;
         const fee = getStudentMonthlyFee(s);
         const feeMatch = fee >= fMin && fee <= fMax;
-        return nameMatch && coachMatch && statusMatch && feeMatch;
+        return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch;
       });
 
       // Sort alphabetically by name
@@ -3106,7 +3108,11 @@
   // ═══════════════════════════════════════════════════════════════
   // THEME & PDF
   // ═══════════════════════════════════════════════════════════════
-  function toggleTheme() { document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark'; }
+  function toggleTheme() { 
+    document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark'; 
+    // Re-render dashboard if visible to update chart colors
+    if ($('page-dash').classList.contains('active')) renderDash();
+  }
   async function generateReportPDF() {
     const { jsPDF } = window.jspdf;
     if (!jsPDF) {
