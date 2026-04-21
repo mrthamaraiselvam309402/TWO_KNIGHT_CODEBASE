@@ -393,6 +393,7 @@
   function getStudentPhone(s) { return s.parent_phone || s.phone || ''; }
   function getStudentEmail(s) { return s.email || ''; }
   function getStudentMonthlyFee(s) {
+    if (s.monthly_fee !== undefined && s.monthly_fee !== null) return parseInt(s.monthly_fee);
     if (s.notes) {
       const match = s.notes.match(/fee[:\s]*(\d+)/i);
       if (match) return parseInt(match[1]);
@@ -435,7 +436,7 @@
 
   function getCoachName(c) { return c.name || ''; }
   function getCoachSpecialty(c) { return c.specialization || ''; }
-  function getCoachSalary(c) { return c.hourly_rate || 0; }
+  function getCoachSalary(c) { return c.salary || c.hourly_rate || 0; }
   function getCoachAvailability(c) { return c.availability || ''; }
   function getCoachStatus(c) { return c.status || c.account_status || 'active'; }
   function getCoachEmail(c) { return c.email || ''; }
@@ -1498,7 +1499,8 @@
       enrollment_date: $('e-join').value,
       session_mode: $('e-batch-type').value,
       session_time: $('e-batch-time').value,
-      notes: `Fee: ${$('e-fee').value}`
+      monthly_fee: parseInt($('e-fee').value) || 0,
+      notes: $('e-notes')?.value || '' 
     };
 
     try {
@@ -1542,8 +1544,9 @@
       enrollment_date: $('m-join').value,
       batch_type: $('m-batch-type').value,
       batch_time: $('m-batch-time').value,
+      monthly_fee: parseInt($('m-fee').value) || 0,
       payment_status: 'Due',
-      notes: `Fee: ${$('m-fee').value || 0}`
+      notes: ''
     };
     
     if (!data.full_name) { toast('Student name is required', 'error'); return; }
