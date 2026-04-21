@@ -80,11 +80,19 @@
   --darker: #fcfaf5;
   --accent: #b3851b;
   
+  --surface: #ffffff;
+  --surface2: #fcfaf5;
+  --surface3: #f5f0e6;
+  --obsidian: #ffffff;
+  --bg2: #fdfbf7;
+  --bg3: #f5f2eb;
+  
   --bg-gradient: linear-gradient(135deg, #fdfbf7 0%, #ffffff 100%);
   
   --gold-mist: rgba(179, 133, 27, 0.06);
   --amber-mist: rgba(179, 133, 27, 0.04);
   --gold-glow: rgba(179, 133, 27, 0.12);
+  --glass: rgba(255, 255, 255, 0.8);
 }
 
 /* Clickable Dashboard Cards */
