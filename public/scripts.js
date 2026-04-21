@@ -962,7 +962,7 @@
       resetSessionTimer();
     });
   }
-
+  function doLogout() {
     if (notificationPolling) {
       clearInterval(notificationPolling);
       notificationPolling = null;
