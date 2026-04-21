@@ -26,6 +26,7 @@
   let eventsData = [];
   let allMessages = [];
   let allAttendance = [];
+  let allPayments = [];
   let allRatingHistory = [];
   let allResources = [];
   
@@ -437,6 +438,25 @@
     
     return 'Group'; // Default
   }
+  function getStudentSessionTime(s) {
+    if (s.session_time) return s.session_time;
+    const match = (s.notes || '').match(/time[:\s]*([^,]+)/i);
+    return match ? match[1].trim() : 'WEEKEND'; 
+  }
+  function isStudentScheduledToday(s) {
+    const time = getStudentSessionTime(s).toUpperCase();
+    const day = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const isWeekend = (day === 0 || day === 6);
+    
+    if (time.includes('MORNING & EVENING')) return true; // Daily
+    if (time.includes('ANYTIME')) return true;
+    if (isWeekend && time.includes('WEEKEND')) return true;
+    if (!isWeekend && time.includes('WEEKDAY')) return true;
+    if (day === 5 || day === 6) if (time.includes('FRI & SAT')) return true;
+    if (day === 0 || day === 1) if (time.includes('SUN & MON')) return true;
+    
+    return false;
+  }
   function getStudentBatchTime(s) { return s.batch_time || '17:00'; }
   function getStudentStatus(s) { return s.status || 'pending'; }
   function getStudentCoachNotes(s) { return s.notes || ''; }
@@ -526,12 +546,14 @@
           }
         };
 
-        const [coaches, students, achievements, events, messages] = await Promise.all([
+        const [coaches, students, achievements, events, messages, attendance, payments] = await Promise.all([
           loadWithRetry('/api/coaches'),
           loadWithRetry('/api/students'),
           loadWithRetry('/api/achievements'),
           loadWithRetry('/api/events'),
-          loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || []))
+          loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || [])),
+          loadWithRetry('/api/attendance'),
+          loadWithRetry('/api/payments').then(r => r && r.data ? r.data : (r || []))
         ]);
 
         allCoaches = coaches || [];
@@ -552,6 +574,8 @@
         achievementsData = achievements || [];
         eventsData = events || [];
         allMessages = messages || [];
+        allAttendance = attendance || [];
+        allPayments = payments || [];
         
         console.log('Data loaded - Coaches:', allCoaches?.length, 'Students:', allStudents?.length, 'Achievements:', achievementsData?.length, 'Events:', eventsData?.length);
         if (allStudents.length > 0) console.log('Sample student:', allStudents[0]);
@@ -1311,40 +1335,50 @@
     const todayLogs = allAttendance.filter(a => a.date === todayStr);
     const presentCount = todayLogs.filter(a => a.status === 'present').length;
     const absentCount = todayLogs.filter(a => a.status === 'absent').length;
-    const pendingCount = allStudents.length - todayLogs.length;
+    
+    // Smart Pending Logic: Only count students scheduled for today
+    const studentsScheduledToday = allStudents.filter(isStudentScheduledToday);
+    const loggedIds = new Set(todayLogs.map(l => l.student_id));
+    const pendingCount = studentsScheduledToday.filter(s => !loggedIds.has(s.id)).length;
 
     if ($('s-att-present')) $('s-att-present').textContent = presentCount;
     if ($('s-att-absent')) $('s-att-absent').textContent = absentCount;
     const pendingEl = $('s-att-pending');
     if (pendingEl) {
-      pendingEl.textContent = Math.max(0, pendingCount);
+      pendingEl.textContent = pendingCount;
       pendingEl.classList.add('bright');
-      pendingEl.style.color = 'var(--gold2)'; // Direct override for maximum brightness
+      pendingEl.style.color = 'var(--gold2)';
     }
     
-    // Revenue stats - Amount Paid = all fees from students with 'Paid' status
-    const paidRevenue = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-    // Amount Due = all fees from students with 'Pending' or 'Due' status (not yet paid)
-    const dueRevenue = allStudents.filter(s => {
-      const ps = getStudentPaymentStatus(s);
-      return ps === 'Pending' || ps === 'Due';
-    }).reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    // Revenue stats - Realized Revenue from actual payment records
+    // We sum all payments from the current month
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const paidRevenue = allPayments.filter(p => {
+      const pDate = new Date(p.created_at || p.payment_date);
+      return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
+    }).reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
+    
+    // Total Potential Revenue = All students' fees (from structured notes or monthly_fee)
+    const totalPotential = allStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+    
+    // Outstanding Dues = Potential - Paid
+    const dueRevenue = Math.max(0, totalPotential - paidRevenue);
     
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
     if ($('s-due')) $('s-due').textContent = '₹' + dueRevenue.toLocaleString();
     
-    // Coach expenses
+    // Coach expenses (Sum of all coach salaries/fees)
     const totalCoachCost = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     if ($('s-coach-exp')) $('s-coach-exp').textContent = '₹' + totalCoachCost.toLocaleString();
     if ($('s-total-cost')) $('s-total-cost').textContent = '₹' + totalCoachCost.toLocaleString();
     
     // Financial analytics
-    // Total Potential Revenue = All students' fees (both paid and pending)
-    const totalPotential = allStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
     // Net Profit = Collected Revenue - Coach Expenses (cash flow)
     const netProfit = paidRevenue - totalCoachCost;
-    // Potential Net Profit = Total Potential Revenue - Coach Expenses (projected)
-    const potentialNetProfit = totalPotential - totalCoachCost;
+    
     if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
     if ($('s-profit')) $('s-profit').textContent = '₹' + netProfit.toLocaleString();
     
@@ -1374,15 +1408,28 @@
     const tbody = $('coach-finance-body');
     if (!tbody) return;
     
-    const coachData = {};
-    
-    // Initialize coach data
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // Map student IDs to their total payments this month
+    const studentPaymentsThisMonth = {};
+    allPayments.filter(p => {
+      const pDate = new Date(p.created_at || p.payment_date);
+      return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
+    }).forEach(p => {
+      const sid = p.student_id;
+      if (!studentPaymentsThisMonth[sid]) studentPaymentsThisMonth[sid] = 0;
+      studentPaymentsThisMonth[sid] += (parseFloat(p.amount) || 0);
+    });
+
     allCoaches.forEach(c => {
       coachData[c.id] = {
         name: c.name || c.full_name || 'Unknown',
         students: 0,
-        revenue: 0,      // Collected (Paid)
-        pending: 0,      // Pending/Due
+        revenue: 0,      // Collected from payments
+        pending: 0,      // Outstanding (Total potential - Collected)
+        projected: 0,    // Total potential (Fee * 1)
         cost: getCoachSalary(c) || 0
       };
     });
@@ -1391,29 +1438,28 @@
     allStudents.forEach(s => {
       const coachId = s.coach_id;
       if (coachData[coachId]) {
-        const fee = getStudentMonthlyFee(s);
+        const fee = getStudentMonthlyFee(s) || 0;
+        const paidThisMonth = studentPaymentsThisMonth[s.id] || 0;
+        
         coachData[coachId].students++;
-        if (getStudentPaymentStatus(s) === 'Paid') {
-          coachData[coachId].revenue += fee;
-        } else {
-          coachData[coachId].pending += fee;
-        }
+        coachData[coachId].revenue += paidThisMonth;
+        coachData[coachId].projected += fee;
+        coachData[coachId].pending += Math.max(0, fee - paidThisMonth);
       }
     });
     
-    // Sort by potential profit (descending)
+    // Sort by projected profit (descending)
     const sorted = Object.entries(coachData).sort((a, b) => {
-      const profitA = (a[1].revenue + a[1].pending) - a[1].cost;
-      const profitB = (b[1].revenue + b[1].pending) - b[1].cost;
+      const profitA = a[1].projected - a[1].cost;
+      const profitB = b[1].projected - b[1].cost;
       return profitB - profitA;
     });
     
     tbody.innerHTML = sorted.map(([id, d]) => {
-      const potentialRevenue = d.revenue + d.pending;
       const netProfit = d.revenue - d.cost;  // Current cash flow
-      const potentialNetProfit = potentialRevenue - d.cost;  // Projected
+      const potentialNetProfit = d.projected - d.cost;  // Projected
       const roi = d.cost > 0 ? ((d.revenue / d.cost) * 100).toFixed(1) : 0;
-      const potentialRoi = d.cost > 0 ? ((potentialRevenue / d.cost) * 100).toFixed(1) : 0;
+      const potentialRoi = d.cost > 0 ? ((d.projected / d.cost) * 100).toFixed(1) : 0;
       const profitClass = netProfit >= 0 ? 'text-success' : 'text-danger';
       const potentialProfitClass = potentialNetProfit >= 0 ? 'text-success' : 'text-danger';
       return `<tr>
@@ -1424,7 +1470,7 @@
         <td>₹${d.cost.toLocaleString()}</td>
         <td class="${profitClass}">₹${netProfit.toLocaleString()}</td>
         <td class="${potentialProfitClass}">₹${potentialNetProfit.toLocaleString()}</td>
-        <td>${roi}% / ${potentialRoi}%</td>
+        <td>${roi}% / <span class="text-gold">${potentialRoi}%</span></td>
       </tr>`;
     }).join('');
   }
