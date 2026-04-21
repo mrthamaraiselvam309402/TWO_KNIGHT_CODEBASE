@@ -70,7 +70,7 @@
   --ivory2: #4a4a4a;
   --ivory3: #757575;
   
-  --glass: rgba(255, 255, 255, 0.85);
+  --glass: rgba(255, 255, 255, 0.9);
   --border: rgba(179, 133, 27, 0.15);
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   --shadow-deep: 0 15px 45px rgba(0, 0, 0, 0.12);
@@ -127,7 +127,8 @@ body[data-theme="light"] textarea {
 
 /* Light theme body overrides */
 body[data-theme="light"] {
-  background: var(--obsidian);
+  background: var(--obsidian) !important;
+  background-image: none !important;
   color: var(--ivory);
 }
 
@@ -166,6 +167,7 @@ body[data-theme="light"] .top-bar {
 }
 
 body[data-theme="light"] .page-title {
+  color: var(--ivory) !important;
   color: var(--ivory);
 }
 
@@ -378,6 +380,7 @@ body.login-mode #login-screen {
 }
 
 .page-title {
+  color: var(--ivory) !important;
   font-family: var(--font-head);
   font-size: 26px;
   font-weight: 700;
@@ -438,7 +441,8 @@ body.login-mode #login-screen {
 }
 .top-profile-info { display: flex; flex-direction: column; }
 .top-profile-hello { font-size: 11px; color: var(--ivory3); line-height: 1.2; }
-.top-profile-name { font-size: 14px; color: var(--ivory); font-weight: 600; }
+.top-profile-name {
+  color: var(--ivory) !important; font-size: 14px; color: var(--ivory); font-weight: 600; }
 
 /* ── HERO & CARDS ── */
 .hero-img {
@@ -1609,7 +1613,7 @@ body.admin-mode .master-only { display: none !important; }
 /* Light theme overrides */
 [data-theme="light"] .ai-chat-panel { background: var(--night); border-color: rgba(0,0,0,0.1); box-shadow: 0 24px 60px rgba(0,0,0,0.18); }
 [data-theme="light"] .ai-chat-header { background: linear-gradient(90deg, rgba(184,145,15,0.09), transparent); }
-[data-theme="light"] .ai-msg.bot { background: #f5f5f5; color: #1a1a2e; border-color: rgba(0,0,0,0.09); }
+[data-theme="light"] .ai-msg.bot { background: var(--surface3); color: var(--ivory); border-color: rgba(0,0,0,0.09); }
 [data-theme="light"] .ai-chat-input-area { background: #f0f2f5; }
 [data-theme="light"] .ai-input { background: var(--surface); border-color: rgba(0,0,0,0.12); color: #1a1a2e; }
 
