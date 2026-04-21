@@ -720,6 +720,11 @@
     <input type="text" id="ev-prize" placeholder="Prize Pool (e.g. ₹2000)">
     <input type="text" id="ev-loc" placeholder="Location">
     <textarea id="ev-desc" placeholder="Event Description..." rows="3"></textarea>
+    <label class="upload-zone" for="ev-img-file">🖼️ Upload Event Poster<input type="file" id="ev-img-file" accept="image/*" onchange="previewFile(this,'ev-img-preview')"></label>
+    <img id="ev-img-preview" class="upload-preview" style="max-height:120px;display:none;margin:10px 0;border-radius:8px;border:1px solid var(--border)">
+    <input type="url" id="ev-img-url" placeholder="OR paste poster image URL">
+    <input type="url" id="ev-map-url" placeholder="Google Maps Location Link (📍)">
+
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
       <button class="btn btn-gold" style="flex:1" onclick="saveEvent()">Publish</button>

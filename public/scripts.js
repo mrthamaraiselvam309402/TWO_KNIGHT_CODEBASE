@@ -1927,6 +1927,7 @@
       const spotsLeft = maxSpots - regCount;
       const isArchived = e.archived === true || e.status === 'archived';
       return `<div class="ev-card" ${isArchived ? 'style="opacity:0.7"' : ''}>
+        ${e.img_url ? `<img src="${e.img_url}" class="ev-poster" alt="Event Poster">` : ''}
         <div class="ev-header">
           <span class="ev-type-badge">${getEventType(e)}</span>
           <span class="ev-date-badge">${e.date ? new Date(e.date).toLocaleDateString() : ''}</span>
@@ -1939,6 +1940,7 @@
             <span class="ev-meta-item ev-loc">${e.location || 'TBD'}</span>
             ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${e.prize_pool}</span>` : ''}
           </div>
+          ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">📍 View on Map</a>` : ''}
           ${e.description ? `<div class="ev-desc">${e.description}</div>` : ''}
         </div>
         <div class="ev-progress-wrap">
@@ -1975,6 +1977,10 @@
     $('ev-prize').value = '';
     $('ev-loc').value = '';
     $('ev-desc').value = '';
+    $('ev-img-url').value = '';
+    $('ev-map-url').value = '';
+    $('ev-img-preview').style.display = 'none';
+    $('ev-img-file').value = '';
     $('ev-modal-title').textContent = 'Create Event';
     openModal('ev-modal');
   }
@@ -1991,6 +1997,14 @@
     $('ev-prize').value = e.prize_pool || '';
     $('ev-loc').value = e.location || '';
     $('ev-desc').value = e.description || '';
+    $('ev-img-url').value = e.img_url || '';
+    $('ev-map-url').value = e.map_url || '';
+    if (e.img_url) {
+      $('ev-img-preview').src = e.img_url;
+      $('ev-img-preview').style.display = 'block';
+    } else {
+      $('ev-img-preview').style.display = 'none';
+    }
     $('ev-modal-title').textContent = 'Edit Event';
     openModal('ev-modal');
   };
@@ -2027,6 +2041,16 @@
 
   async function saveEvent() {
     const id = $('ev-id').value;
+    const fileInput = $('ev-img-file');
+    const urlInput = $('ev-img-url');
+    let img_url = urlInput ? urlInput.value : '';
+
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      toast('Uploading event poster...', 'info');
+      const uploaded = await uploadToImgbb(fileInput.files[0]);
+      if (uploaded) img_url = uploaded;
+    }
+
     const data = {
       id: id || generateClientId(),
       title: $('ev-title').value,
@@ -2036,7 +2060,9 @@
       max_participants: parseInt($('ev-max').value) || 0,
       prize_pool: $('ev-prize').value,
       location: $('ev-loc').value,
-      description: $('ev-desc').value
+      map_url: $('ev-map-url').value,
+      description: $('ev-desc').value,
+      img_url: img_url
     };
     
     if (!data.title) { toast('Event title is required', 'error'); return; }
