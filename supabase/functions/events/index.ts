@@ -168,24 +168,20 @@ Deno.serve(async (req) => {
 
       // Sync redundant columns in PUT
       if (updateData.date !== undefined || updateData.event_date !== undefined) {
-          const dVal = updateData.date || updateData.event_date;
-          updateData.date = dVal;
-          updateData.event_date = dVal;
+          updateData.event_date = updateData.event_date || updateData.date;
+          delete updateData.date;
       }
       if (updateData.type !== undefined || updateData.event_type !== undefined) {
-          const tVal = updateData.type || updateData.event_type;
-          updateData.type = tVal;
-          updateData.event_type = tVal;
+          updateData.type = updateData.event_type || updateData.type;
+          delete updateData.event_type;
       }
       if (updateData.prize !== undefined || updateData.prize_pool !== undefined) {
-          const pVal = updateData.prize || updateData.prize_pool;
-          updateData.prize = pVal;
-          updateData.prize_pool = pVal;
+          delete updateData.prize;
+          delete updateData.prize_pool;
       }
       if (updateData.time !== undefined || updateData.event_time !== undefined) {
-          const tmVal = updateData.time || updateData.event_time;
-          updateData.time = tmVal;
-          updateData.event_time = tmVal;
+          updateData.event_time = updateData.event_time || updateData.time;
+          delete updateData.time;
       }
       
       updateData.updated_at = new Date().toISOString();

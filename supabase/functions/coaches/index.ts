@@ -137,14 +137,11 @@ Deno.serve(async (req) => {
       
       if (body.name !== undefined) {
         updateData.name = body.name;
-        updateData.full_name = body.name;
       }
       if (body.email !== undefined) updateData.email = body.email;
       if (body.phone !== undefined) updateData.phone = body.phone;
       if (body.specialty !== undefined || body.specialization !== undefined) {
-        const specialty = body.specialty || body.specialization;
-        updateData.specialization = specialty;
-        updateData.specialty = specialty;
+        updateData.specialization = body.specialty || body.specialization;
       }
       if (body.experience !== undefined) updateData.experience = body.experience;
       if (body.rating !== undefined) updateData.rating = body.rating;
@@ -154,9 +151,7 @@ Deno.serve(async (req) => {
         updateData.account_status = body.status;
       }
       if (body.salary !== undefined || body.hourly_rate !== undefined) {
-        const rate = body.salary || body.hourly_rate;
-        updateData.hourly_rate = rate;
-        updateData.salary = rate;
+        updateData.hourly_rate = body.salary || body.hourly_rate;
       }
       if (body.availability !== undefined) updateData.availability = body.availability;
       if (body.address !== undefined) updateData.address = body.address;
