@@ -538,8 +538,16 @@
         
         // --- Golden State Deduplication ---
         const rawStudents = students || [];
-        const seen = new Set();
-        allStudents = rawStudents.filter(s => s && s.id && !seen.has(s.id) && seen.add(s.id));
+        const seenId = new Set();
+        const seenName = new Set();
+        allStudents = rawStudents.filter(s => {
+          if (!s || !s.id) return false;
+          const name = getStudentName(s).trim().toUpperCase();
+          if (seenId.has(s.id) || (name && seenName.has(name))) return false;
+          seenId.add(s.id);
+          if (name) seenName.add(name);
+          return true;
+        });
         
         achievementsData = achievements || [];
         eventsData = events || [];
