@@ -680,7 +680,7 @@
         }
         
         // 4. Due payments
-        const due = studsData.filter(s => {
+        const due = dedupedStuds.filter(s => {
           const status = (s.status || '').toLowerCase();
           const payStatus = (s.payment_status || '').toLowerCase();
           return status !== 'active' && payStatus !== 'paid';
@@ -754,7 +754,12 @@
     if (btnArea) {
       btnArea.innerHTML = '';
       if (role === 'admin' || role === 'master') {
-        if (p === 'dash') btnArea.innerHTML = `<button class="btn btn-outline" onclick="generateReportPDF()">📄 Financial Report</button>`;
+        if (p === 'dash') {
+          btnArea.innerHTML = `
+            <button class="btn btn-outline" onclick="generateReportPDF()">📄 Financial Report</button>
+            <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
+          `;
+        }
         if (p === 'stud') btnArea.innerHTML = `
           <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">🗓️ Batch Attendance</button>
           <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
