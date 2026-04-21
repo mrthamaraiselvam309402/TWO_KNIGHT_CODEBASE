@@ -636,11 +636,21 @@
         // 2. New student enrolled check
         const studsRes = await apiCall('/api/students');
         const studs = await studsRes.json();
-        const studsData = studs.data || studs || [];
-        if (studsData.length > lastStudCount) {
+        const rawStuds = studs.data || studs || [];
+        
+        // Use same deduplication logic as loadAllData
+        const seen = new Set();
+        const dedupedStuds = rawStuds.filter(s => {
+          const key = `${(s.full_name || s.name || '').toLowerCase().trim()}|${(s.parent_phone || s.phone || '').trim()}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        if (dedupedStuds.length > lastStudCount) {
           toast('🎓 New student enrolled!', 'success');
-          logAudit('students', 'new', null, { count: studsData.length });
-          lastStudCount = studsData.length;
+          logAudit('students', 'new', null, { count: dedupedStuds.length });
+          lastStudCount = dedupedStuds.length;
           loadAllData(true);
         }
         
