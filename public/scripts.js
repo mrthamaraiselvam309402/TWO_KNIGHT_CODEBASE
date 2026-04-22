@@ -781,7 +781,23 @@
     if ($('award-student')) $('award-student').innerHTML = '<option value="">Select Student</option>' + allStudents.map(s => `<option value="${s.id}">${getStudentName(s)}</option>`).join('');
   }
 
-  function updateNotificationBadge() {
+  // Track shown notifications to avoid repeats
+let shownNotificationIds = JSON.parse(localStorage.getItem('shown_notifications') || '[]');
+
+function clearNotifications() {
+  shownNotificationIds = [];
+  localStorage.setItem('shown_notifications', '[]');
+  toast('Notifications cleared', 'info');
+}
+
+function shouldShowNotification(id) {
+  if (shownNotificationIds.includes(id)) return false;
+  shownNotificationIds.push(id);
+  localStorage.setItem('shown_notifications', JSON.stringify(shownNotificationIds.slice(-50)));
+  return true;
+}
+
+function updateNotificationBadge() {
     const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin').length;
     const badge = $('notification-badge');
     if (badge) {
@@ -845,7 +861,9 @@
         });
 
         if (dedupedStuds.length > lastStudCount) {
-          toast('🎓 New student enrolled!', 'success');
+          if (shouldShowNotification('new_student_' + dedupedStuds.length)) {
+            toast('🎓 New student enrolled!', 'success');
+          }
           logAudit('students', 'new', null, { count: dedupedStuds.length });
           lastStudCount = dedupedStuds.length;
           loadAllData(true);
