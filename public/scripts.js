@@ -597,7 +597,7 @@
     
     if (!currentStudent) { toast('Please login as a parent first', 'error'); return; }
     
-    if (!confirm(`Register ${getStudentName(currentStudent)} for "${e.title}" on ${e.date ? new Date(e.date).toLocaleDateString()}?`)) return;
+    if (!confirm('Register ' + getStudentName(currentStudent) + ' for "' + e.title + '" on ' + (e.date ? new Date(e.date).toLocaleDateString() : 'TBD') + '?')) return;
     
     try {
       const res = await apiCall('/api/events', {
