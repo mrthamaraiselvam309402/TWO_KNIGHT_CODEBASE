@@ -2573,8 +2573,11 @@ function setPage(p) {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  async function markPaid(id, amount, method = 'Cash', desc = 'Monthly Tuition Fee') {
+   async function markPaid(id, amount, method = 'Cash', desc = 'Monthly Tuition Fee') {
     try {
+      const s = allStudents.find(x => String(x.id) === String(id));
+      const amt = amount || (s ? getStudentMonthlyFee(s) : 5000);
+
       // 1. Update Student Status
       await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Paid' }) });
       
@@ -2583,11 +2586,12 @@ function setPage(p) {
         method: 'POST', 
         body: JSON.stringify({ 
           student_id: id, 
-          amount: parseInt(amount) || 5000, 
+          amount: parseInt(amt), 
           status: 'paid', 
           payment_method: method,
           description: desc,
-          transaction_id: 'TXN-' + Math.floor(Math.random()*1000000)
+          transaction_id: 'MAN-' + Math.floor(Math.random()*1000000),
+          payment_date: new Date().toISOString()
         }) 
       });
 
@@ -2670,10 +2674,6 @@ function setPage(p) {
       </tr>`;
     }).join('');
   }
-  async function markPaid(id) {
-    await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Paid' }) });
-    loadAllData(true);
-  }
 
   window.toggleAllStudents = function(checked) {
     document.querySelectorAll('.stud-check').forEach(cb => cb.checked = checked);
@@ -2690,12 +2690,31 @@ function setPage(p) {
     
     toast(`Processing ${checked.length} students...`, 'info');
     for (const cb of checked) {
-      await apiCall(`${API_BASE}/students?id=${cb.dataset.id}`, { 
+      const studentId = cb.dataset.id;
+      const s = allStudents.find(x => String(x.id) === String(studentId));
+      const amt = s ? getStudentMonthlyFee(s) : 5000;
+
+      // Update student status
+      await apiCall(`${API_BASE}/students?id=${studentId}`, { 
         method: 'PUT', 
         body: JSON.stringify({ payment_status: 'Paid' }) 
       });
+
+      // Log history
+      await apiCall(`${API_BASE}/payments`, { 
+        method: 'POST', 
+        body: JSON.stringify({ 
+          student_id: studentId, 
+          amount: amt, 
+          status: 'paid', 
+          payment_method: 'Bulk Admin',
+          description: 'Bulk mark as paid by administrator',
+          transaction_id: 'BLK-' + Math.floor(Math.random()*1000000),
+          payment_date: new Date().toISOString()
+        }) 
+      });
     }
-    toast('Bulk payment marked!', 'success');
+    toast('Bulk payments processed and logged!', 'success');
     loadAllData(true);
   }
 
