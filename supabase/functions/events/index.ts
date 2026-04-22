@@ -82,7 +82,10 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-      // Handle event registration
+      // DEBUG: Log the body received
+      console.log('POST body:', JSON.stringify(body));
+      
+      // Handle event registration FIRST - return early so we don't fall through to event creation
       if (body.action === 'register' && body.event_id && body.student_id) {
         const eventId = body.event_id;
         const studentId = body.student_id;
@@ -145,6 +148,9 @@ Deno.serve(async (req) => {
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
       }
+      
+      // If not a registration, continue with event creation logic below
+      // (moved title check down to ensure registration handler runs first)
       
       const { title, date, type, location, increment_registrations, id, event_date, event_time, event_type, prize_pool, max_participants, description } = body;
       
