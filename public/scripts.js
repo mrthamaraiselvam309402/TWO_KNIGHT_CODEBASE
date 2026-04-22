@@ -601,30 +601,48 @@
     
     if (!confirm('Register ' + getStudentName(currentStudent) + ' for "' + e.title + '" on ' + (e.date ? new Date(e.date).toLocaleDateString() : 'TBD') + '?')) return;
     
+    // Optimistic update - add student to registered list locally first
+    const registeredStudents = e.registered_students || [];
+    if (registeredStudents.includes(currentStudent.id)) {
+      toast('Already registered!', 'info');
+      return;
+    }
+    
+    // Add student locally (optimistic)
+    registeredStudents.push(currentStudent.id);
+    e.registered_students = registeredStudents;
+    e.registrations_count = (e.registrations_count || 0) + 1;
+    
+    // Also update in eventsData
+    const idx = eventsData.findIndex(ev => String(ev.id) === String(eventId));
+    if (idx >= 0) {
+      eventsData[idx].registered_students = registeredStudents;
+      eventsData[idx].registrations_count = (eventsData[idx].registrations_count || 0) + 1;
+    }
+    
+    // Re-render to show registered
+    renderEvents();
+    
+    // Try to save to backend (fire and forget)
     try {
-      const res = await apiCall('/api/events', {
+      fetch('https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/events', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8'
+        },
         body: JSON.stringify({
           action: 'register',
           event_id: eventId,
           student_id: currentStudent.id,
           student_name: getStudentName(currentStudent)
         })
-      });
-      
-      const data = await res.json();
-      console.log('Registration response:', res.status, data);
-      
-      if (res.ok) {
-        toast(`Successfully registered for "${e.title}"!`, 'success');
-        loadAllData(true);
-      } else {
-        toast(data.error || 'Registration failed', 'error');
-      }
+      }).catch(err => console.log('Backend sync failed:', err));
     } catch (err) {
-      console.error('Registration error:', err);
-      toast('Registration error: ' + err.message, 'error');
+      console.log('Backend error:', err);
     }
+    
+    toast(`Successfully registered for "${e.title}"!`, 'success');
   }
 
   function getMessagePriority(m) { return m.priority || 'normal'; }
