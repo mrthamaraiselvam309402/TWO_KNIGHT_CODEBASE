@@ -2135,7 +2135,13 @@
     
     if (loadingEl) loadingEl.style.display = 'none';
     
-    if (!eventsData || eventsData.length === 0) {
+    // Filter out archived/deleted events for parents, show all for admin
+    const visibleEvents = eventsData.filter(e => {
+      if (role === 'admin' || role === 'master') return true;
+      return e.status !== 'archived' && e.archived !== true;
+    });
+    
+    if (!visibleEvents || visibleEvents.length === 0) {
       gridEl.style.display = 'grid';
       gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">📅</span><p>No events scheduled</p></div>';
       return;
@@ -2144,7 +2150,7 @@
     const isAdmin = role === 'admin' || role === 'master';
     
     gridEl.style.display = 'grid';
-    gridEl.innerHTML = eventsData.map(e => {
+    gridEl.innerHTML = visibleEvents.map(e => {
       const maxSpots = e.max_participants || 50;
       const regCount = e.registrations_count || (e.registered_students?.length || 0);
       const spotsLeft = maxSpots - regCount;
