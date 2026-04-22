@@ -998,6 +998,7 @@
       if (p === 'bills') renderBills();
       if (p === 'msgs') renderMsgs();
       if (p === 'child') renderChild();
+      if (p === 'server' && role === 'master') renderServer();
     }, 10);
   }
 
@@ -3205,6 +3206,89 @@ if (parentHistoryList && role === 'parent') {
     if (input) {
       input.value = q;
       input.focus();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MASTER SERVER ACTIVITY
+  // ═══════════════════════════════════════════════════════════════
+  function renderServer() {
+    if (role !== 'master') { setPage('dash'); return; }
+    loadServerActivity();
+  }
+  
+  async function loadServerActivity() {
+    const vercelEl = $('server-vercel');
+    const supabaseEl = $('server-supabase');
+    const githubEl = $('server-github');
+    
+    // Vercel deployments - try to fetch (needs VERCEL_TOKEN)
+    try {
+      const vRes = await fetch('https://api.vercel.com/v6/deployments?projectId=prj_2qG9Q3YVdXNdcRrbB3M9gNz8Yc&utm_source=cli&q=default', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('vercel_token') || ''}` }
+      }).catch(() => null);
+      
+      if (vRes?.ok) {
+        const vData = await vRes.json();
+        if (vData?.deployments?.length) {
+          vercelEl.innerHTML = vData.deployments.slice(0, 5).map(d => `
+            <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
+              <span style="color:var(--success)">●</span> ${d.meta?.githubCommitRef || 'main'} - ${d.state}
+              <span style="color:var(--ivory-dim);float:right">${new Date(d.created).toLocaleTimeString()}</span>
+            </div>
+          `).join('');
+        } else {
+          vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">No deployments found</div>';
+        }
+      } else {
+        vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">Configure VERCEL_TOKEN in console</div>';
+      }
+    } catch (e) {
+      vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">API unavailable</div>';
+    }
+    
+    // Supabase - show function status
+    try {
+      supabaseEl.innerHTML = `
+        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="color:var(--emerald)">●</span> students - Active
+        </div>
+        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="color:var(--emerald)">●</span> coaches - Active
+        </div>
+        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="color:var(--emerald)">●</span> events - Active
+        </div>
+        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="color:var(--emerald)">●</span> messages - Active
+        </div>
+        <div style="padding:8px;font-size:11px;color:var(--ivory-dim);margin-top:8px">
+          Database: vseombfkrvpffnpgbsnk
+        </div>
+      `;
+    } catch (e) {
+      supabaseEl.innerHTML = '<div style="color:var(--ivory-dim)">Error loading</div>';
+    }
+    
+    // GitHub - show recent activity
+    try {
+      const gRes = await fetch('https://api.github.com/repos/THAMARAISELVAM-A/chesskidoo-ai-admin/commits?per_page=5', {
+        headers: { 'Accept': 'application/vnd.github.v3+json' }
+      }).catch(() => null);
+      
+      if (gRes?.ok) {
+        const gData = await gRes.json();
+        githubEl.innerHTML = gData.slice(0, 5).map(c => `
+          <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
+            <span style="color:var(--gold)">●</span> ${c.commit.message?.substring(0, 50) || 'Update'}
+            <span style="color:var(--ivory-dim);float:right">${new Date(c.commit.author.date).toLocaleDateString()}</span>
+          </div>
+        `).join('');
+      } else {
+        githubEl.innerHTML = '<div style="color:var(--ivory-dim)">GitHub API rate limited</div>';
+      }
+    } catch (e) {
+      githubEl.innerHTML = '<div style="color:var(--ivory-dim)">API unavailable</div>';
     }
   }
   

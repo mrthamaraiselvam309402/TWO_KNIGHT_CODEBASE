@@ -83,8 +83,9 @@
     <div class="nav-item" id="nav-fame" onclick="setPage('fame')"><span class="ico">🏆</span> Wall of Fame</div>
     <div class="nav-item" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Events</div>
     <div class="nav-item admin-only" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
-    <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
-    <div class="nav-item" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
+<div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
+      <div class="nav-item" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
+      <div class="nav-item master-only" id="nav-server" onclick="setPage('server')"><span class="ico">🖥️</span> Server</div>
   </div>
   <div style="padding:16px;border-top:1px solid var(--border)">
     <div class="nav-item" onclick="toggleTheme()"><span class="ico">🌗</span> Switch Theme</div>
@@ -386,6 +387,27 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Server Activity (Master Only) -->
+    <div id="page-server" class="page master-only">
+      <div class="page-header">
+        <h2 id="p-title">Server Activity</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
+        <div class="card">
+          <h3 style="color:var(--gold);margin-bottom:12px">🟢 Vercel Deployments</h3>
+          <div id="server-vercel" class="loading-state"><span class="spinner"></span> Loading...</div>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--gold);margin-bottom:12px">🔵 Supabase Functions</h3>
+          <div id="server-supabase" class="loading-state"><span class="spinner"></span> Loading...</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3 style="color:var(--gold);margin-bottom:12px">⚡ GitHub Activity</h3>
+        <div id="server-github" class="loading-state"><span class="spinner"></span> Loading...</div>
       </div>
     </div>
 
@@ -902,6 +924,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="scripts.js?v=2026-04-22-v49"></script>
+<script src="scripts.js?v=2026-04-22-v50"></script>
 </body>
 </html>
