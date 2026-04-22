@@ -597,6 +597,8 @@
     
     if (!currentStudent) { toast('Please login as a parent first', 'error'); return; }
     
+    console.log('Registering for event:', eventId, 'student:', currentStudent.id);
+    
     if (!confirm('Register ' + getStudentName(currentStudent) + ' for "' + e.title + '" on ' + (e.date ? new Date(e.date).toLocaleDateString() : 'TBD') + '?')) return;
     
     try {
@@ -611,15 +613,18 @@
         })
       });
       
+      const data = await res.json();
+      console.log('Registration response:', res.status, data);
+      
       if (res.ok) {
         toast(`Successfully registered for "${e.title}"!`, 'success');
         loadAllData(true);
       } else {
-        const err = await res.json().catch(() => ({}));
-        toast(err.error || 'Registration failed', 'error');
+        toast(data.error || 'Registration failed', 'error');
       }
-    } catch (e) {
-      toast('Registration error: ' + e.message, 'error');
+    } catch (err) {
+      console.error('Registration error:', err);
+      toast('Registration error: ' + err.message, 'error');
     }
   }
 
@@ -2173,7 +2178,7 @@
         </div>
         <div class="ev-footer">
           <div class="ev-spots"><strong>${spotsLeft}</strong> spots left</div>
-          ${role === 'parent' ? `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>` : ''}
+          ${role === 'parent' ? (e.registered_students?.includes(currentStudent?.id) ? '<span class="badge badge-success">✓ Registered</span>' : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`) : ''}
           ${isAdmin ? `
             <div style="display:flex;gap:8px;margin-left:auto">
               <button class="btn btn-outline-grey btn-sm" onclick="editEvent('${e.id}')">Edit</button>
