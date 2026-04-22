@@ -3465,18 +3465,14 @@ function setPage(p) {
      const particleData = [];
      for (let c = 0; c < connections.length; c++) {
        for (let p = 0; p < particlesPerLine; p++) {
-         particleData.push({
-           lineIndex: c,
-           t: p / particlesPerLine
-      });
-    } catch (e) {
-      console.error('3D initialization error:', e);
-      showServer3DError('3D engine failed: ' + e.message);
-      return;
-    }
-     }
+          particleData.push({
+            lineIndex: c,
+            t: p / particlesPerLine
+          });
+         }
+       } // close outer for loop (connections)
 
-     // Ambient lighting
+      // Ambient lighting
      const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
      scene.add(ambientLight);
 
