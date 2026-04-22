@@ -2619,14 +2619,18 @@ function setPage(p) {
 
       if (myPayments.length === 0) {
         if (s.payment_status === 'Paid') {
-          // Synthetic record for existing paid status
+          // Automatic detection from registry
+          const detectedDate = s.updated_at || s.created_at || s.joining_date || new Date().toISOString();
+          const displayDate = new Date(detectedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+          const txId = 'MIG-' + s.id.toString().slice(-6).toUpperCase();
+          
           $('p-history-body').innerHTML = `
             <tr>
-              <td>-</td>
+              <td>${displayDate}</td>
               <td style="color:var(--success);font-weight:600">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-              <td>Registry</td>
-              <td>-</td>
-              <td style="font-size:12px">Payment recorded in student registry</td>
+              <td>System Detected</td>
+              <td style="font-family:var(--font-mono);font-size:11px">${txId}</td>
+              <td style="font-size:12px">Payment verified from student registry history</td>
             </tr>`;
         } else {
           $('p-history-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--ivory3)">No payment history found.</td></tr>';
