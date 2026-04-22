@@ -1317,7 +1317,7 @@
       }
     }
     
-if (parentHistoryList && role === 'parent') {
+    if (parentHistoryList && role === 'parent') {
       // Parent sees only their own sessions, filter to unique login events
       const mySessions = sessions.filter(s => s.user === currentUser);
       // Get unique login sessions (dedupe by login time)
@@ -1345,13 +1345,15 @@ if (parentHistoryList && role === 'parent') {
             </div>
             <div style="font-size:11px;color:var(--ivory-dim);margin-top:2px">${status}</div>
           </div>`;
-        });
+});
         parentHistoryList.innerHTML = html;
       }
     }
-    }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // CHARTS & DASHBOARD
+  // ═══════════════════════════════════════════════════════════════
   function formatTimeAgo(dateStr) {
     const now = new Date();
     const date = new Date(dateStr);
@@ -1366,9 +1368,6 @@ if (parentHistoryList && role === 'parent') {
     return `${diffDays}d ago`;
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // CHARTS & DASHBOARD
-  // ═══════════════════════════════════════════════════════════════
   function buildCharts(studs) {
     if (chartInstances.childElo) { chartInstances.childElo.destroy(); delete chartInstances.childElo; }
     Object.values(chartInstances).forEach(chart => { if (chart) chart.destroy(); });
