@@ -4172,6 +4172,21 @@
   window.bulkMarkPaid = bulkMarkPaid;
   window.doLogout = doLogout;
   window.finishLogin = finishLogin;
+  window.registerForEvent = registerForEvent;
+  window.setChildTab = setChildTab;
+  window.renderChild = renderChild;
+  window.renderChildEvents = renderChildEvents;
+  window.renderChildBilling = renderChildBilling;
+  window.renderChildGrowth = renderChildGrowth;
+  window.renderChildResources = renderChildResources;
+  window.renderChildSkills = renderChildSkills;
+  window.renderChildAchievements = renderChildAchievements;
+  window.openContactModal = openContactModal;
+  window.sendMsg = sendMsg;
+  window.sendFeedback = sendFeedback;
+  window.setAISuggestion = setAISuggestion;
+  window.setAIModule = setAIModule;
+  window.sendAIQuery = sendAIQuery;
 
-  console.log('Chesskidoo Scripts Loaded - doLogin:', typeof window.doLogin, 'toggleEye:', typeof window.toggleEye);
+  console.log('Chesskidoo Scripts Loaded - doLogin:', typeof window.doLogin, 'toggleEye:', typeof window.toggleEye, 'registerForEvent:', typeof window.registerForEvent);
 })();
