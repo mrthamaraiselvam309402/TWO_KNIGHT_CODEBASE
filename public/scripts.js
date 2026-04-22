@@ -3178,8 +3178,6 @@
       chatContainer.appendChild(welcomeMsg);
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
-    
-    toast('Module: ' + (config ? config.title : m), 'info');
   }
   
   function setAISuggestion(q) {

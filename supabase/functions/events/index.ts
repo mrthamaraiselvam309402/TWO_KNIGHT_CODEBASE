@@ -92,19 +92,35 @@ Deno.serve(async (req) => {
       
       // Handle event registration
       if (action === 'register' && eventId && studentId) {
+        console.log('Looking for event:', eventId);
         
-        // Get current event data
-        const { data: currentEvent } = await supabase
+        // Get current event data - try without .single() to debug
+        const { data: events, error: eventError } = await supabase
           .from('events')
           .select('registered_students, current_participants, title')
-          .eq('id', eventId)
-          .single();
+          .eq('id', eventId);
         
-        if (!currentEvent) {
-          return new Response(JSON.stringify({ error: 'Event not found' }), {
-            status: 404,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-          });
+        console.log('Query result:', events, eventError);
+        
+        if (eventError) {
+          console.log('Query error:', eventError);
+          return new Response(JSON.stringify({ error: eventError.message }), { status: 500 });
+        }
+        
+        if (!events || events.length === 0) {
+          // Try fuzzy search
+          const { data: events2 } = await supabase
+            .from('events')
+            .select('registered_students, current_participants, title')
+            .ilike('id', '%' + eventId.substring(0, 8) + '%');
+          console.log('Fuzzy search result:', events2);
+          
+          if (!events2 || events2.length === 0) {
+            return new Response(JSON.stringify({ error: 'Event not found', debug: eventId }), { status: 404 });
+          }
+          const currentEvent = events2[0];
+        } else {
+          var currentEvent = events[0];
         }
         
         const registeredStudents = currentEvent.registered_students || [];
