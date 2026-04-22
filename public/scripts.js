@@ -1229,9 +1229,13 @@ function setPage(p) {
     const sessionId = 'sess_' + Date.now();
     
     if (action === 'login') {
+      const user = auth.user || 'Unknown';
+      // Mark all previous sessions for this user as inactive
+      sessions.forEach(s => { if (s.user === user) s.active = false; });
+      
       sessions.push({
         id: sessionId,
-        user: auth.user || 'Unknown',
+        user: user,
         role: auth.role,
         studentId: auth.studentId || null,
         loginAt: now,
@@ -1251,7 +1255,20 @@ function setPage(p) {
 
   function getActiveSessions() {
     const sessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
-    return sessions.filter(s => s.active);
+    const now = Date.now();
+    // Only show sessions active in the last 2 hours and deduplicate by user
+    const active = sessions.filter(s => s.active && (now - new Date(s.loginAt).getTime() < 3600000 * 2));
+    
+    const deduped = [];
+    const seenUsers = new Set();
+    // Sort by newest first to keep the most recent session
+    active.sort((a,b) => new Date(b.loginAt) - new Date(a.loginAt)).forEach(s => {
+      if (!seenUsers.has(s.user)) {
+        seenUsers.add(s.user);
+        deduped.push(s);
+      }
+    });
+    return deduped;
   }
 
   function getLoginHistory() {
