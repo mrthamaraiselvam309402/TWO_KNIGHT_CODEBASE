@@ -3269,15 +3269,264 @@ function setPage(p) {
    }
    
     // ═══════════════════════════════════════════════════════════════
-    // 3D CIRCUIT MAP ENGINE
+    // 3D CIRCUIT MAP ENGINE - Cinematic
     // ═══════════════════════════════════════════════════════════════
     function initServer3D() {
-      console.log('initServer3D called');
+      console.log('[3D] initServer3D');
       const canvas = $('server-canvas');
-      if (!canvas) {
-        console.error('Server 3D: Canvas element not found');
+      if (!canvas) { console.error('[3D] Canvas missing'); return; }
+
+      if (typeof THREE === 'undefined') {
+        showServer3DError('Three.js not loaded');
         return;
       }
+
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) {
+        document.body.classList.add('webgl-fallback');
+        return;
+      }
+
+      try {
+        // ── Scene ──
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0a0a15, 0.025);
+
+        // ── Camera ──
+        const aspect = (canvas.clientWidth || 800) / (canvas.clientHeight || 600);
+        const camera = new THREE.PerspectiveCamera(55, aspect, 0.1, 2000);
+        camera.position.set(0, 7.5, 16);
+        camera.lookAt(0, 0.2, 0);
+
+        // ── Renderer ──
+        const renderer = new THREE.WebGLRenderer({
+          canvas,
+          antialias: true,
+          alpha: true,
+          powerPreference: 'high-performance'
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x050505, 1);
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+        // ── Node Positions ──
+        const nodePositions = [
+          { x: -5, y: 0, z: 1,  color: 0xff00ff, name: 'GitHub' },
+          { x: -1.7, y: 0, z: -2, color: 0x00ff88, name: 'Vercel' },
+          { x: 1.7, y: 0, z: -2,  color: 0x00aaff, name: 'Supabase' },
+          { x: 5, y: 0, z: 1,   color: 0xffaa00, name: 'Website' }
+        ];
+
+        const nodes = [];
+        const nodeGroup = new THREE.Group();
+        scene.add(nodeGroup);
+
+        nodePositions.forEach((pos, i) => {
+          // Core sphere (standard material for better lighting)
+          const coreGeom = new THREE.SphereGeometry(0.35, 32, 32);
+          const coreMat = new THREE.MeshStandardMaterial({
+            color: pos.color,
+            emissive: pos.color,
+            emissiveIntensity: 0.4,
+            metalness: 0.6,
+            roughness: 0.2
+          });
+          const core = new THREE.Mesh(coreGeom, coreMat);
+          core.position.set(pos.x, pos.y, pos.z);
+
+          // Outer glow (large, soft)
+          const glowGeom = new THREE.SphereGeometry(0.6, 32, 32);
+          const glowMat = new THREE.MeshBasicMaterial({
+            color: pos.color,
+            transparent: true,
+            opacity: 0.15,
+            side: THREE.BackSide
+          });
+          const glow = new THREE.Mesh(glowGeom, glowMat);
+          core.add(glow);
+
+          // Orbital ring
+          const ringGeom = new THREE.RingGeometry(0.8, 0.9, 48);
+          const ringMat = new THREE.MeshBasicMaterial({
+            color: pos.color,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.5
+          });
+          const ring = new THREE.Mesh(ringGeom, ringMat);
+          ring.rotation.x = Math.PI / 2;
+          ring.position.y = 0.35;
+          core.add(ring);
+
+          nodeGroup.add(core);
+          nodes.push({ mesh: core, glow, ring, pos });
+        });
+
+        // ── Circuit Lines ──
+        const connections = [[0,1],[1,2],[2,3]];
+        const lines = [];
+
+        connections.forEach(([i, j]) => {
+          const start = nodePositions[i];
+          const end = nodePositions[j];
+          const midX = (start.x + end.x) / 2;
+          const midY = -0.3;
+          const midZ = (start.z + end.z) / 2;
+
+          const curve = new THREE.QuadraticBezierCurve3(
+            new THREE.Vector3(start.x, start.y, start.z),
+            new THREE.Vector3(midX, midY, midZ),
+            new THREE.Vector3(end.x, end.y, end.z)
+          );
+
+          // Main neon line
+          const pts = curve.getPoints(60);
+          const lineGeom = new THREE.BufferGeometry().setFromPoints(pts);
+          const lineMat = new THREE.LineBasicMaterial({
+            color: 0x00f0ff,
+            linewidth: 2,
+            transparent: true,
+            opacity: 0.6
+          });
+          const line = new THREE.Line(lineGeom, lineMat);
+          scene.add(line);
+
+          // Thin glow line
+          const glowLineGeom = new THREE.BufferGeometry().setFromPoints(pts);
+          const glowLineMat = new THREE.PointsMaterial({
+            size: 0.06,
+            color: 0x00f0ff,
+            transparent: true,
+            opacity: 0.4,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          });
+          const glowLine = new THREE.Points(glowLineGeom, glowLineMat);
+          scene.add(glowLine);
+
+          lines.push({ curve, mesh: line, glow: glowLine });
+        });
+
+        // ── Data Particles ──
+        const particlesPerLine = 10;
+        const totalParticles = connections.length * particlesPerLine;
+        const pGeom = new THREE.BufferGeometry();
+        const pPositions = new Float32Array(totalParticles * 3);
+
+        for (let c = 0; c < connections.length; c++) {
+          for (let p = 0; p < particlesPerLine; p++) {
+            const idx = (c * particlesPerLine + p) * 3;
+            const t = p / particlesPerLine;
+            const pt = lines[c].curve.getPoint(t);
+            pPositions[idx] = pt.x;
+            pPositions[idx+1] = pt.y - 0.05;
+            pPositions[idx+2] = pt.z;
+          }
+        }
+
+        pGeom.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+
+        const pMat = new THREE.PointsMaterial({
+          size: 0.10,
+          color: 0x00f0ff,
+          transparent: true,
+          opacity: 0.85,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+
+        const particleSystem = new THREE.Points(pGeom, pMat);
+        scene.add(particleSystem);
+
+        const particleData = [];
+        for (let c = 0; c < connections.length; c++) {
+          for (let p = 0; p < particlesPerLine; p++) {
+            particleData.push({
+              lineIndex: c,
+              t: p / particlesPerLine,
+              speed: 0.0015 + Math.random() * 0.0008
+            });
+          }
+        }
+
+        // ── Lighting ──
+        const ambient = new THREE.AmbientLight(0x0a0a15, 0.4);
+        scene.add(ambient);
+
+        nodePositions.forEach((pos, i) => {
+          const light = new THREE.PointLight(pos.color, 1.2, 20);
+          light.position.set(pos.x, pos.y + 1.5, pos.z);
+          scene.add(light);
+        });
+
+        // ── Store refs ──
+        server3DScene = scene;
+        server3DRenderer = renderer;
+        server3DCamera = camera;
+        serverParticles = { system: particleSystem, data: particleData, lines };
+        serverNodes = nodes;
+        serverLines = lines;
+
+        // Pre-size gauge canvases
+        ['gauge-students','gauge-coaches','gauge-events','gauge-messages','gauge-payments']
+          .forEach(id => {
+            const el = $(id);
+            if (el) { el.width = el.offsetWidth; el.height = el.offsetHeight; }
+          });
+
+        // ── Resize Handler ──
+        const onResize = () => {
+          if (!document.getElementById('page-server').offsetParent) return;
+          const w = canvas.clientWidth, h = canvas.clientHeight;
+          if (w > 0 && h > 0) {
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+          }
+        };
+        window.addEventListener('resize', onResize);
+
+        // ── Animation Loop ──
+        function animate() {
+          requestAnimationFrame(animate);
+          const t = Date.now() * 0.001;
+
+          // Nodes: float + ring twist
+          nodes.forEach((n, i) => {
+            n.mesh.position.y = Math.sin(t * 0.9 + i * 1.2) * 0.18;
+            n.ring.rotation.z += 0.004 * (i%2?1:-1);
+            n.ring.rotation.x = Math.PI/2 + Math.sin(t*0.6+i)*0.03;
+            n.glow.material.opacity = 0.12 + Math.sin(t*1.8+i)*0.06;
+          });
+
+          // Particles
+          const posAttr = particleSystem.geometry.attributes.position;
+          particleData.forEach((d, i) => {
+            d.t += d.speed;
+            if (d.t > 1) d.t = 0;
+            const p = lines[d.lineIndex].curve.getPoint(d.t);
+            posAttr.array[i*3] = p.x;
+            posAttr.array[i*3+1] = p.y - 0.08;
+            posAttr.array[i*3+2] = p.z;
+          });
+          posAttr.needsUpdate = true;
+
+          // Camera sweep
+          camera.position.x = Math.sin(t * 0.12) * 1.0;
+          camera.position.z = 16 + Math.cos(t * 0.15) * 1.8;
+          camera.lookAt(0, 0.15, 0);
+
+          renderer.render(scene, camera);
+        }
+
+        serverAnimFrameId = requestAnimationFrame(animate);
+        console.log('[3D] Scene initialized');
+
+      } catch (e) {
+        console.error('[3D] Init failed:', e);
+        showServer3DError('3D engine error: ' + e.message);
+      }
+    }
 
       // Check if THREE is loaded
       if (typeof THREE === 'undefined') {
@@ -3465,14 +3714,18 @@ function setPage(p) {
      const particleData = [];
      for (let c = 0; c < connections.length; c++) {
        for (let p = 0; p < particlesPerLine; p++) {
-          particleData.push({
-            lineIndex: c,
-            t: p / particlesPerLine
-          });
-         }
-       } // close outer for loop (connections)
+         particleData.push({
+           lineIndex: c,
+           t: p / particlesPerLine
+      });
+    } catch (e) {
+      console.error('3D initialization error:', e);
+      showServer3DError('3D engine failed: ' + e.message);
+      return;
+    }
+     }
 
-      // Ambient lighting
+     // Ambient lighting
      const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
      scene.add(ambientLight);
 

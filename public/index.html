@@ -392,92 +392,130 @@
       </div>
     </div>
 
-     <!-- Server Activity Command Center (Master Only) -->
-     <div id="page-server" class="page master-only">
-       <!-- 3D Dashboard Container -->
-       <div class="server-3d-container">
-         <!-- Three.js Canvas -->
-         <canvas id="server-canvas"></canvas>
+      <!-- Server Activity Command Center (Master Only) -->
+      <div id="page-server" class="page master-only">
+        <!-- 3D Scene Canvas (Background) -->
+        <canvas id="server-canvas"></canvas>
 
-         <!-- Cyber-grid background overlay -->
-         <div class="cyber-grid-overlay"></div>
+        <!-- Dark cinematic overlay -->
+        <div class="cinematic-vignette"></div>
 
-         <!-- HUD Panels Overlay -->
-         <div class="hud-panels">
-           <!-- GitHub Terminal (left) -->
-           <div class="hud-panel hud-terminal">
-             <div class="panel-header">
-               <span class="panel-title">⚡ GITHUB ACTIVITY</span>
-               <span class="panel-indicator" id="github-indicator">● ONLINE</span>
-             </div>
-             <div class="terminal-content" id="github-terminal">
-               <div class="terminal-line">Initializing connection...</div>
-             </div>
-           </div>
+        <!-- HUD Overlay -->
+        <div class="server-hud">
+          <!-- Top status bar -->
+          <div class="hud-topbar">
+            <div class="hud-brand">
+              <span class="brand-icon">◈</span>
+              <span class="brand-text">SYSTEM MONITOR</span>
+              <span class="brand-divider">|</span>
+              <span class="brand-mode">MASTER</span>
+            </div>
+            <div class="hud-status" id="hud-status">
+              <span class="status-dot"></span>
+              <span>ONLINE</span>
+            </div>
+          </div>
 
-           <!-- Supabase Gauges (center-right top) -->
-           <div class="hud-panel hud-gauges">
-             <div class="panel-header">
-               <span class="panel-title">🔵 SUPABASE METRICS</span>
-               <span class="panel-indicator" id="supabase-indicator">● ONLINE</span>
-             </div>
-             <div class="gauges-container">
-               <div class="gauge-wrapper">
-                 <canvas id="gauge-students" class="gauge-canvas"></canvas>
-                 <span class="gauge-label">Students</span>
-               </div>
-               <div class="gauge-wrapper">
-                 <canvas id="gauge-coaches" class="gauge-canvas"></canvas>
-                 <span class="gauge-label">Coaches</span>
-               </div>
-               <div class="gauge-wrapper">
-                 <canvas id="gauge-events" class="gauge-canvas"></canvas>
-                 <span class="gauge-label">Events</span>
-               </div>
-               <div class="gauge-wrapper">
-                 <canvas id="gauge-messages" class="gauge-canvas"></canvas>
-                 <span class="gauge-label">Messages</span>
-               </div>
-               <div class="gauge-wrapper">
-                 <canvas id="gauge-payments" class="gauge-canvas"></canvas>
-                 <span class="gauge-label">Payments</span>
-               </div>
-             </div>
-           </div>
+          <!-- Left panel: GitHub Terminal -->
+          <div class="hud-panel hud-left-panel">
+            <div class="panel-header">
+              <span class="panel-icon">◉</span>
+              <span class="panel-title">GITHUB ACTIVITY</span>
+              <span class="panel-status" id="git-status">LIVE</span>
+            </div>
+            <div class="panel-body" id="github-terminal">
+              <div class="terminal-line">⟨ Establishing secure connection… ⟩</div>
+              <div class="terminal-line system">⟳ Fetching commit history</div>
+            </div>
+          </div>
 
-           <!-- Vercel Pulse Orb (right bottom) -->
-           <div class="hud-panel hud-vercel">
-             <div class="panel-header">
-               <span class="panel-title">🟢 VERCEL DEPLOYMENTS</span>
-               <span class="panel-indicator" id="vercel-indicator">● CHECKING</span>
-             </div>
-             <div class="vercel-orb-container">
-               <div class="pulse-orb" id="vercel-orb">
-                 <div class="orb-inner"></div>
-                 <div class="orb-ring"></div>
-                 <div class="orb-ring ring-2"></div>
-               </div>
-               <div class="vercel-info" id="vercel-info">
-                 <div class="vercel-stat">Status: <span id="vercel-status">--</span></div>
-                 <div class="vercel-stat">Last Deploy: <span id="vercel-last">--</span></div>
-               </div>
-             </div>
-           </div>
-         </div>
+          <!-- Right panel: Metrics -->
+          <div class="hud-right-column">
+            <!-- Supabase Gauges -->
+            <div class="hud-panel hud-gauges">
+              <div class="panel-header">
+                <span class="panel-icon">◈</span>
+                <span class="panel-title">DATABASE METRICS</span>
+                <span class="panel-status">ACTIVE</span>
+              </div>
+              <div class="gauges-grid">
+                <div class="gauge-card" data-label="Students" data-value="0" data-color="#ff00ff">
+                  <canvas class="gauge-ring" id="gauge-students"></canvas>
+                  <div class="gauge-info">
+                    <span class="gauge-value" id="val-students">0</span>
+                    <span class="gauge-label">Students</span>
+                  </div>
+                </div>
+                <div class="gauge-card" data-label="Coaches" data-value="0" data-color="#00f0ff">
+                  <canvas class="gauge-ring" id="gauge-coaches"></canvas>
+                  <div class="gauge-info">
+                    <span class="gauge-value" id="val-coaches">0</span>
+                    <span class="gauge-label">Coaches</span>
+                  </div>
+                </div>
+                <div class="gauge-card" data-label="Events" data-value="0" data-color="#00ff88">
+                  <canvas class="gauge-ring" id="gauge-events"></canvas>
+                  <div class="gauge-info">
+                    <span class="gauge-value" id="val-events">0</span>
+                    <span class="gauge-label">Events</span>
+                  </div>
+                </div>
+                <div class="gauge-card" data-label="Messages" data-value="0" data-color="#ffaa00">
+                  <canvas class="gauge-ring" id="gauge-messages"></canvas>
+                  <div class="gauge-info">
+                    <span class="gauge-value" id="val-messages">0</span>
+                    <span class="gauge-label">Messages</span>
+                  </div>
+                </div>
+                <div class="gauge-card" data-label="Payments" data-value="0" data-color="#ff0055">
+                  <canvas class="gauge-ring" id="gauge-payments"></canvas>
+                  <div class="gauge-info">
+                    <span class="gauge-value" id="val-payments">0</span>
+                    <span class="gauge-label">Payments</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-         <!-- Data Surge Overlay -->
-         <div class="surge-overlay" id="surge-overlay"></div>
-       </div>
+            <!-- Vercel Deployment Status -->
+            <div class="hud-panel hud-vercel">
+              <div class="panel-header">
+                <span class="panel-icon">◇</span>
+                <span class="panel-title">VERCEL DEPLOYMENT</span>
+                <span class="panel-status" id="vercel-check">CHECKING</span>
+              </div>
+              <div class="vercel-suite">
+                <div class="pulse-orb-lg" id="vercel-orb">
+                  <div class="orb-core"></div>
+                  <div class="orb-glow"></div>
+                  <div class="orb-ring"></div>
+                  <div class="orb-ring ring-2"></div>
+                  <div class="orb-ring ring-3"></div>
+                </div>
+                <div class="vercel-meta">
+                  <div class="meta-row">
+                    <span class="meta-label">Status</span>
+                    <span class="meta-value" id="v-status">Connecting</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-label">Last Update</span>
+                    <span class="meta-value" id="v-time">--:--</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-       <!-- Hidden data stores for gauges -->
-       <div id="server-data" style="display:none"
-            data-students="0"
-            data-coaches="0"
-            data-events="0"
-            data-messages="0"
-            data-payments="0">
-       </div>
-     </div>
+        <!-- Data surge effect (hidden by default) -->
+        <div class="surge-flash" id="surge-effect"></div>
+
+        <!-- Corner brackets for HUD feel -->
+        <div class="corner-bracket top-left"></div>
+        <div class="corner-bracket top-right"></div>
+        <div class="corner-bracket bottom-left"></div>
+        <div class="corner-bracket bottom-right"></div>
+      </div>
 
   </div>
 </div>
