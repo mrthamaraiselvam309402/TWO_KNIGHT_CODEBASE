@@ -2648,19 +2648,24 @@ function setPage(p) {
       const statusClass = status === 'Paid' ? 'text-success' : (status === 'Pending' ? 'text-warning' : 'text-danger');
       const invoiceId = 'INV-' + (s.id ? s.id.toString().slice(-6) : '000000');
       return `<tr>
-        <td><span style="font-family:var(--font-mono);color:var(--gold)">${invoiceId}</span></td>
-        <td><div style="font-weight:600">${getStudentName(s)}</div><small style="color:var(--ivory3)">${getStudentLevel(s)}</small></td>
-        <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-        <td><span class="${statusClass}">${status}</span></td>
-        <td style="display:flex;gap:6px;flex-wrap:wrap">
-          ${status === 'Due' || status === 'Pending' ? 
-            `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-             <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-             <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
-             <button class="btn btn-outline btn-sm" onclick="sendPaymentReminder('${s.id}')">💬 Remind</button>` : 
-            `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}', '${getStudentLevel(s)}', '${getStudentRating(s)}', '${(function(){ var c=allCoaches.find(c => String(c.id) === String(s.coach_id)); return c ? getCoachName(c) : 'N/A'; })()}')">📄 Receipt</button>
-             <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-             <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>`}
+        <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">${invoiceId}</span></td>
+        <td>
+          <div style="font-weight:600;color:var(--ivory)">${getStudentName(s)}</div>
+          <div style="font-size:11px;color:var(--ivory-dim)">${getStudentLevel(s)}</div>
+        </td>
+        <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+        <td><span class="badge ${status === 'Paid' ? 'badge-success' : (status === 'Pending' ? 'badge-warning' : 'badge-danger')}" style="font-size:10px;padding:4px 8px">${status}</span></td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            ${status === 'Due' || status === 'Pending' ? 
+              `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+               <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+               <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
+               <button class="btn btn-outline btn-sm" onclick="sendPaymentReminder('${s.id}')">💬 Remind</button>` : 
+              `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}', '${getStudentLevel(s)}', '${getStudentRating(s)}', '${(function(){ var c=allCoaches.find(c => String(c.id) === String(s.coach_id)); return c ? getCoachName(c) : 'N/A'; })()}')">📄 Receipt</button>
+               <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+               <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>`}
+          </div>
         </td>
       </tr>`;
     }).join('');
