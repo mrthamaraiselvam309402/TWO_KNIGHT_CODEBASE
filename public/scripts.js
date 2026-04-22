@@ -4047,18 +4047,27 @@ if (parentHistoryList && role === 'parent') {
   // ═══════════════════════════════════════════════════════════════
   // INIT & EXPOSE
   // ═══════════════════════════════════════════════════════════════
-  // INIT & EXPOSE
-  // ═══════════════════════════════════════════════════════════════
-  const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+  // Role-based session timeouts (in milliseconds)
+  const SESSION_TIMEOUTS = {
+    'admin': 15 * 60 * 1000,   // 15 minutes for admin
+    'master': null,             // No timeout for master
+    'parent': 10 * 60 * 1000   // 10 minutes for parent
+  };
   let sessionTimer = null;
   
   function resetSessionTimer() {
     if (sessionTimer) clearTimeout(sessionTimer);
-    if (role) {
+    if (!role) return;
+    
+    // Master has no timeout
+    if (role === 'master') return;
+    
+    const timeout = SESSION_TIMEOUTS[role];
+    if (timeout) {
       sessionTimer = setTimeout(() => {
         toast('Session expired. Please login again.', 'error');
         doLogout();
-      }, SESSION_TIMEOUT);
+      }, timeout);
     }
   }
   
