@@ -6,8 +6,9 @@
   <title>Chesskidoo — Premium Chess Academy</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=2026-04-22-v38"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   <link rel="stylesheet" href="styles.css?v=2026-04-22-v39"/>
+   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body data-theme="dark">
 <!-- Skip Link for Accessibility -->
@@ -391,26 +392,92 @@
       </div>
     </div>
 
-    <!-- Server Activity (Master Only) -->
-    <div id="page-server" class="page master-only">
-      <div class="page-header">
-        <h2 id="p-title">Server Activity</h2>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
-        <div class="card">
-          <h3 style="color:var(--gold);margin-bottom:12px">🟢 Vercel Deployments</h3>
-          <div id="server-vercel" class="loading-state"><span class="spinner"></span> Loading...</div>
-        </div>
-        <div class="card">
-          <h3 style="color:var(--gold);margin-bottom:12px">🔵 Supabase Functions</h3>
-          <div id="server-supabase" class="loading-state"><span class="spinner"></span> Loading...</div>
-        </div>
-      </div>
-      <div class="card" style="margin-top:16px">
-        <h3 style="color:var(--gold);margin-bottom:12px">⚡ GitHub Activity</h3>
-        <div id="server-github" class="loading-state"><span class="spinner"></span> Loading...</div>
-      </div>
-    </div>
+     <!-- Server Activity Command Center (Master Only) -->
+     <div id="page-server" class="page master-only">
+       <!-- 3D Dashboard Container -->
+       <div class="server-3d-container">
+         <!-- Three.js Canvas -->
+         <canvas id="server-canvas"></canvas>
+
+         <!-- Cyber-grid background overlay -->
+         <div class="cyber-grid-overlay"></div>
+
+         <!-- HUD Panels Overlay -->
+         <div class="hud-panels">
+           <!-- GitHub Terminal (left) -->
+           <div class="hud-panel hud-terminal">
+             <div class="panel-header">
+               <span class="panel-title">⚡ GITHUB ACTIVITY</span>
+               <span class="panel-indicator" id="github-indicator">● ONLINE</span>
+             </div>
+             <div class="terminal-content" id="github-terminal">
+               <div class="terminal-line">Initializing connection...</div>
+             </div>
+           </div>
+
+           <!-- Supabase Gauges (center-right top) -->
+           <div class="hud-panel hud-gauges">
+             <div class="panel-header">
+               <span class="panel-title">🔵 SUPABASE METRICS</span>
+               <span class="panel-indicator" id="supabase-indicator">● ONLINE</span>
+             </div>
+             <div class="gauges-container">
+               <div class="gauge-wrapper">
+                 <canvas id="gauge-students" class="gauge-canvas"></canvas>
+                 <span class="gauge-label">Students</span>
+               </div>
+               <div class="gauge-wrapper">
+                 <canvas id="gauge-coaches" class="gauge-canvas"></canvas>
+                 <span class="gauge-label">Coaches</span>
+               </div>
+               <div class="gauge-wrapper">
+                 <canvas id="gauge-events" class="gauge-canvas"></canvas>
+                 <span class="gauge-label">Events</span>
+               </div>
+               <div class="gauge-wrapper">
+                 <canvas id="gauge-messages" class="gauge-canvas"></canvas>
+                 <span class="gauge-label">Messages</span>
+               </div>
+               <div class="gauge-wrapper">
+                 <canvas id="gauge-payments" class="gauge-canvas"></canvas>
+                 <span class="gauge-label">Payments</span>
+               </div>
+             </div>
+           </div>
+
+           <!-- Vercel Pulse Orb (right bottom) -->
+           <div class="hud-panel hud-vercel">
+             <div class="panel-header">
+               <span class="panel-title">🟢 VERCEL DEPLOYMENTS</span>
+               <span class="panel-indicator" id="vercel-indicator">● CHECKING</span>
+             </div>
+             <div class="vercel-orb-container">
+               <div class="pulse-orb" id="vercel-orb">
+                 <div class="orb-inner"></div>
+                 <div class="orb-ring"></div>
+                 <div class="orb-ring ring-2"></div>
+               </div>
+               <div class="vercel-info" id="vercel-info">
+                 <div class="vercel-stat">Status: <span id="vercel-status">--</span></div>
+                 <div class="vercel-stat">Last Deploy: <span id="vercel-last">--</span></div>
+               </div>
+             </div>
+           </div>
+         </div>
+
+         <!-- Data Surge Overlay -->
+         <div class="surge-overlay" id="surge-overlay"></div>
+       </div>
+
+       <!-- Hidden data stores for gauges -->
+       <div id="server-data" style="display:none"
+            data-students="0"
+            data-coaches="0"
+            data-events="0"
+            data-messages="0"
+            data-payments="0">
+       </div>
+     </div>
 
   </div>
 </div>
@@ -926,7 +993,7 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="scripts.js?v=2026-04-22-v53"></script>
-</body>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+   <script src="scripts.js?v=2026-04-22-v54"></script>
+ </body>
 </html>

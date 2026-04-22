@@ -975,56 +975,63 @@ function updateNotificationBadge() {
     msgs: 'Messages', ai: 'AI Assistant', server: 'Server Activity'
   };
 
-  function setPage(p) {
-    const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'msgs'];
-    if (adminPages.includes(p) && role !== 'admin' && role !== 'master') {
-      toast('Access denied', 'error');
-      setPage(role === 'parent' ? 'child' : 'dash');
-      return;
-    }
-    document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
-    const pageEl = $('page-' + p);
-    if (pageEl) pageEl.classList.add('active');
-    const navEl = $('nav-' + p);
-    if (navEl) navEl.classList.add('active');
-    if ($('p-title')) $('p-title').textContent = PAGE_TITLES[p] || '';
+function setPage(p) {
+  const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'msgs'];
+  if (adminPages.includes(p) && role !== 'admin' && role !== 'master') {
+    toast('Access denied', 'error');
+    setPage(role === 'parent' ? 'child' : 'dash');
+    return;
+  }
+  
+  // Cleanup server 3D resources when leaving server page
+  const currentPage = document.querySelector('.page.active')?.id?.replace('page-', '');
+  if (currentPage === 'server' && p !== 'server') {
+    cleanupServer3D();
+  }
+  
+  document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
+  const pageEl = $('page-' + p);
+  if (pageEl) pageEl.classList.add('active');
+  const navEl = $('nav-' + p);
+  if (navEl) navEl.classList.add('active');
+  if ($('p-title')) $('p-title').textContent = PAGE_TITLES[p] || '';
 
-    const btnArea = $('top-btn-area');
-    if (btnArea) {
-      btnArea.innerHTML = '';
-      if (role === 'admin' || role === 'master') {
-        if (p === 'dash') {
-          btnArea.innerHTML = `
-            <button class="btn btn-outline" onclick="generateReportPDF()">📄 Financial Report</button>
-            <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
-          `;
-        }
-        if (p === 'stud') btnArea.innerHTML = `
+  const btnArea = $('top-btn-area');
+  if (btnArea) {
+    btnArea.innerHTML = '';
+    if (role === 'admin' || role === 'master') {
+      if (p === 'dash') {
+        btnArea.innerHTML = `
+          <button class="btn btn-outline" onclick="generateReportPDF()">📄 Financial Report</button>
+          <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
+        `;
+      }
+      if (p === 'stud') btnArea.innerHTML = `
           <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">🗓️ Batch Attendance</button>
           <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
         `;
-        if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEventModal()">+ Create Event</button>`;
-      }
+      if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEventModal()">+ Create Event</button>`;
     }
-
-    if (window.innerWidth <= 768) {
-      $('sidebar')?.classList.remove('open');
-      $('sidebar-overlay')?.classList.remove('active');
-    }
-
-    setTimeout(() => {
-      if (p === 'dash') renderDash();
-      if (p === 'stud') renderStudents();
-      if (p === 'coach-mgmt') renderCoachMgmt();
-      if (p === 'fame') renderFame();
-      if (p === 'events') renderEvents();
-      if (p === 'bills') renderBills();
-      if (p === 'msgs') renderMsgs();
-      if (p === 'child') renderChild();
-      if (p === 'server' && role === 'master') renderServer();
-    }, 10);
   }
+
+  if (window.innerWidth <= 768) {
+    $('sidebar')?.classList.remove('open');
+    $('sidebar-overlay')?.classList.remove('active');
+  }
+
+  setTimeout(() => {
+    if (p === 'dash') renderDash();
+    if (p === 'stud') renderStudents();
+    if (p === 'coach-mgmt') renderCoachMgmt();
+    if (p === 'fame') renderFame();
+    if (p === 'events') renderEvents();
+    if (p === 'bills') renderBills();
+    if (p === 'msgs') renderMsgs();
+    if (p === 'child') renderChild();
+    if (p === 'server' && role === 'master') renderServer();
+  }, 10);
+}
 
   // ═══════════════════════════════════════════════════════════════
   // AUTHENTICATION
@@ -1186,19 +1193,23 @@ function updateNotificationBadge() {
       resetSessionTimer();
     });
   }
-  function doLogout() {
-    if (notificationPolling) {
-      clearInterval(notificationPolling);
-      notificationPolling = null;
-    }
-    recordSession('logout');
-    closeModals();
-    role = null; currentStudent = null;
-    localStorage.removeItem('chesskidoo_auth');
-    localStorage.removeItem('chesskidoo_parent_id');
-    document.body.classList.remove('admin-mode', 'parent-mode', 'master-mode');
-    document.body.classList.add('login-mode');
-    const loginScreen = $('login-screen');
+   function doLogout() {
+     if (notificationPolling) {
+       clearInterval(notificationPolling);
+       notificationPolling = null;
+     }
+     if (serverActivityTimeout) {
+       clearInterval(serverActivityTimeout);
+       serverActivityTimeout = null;
+     }
+     recordSession('logout');
+     closeModals();
+     role = null; currentStudent = null;
+     localStorage.removeItem('chesskidoo_auth');
+     localStorage.removeItem('chesskidoo_parent_id');
+     document.body.classList.remove('admin-mode', 'parent-mode', 'master-mode');
+     document.body.classList.add('login-mode');
+     const loginScreen = $('login-screen');
     if (loginScreen) loginScreen.style.display = 'flex';
     const profile = $('top-profile');
     if (profile) profile.style.display = 'none';
@@ -3232,84 +3243,581 @@ function updateNotificationBadge() {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // MASTER SERVER ACTIVITY
-  // ═══════════════════════════════════════════════════════════════
-  function renderServer() {
-    if (role !== 'master') { setPage('dash'); return; }
-    loadServerActivity();
-  }
-  
-  async function loadServerActivity() {
-    const vercelEl = $('server-vercel');
-    const supabaseEl = $('server-supabase');
-    const githubEl = $('server-github');
-    
-    // Vercel deployments - try to fetch (needs VERCEL_TOKEN)
-    try {
-      vercelEl.innerHTML = '<div style="color:var(--ivory-dim);font-size:12px">Checking deployments...</div>';
-      const vRes = await fetch('https://api.vercel.com/v6/deployments?project_id=prj_2qG9Q3YVdXNdcRrbB3M9gNz8Yc&limit=5', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('vercel_token') || ''}` }
-      }).catch(() => null);
+   // ═══════════════════════════════════════════════════════════════
+   // MASTER SERVER ACTIVITY
+   // ═══════════════════════════════════════════════════════════════
+   let server3DScene = null;
+   let server3DRenderer = null;
+   let server3DCamera = null;
+   let serverParticles = [];
+   let serverNodes = [];
+   let serverLines = [];
+   let serverDataHistory = { students: 0, coaches: 0, events: 0, messages: 0, payments: 0 };
+   let serverActivityTimeout = null;
+    let serverAnimFrameId = null;
+
+    function showServer3DError(message) {
+      const container = $('server-canvas').parentElement;
+      if (container) {
+        container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--neon-rose);font-family:var(--font-mono);font-size:14px;text-align:center;padding:20px">${message}</div>`;
+      }
+    }
+
+    function renderServer() {
+     if (role !== 'master') { setPage('dash'); return; }
+     loadServerActivity();
+   }
+   
+    // ═══════════════════════════════════════════════════════════════
+    // 3D CIRCUIT MAP ENGINE
+    // ═══════════════════════════════════════════════════════════════
+    function initServer3D() {
+      console.log('initServer3D called');
+      const canvas = $('server-canvas');
+      if (!canvas) {
+        console.error('Server 3D: Canvas element not found');
+        return;
+      }
+
+      // Check if THREE is loaded
+      if (typeof THREE === 'undefined') {
+        console.error('Three.js not loaded');
+        showServer3DError('Three.js library not loaded. Please check your internet connection or disable ad blocker.');
+        return;
+      }
+
+       // Check WebGL support
+       const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+       if (!gl) {
+         console.warn('WebGL not supported, falling back to 2D gauges only');
+         document.body.classList.add('webgl-fallback');
+         return;
+       }
+
+       // Begin 3D scene construction with error handling
+       try {
+       // Scene setup
+       const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x050505, 0.02);
+
+      // Camera - ensure valid aspect ratio
+      const width = canvas.clientWidth || canvas.offsetWidth || 800;
+      const height = canvas.clientHeight || canvas.offsetHeight || 600;
+      const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+      camera.position.set(0, 5, 12);
+      camera.lookAt(0, 0, 0);
+
+      // Renderer
+      const renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+        stencil: false,
+        depth: true
+      });
       
-      if (vRes?.ok) {
-        const vData = await vRes.json();
-        if (vData?.deployments?.length) {
-          vercelEl.innerHTML = vData.deployments.slice(0, 5).map(d => `
-            <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
-              <span style="color:${d.state === 'READY' ? 'var(--success)' : 'var(--gold)'}">●</span> ${d.meta?.githubCommitRef || d.name?.substring(0,20) || 'deploy'} - ${d.state}
-              <span style="color:var(--ivory-dim);float:right;font-size:10px">${new Date(d.created).toLocaleString()}</span>
-            </div>
-          `).join('');
-        } else {
-          vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">No deployments - set VERCEL_TOKEN in console</div>';
+      // Get actual rendered size - ensure positive values
+      let width = canvas.clientWidth;
+      let height = canvas.clientHeight;
+      
+      // If dimensions are 0, try getBoundingClientRect or force layout flush
+      if (width <= 0 || height <= 0) {
+        // Force reflow
+        document.body.offsetHeight;
+        width = canvas.clientWidth || canvas.offsetWidth || 800;
+        height = canvas.clientHeight || canvas.offsetHeight || 600;
+      }
+      
+      if (width <= 0 || height <= 0) {
+        console.error('Canvas invalid dimensions after reflow:', { width, height });
+        showServer3DError('3D canvas size invalid. Container may be hidden.');
+        return;
+      }
+      
+      console.log('3D canvas size:', width, 'x', height);
+      renderer.setSize(width, height, false);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x050505, 1);
+
+     // Create circuit nodes (4 spheres)
+     const nodePositions = [
+       { x: -4, y: 0, z: 2, name: 'GitHub', color: 0xff00ff },    // Magenta
+       { x: -1.3, y: 0, z: -1, name: 'Vercel', color: 0x00ff88 }, // Emerald
+       { x: 1.3, y: 0, z: -1, name: 'Supabase', color: 0x00aaff }, // Cyan
+       { x: 4, y: 0, z: 2, name: 'Website', color: 0xffaa00 }      // Amber
+     ];
+
+     const nodes = [];
+     const nodeGroup = new THREE.Group();
+     scene.add(nodeGroup);
+
+     nodePositions.forEach((pos, i) => {
+       // Glowing sphere
+       const geometry = new THREE.SphereGeometry(0.4, 32, 32);
+       const material = new THREE.MeshBasicMaterial({
+         color: pos.color,
+         transparent: true,
+         opacity: 0.9
+       });
+       const sphere = new THREE.Mesh(geometry, material);
+       sphere.position.set(pos.x, pos.y, pos.z);
+       
+       // Glow effect (larger transparent sphere)
+       const glowGeom = new THREE.SphereGeometry(0.6, 32, 32);
+       const glowMat = new THREE.MeshBasicMaterial({
+         color: pos.color,
+         transparent: true,
+         opacity: 0.3
+       });
+       const glow = new THREE.Mesh(glowGeom, glowMat);
+       sphere.add(glow);
+
+       // Orbit ring
+       const ringGeom = new THREE.RingGeometry(0.7, 0.8, 32);
+       const ringMat = new THREE.MeshBasicMaterial({
+         color: pos.color,
+         side: THREE.DoubleSide,
+         transparent: true,
+         opacity: 0.5
+       });
+       const ring = new THREE.Mesh(ringGeom, ringMat);
+       ring.rotation.x = Math.PI / 2;
+       sphere.add(ring);
+
+       nodeGroup.add(sphere);
+       nodes.push({ mesh: sphere, pos: pos, ring: ring });
+     });
+
+     // Create circuit lines connecting nodes (neon tubes)
+     const lineGroup = new THREE.Group();
+     scene.add(lineGroup);
+
+     const connections = [
+       [0, 1], // GitHub -> Vercel
+       [1, 2], // Vercel -> Supabase
+       [2, 3]  // Supabase -> Website
+     ];
+
+     const lines = [];
+     connections.forEach(([i, j]) => {
+       const start = nodePositions[i];
+       const end = nodePositions[j];
+       
+       // Create curved path
+       const midX = (start.x + end.x) / 2;
+       const midY = 1.5; // Arc height
+       const midZ = (start.z + end.z) / 2;
+       
+       const curve = new THREE.QuadraticBezierCurve3(
+         new THREE.Vector3(start.x, start.y, start.z),
+         new THREE.Vector3(midX, midY, midZ),
+         new THREE.Vector3(end.x, end.y, end.z)
+       );
+
+       const points = curve.getPoints(50);
+       const geometry = new THREE.BufferGeometry().setFromPoints(points);
+       const material = new THREE.LineBasicMaterial({
+         color: 0x00f0ff,
+         linewidth: 2,
+         transparent: true,
+         opacity: 0.6
+       });
+       const line = new THREE.Line(geometry, material);
+       lineGroup.add(line);
+       lines.push({ curve: curve, mesh: line });
+     });
+
+     // Create flowing particles along lines
+     const particleGroup = new THREE.Group();
+     scene.add(particleGroup);
+
+     const particlesPerLine = 8;
+     const totalParticles = connections.length * particlesPerLine;
+     const particleGeom = new THREE.BufferGeometry();
+     const particlePositions = new Float32Array(totalParticles * 3);
+     const particleColors = new Float32Array(totalParticles * 3);
+
+     for (let i = 0; i < totalParticles; i++) {
+       particlePositions[i * 3] = 0;
+       particlePositions[i * 3 + 1] = 0;
+       particlePositions[i * 3 + 2] = 0;
+       particleColors[i * 3] = 0;
+       particleColors[i * 3 + 1] = 0.9;
+       particleColors[i * 3 + 2] = 1;
+     }
+
+     particleGeom.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+     particleGeom.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+
+     const particleMat = new THREE.PointsMaterial({
+       size: 0.15,
+       vertexColors: true,
+       transparent: true,
+       opacity: 0.9,
+       blending: THREE.AdditiveBlending
+     });
+
+     const particleSystem = new THREE.Points(particleGeom, particleMat);
+     particleGroup.add(particleSystem);
+
+     // Particle animation data
+     const particleData = [];
+     for (let c = 0; c < connections.length; c++) {
+       for (let p = 0; p < particlesPerLine; p++) {
+         particleData.push({
+           lineIndex: c,
+           t: p / particlesPerLine
+      });
+    } catch (e) {
+      console.error('3D initialization error:', e);
+      showServer3DError('3D engine failed: ' + e.message);
+      return;
+    }
+     }
+
+     // Ambient lighting
+     const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+     scene.add(ambientLight);
+
+      // Store references
+      server3DScene = scene;
+      server3DRenderer = renderer;
+      server3DCamera = camera;
+      serverParticles = { system: particleSystem, data: particleData, lines: lines };
+      serverNodes = nodes;
+      serverLines = lines;
+
+      // Initialize gauge canvas sizes for crisp rendering
+      const gaugeCanvases = ['gauge-students','gauge-coaches','gauge-events','gauge-messages','gauge-payments'];
+      gaugeCanvases.forEach(id => {
+        const c = $(id);
+        if (c) {
+          c.width = c.offsetWidth;
+          c.height = c.offsetHeight;
         }
-      } else {
-        vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">Vercel not configured</div>';
+      });
+
+      // Animation loop
+     function animate() {
+       requestAnimationFrame(animate);
+
+       // Rotate nodes slowly
+       nodes.forEach((node, i) => {
+         node.ring.rotation.z += 0.01 * (i % 2 === 0 ? 1 : -1);
+         node.mesh.position.y = Math.sin(Date.now() * 0.001 + i) * 0.2;
+       });
+
+       // Animate particles along paths
+       const positions = particleSystem.geometry.attributes.position.array;
+       particleData.forEach((data, i) => {
+         data.t += 0.003;
+         if (data.t > 1) data.t = 0;
+         
+         const point = lines[data.lineIndex].curve.getPoint(data.t);
+         positions[i * 3] = point.x;
+         positions[i * 3 + 1] = point.y;
+         positions[i * 3 + 2] = point.z;
+       });
+       particleSystem.geometry.attributes.position.needsUpdate = true;
+
+       // Rotate camera slowly for dynamic view
+       const time = Date.now() * 0.0001;
+       camera.position.x = Math.sin(time) * 0.5;
+       camera.position.z = 12 + Math.cos(time * 0.5) * 1;
+       camera.lookAt(0, 0, 0);
+
+       renderer.render(scene, camera);
+     }
+
+      serverAnimFrameId = requestAnimationFrame(animate);
+
+       // Handle resize
+       window.addEventListener('resize', () => {
+        if (!document.getElementById('page-server').offsetParent) return;
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+      });
+    } catch (e) {
+      console.error('3D initialization error:', e);
+      showServer3DError('3D engine failed: ' + e.message);
+      return;
+    }
+    }
+
+   // ═══════════════════════════════════════════════════════════════
+   // SERVER ACTIVITY LOADER & DASHBOARD
+   // ═══════════════════════════════════════════════════════
+   // ═══════════════════════════════════════════════════════════════
+   // SERVER ACTIVITY DASHBOARD - 3D CYBERPUNK INTERFACE
+   // ═══════════════════════════════════════════════════════════════
+   async function loadServerActivity(initial = false) {
+      // Initialize 3D scene on first load
+      if (initial || !server3DScene) {
+        initServer3D();
+        // Setup 10-second auto-refresh for server page
+        if (serverActivityTimeout) clearInterval(serverActivityTimeout);
+        serverActivityTimeout = setInterval(() => {
+          if (document.getElementById('page-server').offsetParent) {
+            loadServerActivity();
+          }
+        }, 10000);
       }
-    } catch (e) {
-      vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">API unavailable</div>';
-    }
-    
-    // Supabase - show function status with actual data
-    try {
-      // Get DB sizes
-      const dbInfo = '<div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Database: <b>vseombfkrvpffnpgbsnk</b></div>';
-      const funcInfo = `
-        ${dbInfo}
-        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Students: ${allStudents.length}</div>
-        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Coaches: ${allCoaches.length}</div>
-        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Events: ${eventsData.length}</div>
-        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Messages: ${allMessages.length}</div>
-        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Payments: ${allPayments.length}</div>
-      `;
-      supabaseEl.innerHTML = funcInfo;
-    } catch (e) {
-      supabaseEl.innerHTML = '<div style="color:var(--ivory-dim)">Error: ' + e.message + '</div>';
-    }
-    
-    // GitHub - show recent activity  
-    try {
-      githubEl.innerHTML = '<div style="color:var(--ivory-dim);font-size:12px">Loading GitHub...</div>';
-      const gRes = await fetch('https://api.github.com/repos/THAMARAISELVAM-A/chesskidoo-ai-admin/commits?per_page=5', {
-        headers: { 'Accept': 'application/vnd.github.v3+json' }
-      }).catch(() => null);
+
+     // Capture previous values for surge detection
+     const prevStudents = serverDataHistory.students;
+     const prevCommits = serverDataHistory.commits || 0;
+
+     // ── Fetch Vercel Deployment Status ──
+     let vercelStatus = 'checking';
+     let lastDeploy = '--';
+     try {
+       const vRes = await fetch('https://api.vercel.com/v6/deployments?project_id=prj_2qG9Q3YVdXNdcRrbB3M9gNz8Yc&limit=1', {
+         headers: { 'Authorization': `Bearer ${localStorage.getItem('vercel_token') || ''}` }
+       }).catch(() => null);
+       
+       if (vRes?.ok) {
+         const vData = await vRes.json();
+         if (vData?.deployments?.length) {
+           const latest = vData.deployments[0];
+           vercelStatus = latest.state === 'READY' ? 'ready' : 'building';
+           lastDeploy = new Date(latest.created).toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit' });
+         } else {
+           vercelStatus = 'idle';
+         }
+       } else {
+         vercelStatus = 'offline';
+       }
+     } catch (e) {
+       vercelStatus = 'offline';
+     }
+     updateVercelOrb(vercelStatus, lastDeploy);
+
+     // ── Update Supabase Gauges ──
+     const currentStudents = allStudents?.length || 0;
+     const currentCoaches = allCoaches?.length || 0;
+     const currentEvents = eventsData?.length || 0;
+     const currentMessages = allMessages?.length || 0;
+     const currentPayments = allPayments?.length || 0;
+
+     serverDataHistory = {
+       students: currentStudents,
+       coaches: currentCoaches,
+       events: currentEvents,
+       messages: currentMessages,
+       payments: currentPayments,
+       commits: serverDataHistory.commits || 0
+     };
+
+     // Update Supabase gauges
+     updateSupabaseGauges({
+       students: currentStudents,
+       coaches: currentCoaches,
+       events: currentEvents,
+       messages: currentMessages,
+       payments: currentPayments
+     });
+
+     // ── Fetch GitHub Commits ──
+     let commitCount = 0;
+     try {
+       const gRes = await fetch('https://api.github.com/repos/THAMARAISELVAM-A/chesskidoo-ai-admin/commits?per_page=10', {
+         headers: { 'Accept': 'application/vnd.github.v3+json' }
+       }).catch(() => null);
+       
+       if (gRes?.ok) {
+         const gData = await gRes.json();
+         commitCount = gData.length;
+         serverDataHistory.commits = commitCount;
+         
+         // Update terminal with new commits (show only new ones)
+         const terminal = $('github-terminal');
+         if (terminal) {
+           const existingLines = terminal.querySelectorAll('.terminal-line.commit').length;
+           const newCommits = gData.slice(0, 5);
+           
+           // Clear and repopulate for clean display
+           terminal.innerHTML = '';
+           
+           newCommits.forEach((commit, idx) => {
+             const line = document.createElement('div');
+             line.className = 'terminal-line commit';
+             line.style.animationDelay = `${idx * 0.1}s`;
+             const msg = commit.commit.message?.substring(0, 40) || 'Update';
+             const author = commit.commit.author?.name || 'Unknown';
+             const time = new Date(commit.commit.author.date).toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit' });
+             line.innerHTML = `<span style="color:var(--neon-magenta)">[${time}]</span> <span style="color:var(--neon-amber)">${author}</span>: ${msg}`;
+             terminal.appendChild(line);
+           });
+           
+           if (newCommits.length === 0) {
+             const line = document.createElement('div');
+             line.className = 'terminal-line system';
+             line.textContent = 'No recent commits';
+             terminal.appendChild(line);
+           }
+         }
+       } else {
+         const terminal = $('github-terminal');
+         if (terminal) {
+           terminal.innerHTML = '<div class="terminal-line system">GitHub API rate limited</div>';
+         }
+       }
+     } catch (e) {
+       const terminal = $('github-terminal');
+       if (terminal) {
+         terminal.innerHTML = '<div class="terminal-line system">Connection unavailable</div>';
+       }
+     }
+
+      // ── Detect Activity Surge ──
+      const studentIncrease = currentStudents - prevStudents;
+      const commitIncrease = commitCount - (prevCommits || 0);
       
-      if (gRes?.ok) {
-        const gData = await gRes.json();
-        githubEl.innerHTML = gData.slice(0, 5).map(c => `
-          <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
-            <span style="color:var(--gold)">●</span> ${c.commit.message?.substring(0, 45) || 'Commit'}...
-            <span style="color:var(--ivory-dim);float:right;font-size:10px">${new Date(c.commit.author.date).toLocaleDateString()}</span>
-          </div>
-        `).join('');
-      } else {
-        githubEl.innerHTML = '<div style="color:var(--ivory-dim)">GitHub API rate limited</div>';
+      if (studentIncrease > 0 || commitIncrease > 0) {
+        triggerDataSurge(studentIncrease > 0, commitIncrease > 0);
       }
-    } catch (e) {
-      githubEl.innerHTML = '<div style="color:var(--ivory-dim)">API unavailable</div>';
     }
-  }
+
+   // ═══════════════════════════════════════════════════════════════
+   // 3D DASHBOARD UPDATE FUNCTIONS
+   // ═══════════════════════════════════════════════════════════════
+   function updateVercelOrb(status, lastDeployTime) {
+     const orb = $('vercel-orb');
+     const indicator = $('vercel-indicator');
+     const statusEl = $('vercel-status');
+     const lastEl = $('vercel-last');
+
+     if (!orb) return;
+
+     const inner = orb.querySelector('.orb-inner');
+     const ring = orb.querySelector('.orb-ring');
+     const ring2 = orb.querySelector('.ring-2');
+
+     let color, statusText;
+     switch(status) {
+       case 'ready':
+         color = 'var(--neon-emerald)';
+         statusText = 'DEPLOYED';
+         break;
+       case 'building':
+         color = 'var(--neon-amber)';
+         statusText = 'BUILDING';
+         break;
+       case 'offline':
+         color = 'var(--neon-rose)';
+         statusText = 'OFFLINE';
+         break;
+       default:
+         color = 'var(--neon-cyan)';
+         statusText = 'IDLE';
+     }
+
+     if (inner) {
+       inner.style.background = `radial-gradient(circle, ${color} 0%, var(--neon-cyan) 100%)`;
+       inner.style.boxShadow = `0 0 30px ${color}, 0 0 60px var(--neon-cyan)`;
+     }
+     if (ring) ring.style.borderColor = color;
+     if (ring2) ring2.style.borderColor = 'var(--neon-cyan)';
+
+     if (indicator) indicator.textContent = `● ${statusText}`;
+     if (indicator) indicator.style.color = color;
+     if (statusEl) statusEl.textContent = statusText;
+     if (lastEl) lastEl.textContent = lastDeployTime;
+   }
+
+   function updateSupabaseGauges(data) {
+     const gauges = [
+       { id: 'gauge-students', value: data.students, max: 500, color: '#ff00ff' },
+       { id: 'gauge-coaches', value: data.coaches, max: 50, color: '#00f0ff' },
+       { id: 'gauge-events', value: data.events, max: 50, color: '#00ff88' },
+       { id: 'gauge-messages', value: data.messages, max: 1000, color: '#ffaa00' },
+       { id: 'gauge-payments', value: data.payments, max: 1000, color: '#ff0055' }
+     ];
+
+     gauges.forEach(gauge => {
+       const canvas = $(gauge.id);
+       if (!canvas) return;
+       const ctx = canvas.getContext('2d');
+       const size = canvas.offsetWidth || 70;
+       const center = size / 2;
+       const radius = size * 0.35;
+       const percentage = Math.min(gauge.value / gauge.max, 1);
+       
+       // Clear
+       ctx.clearRect(0, 0, size, size);
+       
+       // Background arc
+       ctx.beginPath();
+       ctx.arc(center, center, radius, 0, 2 * Math.PI);
+       ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+       ctx.lineWidth = 4;
+       ctx.stroke();
+       
+       // Value arc with glow
+       const startAngle = -Math.PI / 2;
+       const endAngle = startAngle + (2 * Math.PI * percentage);
+       
+       ctx.beginPath();
+       ctx.arc(center, center, radius, startAngle, endAngle);
+       ctx.strokeStyle = gauge.color;
+       ctx.lineWidth = 4;
+       ctx.lineCap = 'round';
+       ctx.shadowColor = gauge.color;
+       ctx.shadowBlur = 10;
+       ctx.stroke();
+       ctx.shadowBlur = 0;
+       
+       // Inner fill with gradient
+       const grad = ctx.createRadialGradient(center, center, 0, center, center, radius);
+       grad.addColorStop(0, gauge.color + '40');
+       grad.addColorStop(1, 'transparent');
+       ctx.fillStyle = grad;
+       ctx.fill();
+       
+       // Value text
+       ctx.font = 'bold 10px "JetBrains Mono"';
+       ctx.fillStyle = gauge.color;
+       ctx.textAlign = 'center';
+       ctx.textBaseline = 'middle';
+       ctx.fillText(gauge.value, center, center);
+     });
+   }
+
+   function triggerDataSurge(studentsChanged, commitsChanged) {
+     const overlay = $('surge-overlay');
+     if (!overlay) return;
+
+     // Random position for surge origin
+     const x = 30 + Math.random() * 40;
+     const y = 30 + Math.random() * 40;
+     overlay.style.setProperty('--surge-x', x + '%');
+     overlay.style.setProperty('--surge-y', y + '%');
+
+     overlay.classList.add('active');
+     setTimeout(() => overlay.classList.remove('active'), 1000);
+   }
+
+    function cleanupServer3D() {
+      if (serverActivityTimeout) {
+        clearInterval(serverActivityTimeout);
+        serverActivityTimeout = null;
+      }
+      if (serverAnimFrameId) {
+        cancelAnimationFrame(serverAnimFrameId);
+        serverAnimFrameId = null;
+      }
+      // Clear Three.js references to force re-init on next entry
+      server3DScene = null;
+      server3DRenderer = null;
+      server3DCamera = null;
+      serverParticles = [];
+      serverNodes = [];
+      serverLines = [];
+    }
   
   // ═══════════════════════════════════════════════════════════════
   // REAL-TIME INTELLIGENCE ENGINE (RAG + AGENTIC AI)
