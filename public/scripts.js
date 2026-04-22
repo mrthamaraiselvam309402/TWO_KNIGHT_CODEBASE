@@ -787,6 +787,9 @@ let shownNotificationIds = JSON.parse(localStorage.getItem('shown_notifications'
 function clearNotifications() {
   shownNotificationIds = [];
   localStorage.setItem('shown_notifications', '[]');
+  // Clear toast queue
+  const tc = $('toast-container');
+  if (tc) tc.innerHTML = '';
   toast('Notifications cleared', 'info');
 }
 
@@ -796,6 +799,9 @@ function shouldShowNotification(id) {
   localStorage.setItem('shown_notifications', JSON.stringify(shownNotificationIds.slice(-50)));
   return true;
 }
+
+// Export for window access
+window.clearNotifications = clearNotifications;
 
 function updateNotificationBadge() {
     const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin').length;
@@ -966,7 +972,7 @@ function updateNotificationBadge() {
   const PAGE_TITLES = {
     dash: 'Academy Overview', stud: 'Student Registry', 'coach-mgmt': 'Coach Management',
     child: 'My Child', fame: 'Wall of Fame', events: 'Events', bills: 'Payments',
-    msgs: 'Messages', ai: 'AI Assistant'
+    msgs: 'Messages', ai: 'AI Assistant', server: 'Server Activity'
   };
 
   function setPage(p) {
@@ -3241,7 +3247,8 @@ function updateNotificationBadge() {
     
     // Vercel deployments - try to fetch (needs VERCEL_TOKEN)
     try {
-      const vRes = await fetch('https://api.vercel.com/v6/deployments?projectId=prj_2qG9Q3YVdXNdcRrbB3M9gNz8Yc&utm_source=cli&q=default', {
+      vercelEl.innerHTML = '<div style="color:var(--ivory-dim);font-size:12px">Checking deployments...</div>';
+      const vRes = await fetch('https://api.vercel.com/v6/deployments?project_id=prj_2qG9Q3YVdXNdcRrbB3M9gNz8Yc&limit=5', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('vercel_token') || ''}` }
       }).catch(() => null);
       
@@ -3250,45 +3257,40 @@ function updateNotificationBadge() {
         if (vData?.deployments?.length) {
           vercelEl.innerHTML = vData.deployments.slice(0, 5).map(d => `
             <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
-              <span style="color:var(--success)">●</span> ${d.meta?.githubCommitRef || 'main'} - ${d.state}
-              <span style="color:var(--ivory-dim);float:right">${new Date(d.created).toLocaleTimeString()}</span>
+              <span style="color:${d.state === 'READY' ? 'var(--success)' : 'var(--gold)'}">●</span> ${d.meta?.githubCommitRef || d.name?.substring(0,20) || 'deploy'} - ${d.state}
+              <span style="color:var(--ivory-dim);float:right;font-size:10px">${new Date(d.created).toLocaleString()}</span>
             </div>
           `).join('');
         } else {
-          vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">No deployments found</div>';
+          vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">No deployments - set VERCEL_TOKEN in console</div>';
         }
       } else {
-        vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">Configure VERCEL_TOKEN in console</div>';
+        vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">Vercel not configured</div>';
       }
     } catch (e) {
       vercelEl.innerHTML = '<div style="color:var(--ivory-dim)">API unavailable</div>';
     }
     
-    // Supabase - show function status
+    // Supabase - show function status with actual data
     try {
-      supabaseEl.innerHTML = `
-        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
-          <span style="color:var(--emerald)">●</span> students - Active
-        </div>
-        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
-          <span style="color:var(--emerald)">●</span> coaches - Active
-        </div>
-        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
-          <span style="color:var(--emerald)">●</span> events - Active
-        </div>
-        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
-          <span style="color:var(--emerald)">●</span> messages - Active
-        </div>
-        <div style="padding:8px;font-size:11px;color:var(--ivory-dim);margin-top:8px">
-          Database: vseombfkrvpffnpgbsnk
-        </div>
+      // Get DB sizes
+      const dbInfo = '<div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Database: <b>vseombfkrvpffnpgbsnk</b></div>';
+      const funcInfo = `
+        ${dbInfo}
+        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Students: ${allStudents.length}</div>
+        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Coaches: ${allCoaches.length}</div>
+        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Events: ${eventsData.length}</div>
+        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Messages: ${allMessages.length}</div>
+        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--emerald)">●</span> Payments: ${allPayments.length}</div>
       `;
+      supabaseEl.innerHTML = funcInfo;
     } catch (e) {
-      supabaseEl.innerHTML = '<div style="color:var(--ivory-dim)">Error loading</div>';
+      supabaseEl.innerHTML = '<div style="color:var(--ivory-dim)">Error: ' + e.message + '</div>';
     }
     
-    // GitHub - show recent activity
+    // GitHub - show recent activity  
     try {
+      githubEl.innerHTML = '<div style="color:var(--ivory-dim);font-size:12px">Loading GitHub...</div>';
       const gRes = await fetch('https://api.github.com/repos/THAMARAISELVAM-A/chesskidoo-ai-admin/commits?per_page=5', {
         headers: { 'Accept': 'application/vnd.github.v3+json' }
       }).catch(() => null);
@@ -3297,8 +3299,8 @@ function updateNotificationBadge() {
         const gData = await gRes.json();
         githubEl.innerHTML = gData.slice(0, 5).map(c => `
           <div style="padding:8px;border-bottom:1px solid var(--border);font-size:12px">
-            <span style="color:var(--gold)">●</span> ${c.commit.message?.substring(0, 50) || 'Update'}
-            <span style="color:var(--ivory-dim);float:right">${new Date(c.commit.author.date).toLocaleDateString()}</span>
+            <span style="color:var(--gold)">●</span> ${c.commit.message?.substring(0, 45) || 'Commit'}...
+            <span style="color:var(--ivory-dim);float:right;font-size:10px">${new Date(c.commit.author.date).toLocaleDateString()}</span>
           </div>
         `).join('');
       } else {
