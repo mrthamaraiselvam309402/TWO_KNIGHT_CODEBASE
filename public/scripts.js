@@ -4139,6 +4139,7 @@ function setAISuggestion(q) {
   window.doLogin = doLogin;
   window.doLogout = doLogout;
   window.openProfile = openProfile;
+  window.clearNotifications = clearNotifications;
   window.clearFilters = clearFilters;
   window.renderStudents = renderStudents;
   window.viewStudent = viewStudent;
