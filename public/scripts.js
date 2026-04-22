@@ -120,6 +120,7 @@
               <span class="ev-meta-item ev-loc">${e.location || 'TBD'}</span>
               ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${e.prize_pool}</span>` : ''}
             </div>
+
             ${e.description ? `<div class="ev-desc">${e.description}</div>` : ''}
           </div>
           <div class="ev-footer">
@@ -2630,7 +2631,9 @@ function setPage(p) {
               <td style="color:var(--success);font-weight:600">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
               <td>System Detected</td>
               <td style="font-family:var(--font-mono);font-size:11px">${txId}</td>
-              <td style="font-size:12px">Payment verified from student registry history</td>
+              <td>
+                <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}', '${getStudentLevel(s)}', '${getStudentRating(s)}', 'N/A', 'System Legacy')">📄 Receipt</button>
+              </td>
             </tr>`;
         } else {
           $('p-history-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--ivory3)">No payment history found.</td></tr>';
@@ -2638,15 +2641,24 @@ function setPage(p) {
         return;
       }
 
-      $('p-history-body').innerHTML = myPayments.map(p => `
-        <tr>
-          <td>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
-          <td style="color:var(--success);font-weight:600">₹${(p.amount || 0).toLocaleString()}</td>
-          <td>${p.payment_method || 'Cash'}</td>
-          <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || '-'}</td>
-          <td style="font-size:12px">${p.description || '-'}</td>
-        </tr>
-      `).join('');
+      $('p-history-body').innerHTML = myPayments.map(p => {
+        const pDate = new Date(p.payment_date || p.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        const pAmount = p.amount || 0;
+        const pMethod = p.payment_method || 'Cash';
+        const txId = p.transaction_id || 'TRX-' + Math.floor(Math.random()*1000000);
+
+        return `
+          <tr>
+            <td>${pDate}</td>
+            <td style="color:var(--success);font-weight:600">₹${pAmount.toLocaleString()}</td>
+            <td>${pMethod}</td>
+            <td style="font-family:var(--font-mono);font-size:11px">${txId}</td>
+            <td>
+              <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${pAmount}', '${getStudentLevel(s)}', '${getStudentRating(s)}', 'N/A', '${pMethod}')">📄 Receipt</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
     } catch (e) {
       $('p-history-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--danger)">Error loading history.</td></tr>';
     }
