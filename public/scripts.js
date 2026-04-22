@@ -1286,11 +1286,20 @@
     }
     
     if (adminHistoryList && (role === 'admin' || role === 'master')) {
-      if (sessions.length === 0) {
+      // Admin sees all users but filter to last 20 unique sessions
+      const seen = new Set();
+      const uniqueSessions = sessions.filter(s => {
+        const key = s.user + '|' + s.loginAt;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).slice(0, 20); // Show last 20 only
+      
+      if (uniqueSessions.length === 0) {
         adminHistoryList.innerHTML = '<div style="color:var(--ivory-dim);text-align:center;padding:10px">No login history</div>';
       } else {
         let html = '';
-        sessions.forEach(s => {
+        uniqueSessions.forEach(s => {
           const loginTime = new Date(s.loginAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
           const status = s.active 
             ? '<span style="color:var(--emerald)">● Active</span>' 
@@ -1307,13 +1316,23 @@
       }
     }
     
-    if (parentHistoryList && role === 'parent') {
+if (parentHistoryList && role === 'parent') {
+      // Parent sees only their own sessions, filter to unique login events
       const mySessions = sessions.filter(s => s.user === currentUser);
-      if (mySessions.length === 0) {
+      // Get unique login sessions (dedupe by login time)
+      const seen = new Set();
+      const uniqueLogins = mySessions.filter(s => {
+        const key = s.loginAt;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).slice(0, 10); // Show last 10 only
+      
+      if (uniqueLogins.length === 0) {
         parentHistoryList.innerHTML = '<div style="color:var(--ivory-dim);text-align:center;padding:10px">No login history</div>';
       } else {
         let html = '';
-        mySessions.forEach(s => {
+        uniqueLogins.forEach(s => {
           const loginTime = new Date(s.loginAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
           const status = s.active 
             ? '<span style="color:var(--emerald)">Currently Active</span>' 
@@ -1323,11 +1342,12 @@
               <span>Login</span>
               <span>${loginTime}</span>
             </div>
-            <div style="font-size:10px;color:var(--ivory-dim);margin-top:2px">${status}</div>
+            <div style="font-size:11px;color:var(--ivory-dim);margin-top:2px">${status}</div>
           </div>`;
         });
         parentHistoryList.innerHTML = html;
       }
+    }
     }
   }
 
