@@ -3300,34 +3300,34 @@ function setPage(p) {
        const scene = new THREE.Scene();
       scene.fog = new THREE.FogExp2(0x050505, 0.02);
 
-      // Camera - ensure valid aspect ratio
-      const width = canvas.clientWidth || canvas.offsetWidth || 800;
-      const height = canvas.clientHeight || canvas.offsetHeight || 600;
-      const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-      camera.position.set(0, 5, 12);
-      camera.lookAt(0, 0, 0);
+       // Camera - ensure valid aspect ratio
+       let width = canvas.clientWidth || canvas.offsetWidth || 800;
+       let height = canvas.clientHeight || canvas.offsetHeight || 600;
+       const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+       camera.position.set(0, 5, 12);
+       camera.lookAt(0, 0, 0);
 
-      // Renderer
-      const renderer = new THREE.WebGLRenderer({
-        canvas: canvas,
-        antialias: true,
-        alpha: true,
-        powerPreference: 'high-performance',
-        stencil: false,
-        depth: true
-      });
-      
-      // Get actual rendered size - ensure positive values
-      let width = canvas.clientWidth;
-      let height = canvas.clientHeight;
-      
-      // If dimensions are 0, try getBoundingClientRect or force layout flush
-      if (width <= 0 || height <= 0) {
-        // Force reflow
-        document.body.offsetHeight;
-        width = canvas.clientWidth || canvas.offsetWidth || 800;
-        height = canvas.clientHeight || canvas.offsetHeight || 600;
-      }
+       // Renderer
+       const renderer = new THREE.WebGLRenderer({
+         canvas: canvas,
+         antialias: true,
+         alpha: true,
+         powerPreference: 'high-performance',
+         stencil: false,
+         depth: true
+       });
+       
+       // Get actual rendered size - ensure positive values
+       width = canvas.clientWidth;
+       height = canvas.clientHeight;
+       
+       // If dimensions are 0, try getBoundingClientRect or force layout flush
+       if (width <= 0 || height <= 0) {
+         // Force reflow
+         document.body.offsetHeight;
+         width = canvas.clientWidth || canvas.offsetWidth || 800;
+         height = canvas.clientHeight || canvas.offsetHeight || 600;
+       }
       
       if (width <= 0 || height <= 0) {
         console.error('Canvas invalid dimensions after reflow:', { width, height });
