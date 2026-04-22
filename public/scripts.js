@@ -4202,6 +4202,8 @@ function setAISuggestion(q) {
   window.openContactModal = openContactModal;
   window.sendMsg = sendMsg;
   window.sendFeedback = sendFeedback;
+  window.viewPaymentHistory = viewPaymentHistory;
+
   window.openAttendanceMarking = openAttendanceMarking;
   window.markPaid = markPaid;
   window.bulkMarkPaid = bulkMarkPaid;
