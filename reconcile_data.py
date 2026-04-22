@@ -88,7 +88,7 @@ def reconcile():
             # If it doesn't, Supabase might ignore it or error.
             # We'll try to update without it first if we are unsure, 
             # but let's include it and see.
-            # update_data["monthly_fee"] = exp['fee']
+            update_data["monthly_fee"] = exp['fee']
             
             print(f"Updating {name}...")
             u_resp = requests.patch(f"{BASE_URL}?id=eq.{s['id']}", 

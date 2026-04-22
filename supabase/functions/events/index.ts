@@ -82,14 +82,16 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-      // DEBUG: Log the body received
-      console.log('POST body:', JSON.stringify(body));
+      // Check URL params for registration action (more reliable than body parsing)
+      const action = url.searchParams.get('action');
+      const eventId = url.searchParams.get('event_id') || body.event_id;
+      const studentId = url.searchParams.get('student_id') || body.student_id;
+      const studentName = url.searchParams.get('student_name') || body.student_name || '';
       
-      // Handle event registration FIRST - return early so we don't fall through to event creation
-      if (body.action === 'register' && body.event_id && body.student_id) {
-        const eventId = body.event_id;
-        const studentId = body.student_id;
-        const studentName = body.student_name || '';
+      console.log('POST action:', action, 'eventId:', eventId, 'studentId:', studentId);
+      
+      // Handle event registration via URL param
+      if (action === 'register' && eventId && studentId) {
         
         // Get current event data
         const { data: currentEvent } = await supabase
