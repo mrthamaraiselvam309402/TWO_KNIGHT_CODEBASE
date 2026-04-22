@@ -2601,6 +2601,15 @@ function setPage(p) {
     }
   }
 
+   async function markUnpaid(id) {
+    if (!confirm('Revert payment status to Unpaid?')) return;
+    try {
+      await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Due' }) });
+      toast('Status reverted to Unpaid', 'info');
+      loadAllData(true);
+    } catch (e) { toast('Failed to revert', 'error'); }
+  }
+
   async function viewPaymentHistory(studentId) {
     const s = allStudents.find(x => String(x.id) === String(studentId));
     if (!s) return;
@@ -2694,7 +2703,7 @@ function setPage(p) {
                <button class="btn btn-outline btn-sm" onclick="sendPaymentReminder('${s.id}')">💬 Remind</button>` : 
               `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}', '${getStudentLevel(s)}', '${getStudentRating(s)}', '${(function(){ var c=allCoaches.find(c => String(c.id) === String(s.coach_id)); return c ? getCoachName(c) : 'N/A'; })()}')">📄 Receipt</button>
                <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-               <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>`}
+               <button class="btn btn-outline-danger btn-sm" onclick="markUnpaid('${s.id}')">❌ Mark Unpaid</button>`}
           </div>
         </td>
       </tr>`;
@@ -4256,6 +4265,7 @@ function setAISuggestion(q) {
 
   window.openAttendanceMarking = openAttendanceMarking;
   window.markPaid = markPaid;
+  window.markUnpaid = markUnpaid;
   window.bulkMarkPaid = bulkMarkPaid;
   window.saveBatchAttendance = saveBatchAttendance;
   window.updateAttStats = updateAttStats;
