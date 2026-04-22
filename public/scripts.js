@@ -2614,6 +2614,7 @@ function setPage(p) {
       const res = await apiCall(`${API_BASE}/payments`);
       const raw = await res.json();
       const allPayments = Array.isArray(raw) ? raw : (raw.data || []);
+      console.log('Payment History Debug:', { studentId, totalPayments: allPayments.length, samplePayment: allPayments[0] });
       const myPayments = allPayments.filter(p => String(p.student_id) === String(studentId));
 
       if (myPayments.length === 0) {
