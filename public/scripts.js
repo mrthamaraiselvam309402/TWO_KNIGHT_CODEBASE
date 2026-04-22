@@ -4037,17 +4037,23 @@ function setPage(p) {
    }
 
    function triggerDataSurge(studentsChanged, commitsChanged) {
-     const overlay = $('surge-overlay');
-     if (!overlay) return;
+     const surge = $('surge-overlay');
+     if (!surge) return;
 
-     // Random position for surge origin
-     const x = 30 + Math.random() * 40;
-     const y = 30 + Math.random() * 40;
-     overlay.style.setProperty('--surge-x', x + '%');
-     overlay.style.setProperty('--surge-y', y + '%');
+     surge.classList.remove('active');
+     void surge.offsetWidth;
+     surge.classList.add('active');
 
-     overlay.classList.add('active');
-     setTimeout(() => overlay.classList.remove('active'), 1000);
+     // Flash the corresponding 3D node
+     if (serverNodes && serverNodes.length > 0) {
+       const nodeIdx = commitsChanged ? 0 : 3; // GitHub node for commits, Website node for students
+       const node = serverNodes[nodeIdx];
+       if (node && node.mesh && node.mesh.material) {
+         const original = node.mesh.material.emissiveIntensity;
+         node.mesh.material.emissiveIntensity = 2;
+         setTimeout(() => { if (node.mesh) node.mesh.material.emissiveIntensity = original; }, 400);
+       }
+     }
    }
 
     function cleanupServer3D() {

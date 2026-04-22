@@ -2601,6 +2601,30 @@ body[data-theme="light"] .status-unpaid { background: rgba(255, 77, 79, 0.1); co
   border-radius: 2px;
 }
 
+.terminal-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--neon-emerald);
+  padding-right: 6px;
+}
+
+.terminal-content::-webkit-scrollbar {
+  width: 3px;
+}
+
+.terminal-content::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.2);
+}
+
+.terminal-content::-webkit-scrollbar-thumb {
+  background: var(--neon-cyan);
+  border-radius: 2px;
+}
+
 .terminal-line {
   padding: 4px 0;
   border-bottom: 1px solid rgba(0,240,255,0.08);

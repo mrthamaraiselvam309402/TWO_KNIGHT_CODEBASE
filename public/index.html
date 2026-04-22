@@ -423,10 +423,10 @@
               <span class="panel-title">GITHUB ACTIVITY</span>
               <span class="panel-status" id="git-status">LIVE</span>
             </div>
-            <div class="panel-body" id="github-terminal">
-              <div class="terminal-line">⟨ Establishing secure connection… ⟩</div>
-              <div class="terminal-line system">⟳ Fetching commit history</div>
-            </div>
+             <div class="terminal-content" id="github-terminal">
+               <div class="terminal-line">⟨ Establishing secure connection… ⟩</div>
+               <div class="terminal-line system">⟳ Fetching commit history</div>
+             </div>
           </div>
 
           <!-- Right panel: Metrics -->
@@ -482,7 +482,7 @@
               <div class="panel-header">
                 <span class="panel-icon">◇</span>
                 <span class="panel-title">VERCEL DEPLOYMENT</span>
-                <span class="panel-status" id="vercel-check">CHECKING</span>
+                <span class="panel-status" id="vercel-indicator">● CHECKING</span>
               </div>
               <div class="vercel-suite">
                 <div class="pulse-orb-lg" id="vercel-orb">
@@ -495,11 +495,11 @@
                 <div class="vercel-meta">
                   <div class="meta-row">
                     <span class="meta-label">Status</span>
-                    <span class="meta-value" id="v-status">Connecting</span>
+                    <span class="meta-value" id="vercel-status">Connecting</span>
                   </div>
                   <div class="meta-row">
                     <span class="meta-label">Last Update</span>
-                    <span class="meta-value" id="v-time">--:--</span>
+                    <span class="meta-value" id="vercel-last">--:--</span>
                   </div>
                 </div>
               </div>
@@ -508,7 +508,7 @@
         </div>
 
         <!-- Data surge effect (hidden by default) -->
-        <div class="surge-flash" id="surge-effect"></div>
+        <div class="surge-flash" id="surge-overlay"></div>
 
         <!-- Corner brackets for HUD feel -->
         <div class="corner-bracket top-left"></div>
