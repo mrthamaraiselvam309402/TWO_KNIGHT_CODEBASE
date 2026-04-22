@@ -770,9 +770,6 @@
         allAttendance = attendance || [];
         allPayments = payments || [];
         
-        console.log('Data loaded - Coaches:', allCoaches?.length, 'Students:', allStudents?.length, 'Achievements:', achievementsData?.length, 'Events:', eventsData?.length);
-        if (allStudents.length > 0) console.log('Sample student:', allStudents[0]);
-        if (allCoaches.length > 0) console.log('Sample coach:', allCoaches[0]);
         
         dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, timestamp: now };
         syncCoachDropdowns();
@@ -1787,13 +1784,13 @@ function setPage(p) {
       const session = getStudentBatchType(s);
       const time = s.session_time || s.class_time || s.batch_time || '';
       const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
-      const coachName = coach ? getCoachName(coach) : '-';
+      const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
       const uniqueId = 'more-' + s.id.replace(/[^a-zA-Z0-9]/g, '');
       
       return `<tr>
         <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
         <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
-        <td><div style="font-weight:600">${getStudentName(s)}</div></td>
+        <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
         <td>${getStudentLevel(s)} - ${getStudentRating(s)} ELO</td>
         <td>${coachName}</td>
         <td>${getStudentDate(s) || '-'}</td>
@@ -2624,7 +2621,6 @@ function setPage(p) {
       const res = await apiCall(`${API_BASE}/payments`);
       const raw = await res.json();
       const allPayments = Array.isArray(raw) ? raw : (raw.data || []);
-      console.log('Payment History Debug:', { studentId, totalPayments: allPayments.length, samplePayment: allPayments[0] });
       const myPayments = allPayments.filter(p => String(p.student_id) === String(studentId));
 
       if (myPayments.length === 0) {
@@ -2689,8 +2685,8 @@ function setPage(p) {
       return `<tr>
         <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">${invoiceId}</span></td>
         <td>
-          <div style="font-weight:600;color:var(--ivory)">${getStudentName(s)}</div>
-          <div style="font-size:11px;color:var(--ivory-dim)">${getStudentLevel(s)}</div>
+          <div style="font-weight:600;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div>
+          <div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(getStudentLevel(s))}</div>
         </td>
         <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
         <td><span class="badge ${status === 'Paid' ? 'badge-success' : (status === 'Pending' ? 'badge-warning' : 'badge-danger')}" style="font-size:10px;padding:4px 8px">${status}</span></td>
