@@ -82,15 +82,15 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-      // Check URL params for registration action (more reliable than body parsing)
-      const action = url.searchParams.get('action');
-      const eventId = url.searchParams.get('event_id') || body.event_id;
-      const studentId = url.searchParams.get('student_id') || body.student_id;
-      const studentName = url.searchParams.get('student_name') || body.student_name || '';
+      // Handle event registration from POST body
+      const action = body.action;
+      const eventId = body.event_id;
+      const studentId = body.student_id;
+      const studentName = body.student_name || '';
       
-      console.log('POST action:', action, 'eventId:', eventId, 'studentId:', studentId);
+      console.log('POST body action:', action, 'eventId:', eventId, 'studentId:', studentId);
       
-      // Handle event registration via URL param
+      // Handle event registration
       if (action === 'register' && eventId && studentId) {
         
         // Get current event data
@@ -151,8 +151,9 @@ Deno.serve(async (req) => {
         });
       }
       
-      // If not a registration, continue with event creation logic below
-      // (moved title check down to ensure registration handler runs first)
+      // If action is not 'register', check for title and create new event
+      // (only for admin creating events)
+      console.log('Not a registration action, checking for event creation');
       
       const { title, date, type, location, increment_registrations, id, event_date, event_time, event_type, prize_pool, max_participants, description } = body;
       
@@ -172,7 +173,7 @@ Deno.serve(async (req) => {
         });
       }
       
-      const eventId = id || generateId();
+      const newEventId = id || generateId();
       const eventDate = event_date || date;
       const eventTime = event_time || body.time || '10:00';
       const eventType = event_type || type || 'Tournament';
@@ -181,7 +182,7 @@ Deno.serve(async (req) => {
       const eventDesc = description || '';
       
       let newEvent: Record<string, unknown> = { 
-        id: eventId, 
+        id: newEventId, 
         title: title,
         event_date: eventDate,
         event_time: eventTime,

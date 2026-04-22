@@ -602,8 +602,14 @@
     if (!confirm('Register ' + getStudentName(currentStudent) + ' for "' + e.title + '" on ' + (e.date ? new Date(e.date).toLocaleDateString() : 'TBD') + '?')) return;
     
     try {
-      const res = await apiCall(`/api/events?action=register&event_id=${eventId}&student_id=${currentStudent.id}&student_name=${encodeURIComponent(getStudentName(currentStudent))}`, {
-        method: 'POST'
+      const res = await apiCall('/api/events', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'register',
+          event_id: eventId,
+          student_id: currentStudent.id,
+          student_name: getStudentName(currentStudent)
+        })
       });
       
       const data = await res.json();
