@@ -38,6 +38,44 @@
   let loadingStates = {};
   const CACHE_DURATION = 5000;
 
+  // ── Notification Management ──
+  let shownNotificationIds = JSON.parse(localStorage.getItem('shown_notifications') || '[]');
+  let dismissedNotifications = JSON.parse(localStorage.getItem('dismissed_notifications') || '{"messages":[], "payments":[]}');
+
+  function saveNotificationState() {
+    localStorage.setItem('shown_notifications', JSON.stringify(shownNotificationIds.slice(-100)));
+    localStorage.setItem('dismissed_notifications', JSON.stringify(dismissedNotifications));
+  }
+
+  function shouldShowNotification(id) {
+    if (shownNotificationIds.includes(id)) return false;
+    shownNotificationIds.push(id);
+    saveNotificationState();
+    return true;
+  }
+
+  function clearNotifications() {
+    const unreadMsgs = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin');
+    unreadMsgs.forEach(m => { if (!dismissedNotifications.messages.includes(m.id)) dismissedNotifications.messages.push(m.id); });
+    const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+    dueStudents.forEach(s => { if (!dismissedNotifications.payments.includes(s.id)) dismissedNotifications.payments.push(s.id); });
+    localStorage.removeItem('audit_logs');
+    saveNotificationState();
+    updateNotificationBadge();
+    const content = $('notification-content');
+    if (content) content.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ivory-dim)">Notifications cleared</div>';
+    toast('Notifications cleared', 'info');
+  }
+
+  function updateNotificationBadge() {
+    const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin' && !dismissedNotifications.messages.includes(m.id)).length;
+    const dueCount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due' && !dismissedNotifications.payments.includes(s.id)).length;
+    const total = unread + dueCount;
+    const badge = $('notification-badge');
+    if (badge) { badge.textContent = total; badge.style.display = total > 0 ? 'inline' : 'none'; }
+  }
+
+
   // ── NEW ADVANCED LOGIC ──
   function setChildTab(tabId, btn) {
     document.querySelectorAll('.child-tab-content').forEach(c => c.classList.remove('active'));
@@ -762,8 +800,10 @@
           const data = await test.json();
           console.error('Direct API returned:', data.length, 'students');
         } catch(e2) {
-          console.error('Direct API also failed:', e2);
+          console.error('Direct API also failed');
         }
+        
+
         toast('Failed to load data - please refresh', 'error');
         setLoading('data', false);
       }
@@ -781,36 +821,7 @@
     if ($('award-student')) $('award-student').innerHTML = '<option value="">Select Student</option>' + allStudents.map(s => `<option value="${s.id}">${getStudentName(s)}</option>`).join('');
   }
 
-  // Track shown notifications to avoid repeats
-let shownNotificationIds = JSON.parse(localStorage.getItem('shown_notifications') || '[]');
 
-function clearNotifications() {
-  shownNotificationIds = [];
-  localStorage.setItem('shown_notifications', '[]');
-  // Clear toast queue
-  const tc = $('toast-container');
-  if (tc) tc.innerHTML = '';
-  toast('Notifications cleared', 'info');
-}
-
-function shouldShowNotification(id) {
-  if (shownNotificationIds.includes(id)) return false;
-  shownNotificationIds.push(id);
-  localStorage.setItem('shown_notifications', JSON.stringify(shownNotificationIds.slice(-50)));
-  return true;
-}
-
-// Export for window access
-window.clearNotifications = clearNotifications;
-
-function updateNotificationBadge() {
-    const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin').length;
-    const badge = $('notification-badge');
-    if (badge) {
-      badge.style.display = unread > 0 ? 'inline' : 'none';
-      badge.textContent = unread;
-    }
-  }
 
   let notificationPolling = null;
   let lastMsgCount = 0;
@@ -846,10 +857,13 @@ function updateNotificationBadge() {
         const newMsgs = msgs.data || msgs || [];
         if (newMsgs.length > lastMsgCount) {
           const newCount = newMsgs.length - lastMsgCount;
-          toast(`📬 ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
+          const latest = newMsgs[0];
+          if (latest && shouldShowNotification('msg_' + latest.id)) {
+            toast(`📬 ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
+          }
           lastMsgCount = newMsgs.length;
           allMessages = newMsgs;
-          updateMsgBadge();
+          updateNotificationBadge();
         }
         
         // 2. New student enrolled check
@@ -877,25 +891,26 @@ function updateNotificationBadge() {
         
         // 3. Failed login from Supabase
         try {
-          const auditRes = await apiCall('/api/audit?limit=20');
+          const auditRes = await apiCall('/api/audit?limit=10');
           const auditData = await auditRes.json();
           const failedLogins = (auditData.data || auditData || []).filter(l => l.action === 'login_failed');
           if (failedLogins.length > 0) {
-            const recentFailed = failedLogins.slice(0, 3);
-            recentFailed.forEach(log => {
-              const time = new Date(log.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`🚫 Failed login: ${log.user_name} at ${time}`, 'error');
-            });
+            const latest = failedLogins[0];
+            if (latest && shouldShowNotification('fail_' + (latest.id || latest.timestamp || latest.created_at))) {
+              const time = new Date(latest.created_at || latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+              toast(`🚫 Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
+            }
           }
         } catch (e) {
+          // Local fallback
           const localLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
           const localFailed = localLogs.filter(l => l.action === 'login_failed');
           if (localFailed.length > 0) {
-            const recentFailed = localFailed.slice(-3);
-            recentFailed.forEach(log => {
-              const time = new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`🚫 Failed login: ${log.user_name} at ${time}`, 'error');
-            });
+            const latest = localFailed[localFailed.length - 1];
+            if (latest && shouldShowNotification('fail_local_' + latest.timestamp)) {
+              const time = new Date(latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+              toast(`🚫 Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
+            }
           }
         }
         
@@ -4183,8 +4198,9 @@ function setAISuggestion(q) {
   window.showNotifications = () => {
     const content = $('notification-content');
     if (!content) return;
-    const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin');
-    const due = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+    
+    const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin' && !dismissedNotifications.messages.includes(m.id));
+    const due = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due' && !dismissedNotifications.payments.includes(s.id));
     const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
     const failedLogins = auditLogs.filter(l => l.action === 'login_failed').slice(-10).reverse();
     
@@ -4193,9 +4209,12 @@ function setAISuggestion(q) {
     if (unread.length > 0) {
       html += `<div style="padding:12px;background:var(--gold-glow);border-radius:8px;margin-bottom:12px">
         <div style="font-weight:600;color:var(--gold)">📬 Unread Messages (${unread.length})</div>
-        ${unread.slice(0,3).map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:13px">${m.subject || 'No Subject'}</div>
-          <div style="font-size:11px;color:var(--ivory-dim)">${m.sender_name || 'User'} • ${new Date(m.created_at).toLocaleDateString()}</div>
+        ${unread.slice(0,5).map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:500">${m.subject || 'No Subject'}</div>
+            <div style="font-size:11px;color:var(--ivory-dim)">${m.sender_name || 'User'} • ${new Date(m.created_at).toLocaleDateString()}</div>
+          </div>
+          <button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')" style="padding:2px 8px;font-size:10px">Mark Read</button>
         </div>`).join('')}
       </div>`;
     }
@@ -4204,6 +4223,7 @@ function setAISuggestion(q) {
       html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
         <div style="font-weight:600;color:var(--danger)">💰 Due Payments (${due.length})</div>
         <div style="font-size:12px;color:var(--ivory-dim)">Students with pending fees</div>
+        ${due.slice(0,5).map(s => `<div style="padding:6px 0;font-size:12px;color:var(--ivory)">${getStudentName(s)}</div>`).join('')}
       </div>`;
     }
     
@@ -4221,7 +4241,13 @@ function setAISuggestion(q) {
       html = '<div style="text-align:center;padding:30px;color:var(--ivory-dim)">No new notifications</div>';
     }
     
-    content.innerHTML = html;
+    content.innerHTML = `
+      <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0">System Notifications</h3>
+        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">🗑️ Clear All</button>
+      </div>
+      ${html}
+    `;
     openModal('notification-modal');
   };
   window.updateNotificationBadge = () => { try { updateNotificationBadge(); } catch(e) {} };
