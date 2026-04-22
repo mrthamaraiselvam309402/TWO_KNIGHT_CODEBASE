@@ -1560,10 +1560,7 @@ function setPage(p) {
     console.log('renderDash called, allStudents:', allStudents.length, 'allCoaches:', allCoaches.length);
     
     // Skip if data hasn't loaded yet - this prevents the first call with empty data from setting UI to 0
-    if (allStudents.length === 0 && allCoaches.length === 0) {
-      console.log('renderDash skipped - no data yet');
-      return;
-    }
+    if (allStudents.length === 0 && allCoaches.length === 0) return;
     
      console.log('renderDash executing with data');
      
@@ -2620,7 +2617,19 @@ function setPage(p) {
       const myPayments = allPayments.filter(p => String(p.student_id) === String(studentId));
 
       if (myPayments.length === 0) {
-        $('p-history-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--ivory3)">No payment history found.</td></tr>';
+        if (s.payment_status === 'Paid') {
+          // Synthetic record for existing paid status
+          $('p-history-body').innerHTML = `
+            <tr>
+              <td>-</td>
+              <td style="color:var(--success);font-weight:600">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+              <td>Registry</td>
+              <td>-</td>
+              <td style="font-size:12px">Payment recorded in student registry</td>
+            </tr>`;
+        } else {
+          $('p-history-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--ivory3)">No payment history found.</td></tr>';
+        }
         return;
       }
 
