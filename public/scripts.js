@@ -2142,7 +2142,7 @@
     gridEl.style.display = 'grid';
     gridEl.innerHTML = eventsData.map(e => {
       const maxSpots = e.max_participants || 50;
-      const regCount = 0;
+      const regCount = e.registrations_count || (e.registered_students?.length || 0);
       const spotsLeft = maxSpots - regCount;
       const isArchived = e.archived === true || e.status === 'archived';
       return `<div class="ev-card" ${isArchived ? 'style="opacity:0.7"' : ''}>
@@ -2955,7 +2955,30 @@
       toast('Failed to send message', 'error');
     }
   }
-  async function sendFeedback() { toast('Feedback sent!'); closeModals(); }
+  async function sendFeedback() {
+    const msg = $('fb-msg')?.value?.trim();
+    if (!msg) { toast('Please enter your feedback', 'error'); return; }
+    if (!currentStudent) return;
+    
+    try {
+      await apiCall('/api/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          sender_type: 'parent',
+          sender_id: currentStudent.id,
+          receiver_type: 'admin',
+          subject: `Feedback from parent of ${getStudentName(currentStudent)}`,
+          message: msg,
+          priority: 'normal'
+        })
+      });
+      toast('Feedback submitted successfully!', 'success');
+      if ($('fb-msg')) $('fb-msg').value = '';
+      closeModals();
+    } catch (e) {
+      toast('Failed to submit feedback', 'error');
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // AI & CHAT

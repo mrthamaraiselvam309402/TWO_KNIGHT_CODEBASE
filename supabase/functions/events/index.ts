@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
       prize: e.prize || e.prize_pool || '',
       prize_pool: e.prize || e.prize_pool || '',
       registrations_count: e.current_participants || 0,
+      registered_students: e.registered_students || [],
       max_participants: e.max_participants,
       status: e.status || 'upcoming',
       created_at: e.created_at,
@@ -81,6 +82,70 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'POST') {
+      // Handle event registration
+      if (body.action === 'register' && body.event_id && body.student_id) {
+        const eventId = body.event_id;
+        const studentId = body.student_id;
+        const studentName = body.student_name || '';
+        
+        // Get current event data
+        const { data: currentEvent } = await supabase
+          .from('events')
+          .select('registered_students, current_participants, title')
+          .eq('id', eventId)
+          .single();
+        
+        if (!currentEvent) {
+          return new Response(JSON.stringify({ error: 'Event not found' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+        
+        const registeredStudents = currentEvent.registered_students || [];
+        
+        // Check if already registered
+        if (registeredStudents.includes(studentId)) {
+          return new Response(JSON.stringify({ error: 'Student already registered for this event', event: transformEvent(currentEvent) }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+        
+        // Add student to registered list
+        registeredStudents.push(studentId);
+        
+        // Update event with new registration
+        const updateData = {
+          registered_students: registeredStudents,
+          current_participants: registeredStudents.length,
+          updated_at: new Date().toISOString()
+        };
+        
+        const { data: updatedEvent, error: updateError } = await supabase
+          .from('events')
+          .update(updateData)
+          .eq('id', eventId)
+          .select()
+          .single();
+        
+        if (updateError) {
+          return new Response(JSON.stringify({ error: updateError.message }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: `${studentName} registered for "${currentEvent.title}"`,
+          event: transformEvent(updatedEvent)
+        }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+      
       const { title, date, type, location, increment_registrations, id, event_date, event_time, event_type, prize_pool, max_participants, description } = body;
       
       console.log('Creating event with body:', JSON.stringify(body));
