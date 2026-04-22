@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
    <link rel="stylesheet" href="styles.css?v=2026-04-22-v39"/>
    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+ 
 </head>
 <body data-theme="dark">
 <!-- Skip Link for Accessibility -->
@@ -85,8 +85,7 @@
     <div class="nav-item" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Events</div>
     <div class="nav-item admin-only" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
 <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
-      <div class="nav-item" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
-      <div class="nav-item master-only" id="nav-server" onclick="setPage('server')"><span class="ico">🖥️</span> Server</div>
+<div class="nav-item" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
   </div>
   <div style="padding:16px;border-top:1px solid var(--border)">
     <div class="nav-item" onclick="toggleTheme()"><span class="ico">🌗</span> Switch Theme</div>
@@ -390,132 +389,7 @@
           </div>
         </div>
       </div>
-    </div>
-
-      <!-- Server Activity Command Center (Master Only) -->
-      <div id="page-server" class="page master-only">
-        <!-- 3D Scene Canvas (Background) -->
-        <canvas id="server-canvas"></canvas>
-
-        <!-- Dark cinematic overlay -->
-        <div class="cinematic-vignette"></div>
-
-        <!-- HUD Overlay -->
-        <div class="server-hud">
-          <!-- Top status bar -->
-          <div class="hud-topbar">
-            <div class="hud-brand">
-              <span class="brand-icon">◈</span>
-              <span class="brand-text">SYSTEM MONITOR</span>
-              <span class="brand-divider">|</span>
-              <span class="brand-mode">MASTER</span>
-            </div>
-            <div class="hud-status" id="hud-status">
-              <span class="status-dot"></span>
-              <span>ONLINE</span>
-            </div>
-          </div>
-
-          <!-- Left panel: GitHub Terminal -->
-          <div class="hud-panel hud-left-panel">
-            <div class="panel-header">
-              <span class="panel-icon">◉</span>
-              <span class="panel-title">GITHUB ACTIVITY</span>
-              <span class="panel-status" id="git-status">LIVE</span>
-            </div>
-             <div class="terminal-content" id="github-terminal">
-               <div class="terminal-line">⟨ Establishing secure connection… ⟩</div>
-               <div class="terminal-line system">⟳ Fetching commit history</div>
-             </div>
-          </div>
-
-          <!-- Right panel: Metrics -->
-          <div class="hud-right-column">
-            <!-- Supabase Gauges -->
-            <div class="hud-panel hud-gauges">
-              <div class="panel-header">
-                <span class="panel-icon">◈</span>
-                <span class="panel-title">DATABASE METRICS</span>
-                <span class="panel-status">ACTIVE</span>
-              </div>
-              <div class="gauges-grid">
-                <div class="gauge-card" data-label="Students" data-value="0" data-color="#ff00ff">
-                  <canvas class="gauge-ring" id="gauge-students"></canvas>
-                  <div class="gauge-info">
-                    <span class="gauge-value" id="val-students">0</span>
-                    <span class="gauge-label">Students</span>
-                  </div>
-                </div>
-                <div class="gauge-card" data-label="Coaches" data-value="0" data-color="#00f0ff">
-                  <canvas class="gauge-ring" id="gauge-coaches"></canvas>
-                  <div class="gauge-info">
-                    <span class="gauge-value" id="val-coaches">0</span>
-                    <span class="gauge-label">Coaches</span>
-                  </div>
-                </div>
-                <div class="gauge-card" data-label="Events" data-value="0" data-color="#00ff88">
-                  <canvas class="gauge-ring" id="gauge-events"></canvas>
-                  <div class="gauge-info">
-                    <span class="gauge-value" id="val-events">0</span>
-                    <span class="gauge-label">Events</span>
-                  </div>
-                </div>
-                <div class="gauge-card" data-label="Messages" data-value="0" data-color="#ffaa00">
-                  <canvas class="gauge-ring" id="gauge-messages"></canvas>
-                  <div class="gauge-info">
-                    <span class="gauge-value" id="val-messages">0</span>
-                    <span class="gauge-label">Messages</span>
-                  </div>
-                </div>
-                <div class="gauge-card" data-label="Payments" data-value="0" data-color="#ff0055">
-                  <canvas class="gauge-ring" id="gauge-payments"></canvas>
-                  <div class="gauge-info">
-                    <span class="gauge-value" id="val-payments">0</span>
-                    <span class="gauge-label">Payments</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Vercel Deployment Status -->
-            <div class="hud-panel hud-vercel">
-              <div class="panel-header">
-                <span class="panel-icon">◇</span>
-                <span class="panel-title">VERCEL DEPLOYMENT</span>
-                <span class="panel-status" id="vercel-indicator">● CHECKING</span>
-              </div>
-              <div class="vercel-suite">
-                <div class="pulse-orb-lg" id="vercel-orb">
-                  <div class="orb-core"></div>
-                  <div class="orb-glow"></div>
-                  <div class="orb-ring"></div>
-                  <div class="orb-ring ring-2"></div>
-                  <div class="orb-ring ring-3"></div>
-                </div>
-                <div class="vercel-meta">
-                  <div class="meta-row">
-                    <span class="meta-label">Status</span>
-                    <span class="meta-value" id="vercel-status">Connecting</span>
-                  </div>
-                  <div class="meta-row">
-                    <span class="meta-label">Last Update</span>
-                    <span class="meta-value" id="vercel-last">--:--</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Data surge effect (hidden by default) -->
-        <div class="surge-flash" id="surge-overlay"></div>
-
-        <!-- Corner brackets for HUD feel -->
-        <div class="corner-bracket top-left"></div>
-        <div class="corner-bracket top-right"></div>
-        <div class="corner-bracket bottom-left"></div>
-        <div class="corner-bracket bottom-right"></div>
-      </div>
+</div>
 
   </div>
 </div>
