@@ -1,21 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-<!DOCTYPE html>
-<html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Chesskidoo — Premium Chess Academy</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-   <link rel="stylesheet" href="styles.css?v=2026-04-22-v39"/>
-   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-   
-   <!-- Security Hardening -->
-   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co https://i.ibb.co; connect-src 'self' https://*.supabase.co;"/>
-   <meta name="referrer" content="strict-origin-when-cross-origin"/>
-   <meta http-equiv="X-Frame-Options" content="DENY"/>
- 
+  <link rel="stylesheet" href="styles.css?v=2026-04-23-v55"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Security Hardening -->
+  <!-- CSP: allows cdnjs for jsPDF, ui-avatars/unsplash/imgbb for images, jsdelivr for sourcemaps -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co https://i.ibb.co https://*.ibb.co https://ui-avatars.com https://images.unsplash.com https://api.imgbb.com; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://api.imgbb.com;"/>
+  <meta name="referrer" content="strict-origin-when-cross-origin"/>
+  <!-- X-Frame-Options must be an HTTP header, not a meta tag — set in vercel.json -->
+
 </head>
 
 <!-- Sidebar Overlay -->
@@ -909,7 +908,8 @@
   </div>
 </div>
 
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-   <script src="scripts.js?v=2026-04-22-v54"></script>
+   <!-- jsPDF on jsdelivr so it passes CSP (cdnjs was blocked) -->
+   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+   <script src="scripts.js?v=2026-04-23-v55"></script>
  </body>
 </html>
