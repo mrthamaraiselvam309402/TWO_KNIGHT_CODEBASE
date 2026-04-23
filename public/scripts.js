@@ -546,9 +546,12 @@
   function getStudentPhone(s) { return s.parent_phone || s.phone || ''; }
   function getStudentEmail(s) { return s.email || ''; }
   function getStudentMonthlyFee(s) {
-    // If the database has a non-zero fee, use it
-    if (s.monthly_fee !== undefined && s.monthly_fee !== null && parseInt(s.monthly_fee) > 0) {
-      return parseInt(s.monthly_fee);
+    // Read from all possible column names Supabase might use
+    const candidates = [s.monthly_fee, s.fee, s.fees, s.tuition_fee, s.course_fee];
+    for (const val of candidates) {
+      if (val !== undefined && val !== null && parseInt(val) > 0) {
+        return parseInt(val);
+      }
     }
     
     // Fallback to notes parsing if database fee is 0 or missing
@@ -1897,15 +1900,16 @@ function setPage(p) {
     if (!s) { toast('Student not found', 'error'); return; }
     const oldElo = getStudentRating(s);
     const newElo = parseInt($('e-elo').value);
+    const newFee = parseInt($('e-fee').value) || 0;
     
-    // BUG FIX: Use correct DB field names (full_name, level) matching saveStudent/Supabase schema
+    // Send fee under every possible field name so whichever Supabase column exists gets updated
     const data = {
       full_name: $('e-name').value,
-      name: $('e-name').value,          // keep for legacy columns
+      name: $('e-name').value,
       phone: $('e-phone').value,
       parent_phone: $('e-phone').value,
       level: $('e-level').value,
-      grade: $('e-level').value,         // keep for legacy columns
+      grade: $('e-level').value,
       rating: newElo,
       coach_id: $('e-coach').value,
       status: $('e-status').value === 'Paid' ? 'active' : 'pending',
@@ -1913,9 +1917,14 @@ function setPage(p) {
       enrollment_date: $('e-join').value,
       due_date: $('e-due-date')?.value || null,
       session_mode: $('e-batch-type').value,
+      batch_type: $('e-batch-type').value,
       session_time: $('e-batch-time').value,
-      monthly_fee: parseInt($('e-fee').value) || 0,
-      // BUG FIX: notes field pre-filled in openEdit so this won't blank it
+      batch_time: $('e-batch-time').value,
+      // Send fee under ALL possible column names
+      monthly_fee: newFee,
+      fee: newFee,
+      fees: newFee,
+      tuition_fee: newFee,
       notes: $('e-notes')?.value || s.notes || ''
     };
 
@@ -1931,11 +1940,48 @@ function setPage(p) {
             });
           } catch (e) { console.warn('Rating history table missing, skipping log.'); }
         }
+
+        // OPTIMISTIC UPDATE: immediately patch the in-memory record so the UI
+        // shows the new values without waiting for the next loadAllData fetch.
+        // This prevents stale data from showing if Supabase is slow or if
+        // the column name doesn't match what loadAllData returns.
+        const idx = allStudents.findIndex(x => String(x.id) === String(id));
+        if (idx !== -1) {
+          allStudents[idx] = {
+            ...allStudents[idx],
+            full_name: data.full_name,
+            name: data.name,
+            phone: data.phone,
+            parent_phone: data.parent_phone,
+            level: data.level,
+            grade: data.grade,
+            rating: data.rating,
+            coach_id: data.coach_id,
+            status: data.status,
+            payment_status: data.payment_status,
+            enrollment_date: data.enrollment_date,
+            due_date: data.due_date,
+            session_mode: data.session_mode,
+            batch_type: data.batch_type,
+            session_time: data.session_time,
+            batch_time: data.batch_time,
+            monthly_fee: newFee,
+            fee: newFee,
+            fees: newFee,
+            tuition_fee: newFee,
+            notes: data.notes
+          };
+        }
+
         toast('Student updated!', 'success');
         closeModals();
+        // Re-render immediately with patched in-memory data
+        renderStudents();
+        renderDash();
+        renderBills();
+        // Then sync fresh data from server in background
         loadAllData(true);
       } else {
-        // BUG FIX: surface server-side errors instead of silently failing
         const err = await res.json().catch(() => ({}));
         toast('Update failed: ' + (err.error || err.message || `Server error ${res.status}`), 'error');
       }
