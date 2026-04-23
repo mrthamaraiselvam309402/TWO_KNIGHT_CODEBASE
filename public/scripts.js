@@ -3979,38 +3979,33 @@ function setAISuggestion(q) {
     doc.line(20, 77, 190, 77);
 
     // Grid of 8 Metrics
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    
-    // Column 1
-    let gy = 85;
-    const drawMetric = (label, val, sub, x) => {
+    const drawMetric = (label, val, sub, x, y) => {
       doc.setFont("helvetica", "bold");
       doc.setTextColor(100, 100, 100);
-      doc.text(label.toUpperCase(), x, gy);
+      doc.setFontSize(9);
+      doc.text(label.toUpperCase(), x, y);
       doc.setFontSize(14);
       doc.setTextColor(...darkGray);
-      doc.text(val, x, gy + 8);
+      doc.text(val, x, y + 8);
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text(sub, x, gy + 13);
-      doc.setFontSize(9);
+      doc.text(sub, x, y + 13);
     };
 
-    drawMetric('Total Cadets', String(totalStudents), 'Academy Strength', 25);
-    drawMetric('Collected', `Rs. ${collected.toLocaleString()}`, 'Revenue Received', 25); gy += 25;
-    drawMetric('Total Potential', `Rs. ${potential.toLocaleString()}`, 'Full Revenue Capacity', 25); gy += 25;
-    drawMetric('Net Profit', `Rs. ${netProfit.toLocaleString()}`, 'Current Cash Profit', 25);
+    // Column 1
+    drawMetric('Total Cadets', String(totalStudents), 'Academy Strength', 25, 85);
+    drawMetric('Collected', `Rs. ${collected.toLocaleString()}`, 'Revenue Received', 25, 110);
+    drawMetric('Total Potential', `Rs. ${potential.toLocaleString()}`, 'Full Revenue Capacity', 25, 135);
+    drawMetric('Net Profit', `Rs. ${netProfit.toLocaleString()}`, 'Current Cash Profit', 25, 160);
 
     // Column 2
-    gy = 85;
-    drawMetric('Active Coaches', String(allCoaches.length), 'Teaching Staff', 110);
-    drawMetric('Pending', `Rs. ${pending.toLocaleString()}`, 'Outstanding Fees', 110); gy += 25;
-    drawMetric('Coach Expenses', `Rs. ${payroll.toLocaleString()}`, 'Monthly Payroll', 110); gy += 25;
-    drawMetric('Collection Rate', `${collectionRate}%`, 'Academy Efficiency', 110);
+    drawMetric('Active Coaches', String(allCoaches.length), 'Teaching Staff', 110, 85);
+    drawMetric('Pending', `Rs. ${pending.toLocaleString()}`, 'Outstanding Fees', 110, 110);
+    drawMetric('Coach Expenses', `Rs. ${payroll.toLocaleString()}`, 'Monthly Payroll', 110, 135);
+    drawMetric('Collection Rate', `${collectionRate}%`, 'Academy Efficiency', 110, 160);
 
     // Summary Insights Box
-    gy += 30;
+    let gy = 190;
     doc.setFillColor(250, 248, 240);
     doc.roundedRect(20, gy, 170, 35, 3, 3, 'F');
     doc.setTextColor(...gold);
@@ -4036,23 +4031,12 @@ function setAISuggestion(q) {
     
     doc.setTextColor(...gold);
     doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
     doc.text('COACH FINANCIAL BREAKDOWN', 20, 20);
     doc.line(20, 22, 190, 22);
 
-    doc.setTextColor(...darkGray);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.text('Coach Name', 22, 35);
-    doc.text('Students', 65, 35);
-    doc.text('Revenue (Collected)', 85, 35);
-    doc.text('Salary Cost', 120, 35);
-    doc.text('Net Profit', 145, 35);
-    doc.text('ROI', 175, 35);
-    doc.line(20, 37, 190, 37);
-
-    doc.setFont("helvetica", "normal");
-    let rowY = 45;
     let coachMetrics = [];
+    let tableData = [];
 
     allCoaches.forEach(c => {
       const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
@@ -4060,31 +4044,63 @@ function setAISuggestion(q) {
       const coachCost = getCoachSalary(c) || 0;
       const profit = coachRev - coachCost;
       const roi = coachCost > 0 ? ((profit / coachCost) * 100).toFixed(0) : '0';
+      
       coachMetrics.push({ name: getCoachName(c), profit, students: coachStuds.length, roi });
-
-      doc.text(getCoachName(c).substring(0, 18), 22, rowY);
-      doc.text(String(coachStuds.length), 65, rowY);
-      doc.text(`Rs. ${coachRev.toLocaleString()}`, 85, rowY);
-      doc.text(`Rs. ${coachCost.toLocaleString()}`, 120, rowY);
-      doc.text(`Rs. ${profit.toLocaleString()}`, 145, rowY);
-      doc.text(`${roi}%`, 175, rowY);
-      rowY += 10;
+      
+      tableData.push([
+        getCoachName(c),
+        String(coachStuds.length),
+        `Rs. ${coachRev.toLocaleString()}`,
+        `Rs. ${coachCost.toLocaleString()}`,
+        `Rs. ${profit.toLocaleString()}`,
+        `${roi}%`
+      ]);
     });
 
-    // Academy Total Row
-    doc.setFont("helvetica", "bold");
-    doc.line(20, rowY - 5, 190, rowY - 5);
-    doc.text('ACADEMY TOTAL', 22, rowY);
-    doc.text(String(totalStudents), 65, rowY);
-    doc.text(`Rs. ${collected.toLocaleString()}`, 85, rowY);
-    doc.text(`Rs. ${payroll.toLocaleString()}`, 120, rowY);
-    doc.text(`Rs. ${netProfit.toLocaleString()}`, 145, rowY);
+    // Add Academy Total row
     const totalRoi = payroll > 0 ? ((netProfit / payroll) * 100).toFixed(0) : '0';
-    doc.text(`${totalRoi}%`, 175, rowY);
+    tableData.push([
+      'ACADEMY TOTAL',
+      String(totalStudents),
+      `Rs. ${collected.toLocaleString()}`,
+      `Rs. ${payroll.toLocaleString()}`,
+      `Rs. ${netProfit.toLocaleString()}`,
+      `${totalRoi}%`
+    ]);
 
-    rowY += 20;
+    // Use jspdf-autotable if available, otherwise fallback
+    if (doc.autoTable) {
+      doc.autoTable({
+        startY: 30,
+        head: [['Coach Name', 'Students', 'Revenue (Collected)', 'Salary Cost', 'Net Profit', 'ROI']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: gold, textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { font: 'helvetica', fontSize: 9, textColor: darkGray },
+        columnStyles: {
+          1: { halign: 'center' },
+          2: { halign: 'right' },
+          3: { halign: 'right' },
+          4: { halign: 'right' },
+          5: { halign: 'right' }
+        },
+        willDrawCell: function (data) {
+          // Make the last row bold
+          if (data.row.index === tableData.length - 1) {
+            doc.setFont("helvetica", "bold");
+            if (data.section === 'body') {
+              doc.setFillColor(250, 248, 240);
+            }
+          }
+        }
+      });
+    }
+
+    let rowY = doc.autoTable ? doc.lastAutoTable.finalY + 20 : 150;
+
     doc.setTextColor(...gold);
     doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
     doc.text('PERFORMANCE HIGHLIGHTS & INSIGHTS', 20, rowY);
     rowY += 10;
     doc.setFontSize(10);
@@ -4110,34 +4126,48 @@ function setAISuggestion(q) {
     
     addFooter(2, 3);
 
-    // --- PAGE 3: STRATEGIC RECOMMENDATIONS ---
+    // --- PAGE 3: STRATEGIC RECOMMENDATIONS & WATERFALL ---
     doc.addPage();
     doc.setFillColor(254, 253, 251);
     doc.rect(0, 0, 210, 297, 'F');
     
     doc.setTextColor(...gold);
     doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
     doc.text('MONTHLY FINANCIAL WATERFALL', 20, 20);
     doc.line(20, 22, 190, 22);
     
-    doc.setTextColor(...darkGray);
-    doc.setFontSize(10);
     let waterY = 35;
     const waterItems = [
-      ['Gross Revenue Potential', `+Rs. ${potential.toLocaleString()}`],
-      ['Collected Fees', `+Rs. ${collected.toLocaleString()}`],
-      ['Pending Fees', `Rs. ${pending.toLocaleString()}`],
-      ['Total Coach Payroll', `-Rs. ${payroll.toLocaleString()}`],
-      ['Net Operating Profit', `+Rs. ${netProfit.toLocaleString()}`]
+      { label: 'Gross Revenue Potential', val: potential, sign: '+', color: [46, 125, 50] }, // Green
+      { label: 'Collected Fees', val: collected, sign: '+', color: [46, 125, 50] },
+      { label: 'Pending Fees', val: pending, sign: '', color: [255, 152, 0] }, // Orange
+      { label: 'Total Coach Payroll', val: payroll, sign: '-', color: [211, 47, 47] }, // Red
+      { label: 'Net Operating Profit', val: netProfit, sign: '+', color: [46, 125, 50] }
     ];
     
+    // Draw Waterfall Chart
+    const maxVal = Math.max(potential, 1);
+    const maxBarWidth = 70; // mm
+
     waterItems.forEach(item => {
-      doc.text(item[0], 25, waterY);
-      doc.text(item[1], 150, waterY);
-      waterY += 10;
+      // Text
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...darkGray);
+      doc.text(item.label, 25, waterY);
+      
+      const valStr = `${item.sign}Rs. ${item.val.toLocaleString()}`;
+      doc.text(valStr, 110, waterY, { align: 'right' });
+      
+      // Bar
+      const barWidth = (item.val / maxVal) * maxBarWidth;
+      doc.setFillColor(...item.color);
+      doc.rect(120, waterY - 4, barWidth, 5, 'F');
+
+      waterY += 15;
     });
 
-    waterY += 20;
+    waterY += 15;
     doc.setTextColor(...gold);
     doc.setFontSize(14);
     doc.text('STRATEGIC RECOMMENDATIONS', 20, waterY);
