@@ -2937,7 +2937,7 @@ function setPage(p) {
     <div class="academy-tagline">Building Champions, One Move at a Time</div>
     <div class="academy-contact">
       <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2a1a00" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14z"/></svg>+91 99622 99622</span>
-      <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2a1a00" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>info@chesskidoo.com</span>
+      <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2a1a00" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Chesskidoo37@gmail.com</span>
     </div>
   </div>
   <div class="receipt-title-bar"><h2>Official Receipt</h2></div>
@@ -2963,7 +2963,7 @@ function setPage(p) {
   <div class="total-words">${inWords}</div>
   <div class="receipt-footer">
     <p>This is a computer-generated receipt. No signature required.</p>
-    <p>For queries, contact info@chesskidoo.com</p>
+    <p>For queries, contact Chesskidoo37@gmail.com</p>
     <p class="thank-you">&#9820; &nbsp; Thank you for your patronage! &nbsp; &#9820;</p>
   </div>
 </div>
