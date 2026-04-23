@@ -869,12 +869,17 @@
         const studs = await studsRes.json();
         const rawStuds = studs.data || studs || [];
         
-        // Use same deduplication logic as loadAllData
-        const seen = new Set();
+        // BUG FIX: Mirror EXACT deduplication logic from loadAllData (by id + full_name)
+        // Old code used name+phone key which never matched loadAllData's id+name key
+        // causing the poller to always see rawStuds.length > allStudents.length → infinite reload
+        const seenId = new Set();
+        const seenName = new Set();
         const dedupedStuds = rawStuds.filter(s => {
-          const key = `${(s.full_name || s.name || '').toLowerCase().trim()}|${(s.parent_phone || s.phone || '').trim()}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
+          if (!s || !s.id) return false;
+          const name = (s.full_name || s.name || '').trim().toUpperCase();
+          if (seenId.has(s.id) || (name && seenName.has(name))) return false;
+          seenId.add(s.id);
+          if (name) seenName.add(name);
           return true;
         });
 
@@ -1879,6 +1884,8 @@ function setPage(p) {
     $('e-batch-type').value = getStudentBatchType(s);
     $('e-batch-time').value = getStudentBatchTime(s);
     if ($('e-due-date')) $('e-due-date').value = s.due_date || '';
+    // BUG FIX: Pre-fill notes so updateStudent never silently blanks them
+    if ($('e-notes')) $('e-notes').value = getStudentCoachNotes(s);
     syncCoachDropdowns();
     $('e-coach').value = savedCoachId;
     openModal('edit-modal');
@@ -1887,14 +1894,18 @@ function setPage(p) {
   async function updateStudent() {
     const id = $('e-id').value;
     const s = allStudents.find(x => String(x.id) === String(id));
+    if (!s) { toast('Student not found', 'error'); return; }
     const oldElo = getStudentRating(s);
     const newElo = parseInt($('e-elo').value);
     
+    // BUG FIX: Use correct DB field names (full_name, level) matching saveStudent/Supabase schema
     const data = {
-      name: $('e-name').value,
+      full_name: $('e-name').value,
+      name: $('e-name').value,          // keep for legacy columns
       phone: $('e-phone').value,
       parent_phone: $('e-phone').value,
-      grade: $('e-level').value,
+      level: $('e-level').value,
+      grade: $('e-level').value,         // keep for legacy columns
       rating: newElo,
       coach_id: $('e-coach').value,
       status: $('e-status').value === 'Paid' ? 'active' : 'pending',
@@ -1904,7 +1915,8 @@ function setPage(p) {
       session_mode: $('e-batch-type').value,
       session_time: $('e-batch-time').value,
       monthly_fee: parseInt($('e-fee').value) || 0,
-      notes: $('e-notes')?.value || '' 
+      // BUG FIX: notes field pre-filled in openEdit so this won't blank it
+      notes: $('e-notes')?.value || s.notes || ''
     };
 
     try {
@@ -1922,8 +1934,15 @@ function setPage(p) {
         toast('Student updated!', 'success');
         closeModals();
         loadAllData(true);
+      } else {
+        // BUG FIX: surface server-side errors instead of silently failing
+        const err = await res.json().catch(() => ({}));
+        toast('Update failed: ' + (err.error || err.message || `Server error ${res.status}`), 'error');
       }
-    } catch (e) { toast('Update failed', 'error'); }
+    } catch (e) {
+      console.error('updateStudent error:', e);
+      toast('Update failed: ' + e.message, 'error');
+    }
   }
   function openEnroll() { 
     $('m-name').value = '';
@@ -2153,17 +2172,21 @@ function setPage(p) {
 
   async function saveCoach() { 
     const id = $('cm-id').value;
+    const salaryVal = parseInt($('cm-salary').value) || 0;
     const data = {
       name: $('cm-name').value.trim(),
       specialization: $('cm-spec').value.trim(),
       phone: $('cm-phone').value.trim(),
       email: $('cm-email').value.trim(),
       address: $('cm-address').value.trim(),
-      hourly_rate: parseInt($('cm-salary').value) || 0,
+      // BUG FIX: send both field names so getCoachSalary (reads salary||hourly_rate) always picks it up
+      salary: salaryVal,
+      hourly_rate: salaryVal,
       experience: parseInt($('cm-exp').value) || 0,
       status: $('cm-status').value,
       availability: $('cm-avail').value.trim(),
       bio: $('cm-etc').value.trim(),
+      additional_details: $('cm-etc').value.trim(),
       photo_url: $('cm-photo').value.trim()
     };
 
