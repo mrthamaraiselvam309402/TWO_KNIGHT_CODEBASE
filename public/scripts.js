@@ -731,7 +731,8 @@
         const loadWithRetry = async (url, maxRetries = 1) => {
           for (let i = 0; i <= maxRetries; i++) {
             try {
-              const response = await apiCall(url);
+              const urlWithBust = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
+              const response = await apiCall(urlWithBust, { cache: 'no-store' });
               if (response.ok) return await response.json();
               if (response.status === 404) return null;
               throw new Error(`HTTP ${response.status}`);
