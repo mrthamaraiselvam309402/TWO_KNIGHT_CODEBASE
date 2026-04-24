@@ -928,20 +928,13 @@
 
 
   async function updateMsgBadge() {
-    try {
-      const res = await apiCall('/api/messages');
-      const msgs = await res.json();
-      allMessages = msgs.data || msgs || [];
-      const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin').length;
-      const badge = $('msg-badge');
-      if (badge) {
-        if (unread > 0) { badge.style.display = 'inline'; badge.textContent = unread; }
-        else { badge.style.display = 'none'; }
-      }
-      updateNotificationBadge();
-    } catch (e) {
-      console.error('Failed to update message badge:', e);
+    const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin').length;
+    const badge = $('msg-badge');
+    if (badge) {
+      if (unread > 0) { badge.style.display = 'inline'; badge.textContent = unread; }
+      else { badge.style.display = 'none'; }
     }
+    updateNotificationBadge();
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -3013,8 +3006,14 @@ function setPage(p) {
       </div>
     `).join('');
   }
-  async function markMsgRead(id) { await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'PUT', body: JSON.stringify({ is_read: true }) }); renderMsgs(); }
-  async function deleteMsg(id) { await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'DELETE' }); renderMsgs(); }
+  async function markMsgRead(id) { 
+    await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'PUT', body: JSON.stringify({ is_read: true }) }); 
+    loadAllData(true); 
+  }
+  async function deleteMsg(id) { 
+    await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'DELETE' }); 
+    loadAllData(true); 
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // PARENT VIEW
