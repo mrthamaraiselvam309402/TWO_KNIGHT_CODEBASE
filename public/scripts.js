@@ -403,6 +403,14 @@
     return response;
   }
 
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   const isValidPhone = p => /^\d{10}$/.test(p);
   const capitalizeFirst = str => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
   const formatTime = time24 => {
