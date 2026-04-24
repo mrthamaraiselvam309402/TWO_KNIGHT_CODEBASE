@@ -4047,17 +4047,11 @@ function setAISuggestion(q) {
   window.setAISuggestion = setAISuggestion;
   window.sendAIQuery = sendAIQuery;
   window.toggleChatbot = toggleChatbot;
-  window.sendChatMessage = sendChatMessage;
-  window.toggleChat = toggleChat;
-  window.toggleLoginChat = toggleLoginChat;
-  window.sendChat = sendChat;
-  window.sendLoginChat = sendLoginChat;
   window.toggleTheme = toggleTheme;
   window.closeModals = closeModals;
   window.openModal = openModal;
   window.previewFile = previewFile;
   window.executeDelete = executeDelete;
-  window.generateReportPDF = generateReportPDF;
   window.exportAcademyData = exportAcademyData;
   window.exportData = exportData;
   window.toast = toast;
@@ -4065,9 +4059,7 @@ function setAISuggestion(q) {
   window.toggleSidebar = toggleSidebar;
   window.toggleEye = toggleEye;
   window.setPage = setPage;
-  window.doLogin = doLogin;
   window.bulkMarkPaid = bulkMarkPaid;
-  window.doLogout = doLogout;
   window.finishLogin = finishLogin;
   window.registerForEvent = registerForEvent;
   window.setChildTab = setChildTab;
