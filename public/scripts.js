@@ -1335,10 +1335,10 @@ function setPage(p) {
           datasets: [{ 
             label: 'New Students', 
             data, 
-            borderColor: '#5a9fff', 
-            backgroundColor: 'rgba(90, 159, 255, 0.1)', 
+            borderColor: '#e8a830', 
+            backgroundColor: 'rgba(232, 168, 48, 0.15)', 
             tension: 0.4,
-            pointBackgroundColor: '#5a9fff',
+            pointBackgroundColor: '#e8a830',
             fill: true
           }] 
         },
@@ -1363,7 +1363,7 @@ function setPage(p) {
           labels: ['Paid', 'Pending', 'Due'], 
           datasets: [{ 
             data: [paid, pending, due], 
-            backgroundColor: ['#52c41a', '#e8a830', '#ff4d4f'], 
+            backgroundColor: ['#c9960c', '#e8a830', '#ff4d4f'], 
             borderWidth: 0 
           }] 
         },
@@ -1386,7 +1386,7 @@ function setPage(p) {
           labels: ['Group', 'Single'], 
           datasets: [{ 
             data: [groupCount, singleCount], 
-            backgroundColor: ['#dca33e', '#5a9fff'], 
+            backgroundColor: ['#c9960c', '#f0c05a'], 
             borderWidth: 0 
           }] 
         },
