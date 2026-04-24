@@ -687,6 +687,12 @@
         achievementsData = dataCache.achievements;
         eventsData = dataCache.events;
         allMessages = dataCache.messages || [];
+        
+        // Sync to window for modules
+        window.allStudents = allStudents;
+        window.allCoaches = allCoaches;
+        window.allMessages = allMessages;
+        
         syncCoachDropdowns();
         if (role === 'admin' || role === 'master') { 
           renderDash(); 
@@ -750,6 +756,12 @@
         allAttendance = attendance || [];
         allPayments = payments || [];
         
+        // Sync to window for modules
+        window.allStudents = allStudents;
+        window.allCoaches = allCoaches;
+        window.allPayments = allPayments;
+        window.allMessages = allMessages;
+        window.allAttendance = allAttendance;
         
         dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, timestamp: now };
         syncCoachDropdowns();
