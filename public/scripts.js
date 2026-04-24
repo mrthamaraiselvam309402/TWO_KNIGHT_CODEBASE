@@ -4287,11 +4287,13 @@ function setAISuggestion(q) {
 
     // 3. Render and Save
     const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'fixed';
+    tempDiv.style.position = 'absolute';
     tempDiv.style.top = '0';
-    tempDiv.style.left = '-10000px';
+    tempDiv.style.left = '0';
     tempDiv.style.width = '800px';
-    tempDiv.style.background = '#fff';
+    tempDiv.style.zIndex = '-9999';
+    tempDiv.style.opacity = '0';
+    tempDiv.style.pointerEvents = 'none';
     tempDiv.innerHTML = reportHTML;
     document.body.appendChild(tempDiv);
 
