@@ -59,6 +59,8 @@
     <div class="form-group">
       <label class="label">Password or Phone Number</label>
       <form onsubmit="event.preventDefault(); doLogin();">
+        <!-- Accessibility: hidden username field for password managers -->
+        <input type="text" name="username" autocomplete="username" style="display:none;" value="admin">
         <div style="position:relative">
           <input type="password" id="li-pass" class="input-field" placeholder="Enter password or mobile" autocomplete="current-password">
           <button type="button" id="eye-btn" onclick="toggleEye()" aria-label="Show password" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;padding:8px;z-index:10">
@@ -952,6 +954,7 @@
    <!-- jsPDF on jsdelivr so it passes CSP (cdnjs was blocked) -->
    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
    <script src="scripts.js?v=2026-04-23-v56"></script>
  </body>
 </html>
