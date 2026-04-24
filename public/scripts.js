@@ -4317,8 +4317,6 @@ function setAISuggestion(q) {
       document.body.removeChild(tempDiv);
     }
   }
-  }
-
 
   function exportAcademyData() {
     if (!allStudents || allStudents.length === 0) {
