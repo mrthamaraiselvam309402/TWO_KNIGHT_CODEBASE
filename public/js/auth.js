@@ -53,7 +53,7 @@ window.doLogin = async function() {
                 toast(`Welcome back, ${data.role}!`, 'success');
                 return;
             } else {
-                errEl.textContent = data.error || 'Invalid credentials.';
+                errEl.textContent = data.details || data.error || 'Invalid credentials.';
                 errEl.style.display = 'block';
                 return;
             }
