@@ -48,39 +48,42 @@ Deno.serve(async (req) => {
   }
 
    // Transform DB row to API response (add convenience aliases the frontend expects)
-   function transformStudent(s: Record<string, unknown>) {
-     const status = s.status || 'pending';
-     return {
-       id: s.id,
-       name: s.name || '',
-       full_name: s.name || '',    // alias for frontend compatibility
-       email: s.email || '',
-       phone: s.phone || '',
-       parent_phone: s.parent_phone || s.phone || '',
-       parent_name: s.parent_name || '',
-       age: s.age || null,
-       grade: s.grade || null,
-       level: s.grade || 'Beginner',           // alias
-       enrollment_date: s.enrollment_date || '',
-       join_date: s.enrollment_date || '',      // alias
-       address: s.address || '',
-       status: status,
-       payment_status: status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due'),
-       coach_id: s.coach_id || null,
-       rating: s.rating || 800,
-       current_rating: s.rating || 800,         // alias
-       notes: s.notes || '',
-       session_mode: s.session_mode || null,
-       session_time: s.session_time || null,
-       batch_type: s.session_mode || null,
-       batch_time: s.session_time || null,
-       monthly_fee: s.monthly_fee || 0,
-       due_date: s.due_date || null,
-       account_status: s.account_status || 'active',
-       created_at: s.created_at,
-       updated_at: s.updated_at
-     }
-   }
+    function transformStudent(s: Record<string, unknown>) {
+      const status = s.status || 'pending';
+      // Resilience: check all possible fee column names
+      const fee = s.monthly_fee ?? s.fee ?? s.fees ?? s.tuition_fee ?? 0;
+      
+      return {
+        id: s.id,
+        name: s.name || '',
+        full_name: s.name || '',    // alias for frontend compatibility
+        email: s.email || '',
+        phone: s.phone || '',
+        parent_phone: s.parent_phone || s.phone || '',
+        parent_name: s.parent_name || '',
+        age: s.age || null,
+        grade: s.grade || null,
+        level: s.grade || 'Beginner',           // alias
+        enrollment_date: s.enrollment_date || '',
+        join_date: s.enrollment_date || '',      // alias
+        address: s.address || '',
+        status: status,
+        payment_status: status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due'),
+        coach_id: s.coach_id || null,
+        rating: s.rating || 800,
+        current_rating: s.rating || 800,         // alias
+        notes: s.notes || '',
+        session_mode: s.session_mode || null,
+        session_time: s.session_time || null,
+        batch_type: s.session_mode || null,
+        batch_time: s.session_time || null,
+        monthly_fee: parseInt(String(fee)) || 0,
+        due_date: s.due_date || null,
+        account_status: s.account_status || 'active',
+        created_at: s.created_at,
+        updated_at: s.updated_at
+      }
+    }
 
   try {
     const url = new URL(req.url)
@@ -209,8 +212,9 @@ Deno.serve(async (req) => {
       if (rawBody.session_time !== undefined || rawBody.batch_time !== undefined) {
         updateData.session_time = sanitizeString(rawBody.session_time || rawBody.batch_time, 100);
       }
-      if (rawBody.monthly_fee !== undefined || rawBody.fee !== undefined) {
-        updateData.monthly_fee = parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0;
+      if (rawBody.monthly_fee !== undefined || rawBody.fee !== undefined || rawBody.fees !== undefined || rawBody.tuition_fee !== undefined) {
+        const feeVal = parseInt(String(rawBody.monthly_fee ?? rawBody.fee ?? rawBody.fees ?? rawBody.tuition_fee)) || 0;
+        updateData.monthly_fee = feeVal;
       }
       if (rawBody.due_date !== undefined) {
         updateData.due_date = rawBody.due_date ? String(rawBody.due_date) : null;

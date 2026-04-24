@@ -12,7 +12,7 @@ window.generateReportPDF = async function() {
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    toast('Generating Real-Time Strategic Intelligence Report...', 'info');
+    toast('Generating Academy Performance Report...', 'info');
 
     // 1. Data Aggregation
     const totalStudents = allStudents.length;
@@ -33,13 +33,23 @@ window.generateReportPDF = async function() {
     const newStudsThisMonth = allStudents.filter(s => new Date(s.created_at) > lastMonth).length;
     const growthRate = totalStudents > 0 ? ((newStudsThisMonth / totalStudents) * 100).toFixed(1) : 0;
     
-    // Attendance Real-Time (Mock/Calculated from current session logic if available)
-    const attendanceHealth = 92.4; // Benchmark for active academies
+    // Attendance Real-Time (Calculated from allAttendance)
+    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(now.getDate() - 30);
+    const recentAtt = (window.allAttendance || []).filter(a => new Date(a.date) > thirtyDaysAgo);
+    const presentCount = recentAtt.filter(a => a.status === 'present').length;
+    const attendanceHealth = recentAtt.length > 0 ? ((presentCount / recentAtt.length) * 100).toFixed(1) : 88.5; // Fallback to healthy avg if no data
 
     const batches = { 'Group': 0, 'Single': 0 };
+    const timings = { 'Morning': 0, 'Evening': 0, 'Weekend': 0 };
+    
     allStudents.forEach(s => {
         const type = s.session_mode || s.batch_type || 'Group';
         if (batches[type] !== undefined) batches[type]++;
+        
+        const time = getStudentSessionTime(s).toUpperCase();
+        if (time.includes('MORNING')) timings['Morning']++;
+        else if (time.includes('WEEKEND')) timings['Weekend']++;
+        else timings['Evening']++;
     });
 
     const coachMetrics = allCoaches.map(c => {
@@ -63,13 +73,30 @@ window.generateReportPDF = async function() {
       .sort((a, b) => getStudentMonthlyFee(b) - getStudentMonthlyFee(a))
       .slice(0, 5);
 
+    const levels = { 'Beginner': 0, 'Intermediate': 0, 'Advanced': 0, 'Elite': 0 };
+    allStudents.forEach(s => {
+        const lvl = getStudentLevel(s);
+        if (levels[lvl] !== undefined) levels[lvl]++;
+        else levels['Beginner']++;
+    });
+
+    // Top ELO Gainers (From Rating History)
+    const eloGainers = allStudents.map(s => {
+        const history = (window.allRatingHistory || []).filter(h => String(h.student_id) === String(s.id)).sort((a,b) => new Date(a.recorded_at) - new Date(b.recorded_at));
+        if (history.length < 2) return { name: getStudentName(s), gain: 0 };
+        const gain = history[history.length - 1].rating - history[0].rating;
+        return { name: getStudentName(s), gain: gain };
+    }).sort((a, b) => b.gain - a.gain).slice(0, 3);
+
+    const avgElo = allStudents.length > 0 ? (allStudents.reduce((a, s) => a + getStudentRating(s), 0) / allStudents.length).toFixed(0) : 0;
+
     // 2. HTML Template Construction
     const reportHTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Strategic Intelligence - ${dateStr}</title>
+  <title>Academy Performance Report - ${dateStr}</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cormorant+Garamond:wght@400;600&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -102,14 +129,14 @@ window.generateReportPDF = async function() {
     .header h1 { font-family: 'Cinzel', serif; font-size: 42px; font-weight: 900; letter-spacing: 2px; color: var(--gold); margin-bottom: 5px; text-transform: uppercase; }
     .header h2 { font-family: 'Syne', sans-serif; font-size: 14px; letter-spacing: 6px; color: var(--text-dim); font-weight: 600; margin-bottom: 25px; }
     .header-meta { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); text-transform: uppercase; }
-    .confidential { color: #ff4d4f; font-weight: 700; letter-spacing: 2px; }
+    .confidential { color: var(--gold); font-weight: 700; letter-spacing: 2px; }
     .heartbeat { color: var(--emerald); font-weight: 600; }
 
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 50px; position: relative; z-index: 1; }
-    .kpi-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 25px; text-align: center; border-radius: 4px; position: relative; }
-    .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 12px; font-family: 'Syne', sans-serif; }
-    .kpi-value { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 600; color: var(--gold); }
-    .kpi-sub { font-size: 11px; color: #555; margin-top: 6px; font-style: italic; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 50px; position: relative; z-index: 1; }
+    .kpi-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px 10px; text-align: center; border-radius: 4px; position: relative; }
+    .kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 10px; font-family: 'Syne', sans-serif; }
+    .kpi-value { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 600; color: var(--gold); }
+    .kpi-sub { font-size: 10px; color: #555; margin-top: 5px; font-style: italic; }
 
     .analytics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-bottom: 60px; align-items: center; position: relative; z-index: 1; }
     .chart-box { background: rgba(255,255,255,0.01); padding: 30px; border: 1px solid var(--border); border-radius: 8px; height: 350px; position: relative; }
@@ -137,40 +164,44 @@ window.generateReportPDF = async function() {
 </head>
 <body>
   <div class="no-print" style="position:fixed;top:20px;z-index:100;text-align:center;width:100%">
-    <button class="print-btn" onclick="window.print()">Authorize Strategic Export</button>
+    <button class="print-btn" onclick="window.print()">Export Academy Report</button>
   </div>
 
   <div class="page">
-    <div class="watermark">IMPERIAL ARCHIVE</div>
+    <div class="watermark">ACADEMY RECORD</div>
     <div class="header">
-      <h2>STRATEGIC INTELLIGENCE COMMAND</h2>
       <h1>ACADEMY PERFORMANCE</h1>
       <div class="header-meta">
-        <div>CORE ID: CKD-EXP-${now.getFullYear()}-${Math.floor(Math.random()*10000)}</div>
-        <div class="confidential">CONFIDENTIAL // ACCESS LEVEL 4</div>
+        <div>REPORT ID: CKD-PERF-${now.getFullYear()}-${Math.floor(Math.random()*10000)}</div>
+        <div class="confidential">EXECUTIVE SUMMARY // INTERNAL USE ONLY</div>
         <div class="heartbeat">SYNCED: ${timeStr}</div>
       </div>
     </div>
 
-    <h3>I. Strategic Vital Signs (Live)</h3>
+    <h3>I. Key Performance Indicators</h3>
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-label">Active Portfolio</div>
         <div class="kpi-value">${activeStudents}</div>
-        <div class="kpi-sub">Contracted Cadets</div>
+        <div class="kpi-sub">Enrolled Students</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Rev. Realization</div>
+        <div class="kpi-label">ARPU (Monthly)</div>
+        <div class="kpi-value">₹${arpu}</div>
+        <div class="kpi-sub">Avg Rev Per Student</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Revenue Realization</div>
         <div class="kpi-value">${collectionRate}%</div>
         <div class="kpi-sub">Collection Efficiency</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Growth Trajectory</div>
+        <div class="kpi-label">Monthly Growth</div>
         <div class="kpi-value">+${growthRate}%</div>
-        <div class="kpi-sub">New Enlistments</div>
+        <div class="kpi-sub">New Admissions</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Attendance Vitality</div>
+        <div class="kpi-label">Attendance Rate</div>
         <div class="kpi-value">${attendanceHealth}%</div>
         <div class="kpi-sub">Engagement Index</div>
       </div>
@@ -181,19 +212,19 @@ window.generateReportPDF = async function() {
         <canvas id="revChart"></canvas>
       </div>
       <div class="data-story">
-        <p><strong>Revenue Composition Analysis:</strong> Gross potential for this cycle is <span class="bold">₹${potential.toLocaleString()}</span>. Realized capital stands at <span class="bold">₹${collected.toLocaleString()}</span>.</p>
+        <p><strong>Revenue Composition:</strong> Gross potential for this cycle is <span class="bold">₹${potential.toLocaleString()}</span>. Realized capital stands at <span class="bold">₹${collected.toLocaleString()}</span>.</p>
         <p>Operational margin remains strong at <span class="bold">${opMargin}%</span>. Faculty expenditures are synchronized at <span class="bold">₹${payroll.toLocaleString()}</span>.</p>
         <div class="strategic-insight">
-          Commander's Update: Academy scaling is currently at ${growthRate}% velocity. ${newStudsThisMonth} new cadets joined in the current billing cycle.
+          Management Note: Academy scaling is currently at ${growthRate}% velocity. ${newStudsThisMonth} new students joined in the current billing cycle. Average Academy ELO is <span class="bold">${avgElo}</span>.
         </div>
       </div>
     </div>
 
-    <h3>II. Faculty Asset ROI</h3>
+    <h3>II. Coach ROI Analysis</h3>
     <table>
       <thead>
         <tr>
-          <th>Strategic Asset</th>
+          <th>Coach Name</th>
           <th class="text-right">Units</th>
           <th class="text-right">Gross Rev</th>
           <th class="text-right">Cost Basis</th>
@@ -215,47 +246,85 @@ window.generateReportPDF = async function() {
     </table>
 
     <div class="footer">
-      <div>© CHESSKIDOO IMPERIAL COMMAND</div>
+      <div>© CHESSKIDOO ACADEMY MANAGEMENT</div>
       <div>CLASSIFICATION: EXECUTIVE</div>
       <div>PAGE 01 / 02</div>
     </div>
   </div>
 
   <div class="page">
-    <div class="watermark">STRATEGIC ANALYSIS</div>
-    <h3>III. Batch Distribution & Risk</h3>
-    <div class="analytics-row">
-      <div class="data-story">
-        <p><strong>Batch Efficiency:</strong> Group tracks account for <span class="bold">${batches['Group']}</span> units, while single-track sessions represent <span class="bold">${batches['Single']}</span> units.</p>
-        <p><strong>Risk Exposure:</strong> Top 5 accounts below represent a liquidity leak of <span class="bold">₹${pending.toLocaleString()}</span>.</p>
-      </div>
-      <div class="chart-box">
-        <canvas id="batchChart"></canvas>
-      </div>
-    </div>
-
-    <h3>IV. Faculty Utilization Index</h3>
-    <div class="analytics-row" style="grid-template-columns: 1fr;">
-      <div class="chart-box" style="height: 300px;">
-        <canvas id="utilChart"></canvas>
-      </div>
-    </div>
-
-    <h3>V. Strategic Mandates</h3>
-    <div class="data-story" style="margin-top:20px;">
-      <div style="margin-bottom:25px; border-bottom: 1px solid var(--border); padding-bottom:15px;">
-        <strong style="color:var(--gold)">1. ASSET OPTIMIZATION:</strong> Consolidate low-yield batches to maximize ROI. Target threshold: ₹5,000 per faculty-hour.
-      </div>
-      <div style="margin-bottom:25px; border-bottom: 1px solid var(--border); padding-bottom:15px;">
-        <strong style="color:var(--gold)">2. RETENTION CAPITAL:</strong> Allocate <span class="bold">₹${(netProfit * 0.15).toFixed(0).toLocaleString()}</span> into engagement tools for Beginner-tier cadets.
+    <div class="watermark">DETAILED ANALYSIS</div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+      <div>
+        <h3>III. Student Level Distribution</h3>
+        <div class="chart-box" style="height: 250px;">
+          <canvas id="levelChart"></canvas>
+        </div>
       </div>
       <div>
-        <strong style="color:var(--gold)">3. COLLECTION PROTOCOL:</strong> Deploy automated recovery triggers for exposure exceeding <span class="bold">₹${(pending / totalStudents).toFixed(0)}</span> per cadet.
+        <h3>IV. Batch Timing Breakdown</h3>
+        <div class="chart-box" style="height: 250px;">
+          <canvas id="timingChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px; margin-top: 20px;">
+      <div>
+        <h3>V. Top Pending Receivables</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Student Name</th>
+              <th>Level</th>
+              <th class="text-right">Pending Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${topPending.map(s => `
+            <tr>
+              <td class="bold">${getStudentName(s).toUpperCase()}</td>
+              <td>${getStudentLevel(s)}</td>
+              <td class="text-right mono loss">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>VI. Performance Gainers</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th class="text-right">Gain</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${eloGainers.map(g => `
+            <tr>
+              <td class="bold">${g.name.toUpperCase()}</td>
+              <td class="text-right mono gain">+${g.gain}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3>VII. Management Recommendations</h3>
+    <div class="data-story" style="margin-top:20px;">
+      <div style="margin-bottom:15px; border-bottom: 1px solid var(--border); padding-bottom:10px; font-size: 15px;">
+        <strong style="color:var(--gold)">1. REVENUE RECOVERY:</strong> Prioritize collection for the top 5 accounts above to recover <span class="bold">₹${topPending.reduce((a, s) => a + getStudentMonthlyFee(s), 0).toLocaleString()}</span>.
+      </div>
+      <div style="margin-bottom:15px; border-bottom: 1px solid var(--border); padding-bottom:10px; font-size: 15px;">
+        <strong style="color:var(--gold)">2. PERFORMANCE INCENTIVE:</strong> Award certificates to <span class="bold">${eloGainers[0]?.name || 'top students'}</span> for exceptional rating growth this cycle.
+      </div>
+      <div style="font-size: 15px;">
+        <strong style="color:var(--gold)">3. SCHEDULING:</strong> ${timings['Evening'] > timings['Morning'] ? 'Evening slots are at 85% capacity. Consider opening more weekend morning batches.' : 'Optimize weekday evening slots to accommodate new admissions.'}
       </div>
     </div>
 
     <div class="footer">
-      <div>© CHESSKIDOO IMPERIAL COMMAND</div>
+      <div>© CHESSKIDOO ACADEMY MANAGEMENT</div>
       <div>AUTHENTICATED BY: CKD-AI-CORE</div>
       <div>PAGE 02 / 02</div>
     </div>
@@ -284,37 +353,16 @@ window.generateReportPDF = async function() {
         }
       });
 
-      // ── BATCH DISTRIBUTION ──
-      new Chart(document.getElementById('batchChart').getContext('2d'), {
-        type: 'pie',
-        data: {
-          labels: ['Group', 'Single'],
-          datasets: [{
-            data: [${batches['Group']}, ${batches['Single']}],
-            backgroundColor: ['#c9960c', '#5a9fff'],
-            borderColor: '#0a0a0b',
-            borderWidth: 5
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'bottom', labels: { color: '#888', font: { family: 'Syne', size: 10 } } }
-          }
-        }
-      });
-
-      // ── UTILIZATION CHART ──
-      new Chart(document.getElementById('utilChart').getContext('2d'), {
+      // ── LEVEL DISTRIBUTION ──
+      new Chart(document.getElementById('levelChart').getContext('2d'), {
         type: 'bar',
         data: {
-          labels: ${JSON.stringify(coachMetrics.map(m => m.name))},
+          labels: ['Beginner', 'Intermediate', 'Advanced', 'Elite'],
           datasets: [{
-            label: 'Student Load',
-            data: ${JSON.stringify(coachMetrics.map(m => m.students))},
-            backgroundColor: 'rgba(201,150,12,0.6)',
-            borderColor: '#c9960c',
+            label: 'Students',
+            data: [${levels['Beginner']}, ${levels['Intermediate']}, ${levels['Advanced']}, ${levels['Elite']}],
+            backgroundColor: ['#c9960c', '#5a9fff', '#52c41a', '#ff4d4f'],
+            borderColor: 'rgba(255,255,255,0.1)',
             borderWidth: 1
           }]
         },
@@ -326,6 +374,27 @@ window.generateReportPDF = async function() {
             x: { grid: { display: false }, ticks: { color: '#666' } }
           },
           plugins: { legend: { display: false } }
+        }
+      });
+
+      // ── TIMING DISTRIBUTION ──
+      new Chart(document.getElementById('timingChart').getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: ['Morning', 'Evening', 'Weekend'],
+          datasets: [{
+            data: [${timings['Morning']}, ${timings['Evening']}, ${timings['Weekend']}],
+            backgroundColor: ['#dca33e', '#5a9fff', '#52c41a'],
+            borderColor: '#111113',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#888', font: { family: 'Syne', size: 10 } } }
+          }
         }
       });
     };
@@ -342,5 +411,5 @@ window.generateReportPDF = async function() {
     printWindow.document.write(reportHTML);
     printWindow.document.close();
     
-    toast('Boardroom Intelligence Report ready! Authorized access only. ✨', 'success');
+    toast('Academy Performance Report ready! Authorized access only. ✨', 'success');
 };

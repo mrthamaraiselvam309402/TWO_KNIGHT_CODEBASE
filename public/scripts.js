@@ -376,7 +376,7 @@
       });
 
       if (updateRes.ok) {
-        toast('Cadet Promoted!', 'success');
+        toast('Student Promoted!', 'success');
         closeModals();
         loadAllData(true);
       }
@@ -725,14 +725,15 @@
           }
         };
 
-        const [coaches, students, achievements, events, messages, attendance, payments] = await Promise.all([
+        const [coaches, students, achievements, events, messages, attendance, payments, ratingHistory] = await Promise.all([
           loadWithRetry('/api/coaches'),
           loadWithRetry('/api/students'),
           loadWithRetry('/api/achievements'),
           loadWithRetry('/api/events'),
           loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || [])),
           loadWithRetry('/api/attendance'),
-          loadWithRetry('/api/payments').then(r => r && r.data ? r.data : (r || []))
+          loadWithRetry('/api/payments').then(r => r && r.data ? r.data : (r || [])),
+          loadWithRetry('/api/rating_history')
         ]);
 
         allCoaches = coaches || [];
@@ -755,6 +756,7 @@
         allMessages = messages || [];
         allAttendance = attendance || [];
         allPayments = payments || [];
+        allRatingHistory = ratingHistory || [];
         
         // Sync to window for modules
         window.allStudents = allStudents;
@@ -762,6 +764,7 @@
         window.allPayments = allPayments;
         window.allMessages = allMessages;
         window.allAttendance = allAttendance;
+        window.allRatingHistory = allRatingHistory;
         
         dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, timestamp: now };
         syncCoachDropdowns();

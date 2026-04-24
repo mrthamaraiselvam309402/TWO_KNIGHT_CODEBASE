@@ -141,7 +141,7 @@
     <div id="page-dash" class="page admin-only">
       <img src="https://images.unsplash.com/photo-1529699211952-734e80c4d42b?auto=format&fit=crop&w=2000&q=80" class="hero-img" alt="Chess">
       <div class="dash-grid">
-        <div class="card card-clickable" onclick="setPage('stud')"><div class="stat-label">Total Cadets</div><div class="stat-value" id="s-total">—</div></div>
+        <div class="card card-clickable" onclick="setPage('stud')"><div class="stat-label">Total Students</div><div class="stat-value" id="s-total">—</div></div>
         <div class="card"><div class="stat-label">Avg Academy ELO</div><div class="stat-value" id="s-elo">—</div></div>
         <div class="card card-clickable" onclick="setPage('coach-mgmt')"><div class="stat-label">Active Coaches</div><div class="stat-value" id="s-coaches">—</div></div>
       </div>
@@ -215,7 +215,7 @@
               <th>Coach</th>
               <th>Join Date</th>
               <th>Session</th>
-              <th>Timing</th>
+              <th>Schedule</th>
               <th>Fee</th>
               <th>Status</th>
               <th>Actions</th>
@@ -332,7 +332,7 @@
     <!-- Wall of Fame -->
     <div id="page-fame" class="page">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <p style="color:var(--ivory-dim);font-size:15px">Celebrating the proudest victories of Chesskidoo cadets.</p>
+        <p style="color:var(--ivory-dim);font-size:15px">Celebrating the proudest victories of Chesskidoo students.</p>
         <button class="btn btn-gold admin-only" onclick="openAwardModal()">+ Add Achievement</button>
       </div>
       <div id="fame-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
@@ -489,7 +489,7 @@
       <div><b style="color:var(--ivory)">ELO:</b> <span id="sv-elo"></span></div>
       <div><b style="color:var(--ivory)">Join Date:</b> <span id="sv-join"></span></div>
       <div><b style="color:var(--ivory)">Coach:</b> <span id="sv-coach"></span></div>
-      <div><b style="color:var(--ivory)">Batch:</b> <span id="sv-batch"></span></div>
+      <div><b style="color:var(--ivory)">Schedule:</b> <span id="sv-batch"></span></div>
       <div><b style="color:var(--ivory)">Fee:</b> ₹<span id="sv-fee"></span></div>
       <div><b style="color:var(--ivory)">Status:</b> <span id="sv-status"></span></div>
       <div style="grid-column:1/-1"><b style="color:var(--ivory)">Phone:</b> <span id="sv-phone"></span></div>
@@ -527,8 +527,8 @@
 <!-- Enroll Modal -->
 <div class="modal" id="enroll-modal">
   <div class="modal-box">
-    <div class="modal-title">Enroll New Cadet</div>
-    <div class="modal-sub">Strategic Enlistment Protocol</div>
+    <div class="modal-title">Enroll New Student</div>
+    <div class="modal-sub">Academy Enrollment Protocol</div>
     
     <div class="modal-grid">
       <div class="form-group">
@@ -543,7 +543,7 @@
 
     <div class="modal-grid">
       <div class="form-group">
-        <label>Strategic Level</label>
+        <label>Student Level</label>
         <select id="m-level">
           <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Elite</option>
         </select>
@@ -569,8 +569,8 @@
 
     <div class="modal-grid">
       <div class="form-group">
-        <label>Session Start Time</label>
-        <input type="time" id="m-batch-time" value="17:00">
+        <label>Session Schedule</label>
+        <input type="text" id="m-batch-time" placeholder="e.g. FRI & SAT or 17:00" value="17:00">
       </div>
       <div class="form-group">
         <label>Enlistment Date</label>
@@ -591,7 +591,7 @@
 
     <div style="display:flex;gap:10px;margin-top:20px; border-top: 1px solid var(--border); padding-top: 20px;">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Abort</button>
-      <button class="btn btn-gold" style="flex:1" onclick="saveStudent()">Complete Enlistment</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveStudent()">Complete Enrollment</button>
     </div>
   </div>
 </div>
@@ -599,7 +599,7 @@
 <!-- Edit Modal -->
 <div class="modal" id="edit-modal">
   <div class="modal-box">
-    <div class="modal-title">Edit Cadet Records</div>
+    <div class="modal-title">Edit Student Records</div>
     <input type="hidden" id="e-id">
     
     <div class="modal-grid">
@@ -615,7 +615,7 @@
 
     <div class="modal-grid">
       <div class="form-group">
-        <label>Strategic Level</label>
+        <label>Student Level</label>
         <select id="e-level">
           <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Elite</option>
         </select>
@@ -641,8 +641,8 @@
 
     <div class="modal-grid">
       <div class="form-group">
-        <label>Session Start Time</label>
-        <input type="time" id="e-batch-time">
+        <label>Session Schedule</label>
+        <input type="text" id="e-batch-time" placeholder="e.g. FRI & SAT or 17:00">
       </div>
       <div class="form-group">
         <label>Join Date</label>
@@ -667,7 +667,7 @@
         <select id="e-status"><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
       </div>
       <div class="form-group">
-        <label>Commander's Notes</label>
+        <label>Administrative Notes</label>
         <input type="text" id="e-notes" placeholder="Notes...">
       </div>
     </div>
