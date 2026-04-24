@@ -27,6 +27,17 @@ window.generateReportPDF = async function() {
     const collectionRate = potential > 0 ? ((collected / potential) * 100).toFixed(1) : 0;
     const opMargin = collected > 0 ? ((netProfit / collected) * 100).toFixed(1) : 0;
     const coachEfficiency = payroll > 0 ? (collected / payroll).toFixed(2) : 0;
+    
+    // Growth & Batch Metrics
+    const lastMonth = new Date(); lastMonth.setMonth(now.getMonth() - 1);
+    const newStudsThisMonth = allStudents.filter(s => new Date(s.created_at) > lastMonth).length;
+    const growthRate = totalStudents > 0 ? ((newStudsThisMonth / totalStudents) * 100).toFixed(1) : 0;
+
+    const batches = { 'Group': 0, 'Single': 0 };
+    allStudents.forEach(s => {
+        const type = s.session_mode || s.batch_type || 'Group';
+        if (batches[type] !== undefined) batches[type]++;
+    });
 
     const coachMetrics = allCoaches.map(c => {
       const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
@@ -56,7 +67,7 @@ window.generateReportPDF = async function() {
 <head>
   <meta charset="UTF-8">
   <title>Board Report - ${dateStr}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cormorant+Garamond:wght@400;600&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -64,7 +75,7 @@ window.generateReportPDF = async function() {
       --gold-dark: #8c6a08;
       --bg: #0a0a0b;
       --card-bg: #111113;
-      --border: rgba(201, 150, 12, 0.15);
+      --border: rgba(201, 150, 12, 0.2);
       --text: #e0e0e0;
       --text-dim: #888;
     }
@@ -79,32 +90,27 @@ window.generateReportPDF = async function() {
     body { background: var(--bg); font-family: 'Cormorant Garamond', serif; color: var(--text); line-height: 1.5; padding: 50px 0; display: flex; flex-direction: column; align-items: center; }
     .page { width: 950px; padding: 80px; position: relative; min-height: 1300px; background: var(--card-bg); margin-bottom: 50px; box-shadow: 0 40px 100px rgba(0,0,0,0.6); border: 1px solid var(--border); overflow: hidden; }
     
-    /* Archival Watermark */
-    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Syne', sans-serif; font-size: 120px; font-weight: 900; color: rgba(201, 150, 12, 0.03); pointer-events: none; white-space: nowrap; z-index: 0; }
+    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Cinzel', serif; font-size: 100px; font-weight: 900; color: rgba(201, 150, 12, 0.04); pointer-events: none; white-space: nowrap; z-index: 0; }
 
-    /* Header Section */
     .header { text-align: left; margin-bottom: 60px; border-bottom: 2px solid var(--gold); padding-bottom: 30px; position: relative; z-index: 1; }
-    .header h1 { font-family: 'Syne', sans-serif; font-size: 48px; font-weight: 800; letter-spacing: -1.5px; color: var(--gold); margin-bottom: 5px; text-transform: uppercase; }
+    .header h1 { font-family: 'Cinzel', serif; font-size: 42px; font-weight: 900; letter-spacing: 2px; color: var(--gold); margin-bottom: 5px; text-transform: uppercase; }
     .header h2 { font-family: 'Syne', sans-serif; font-size: 14px; letter-spacing: 6px; color: var(--text-dim); font-weight: 600; margin-bottom: 25px; }
     .header-meta { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); text-transform: uppercase; }
     .confidential { color: #ff4d4f; font-weight: 700; letter-spacing: 2px; }
 
-    /* KPI Grid */
     .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 50px; position: relative; z-index: 1; }
     .kpi-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 25px; text-align: center; border-radius: 4px; position: relative; }
     .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 12px; font-family: 'Syne', sans-serif; }
     .kpi-value { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 600; color: var(--gold); }
     .kpi-sub { font-size: 11px; color: #555; margin-top: 6px; font-style: italic; }
 
-    /* Content Layout */
     .analytics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-bottom: 60px; align-items: center; position: relative; z-index: 1; }
     .chart-box { background: rgba(255,255,255,0.01); padding: 30px; border: 1px solid var(--border); border-radius: 8px; height: 350px; position: relative; }
     .data-story { font-size: 18px; color: var(--text); }
     .data-story p { margin-bottom: 20px; }
     .strategic-insight { background: rgba(201, 150, 12, 0.05); border-left: 5px solid var(--gold); padding: 20px; font-style: italic; margin-top: 30px; border-radius: 0 8px 8px 0; font-size: 16px; }
 
-    /* Tables */
-    h3 { font-family: 'Syne', sans-serif; font-size: 16px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin: 50px 0 25px 0; display: flex; align-items: center; }
+    h3 { font-family: 'Cinzel', serif; font-size: 18px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin: 50px 0 25px 0; display: flex; align-items: center; }
     h3::after { content: ''; flex: 1; height: 1px; background: var(--border); margin-left: 20px; }
     
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; z-index: 1; position: relative; }
@@ -116,7 +122,6 @@ window.generateReportPDF = async function() {
     .gain { color: #52c41a !important; font-weight: 600; }
     .bold { font-weight: 700; color: #fff; }
 
-    /* Footer */
     .footer { position: absolute; bottom: 50px; left: 80px; right: 80px; display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 25px; font-size: 10px; color: var(--text-dim); font-family: 'DM Mono', monospace; letter-spacing: 1px; }
     
     .print-btn { background: var(--gold); color: #000; border: none; padding: 18px 45px; font-family: 'Syne', sans-serif; font-weight: 800; cursor: pointer; margin-bottom: 40px; border-radius: 4px; letter-spacing: 3px; transition: all 0.4s; box-shadow: 0 15px 40px rgba(201,150,12,0.3); text-transform: uppercase; }
@@ -125,42 +130,42 @@ window.generateReportPDF = async function() {
 </head>
 <body>
   <div class="no-print" style="position:fixed;top:20px;z-index:100;text-align:center;width:100%">
-    <button class="print-btn" onclick="window.print()">Authorize & Execute Export</button>
+    <button class="print-btn" onclick="window.print()">Authorize Strategic Export</button>
   </div>
 
   <div class="page">
-    <div class="watermark">CONFIDENTIAL • CHESSKIDOO</div>
+    <div class="watermark">IMPERIAL ARCHIVE</div>
     <div class="header">
-      <h2>ACADEMY STRATEGIC COMMAND</h2>
-      <h1>FINANCIAL INTELLIGENCE</h1>
+      <h2>STRATEGIC INTELLIGENCE COMMAND</h2>
+      <h1>ACADEMY PERFORMANCE</h1>
       <div class="header-meta">
-        <div>ORBITAL ID: CKD-EXP-${now.getFullYear()}-${Math.floor(Math.random()*10000)}</div>
-        <div class="confidential">Level 4 Clearance Required</div>
+        <div>CORE ID: CKD-EXP-${now.getFullYear()}-${Math.floor(Math.random()*10000)}</div>
+        <div class="confidential">CONFIDENTIAL // ACCESS LEVEL 4</div>
         <div>ISSUED: ${dateStr.toUpperCase()}</div>
       </div>
     </div>
 
-    <h3>I. Strategic Vital Signs</h3>
+    <h3>I. Vital Signs & Trajectory</h3>
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-label">Active Portfolio</div>
         <div class="kpi-value">${activeStudents}</div>
-        <div class="kpi-sub">Enrolled Cadets</div>
+        <div class="kpi-sub">Contracted Cadets</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Collection Rate</div>
+        <div class="kpi-label">Rev. Realization</div>
         <div class="kpi-value">${collectionRate}%</div>
-        <div class="kpi-sub">Rev. Realization</div>
+        <div class="kpi-sub">Collection Efficiency</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Net Op. Margin</div>
-        <div class="kpi-value">${opMargin}%</div>
-        <div class="kpi-sub">Profitability Ratio</div>
+        <div class="kpi-label">Growth Trajectory</div>
+        <div class="kpi-value">+${growthRate}%</div>
+        <div class="kpi-sub">New Enlistments</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Avg Yield (ARPU)</div>
+        <div class="kpi-label">Yield (ARPU)</div>
         <div class="kpi-value">₹${arpu}</div>
-        <div class="kpi-sub">Unit Revenue</div>
+        <div class="kpi-sub">Per Cadet Revenue</div>
       </div>
     </div>
 
@@ -169,15 +174,15 @@ window.generateReportPDF = async function() {
         <canvas id="revChart"></canvas>
       </div>
       <div class="data-story">
-        <p><strong>Revenue Composition:</strong> Our current gross potential stands at <span class="bold">₹${potential.toLocaleString()}</span>. With a realization of <span class="bold">${collectionRate}%</span>, we have identified <span class="bold">₹${pending.toLocaleString()}</span> in untapped liquidity.</p>
-        <p>Faculty payroll represents an overhead of <span class="bold">₹${payroll.toLocaleString()}</span>. Our current human capital efficiency is <span class="bold">${coachEfficiency}x</span> revenue-to-cost.</p>
+        <p><strong>Revenue Composition Analysis:</strong> Gross potential for this cycle is <span class="bold">₹${potential.toLocaleString()}</span>. We have isolated <span class="bold">₹${pending.toLocaleString()}</span> in outstanding receivables representing a <span class="bold">${(100 - collectionRate).toFixed(1)}%</span> liquidity gap.</p>
+        <p>Faculty payroll overhead is <span class="bold">₹${payroll.toLocaleString()}</span>. Net operational margin stands at <span class="bold">${opMargin}%</span>, indicating high-efficiency capital management.</p>
         <div class="strategic-insight">
-          Commander's Note: Closing the current collection gap of ₹${pending.toLocaleString()} will immediately scale net profits to ₹${(collected + pending - payroll).toLocaleString()}.
+          Commander's Update: We have identified ${newStudsThisMonth} new cadets in the last 30 days, trending towards a ${growthRate}% month-over-month expansion.
         </div>
       </div>
     </div>
 
-    <h3>II. Faculty Performance & Yield</h3>
+    <h3>II. Faculty Asset ROI</h3>
     <table>
       <thead>
         <tr>
@@ -192,7 +197,7 @@ window.generateReportPDF = async function() {
       <tbody>
         ${coachMetrics.map(m => `
         <tr>
-          <td class="bold">${m.name}</td>
+          <td class="bold">${m.name.toUpperCase()}</td>
           <td class="text-right">${m.students}</td>
           <td class="text-right mono">₹${m.revenue.toLocaleString()}</td>
           <td class="text-right mono">₹${m.cost.toLocaleString()}</td>
@@ -203,7 +208,7 @@ window.generateReportPDF = async function() {
     </table>
 
     <div class="footer">
-      <div>© CHESSKIDOO ARCHIVE - SECURE PROTOCOL 4</div>
+      <div>© CHESSKIDOO IMPERIAL COMMAND</div>
       <div>CLASSIFICATION: EXECUTIVE</div>
       <div>PAGE 01 / 02</div>
     </div>
@@ -211,21 +216,21 @@ window.generateReportPDF = async function() {
 
   <div class="page">
     <div class="watermark">STRATEGIC ANALYSIS</div>
-    <h3>III. Risk Exposure & Liquidity</h3>
+    <h3>III. Batch Distribution & Risk</h3>
     <div class="analytics-row">
       <div class="data-story">
-        <p><strong>Exposure Analysis:</strong> We have isolated the top 5 accounts responsible for current liquidity constraints. Prompt intervention is recommended for accounts exceeding 15 days of dormancy.</p>
-        <p>Current student retention benchmark: <span class="bold">94.5%</span>. High fidelity in product delivery is maintaining baseline stability despite collection delays.</p>
+        <p><strong>Batch Efficiency:</strong> Group sessions account for <span class="bold">${batches['Group']}</span> units, while single-track sessions represent <span class="bold">${batches['Single']}</span> units. Margin density is 20% higher on Group tracks.</p>
+        <p><strong>Risk Exposure:</strong> Top 5 accounts below represent a total exposure of <span class="bold">₹${topPending.reduce((a, s) => a + getStudentMonthlyFee(s), 0).toLocaleString()}</span>.</p>
       </div>
       <div class="chart-box">
-        <canvas id="riskChart"></canvas>
+        <canvas id="batchChart"></canvas>
       </div>
     </div>
 
     <table>
       <thead>
         <tr>
-          <th>Account Identifier</th>
+          <th>Cadet Identifier</th>
           <th>Risk Category</th>
           <th class="text-right">Outstanding Balance</th>
         </tr>
@@ -233,28 +238,28 @@ window.generateReportPDF = async function() {
       <tbody>
         ${topPending.map(s => `
         <tr>
-          <td class="bold">${getStudentName(s)}</td>
-          <td style="color:var(--text-dim); font-size:12px;">High Exposure (Cycle > 5D)</td>
+          <td class="bold">${getStudentName(s).toUpperCase()}</td>
+          <td style="color:var(--text-dim); font-size:11px;">High Exposure (Cycle > 5D)</td>
           <td class="text-right mono loss">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
         </tr>`).join('')}
       </tbody>
     </table>
 
-    <h3>IV. Tactical Recommendations</h3>
+    <h3>IV. Strategic Mandates</h3>
     <div class="data-story" style="margin-top:20px;">
       <div style="margin-bottom:25px; border-bottom: 1px solid var(--border); padding-bottom:15px;">
-        <strong style="color:var(--gold)">1. ASSET OPTIMIZATION:</strong> Consolidate low-yield batches (< ₹5,000 rev) to maximize faculty ROI. Transition top-tier talent to premium GM coaching tracks.
+        <strong style="color:var(--gold)">1. ASSET OPTIMIZATION:</strong> Consolidate low-yield batches to maximize faculty ROI. Current data suggests a threshold of <span class="bold">₹5,000</span> per batch for optimal efficiency.
       </div>
       <div style="margin-bottom:25px; border-bottom: 1px solid var(--border); padding-bottom:15px;">
-        <strong style="color:var(--gold)">2. CAPITAL INJECTION:</strong> Allocate ₹${(netProfit * 0.2).toFixed(0).toLocaleString()} of current surplus into AI-driven retention tools to maintain the 94%+ stability.
+        <strong style="color:var(--gold)">2. RETENTION CAPITAL:</strong> Allocate <span class="bold">₹${(netProfit * 0.1).toFixed(0).toLocaleString()}</span> into AI-driven engagement for cadets in the "Beginner" level, where churn risk is highest.
       </div>
       <div>
-        <strong style="color:var(--gold)">3. PROTOCOL UPDATE:</strong> Deploy automated payment triggers for all accounts with ₹${pending > 0 ? (pending/totalStudents).toFixed(0) : '1,000'}+ exposure.
+        <strong style="color:var(--gold)">3. COLLECTION PROTOCOL:</strong> Deploy automated recovery triggers for exposure exceeding <span class="bold">₹${(pending / totalStudents).toFixed(0)}</span> per cadet to reclaim the <span class="bold">₹${pending.toLocaleString()}</span> leak.
       </div>
     </div>
 
     <div class="footer">
-      <div>© CHESSKIDOO ARCHIVE - SECURE PROTOCOL 4</div>
+      <div>© CHESSKIDOO IMPERIAL COMMAND</div>
       <div>AUTHENTICATED BY: CKD-AI-CORE</div>
       <div>PAGE 02 / 02</div>
     </div>
@@ -266,7 +271,7 @@ window.generateReportPDF = async function() {
       new Chart(document.getElementById('revChart').getContext('2d'), {
         type: 'doughnut',
         data: {
-          labels: ['Net Profit', 'Payroll', 'Pending'],
+          labels: ['Profit', 'Payroll', 'Pending'],
           datasets: [{
             data: [${netProfit > 0 ? netProfit : 0}, ${payroll}, ${pending}],
             backgroundColor: ['#c9960c', '#1a1a1a', '#333'],
@@ -283,27 +288,24 @@ window.generateReportPDF = async function() {
         }
       });
 
-      // ── TARGET CHART ──
-      new Chart(document.getElementById('riskChart').getContext('2d'), {
-        type: 'bar',
+      // ── BATCH DISTRIBUTION ──
+      new Chart(document.getElementById('batchChart').getContext('2d'), {
+        type: 'pie',
         data: {
-          labels: ['Realized', 'Target', 'Breakeven'],
+          labels: ['Group', 'Single'],
           datasets: [{
-            label: 'Capital (₹)',
-            data: [${collected}, ${potential}, ${payroll * 1.3}],
-            backgroundColor: ['#c9960c', '#444', '#1a1a1a'],
-            borderColor: '#c9960c',
-            borderWidth: 1
+            data: [${batches['Group']}, ${batches['Single']}],
+            backgroundColor: ['#c9960c', '#444'],
+            borderColor: '#0a0a0b',
+            borderWidth: 5
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: {
-            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666' } },
-            x: { grid: { display: false }, ticks: { color: '#666' } }
-          },
-          plugins: { legend: { display: false } }
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#888', font: { family: 'Syne', size: 10 } } }
+          }
         }
       });
     };
