@@ -4037,19 +4037,14 @@ function setAISuggestion(q) {
 
     // 2. HTML Template Construction
     const reportHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Mono:wght@400;500&family=Syne:wght@500;700&display=swap" rel="stylesheet"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #fff; font-family: 'Cormorant Garamond', serif; color: #1a0e00; line-height: 1.4; padding: 0; }
-    .page { width: 800px; padding: 60px; position: relative; min-height: 1100px; background: #fff; border-bottom: 1px solid #eee; }
+    .report-wrap { width: 800px; background: #fff; color: #1a0e00; line-height: 1.4; }
+    .page { width: 800px; padding: 60px; position: relative; min-height: 1120px; background: #fff; border-bottom: 2px dashed #eee; page-break-after: always; }
     
     /* Header */
     .header { background: linear-gradient(135deg, #c9960c 0%, #daa520 100%); padding: 40px; text-align: center; margin-bottom: 40px; color: #1a0e00; position: relative; }
     .header h1 { font-family: 'Syne', sans-serif; font-size: 32px; letter-spacing: 4px; margin-bottom: 5px; }
-    .header h2 { font-size: 14px; letter-spacing: 2px; font-weight: 400; opacity: 0.9; }
+    .header h2 { font-family: 'Cormorant Garamond', serif; font-size: 14px; letter-spacing: 2px; font-weight: 400; opacity: 0.9; }
     .report-date { position: absolute; bottom: 15px; right: 20px; font-family: 'DM Mono', monospace; font-size: 11px; }
 
     /* Typography */
@@ -4098,216 +4093,225 @@ function setAISuggestion(q) {
     /* Footer */
     .footer { text-align: center; color: #b0a090; font-size: 11px; margin-top: 40px; border-top: 1px solid #f0e8d0; padding-top: 20px; }
   </style>
-</head>
-<body>
-  <div class="page">
-    <div class="header">
-      <h1>CHESSKIDOO ACADEMY</h1>
-      <h2>PREMIUM FINANCIAL PERFORMANCE REPORT</h2>
-      <div class="report-date">DATE: ${dateStr}</div>
-    </div>
+  <div class="report-wrap">
+    <div class="page">
+      <div class="header">
+        <h1>CHESSKIDOO ACADEMY</h1>
+        <h2>PREMIUM FINANCIAL PERFORMANCE REPORT</h2>
+        <div class="report-date">DATE: ${dateStr}</div>
+      </div>
 
-    <h3>Executive Summary</h3>
-    <div class="summary-grid">
-      <div class="metric-card">
-        <div class="metric-label">Total Cadets</div>
-        <div class="metric-value">${totalStudents}</div>
-        <div class="metric-sub">Academy Strength</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Collected</div>
-        <div class="metric-value">₹${collected.toLocaleString()}</div>
-        <div class="metric-sub">Revenue Received</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Total Potential</div>
-        <div class="metric-value">₹${potential.toLocaleString()}</div>
-        <div class="metric-sub">Full Capacity</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Net Profit</div>
-        <div class="metric-value">₹${netProfit.toLocaleString()}</div>
-        <div class="metric-sub">Cash Surplus</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Active Coaches</div>
-        <div class="metric-value">${allCoaches.length}</div>
-        <div class="metric-sub">Staff Strength</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Pending</div>
-        <div class="metric-value">₹${pending.toLocaleString()}</div>
-        <div class="metric-sub">Outstanding Fees</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Coach Expenses</div>
-        <div class="metric-value">₹${payroll.toLocaleString()}</div>
-        <div class="metric-sub">Monthly Payroll</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Collection Rate</div>
-        <div class="metric-value">${collectionRate}%</div>
-        <div class="metric-sub">Academy Efficiency</div>
-      </div>
-    </div>
-
-    <div class="insights">
-      <div class="insight-card">
-        <div class="insight-title">Performance Highlights</div>
-        <div class="insight-item">
-          <span class="insight-label">Top Performer: ${topCoach ? topCoach.name : 'N/A'}</span>
-          <span class="insight-desc">₹${topCoach ? topCoach.profit.toLocaleString() : 0} net profit with ${topCoach ? topCoach.students : 0} students — ROI: ${topCoach ? topCoach.roi : 0}%</span>
+      <h3>Executive Summary</h3>
+      <div class="summary-grid">
+        <div class="metric-card">
+          <div class="metric-label">Total Cadets</div>
+          <div class="metric-value">${totalStudents}</div>
+          <div class="metric-sub">Academy Strength</div>
         </div>
-        ${lossCoach && lossCoach.profit < 0 ? `
-        <div class="insight-item">
-          <span class="insight-label loss">Attention Required: ${lossCoach.name}</span>
-          <span class="insight-desc">₹${Math.abs(lossCoach.profit).toLocaleString()} net loss — review batch ROI and pending fees.</span>
-        </div>` : ''}
-      </div>
-      <div class="insight-card">
-        <div class="insight-title">Collection Insights</div>
-        <div class="insight-item">
-          <span class="insight-label">Collection Rate: ${collectionRate}%</span>
-          <span class="insight-desc">${collectionRate >= 90 ? 'Excellent collection health.' : 'Proactive reminders recommended.'}</span>
+        <div class="metric-card">
+          <div class="metric-label">Collected</div>
+          <div class="metric-value">₹${collected.toLocaleString()}</div>
+          <div class="metric-sub">Revenue Received</div>
         </div>
-        <div class="insight-item">
-          <span class="insight-label">Profit Margin: ${profitMargin}%</span>
-          <span class="insight-desc">Net profit vs collected revenue efficiency.</span>
+        <div class="metric-card">
+          <div class="metric-label">Total Potential</div>
+          <div class="metric-value">₹${potential.toLocaleString()}</div>
+          <div class="metric-sub">Full Capacity</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Net Profit</div>
+          <div class="metric-value">₹${netProfit.toLocaleString()}</div>
+          <div class="metric-sub">Cash Surplus</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Active Coaches</div>
+          <div class="metric-value">${allCoaches.length}</div>
+          <div class="metric-sub">Staff Strength</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Pending</div>
+          <div class="metric-value">₹${pending.toLocaleString()}</div>
+          <div class="metric-sub">Outstanding Fees</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Coach Expenses</div>
+          <div class="metric-value">₹${payroll.toLocaleString()}</div>
+          <div class="metric-sub">Monthly Payroll</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Collection Rate</div>
+          <div class="metric-value">${collectionRate}%</div>
+          <div class="metric-sub">Academy Efficiency</div>
         </div>
       </div>
-    </div>
 
-    <div class="footer">
-      <p>Generated by Chesskidoo Admin System | Confidential & Proprietary</p>
-      <p>Page 1 of 2</p>
-    </div>
-  </div>
-
-  <div class="page">
-    <h3>Coach Financial Breakdown</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Coach Name</th>
-          <th class="text-right">Students</th>
-          <th class="text-right">Collected</th>
-          <th class="text-right">Salary Cost</th>
-          <th class="text-right">Net Profit</th>
-          <th class="text-right">ROI</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${coachMetrics.map(m => `
-        <tr>
-          <td><strong>${m.name}</strong></td>
-          <td class="text-right">${m.students}</td>
-          <td class="text-right mono">₹${m.revenue.toLocaleString()}</td>
-          <td class="text-right mono">₹${m.cost.toLocaleString()}</td>
-          <td class="text-right mono ${m.profit < 0 ? 'loss' : 'gain'}">₹${m.profit.toLocaleString()}</td>
-          <td class="text-right mono ${m.roi < 0 ? 'loss' : 'gain'}">${m.roi}%</td>
-        </tr>`).join('')}
-        <tr class="row-total">
-          <td>ACADEMY TOTAL</td>
-          <td class="text-right">${totalStudents}</td>
-          <td class="text-right mono">₹${collected.toLocaleString()}</td>
-          <td class="text-right mono">₹${payroll.toLocaleString()}</td>
-          <td class="text-right mono">₹${netProfit.toLocaleString()}</td>
-          <td class="text-right mono">${payroll > 0 ? ((netProfit / payroll) * 100).toFixed(0) : 0}%</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:40px; margin-bottom:40px;">
-      <div>
-        <h3>Top Pending Fees</h3>
-        <table>
-          <thead>
-            <tr><th>Student</th><th class="text-right">Amount</th></tr>
-          </thead>
-          <tbody>
-            ${topPending.length > 0 ? topPending.map(s => `
-              <tr>
-                <td>${getStudentName(s)}</td>
-                <td class="text-right mono loss">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-              </tr>`).join('') : '<tr><td colspan="2">No pending fees!</td></tr>'}
-          </tbody>
-        </table>
-      </div>
-      <div>
-        <h3>Financial Waterfall</h3>
-        <div class="waterfall">
-          <div class="wf-row">
-            <div class="wf-label">Gross Potential</div>
-            <div class="wf-val gain">₹${potential.toLocaleString()}</div>
+      <div class="insights">
+        <div class="insight-card">
+          <div class="insight-title">Performance Highlights</div>
+          <div class="insight-item">
+            <span class="insight-label">Top Performer: ${topCoach ? topCoach.name : 'N/A'}</span>
+            <span class="insight-desc">₹${topCoach ? topCoach.profit.toLocaleString() : 0} net profit with ${topCoach ? topCoach.students : 0} students — ROI: ${topCoach ? topCoach.roi : 0}%</span>
           </div>
-          <div class="wf-row">
-            <div class="wf-label">Collected</div>
-            <div class="wf-val gain">₹${collected.toLocaleString()}</div>
+          ${lossCoach && lossCoach.profit < 0 ? `
+          <div class="insight-item">
+            <span class="insight-label loss">Attention Required: ${lossCoach.name}</span>
+            <span class="insight-desc">₹${Math.abs(lossCoach.profit).toLocaleString()} net loss — review batch ROI and pending fees.</span>
+          </div>` : ''}
+        </div>
+        <div class="insight-card">
+          <div class="insight-title">Collection Insights</div>
+          <div class="insight-item">
+            <span class="insight-label">Collection Rate: ${collectionRate}%</span>
+            <span class="insight-desc">${collectionRate >= 90 ? 'Excellent collection health.' : 'Proactive reminders recommended.'}</span>
           </div>
-          <div class="wf-row">
-            <div class="wf-label">Pending Fees</div>
-            <div class="wf-val loss">-₹${pending.toLocaleString()}</div>
-          </div>
-          <div class="wf-row">
-            <div class="wf-label">Coach Payroll</div>
-            <div class="wf-val loss">-₹${payroll.toLocaleString()}</div>
-          </div>
-          <div class="wf-row" style="border-top:1px solid #f0e8d0; padding-top:10px;">
-            <div class="wf-label">Net Profit</div>
-            <div class="wf-val gain" style="font-size:20px;">₹${netProfit.toLocaleString()}</div>
+          <div class="insight-item">
+            <span class="insight-label">Profit Margin: ${profitMargin}%</span>
+            <span class="insight-desc">Net profit vs collected revenue efficiency.</span>
           </div>
         </div>
       </div>
-    </div>
 
-    <h3>Strategic Recommendations</h3>
-    <div class="rec-grid">
-      <div class="rec-card">
-        <div class="rec-num">01</div>
-        <div class="rec-tag">IMMEDIATE</div>
-        <div class="rec-text">Chase <strong>₹${pending.toLocaleString()}</strong> in pending fees — send payment reminders via WhatsApp to high-priority students listed above.</div>
-      </div>
-      <div class="rec-card">
-        <div class="rec-num">02</div>
-        <div class="rec-tag">SHORT-TERM</div>
-        <div class="rec-text">Review batch structures for coaches with ROI below 100% (like <strong>${lossCoach ? lossCoach.name : 'N/A'}</strong>); consider merging sessions to optimize margins.</div>
-      </div>
-      <div class="rec-card">
-        <div class="rec-num">03</div>
-        <div class="rec-tag">MEDIUM-TERM</div>
-        <div class="rec-text">Scale slots for high-ROI coaches like <strong>${topCoach ? topCoach.name : 'Top Performers'}</strong> who demonstrate strong student retention and profitability.</div>
-      </div>
-      <div class="rec-card">
-        <div class="rec-num">04</div>
-        <div class="rec-tag">STRUCTURAL</div>
-        <div class="rec-text">Standardize monthly fee bands across student levels to reduce revenue variance and improve predictability of the Gross Potential.</div>
+      <div class="footer">
+        <p>Generated by Chesskidoo Admin System | Confidential & Proprietary</p>
+        <p>Page 1 of 2</p>
       </div>
     </div>
 
-    <div class="footer">
-      <p>CHESSKIDOO ACADEMY — Premium Chess Education</p>
-      <p>Page 2 of 2</p>
+    <div class="page">
+      <h3>Coach Financial Breakdown</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Coach Name</th>
+            <th class="text-right">Students</th>
+            <th class="text-right">Collected</th>
+            <th class="text-right">Salary Cost</th>
+            <th class="text-right">Net Profit</th>
+            <th class="text-right">ROI</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${coachMetrics.map(m => `
+          <tr>
+            <td><strong>${m.name}</strong></td>
+            <td class="text-right">${m.students}</td>
+            <td class="text-right mono">₹${m.revenue.toLocaleString()}</td>
+            <td class="text-right mono">₹${m.cost.toLocaleString()}</td>
+            <td class="text-right mono ${m.profit < 0 ? 'loss' : 'gain'}">₹${m.profit.toLocaleString()}</td>
+            <td class="text-right mono ${m.roi < 0 ? 'loss' : 'gain'}">${m.roi}%</td>
+          </tr>`).join('')}
+          <tr class="row-total">
+            <td>ACADEMY TOTAL</td>
+            <td class="text-right">${totalStudents}</td>
+            <td class="text-right mono">₹${collected.toLocaleString()}</td>
+            <td class="text-right mono">₹${payroll.toLocaleString()}</td>
+            <td class="text-right mono">₹${netProfit.toLocaleString()}</td>
+            <td class="text-right mono">${payroll > 0 ? ((netProfit / payroll) * 100).toFixed(0) : 0}%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:40px; margin-bottom:40px;">
+        <div>
+          <h3>Top Pending Fees</h3>
+          <table>
+            <thead>
+              <tr><th>Student</th><th class="text-right">Amount</th></tr>
+            </thead>
+            <tbody>
+              ${topPending.length > 0 ? topPending.map(s => `
+                <tr>
+                  <td>${getStudentName(s)}</td>
+                  <td class="text-right mono loss">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+                </tr>`).join('') : '<tr><td colspan="2">No pending fees!</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>Financial Waterfall</h3>
+          <div class="waterfall">
+            <div class="wf-row">
+              <div class="wf-label">Gross Potential</div>
+              <div class="wf-val gain">₹${potential.toLocaleString()}</div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-label">Collected</div>
+              <div class="wf-val gain">₹${collected.toLocaleString()}</div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-label">Pending Fees</div>
+              <div class="wf-val loss">-₹${pending.toLocaleString()}</div>
+            </div>
+            <div class="wf-row">
+              <div class="wf-label">Coach Payroll</div>
+              <div class="wf-val loss">-₹${payroll.toLocaleString()}</div>
+            </div>
+            <div class="wf-row" style="border-top:1px solid #f0e8d0; padding-top:10px;">
+              <div class="wf-label">Net Profit</div>
+              <div class="wf-val gain" style="font-size:20px;">₹${netProfit.toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Strategic Recommendations</h3>
+      <div class="rec-grid">
+        <div class="rec-card">
+          <div class="rec-num">01</div>
+          <div class="rec-tag">IMMEDIATE</div>
+          <div class="rec-text">Chase <strong>₹${pending.toLocaleString()}</strong> in pending fees — send payment reminders via WhatsApp to high-priority students listed above.</div>
+        </div>
+        <div class="rec-card">
+          <div class="rec-num">02</div>
+          <div class="rec-tag">SHORT-TERM</div>
+          <div class="rec-text">Review batch structures for coaches with ROI below 100% (like <strong>${lossCoach ? lossCoach.name : 'N/A'}</strong>); consider merging sessions to optimize margins.</div>
+        </div>
+        <div class="rec-card">
+          <div class="rec-num">03</div>
+          <div class="rec-tag">MEDIUM-TERM</div>
+          <div class="rec-text">Scale slots for high-ROI coaches like <strong>${topCoach ? topCoach.name : 'Top Performers'}</strong> who demonstrate strong student retention and profitability.</div>
+        </div>
+        <div class="rec-card">
+          <div class="rec-num">04</div>
+          <div class="rec-tag">STRUCTURAL</div>
+          <div class="rec-text">Standardize monthly fee bands across student levels to reduce revenue variance and improve predictability of the Gross Potential.</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>CHESSKIDOO ACADEMY — Premium Chess Education</p>
+        <p>Page 2 of 2</p>
+      </div>
     </div>
-  </div>
-</body>
-</html>`;
+  </div>`;
 
     // 3. Render and Save
     const tempDiv = document.createElement('div');
     tempDiv.style.position = 'fixed';
+    tempDiv.style.top = '0';
     tempDiv.style.left = '-10000px';
+    tempDiv.style.width = '800px';
+    tempDiv.style.background = '#fff';
     tempDiv.innerHTML = reportHTML;
     document.body.appendChild(tempDiv);
 
     const opt = {
       margin: [0, 0, 0, 0],
       filename: `Chesskidoo_Executive_Report_${now.toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 1.0 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true, width: 800 },
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        letterRendering: true, 
+        width: 800,
+        logging: false
+      },
       jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' }
     };
 
     try {
+      // Small delay to ensure Google Fonts are rendered
+      await new Promise(resolve => setTimeout(resolve, 800));
       await html2pdf().set(opt).from(tempDiv).save();
       toast('Premium Report Generated! ✨', 'success');
     } catch (err) {
@@ -4316,6 +4320,7 @@ function setAISuggestion(q) {
     } finally {
       document.body.removeChild(tempDiv);
     }
+
   }
 
   function exportAcademyData() {
