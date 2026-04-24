@@ -346,11 +346,27 @@
 
     <!-- Payments -->
     <div id="page-bills" class="page admin-only">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Invoice</th><th>Student</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead>
-          <tbody id="bill-body"><tr><td colspan="5"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
-        </table>
+      <div class="tabs-nav" style="margin-bottom:20px;">
+        <button class="tab-link active" onclick="setBillTab('students', this)">Student Fees</button>
+        <button class="tab-link" onclick="setBillTab('coaches', this)">Coach Salaries</button>
+      </div>
+
+      <div id="bills-tab-students" class="bill-tab-content" style="display:block;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Invoice</th><th>Student</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="bill-body"><tr><td colspan="5"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="bills-tab-coaches" class="bill-tab-content" style="display:none;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Emp ID</th><th>Coach</th><th>Role</th><th>Salary</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="coach-bill-body"><tr><td colspan="6"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 

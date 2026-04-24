@@ -2671,8 +2671,68 @@ function setPage(p) {
       $('p-history-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--danger)">Error loading history.</td></tr>';
     }
   }
+  const coachPaymentStatus = JSON.parse(localStorage.getItem('coachPaymentStatus') || '{}');
+  
+  function getCoachPaymentStatus(c) {
+    return coachPaymentStatus[c.id] || 'Pending';
+  }
+
+  window.markCoachPaid = function(id) {
+    coachPaymentStatus[id] = 'Paid';
+    localStorage.setItem('coachPaymentStatus', JSON.stringify(coachPaymentStatus));
+    toast('Coach salary marked as paid', 'success');
+    renderCoachBills();
+  };
+
+  window.markCoachUnpaid = function(id) {
+    coachPaymentStatus[id] = 'Pending';
+    localStorage.setItem('coachPaymentStatus', JSON.stringify(coachPaymentStatus));
+    toast('Coach salary marked as pending', 'warning');
+    renderCoachBills();
+  };
+
+  window.setBillTab = function(tabName, btn) {
+    document.querySelectorAll('#page-bills .tab-link').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    $('bills-tab-students').style.display = tabName === 'students' ? 'block' : 'none';
+    $('bills-tab-coaches').style.display = tabName === 'coaches' ? 'block' : 'none';
+  };
+
+  function renderCoachBills() {
+    const tbody = $('coach-bill-body');
+    if (!tbody) return;
+    
+    if (!allCoaches || allCoaches.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No coaches found</div></td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = allCoaches.map(c => {
+      const status = getCoachPaymentStatus(c);
+      const empId = 'EMP-' + (c.id ? c.id.toString().slice(-6) : '000000');
+      const salary = getCoachSalary(c) || 0;
+      
+      return `<tr>
+        <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">${empId}</span></td>
+        <td>
+          <div style="font-weight:600;color:var(--ivory)">${escapeHtml(getCoachName(c))}</div>
+        </td>
+        <td><div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(getCoachSpecialty(c))}</div></td>
+        <td style="font-weight:600;color:var(--gold)">₹${salary.toLocaleString()}</td>
+        <td><span class="badge ${status === 'Paid' ? 'badge-success' : 'badge-warning'}" style="font-size:10px;padding:4px 8px">${status}</span></td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            ${status === 'Pending' ? 
+              `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">✅ Mark Paid</button>` : 
+              `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">❌ Mark Unpaid</button>`}
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
 
   function renderBills() {
+    renderCoachBills();
     const tbody = $('bill-body');
     if (!tbody) return;
     
@@ -4396,4 +4456,7 @@ function setAISuggestion(q) {
   window.openContactModal = openContactModal;
   window.sendMsg = sendMsg;
   window.sendFeedback = sendFeedback;
+  window.setBillTab = setBillTab;
+  window.markCoachPaid = markCoachPaid;
+  window.markCoachUnpaid = markCoachUnpaid;
 })();
