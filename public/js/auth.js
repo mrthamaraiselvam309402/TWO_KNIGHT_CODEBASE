@@ -75,11 +75,17 @@ window.doLogin = async function() {
 window.doLogout = function() {
     localStorage.removeItem('chesskidoo_auth');
     role = null;
-    currentStudent = null;
+    if (window.role) window.role = null;
+    
+    document.body.classList.remove('admin-mode', 'parent-mode', 'master-mode');
     document.body.classList.add('login-mode');
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('admin-layout').style.display = 'none';
-    document.getElementById('parent-portal').style.display = 'none';
+    
+    const loginScreen = document.getElementById('login-screen');
+    if (loginScreen) loginScreen.style.display = 'flex';
+    
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.remove('active');
+    
     toast('Logged out safely.', 'info');
-    location.reload(); // Hard refresh to clear state
+    setTimeout(() => location.reload(), 500); // Reload to clear all state
 };

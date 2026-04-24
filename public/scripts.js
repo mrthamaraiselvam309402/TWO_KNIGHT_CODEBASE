@@ -3941,6 +3941,24 @@ function setAISuggestion(q) {
   window.API_BASE = API_BASE;
   window.role = role;
   window.currentStudent = currentStudent;
+  
+  // Data Arrays
+  window.allStudents = allStudents;
+  window.allCoaches = allCoaches;
+  window.allPayments = allPayments;
+  window.allMessages = allMessages;
+  window.allAttendance = allAttendance;
+  window.allRatingHistory = allRatingHistory;
+  window.allResources = allResources;
+
+  // Helper Functions
+  window.getStudentName = getStudentName;
+  window.getStudentMonthlyFee = getStudentMonthlyFee;
+  window.getStudentPaymentStatus = getStudentPaymentStatus;
+  window.getStudentLevel = getStudentLevel;
+  window.getCoachName = getCoachName;
+  window.getCoachSalary = getCoachSalary;
+  window.getCoachSpecialty = getCoachSpecialty;
   window.toggleTheme = toggleTheme;
   window.toggleSidebar = toggleSidebar;
   window.toggleEye = toggleEye;
