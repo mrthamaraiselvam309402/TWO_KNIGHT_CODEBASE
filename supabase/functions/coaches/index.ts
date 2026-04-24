@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
         hourly_rate: body.hourly_rate || body.salary || 0,
         availability: body.availability || '',
         address: body.address || '',
+        photo_url: body.photo_url || '',
         role: 'coach',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -155,6 +156,7 @@ Deno.serve(async (req) => {
       }
       if (body.availability !== undefined) updateData.availability = body.availability;
       if (body.address !== undefined) updateData.address = body.address;
+      if (body.photo_url !== undefined) updateData.photo_url = body.photo_url;
       
       updateData.updated_at = new Date().toISOString();
       

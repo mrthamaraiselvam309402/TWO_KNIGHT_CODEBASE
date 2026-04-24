@@ -5,8 +5,6 @@
 
 (function() {
   'use strict';
-  
-  console.log('Chesskidoo Scripts Loading...');
 
   // ═══════════════════════════════════════════════════════════════
   // CONFIG & CONSTANTS
@@ -401,12 +399,7 @@
       'apikey': SUPABASE_ANON_KEY,
       ...options.headers
     };
-    console.log('API Call:', options.method || 'GET', url);
     const response = await fetch(url, { ...options, headers });
-    const responseBody = await response.clone().json().catch(() => null);
-    if (!response.ok) {
-      console.warn(`API Error: ${options.method || 'GET'} ${url} -> ${response.status} ${response.statusText}`, responseBody);
-    }
     return response;
   }
 
@@ -434,21 +427,6 @@
     setTimeout(() => el.remove(), 3800);
   }
   
-  function logAudit(tableName, recordId, action, oldValue, newValue) {
-    const log = {
-      table: tableName,
-      record_id: recordId,
-      action: action,
-      old_value: oldValue,
-      new_value: newValue,
-      timestamp: new Date().toISOString(),
-      admin_id: role
-    };
-    console.log('AUDIT LOG:', log);
-    const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
-    auditLogs.push(log);
-    localStorage.setItem('audit_logs', JSON.stringify(auditLogs.slice(-100)));
-  }
 
   function setLoading(key, loading) {
     loadingStates[key] = loading;
@@ -463,7 +441,6 @@
   document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModals(); }));
   
   window.executeDelete = async function() {
-    console.log('Executing Delete...');
     const id = $('delete-item-id').value;
     const type = $('delete-type').value;
     const isHardDelete = $('hard-delete').checked;
@@ -515,11 +492,6 @@
     }
   };
 
-  function toggleAllStud(ctrl) {
-    document.querySelectorAll('.stud-check').forEach(ck => {
-      if (!ck.disabled) ck.checked = ctrl.checked;
-    });
-  }
 
   function previewFile(inp, previewId) {
     const file = inp.files[0];
@@ -638,9 +610,6 @@
     if (!e) { toast('Event not found', 'error'); return; }
     
     if (!currentStudent) { toast('Please login as a parent first', 'error'); return; }
-    
-    console.log('Registering for event:', eventId, 'student:', currentStudent.id);
-    
     if (!confirm('Register ' + getStudentName(currentStudent) + ' for "' + e.title + '" on ' + (e.date ? new Date(e.date).toLocaleDateString() : 'TBD') + '?')) return;
     
     // Optimistic update - add student to registered list locally first
@@ -679,9 +648,8 @@
           student_id: currentStudent.id,
           student_name: getStudentName(currentStudent)
         })
-      }).catch(err => console.log('Backend sync failed:', err));
+      }).catch(() => {});
     } catch (err) {
-      console.log('Backend error:', err);
     }
     
     toast(`Successfully registered for "${e.title}"!`, 'success');
@@ -792,20 +760,6 @@
 
         setLoading('data', false);
       } catch (err) {
-        console.error('Load error:', err);
-        console.error('Error stack:', err.stack);
-        // Try to get more details from failed requests
-        console.error('Trying direct API call...');
-        try {
-          const test = await fetch('/api/students');
-          console.error('Direct /api/students status:', test.status);
-          const data = await test.json();
-          console.error('Direct API returned:', data.length, 'students');
-        } catch(e2) {
-          console.error('Direct API also failed');
-        }
-        
-
         toast('Failed to load data - please refresh', 'error');
         setLoading('data', false);
       }
@@ -836,7 +790,6 @@
     if (role !== 'admin' && role !== 'master') return;
     
     // Initialize counts AFTER data is loaded - will be set in loadAllData callback
-    console.log('Real-time notifications initialized');
   }
   
   function setupNotificationCounts() {
@@ -845,7 +798,6 @@
     lastStudCount = allStudents ? allStudents.length : 0;
     const dueStudents = allStudents ? allStudents.filter(s => getStudentPaymentStatus(s) === 'Due') : [];
     lastDueCount = dueStudents.length;
-    console.log('Notification counts set - Students:', lastStudCount, 'Messages:', lastMsgCount);
   }
   
   function startNotificationPolling() {
@@ -951,8 +903,6 @@
         console.error('Notification polling error:', e);
       }
     }, 15000);
-    
-    console.log('Real-time notifications polling started (15s interval)');
   }
 
 
@@ -1191,11 +1141,8 @@ function setPage(p) {
     else setPage('dash');
 
     // Load data in background - force refresh to get latest
-    console.log('finishLogin called, loading data...');
     dataCache = { timestamp: 0 }; // Reset cache to ensure fresh load
     loadAllData(true).then(() => {
-      console.log('Data load complete, students:', allStudents.length, 'coaches:', allCoaches.length);
-      
       // Set up notification counts after data loads
       setupNotificationCounts();
       
@@ -1305,7 +1252,7 @@ function setPage(p) {
     apiCall('/api/audit', {
       method: 'POST',
       body: JSON.stringify(data)
-    }).catch(e => console.log('Audit log saved locally only'));
+    }).catch(() => {});
   }
 
   function openProfile() {
@@ -1564,13 +1511,8 @@ function setPage(p) {
   }
 
   function renderDash() {
-    console.log('renderDash called, allStudents:', allStudents.length, 'allCoaches:', allCoaches.length);
-    
     // Skip if data hasn't loaded yet - this prevents the first call with empty data from setting UI to 0
     if (allStudents.length === 0 && allCoaches.length === 0) return;
-    
-     console.log('renderDash executing with data');
-     
      // Basic stats
     if ($('s-total')) $('s-total').textContent = allStudents.length;
     if ($('s-elo')) $('s-elo').textContent = allStudents.length ? Math.round(allStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / allStudents.length) : 0;
@@ -1618,12 +1560,8 @@ function setPage(p) {
     });
     
     const statusRevenue = paidStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
-    
-    console.log(`Revenue Audit - Transactions: ₹${paidRevenue} | Status-based: ₹${statusRevenue} (${paidStudents.length} students)`);
-
     // If transactions are missing but students are marked paid, use students as source
     if (paidRevenue === 0 && statusRevenue > 0) {
-      console.warn(`Applying revenue fallback from student registry status.`);
       paidRevenue = statusRevenue;
     }
     
@@ -1635,9 +1573,6 @@ function setPage(p) {
     
     // Outstanding Dues
     const dueRevenue = Math.max(0, totalPotential - paidRevenue);
-    
-    console.log(`Financial Pulse - Potential: ₹${totalPotential.toLocaleString()} | Collected: ₹${paidRevenue.toLocaleString()} | Outstanding: ₹${dueRevenue.toLocaleString()}`);
-
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
     if ($('s-due')) $('s-due').textContent = '₹' + dueRevenue.toLocaleString();
     
@@ -1659,8 +1594,6 @@ function setPage(p) {
       if (type === 'Single') singleCount++;
       else groupCount++;
     });
-    
-    console.log(`Session stats - Group: ${groupCount}, Single: ${singleCount}, total: ${allStudents.length}`);
     if ($('s-group')) $('s-group').textContent = groupCount;
     if ($('s-single')) $('s-single').textContent = singleCount;
     
@@ -2456,7 +2389,7 @@ function setPage(p) {
     
     if (!data.title) { toast('Event title is required', 'error'); return; }
     if (!data.event_date) { toast('Event date is required', 'error'); return; }
-    if (data.date && new Date(data.date) < new Date()) { toast('Event date cannot be in the past', 'error'); return; }
+    if (data.event_date && new Date(data.event_date) < new Date()) { toast('Event date cannot be in the past', 'error'); return; }
     
     try {
       let res;
@@ -3020,8 +2953,6 @@ function setPage(p) {
   }
 
 
-  function showReceiptPreview() { openModal('receipt-preview-modal'); }
-  
   function showReceiptPreview() { openModal('receipt-preview-modal'); }
   function printReceipt() { window.print(); }
 
@@ -3701,7 +3632,7 @@ function setAISuggestion(q) {
       if (!response) {
         // Default comprehensive response
         response = `🏫 **Chesskidoo Academy Report**\n`;
-        response += `${temporalContext.getTimeBasedGreeting()}! Here's your academy overview:\n\n`;
+        response += `${TEMPORAL_ENGINE.getTimeBasedGreeting()}! Here's your academy overview:\n\n`;
         
         const stats = results.find(r => r.totalStudents !== undefined);
         if (stats) {
@@ -3743,7 +3674,7 @@ function setAISuggestion(q) {
       if (!validation.allowed) {
         const userMsg = document.createElement('div');
         userMsg.className = 'ai-ws-msg user';
-        userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${query}</div>`;
+        userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
         chatContainer.appendChild(userMsg);
         
         const botMsg = document.createElement('div');
@@ -3758,7 +3689,7 @@ function setAISuggestion(q) {
     // Add user message
     const userMsg = document.createElement('div');
     userMsg.className = 'ai-ws-msg user';
-    userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${query}</div>`;
+    userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
     chatContainer.appendChild(userMsg);
     
     input.value = '';
@@ -3867,7 +3798,7 @@ function setAISuggestion(q) {
     const msg = input.value.trim();
     input.value = '';
     
-    const container = $('login-chat-msgs');
+    const container = $('login-chat-body');
     if (container) {
       container.innerHTML += `<div class="chat-msg user">${escapeHtml(msg)}</div>`;
       container.scrollTop = container.scrollHeight;
@@ -4427,48 +4358,7 @@ function setAISuggestion(q) {
     openModal('notification-modal');
   };
   window.updateNotificationBadge = () => { try { updateNotificationBadge(); } catch(e) {} };
-  window.toggleAllStud = toggleAllStud;
   window.setAIModule = setAIModule;
   window.setAISuggestion = setAISuggestion;
   window.sendAIQuery = sendAIQuery;
-  window.toggleChatbot = toggleChatbot;
-  window.sendChatMessage = sendChatMessage;
-  window.toggleChat = toggleChat;
-  window.toggleLoginChat = toggleLoginChat;
-  window.sendChat = sendChat;
-  window.sendLoginChat = sendLoginChat;
-  window.toggleTheme = toggleTheme;
-  window.closeModals = closeModals;
-  window.openModal = openModal;
-  window.previewFile = previewFile;
-  window.executeDelete = executeDelete;
-  window.generateReportPDF = generateReportPDF;
-  window.exportAcademyData = exportAcademyData;
-  window.exportData = exportData;
-  window.toast = toast;
-  window.$ = $;
-  window.toggleSidebar = toggleSidebar;
-  window.toggleEye = toggleEye;
-  window.setPage = setPage;
-  window.doLogin = doLogin;
-  window.bulkMarkPaid = bulkMarkPaid;
-  window.doLogout = doLogout;
-  window.finishLogin = finishLogin;
-  window.registerForEvent = registerForEvent;
-  window.setChildTab = setChildTab;
-  window.renderChild = renderChild;
-  window.renderChildEvents = renderChildEvents;
-  window.renderChildBilling = renderChildBilling;
-  window.renderChildGrowth = renderChildGrowth;
-  window.renderChildResources = renderChildResources;
-  window.renderChildSkills = renderChildSkills;
-  window.renderChildAchievements = renderChildAchievements;
-  window.openContactModal = openContactModal;
-  window.sendMsg = sendMsg;
-  window.sendFeedback = sendFeedback;
-  window.setAISuggestion = setAISuggestion;
-  window.setAIModule = setAIModule;
-  window.sendAIQuery = sendAIQuery;
-
-  console.log('Chesskidoo Scripts Loaded - doLogin:', typeof window.doLogin, 'toggleEye:', typeof window.toggleEye, 'registerForEvent:', typeof window.registerForEvent);
 })();

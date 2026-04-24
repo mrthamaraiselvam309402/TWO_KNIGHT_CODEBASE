@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Chesskidoo — Premium Chess Academy</title>
+  <meta name="description" content="Chesskidoo Academy — Premium chess coaching management system for students, coaches, and parents."/>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="styles.css?v=2026-04-23-v55"/>
@@ -16,6 +17,7 @@
   <!-- X-Frame-Options must be an HTTP header, not a meta tag — set in vercel.json -->
 
 </head>
+<body>
 
 <!-- Sidebar Overlay -->
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -261,6 +263,7 @@
           <button class="tab-link active" onclick="setChildTab('overview', this)">Overview</button>
           <button class="tab-link" onclick="setChildTab('growth', this)">Growth</button>
           <button class="tab-link" onclick="setChildTab('learning', this)">Resources</button>
+          <button class="tab-link" onclick="setChildTab('events', this)">Events</button>
           <button class="tab-link" onclick="setChildTab('billing', this)">Billing</button>
         </div>
 
@@ -306,6 +309,10 @@
           <div id="resource-grid" class="resource-grid">
             <div class="loading-state"><span class="spinner"></span> Loading Library…</div>
           </div>
+        </div>
+
+        <div id="child-tab-events" class="child-tab-content">
+          <div id="child-events-grid" class="ev-grid"></div>
         </div>
 
         <div id="child-tab-billing" class="child-tab-content">
@@ -579,6 +586,10 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <select id="e-batch-type"><option value="Morning">Morning</option><option value="Evening">Evening</option><option value="Weekend">Weekend</option></select>
       <input type="time" id="e-batch-time" value="17:00">
+    </div>
+    <div class="form-group" style="margin-top:8px">
+      <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Coach Notes</label>
+      <textarea id="e-notes" rows="2" placeholder="Coach notes / observations..." style="margin-top:2px"></textarea>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
