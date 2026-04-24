@@ -534,7 +534,7 @@
     <div class="modal-grid">
       <div class="form-group">
         <label>Full Name</label>
-        <input type="text" id="m-name" placeholder="Enter name">
+        <input type="text" id="m-name" placeholder="Enter cadet name">
       </div>
       <div class="form-group">
         <label>Parent Phone</label>
@@ -542,11 +542,7 @@
       </div>
     </div>
 
-    <div class="modal-grid-3">
-      <div class="form-group">
-        <label>Initial ELO</label>
-        <input type="number" id="m-elo" value="800">
-      </div>
+    <div class="modal-grid">
       <div class="form-group">
         <label>Strategic Level</label>
         <select id="m-level">
@@ -554,31 +550,38 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Assigned Coach</label>
-        <select id="m-coach"><option value="">Loading...</option></select>
+        <label>Initial ELO Rating</label>
+        <input type="number" id="m-elo" value="800">
       </div>
     </div>
 
-    <div class="modal-grid-3">
+    <div class="modal-grid">
       <div class="form-group">
-        <label>Batch Type</label>
+        <label>Assigned Coach</label>
+        <select id="m-coach"><option value="">Loading...</option></select>
+      </div>
+      <div class="form-group">
+        <label>Batch Classification</label>
         <select id="m-batch-type">
           <option value="Morning">Morning</option><option value="Evening">Evening</option><option value="Weekend">Weekend</option>
         </select>
       </div>
+    </div>
+
+    <div class="modal-grid">
       <div class="form-group">
-        <label>Session Time</label>
+        <label>Session Start Time</label>
         <input type="time" id="m-batch-time" value="17:00">
       </div>
       <div class="form-group">
-        <label>Join Date</label>
+        <label>Enlistment Date</label>
         <input type="date" id="m-join">
       </div>
     </div>
 
     <div class="modal-grid">
       <div class="form-group">
-        <label>Monthly Fee (₹)</label>
+        <label>Monthly Tuition (₹)</label>
         <input type="number" id="m-fee" value="5000">
       </div>
       <div class="form-group">
@@ -588,8 +591,8 @@
     </div>
 
     <div style="display:flex;gap:10px;margin-top:20px; border-top: 1px solid var(--border); padding-top: 20px;">
-      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
-      <button class="btn btn-gold" style="flex:1" onclick="saveStudent()">Enroll Cadet</button>
+      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Abort</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveStudent()">Complete Enlistment</button>
     </div>
   </div>
 </div>
@@ -611,11 +614,7 @@
       </div>
     </div>
 
-    <div class="modal-grid-3">
-      <div class="form-group">
-        <label>Current ELO</label>
-        <input type="number" id="e-elo">
-      </div>
+    <div class="modal-grid">
       <div class="form-group">
         <label>Strategic Level</label>
         <select id="e-level">
@@ -623,20 +622,27 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Assigned Coach</label>
-        <select id="e-coach"></select>
+        <label>Current ELO Rating</label>
+        <input type="number" id="e-elo">
       </div>
     </div>
 
-    <div class="modal-grid-3">
+    <div class="modal-grid">
+      <div class="form-group">
+        <label>Assigned Coach</label>
+        <select id="e-coach"></select>
+      </div>
       <div class="form-group">
         <label>Batch Type</label>
         <select id="e-batch-type">
           <option value="Morning">Morning</option><option value="Evening">Evening</option><option value="Weekend">Weekend</option>
         </select>
       </div>
+    </div>
+
+    <div class="modal-grid">
       <div class="form-group">
-        <label>Session Time</label>
+        <label>Session Start Time</label>
         <input type="time" id="e-batch-time">
       </div>
       <div class="form-group">
@@ -645,11 +651,7 @@
       </div>
     </div>
 
-    <div class="modal-grid-3">
-      <div class="form-group">
-        <label>Payment Status</label>
-        <select id="e-status"><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
-      </div>
+    <div class="modal-grid">
       <div class="form-group">
         <label>Monthly Fee (₹)</label>
         <input type="number" id="e-fee">
@@ -660,14 +662,20 @@
       </div>
     </div>
 
-    <div class="form-group" style="margin-bottom: 20px;">
-      <label>Commander's Notes</label>
-      <textarea id="e-notes" rows="2" placeholder="Enter notes..."></textarea>
+    <div class="modal-grid">
+       <div class="form-group">
+        <label>Payment Status</label>
+        <select id="e-status"><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
+      </div>
+      <div class="form-group">
+        <label>Commander's Notes</label>
+        <input type="text" id="e-notes" placeholder="Notes...">
+      </div>
     </div>
 
     <div style="display:flex;gap:10px;margin-top:20px; border-top: 1px solid var(--border); padding-top: 20px;">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Discard</button>
-      <button class="btn btn-gold" style="flex:1" onclick="updateStudent()">Save Updates</button>
+      <button class="btn btn-gold" style="flex:1" onclick="updateStudent()">Update Records</button>
     </div>
   </div>
 </div>
@@ -1012,7 +1020,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-   <script src="scripts.js?v=2026-04-23-v72"></script>
+   <script src="scripts.js?v=2026-04-23-v73"></script>
    <script src="js/reporting.js?v=v1"></script>
    <script src="js/ai-assistant.js?v=v1"></script>
    <script src="js/auth.js?v=v1"></script>
