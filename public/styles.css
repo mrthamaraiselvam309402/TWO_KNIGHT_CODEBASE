@@ -335,7 +335,7 @@ body.login-mode .sidebar-overlay {
 
 /* ── MENU TOGGLE ── */
 .menu-toggle {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   background: transparent;
@@ -347,6 +347,10 @@ body.login-mode .sidebar-overlay {
   border-radius: 6px;
   transition: 0.2s ease;
 }
+
+@media (max-width: 1024px) {
+  .menu-toggle { display: flex; }
+}
 .menu-toggle:hover { background: var(--gold-mist); color: var(--gold2); }
 
 .sidebar-overlay {
@@ -354,14 +358,11 @@ body.login-mode .sidebar-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
-  z-index: 95;
-  backdrop-filter: blur(3px);
-  opacity: 0;
-  transition: opacity 0.3s;
+  backdrop-filter: blur(4px);
+  z-index: 9998;
 }
-.sidebar-overlay.active { display: block; opacity: 1; }
+.sidebar-overlay.active { display: block; }
 
-/* ── TOP PROFILE ── */
 .top-profile {
   display: flex;
   align-items: center;
@@ -2383,3 +2384,14 @@ body[data-theme="light"] .status-unpaid { background: rgba(255, 77, 79, 0.1); co
   .modal-grid, .modal-grid-3 { grid-template-columns: 1fr !important; }
 }
 .modal-box { width: 600px !important; max-width: 95vw !important; }
+
+/* Premium Responsive Overhaul v74 */
+@media (max-width: 768px) {
+  .modal-box { width: 95vw !important; padding: 20px !important; border-radius: 16px 16px 0 0 !important; position: fixed !important; bottom: 0 !important; left: 50% !important; transform: translateX(-50%) !important; max-height: 85vh !important; }
+  input, select, textarea { font-size: 16px !important; padding: 14px !important; } /* Prevents iOS zoom */
+  .content { padding: 16px !important; }
+  .stat-grid { gap: 12px !important; }
+  .top-bar { padding: 10px 16px !important; }
+  .p-title { font-size: 18px !important; }
+  .table-wrap { -webkit-overflow-scrolling: touch; border-radius: 8px; box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.5); }
+}

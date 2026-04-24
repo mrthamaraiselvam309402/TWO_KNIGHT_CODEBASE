@@ -976,6 +976,14 @@ function setPage(p) {
   if (navEl) navEl.classList.add('active');
   if ($('p-title')) $('p-title').textContent = PAGE_TITLES[p] || '';
 
+  // Mobile auto-close sidebar
+  if (window.innerWidth <= 768) {
+    const sidebar = $('sidebar');
+    const overlay = $('sidebar-overlay');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('active');
+  }
+
   const btnArea = $('top-btn-area');
   if (btnArea) {
     btnArea.innerHTML = '';
