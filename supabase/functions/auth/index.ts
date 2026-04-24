@@ -48,48 +48,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    const masterUser = Deno.env.get('MASTER_USERNAME');
-    const masterPass = Deno.env.get('MASTER_PASSWORD');
-    const adminUser = Deno.env.get('ADMIN_USERNAME');
-    const adminPass = Deno.env.get('ADMIN_PASSWORD');
-
-    if (!masterUser || !masterPass || !adminUser || !adminPass) {
-      console.error('Auth credentials not configured');
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-      });
-    }
-
-    // Check master credentials
-    if (username === masterUser && password === masterPass) {
-      return new Response(JSON.stringify({
-        success: true,
-        token: 'master-token-' + Date.now(),
-        role: 'master'
-      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-    }
-
-    // Check admin credentials
-    if (username === adminUser && password === adminPass) {
-      return new Response(JSON.stringify({
-        success: true,
-        token: 'admin-token-' + Date.now(),
-        role: 'admin'
-      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-    }
-
-    // 3. Check Supabase Auth (Built-in users from Dashboard)
+    // 1. Check Supabase Auth (Built-in users from Dashboard)
+    // This is the secure way to handle Admin/Master access
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: username,
       password: password,
     });
 
     if (!authError && authData.user) {
+      // If user has metadata for role, use it; otherwise default to admin
+      const userRole = authData.user.user_metadata?.role || 'admin';
+      
       return new Response(JSON.stringify({
         success: true,
-        token: authData.session?.access_token || 'dash-token-' + Date.now(),
-        role: 'admin',
+        token: authData.session?.access_token || 'session-' + Date.now(),
+        role: userRole,
         user: authData.user.email
       }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
