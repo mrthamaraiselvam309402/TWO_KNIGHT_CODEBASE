@@ -540,9 +540,9 @@
       if (match) return parseInt(match[1]);
     }
     
-    // Default fallback based on session type if notes also missing
-    const type = getStudentBatchType(s);
-    return type === 'Single' ? 2500 : 1200;
+    // Final fallback: if absolutely no fee data found, return 0
+    // (This prevents the 1200 fallback bug from showing stale data)
+    return 0;
   }
   function getStudentPaymentStatus(s) { 
     if (!s) return 'Due';
