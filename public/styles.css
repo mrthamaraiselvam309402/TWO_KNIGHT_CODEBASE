@@ -2375,3 +2375,11 @@ body[data-theme="light"] .chat-input-row {
 body[data-theme="light"] .status-paid { background: rgba(82, 196, 26, 0.1); color: #2e7d32; }
 body[data-theme="light"] .status-pending { background: rgba(232, 168, 48, 0.1); color: #ed6c02; }
 body[data-theme="light"] .status-unpaid { background: rgba(255, 77, 79, 0.1); color: #d32f2f; }
+
+/* Responsive Modal Grid */
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+.modal-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+@media (max-width: 768px) {
+  .modal-grid, .modal-grid-3 { grid-template-columns: 1fr !important; }
+}
+.modal-box { width: 600px !important; max-width: 95vw !important; }
