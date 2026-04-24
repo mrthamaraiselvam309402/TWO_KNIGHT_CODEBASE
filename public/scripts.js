@@ -4068,10 +4068,6 @@ function setAISuggestion(q) {
   window.sendPaymentReminder = sendPaymentReminder;
   window.showNotifications = showNotifications;
   window.updateNotificationBadge = () => { try { updateNotificationBadge(); } catch(e) {} };
-  window.setAIModule = setAIModule;
-  window.setAISuggestion = setAISuggestion;
-  window.sendAIQuery = sendAIQuery;
-  window.toggleChatbot = toggleChatbot;
   window.previewFile = previewFile;
   window.executeDelete = executeDelete;
   window.exportAcademyData = exportAcademyData;
