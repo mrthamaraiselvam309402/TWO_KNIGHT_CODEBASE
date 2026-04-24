@@ -2671,24 +2671,62 @@ function setPage(p) {
       $('p-history-body').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--danger)">Error loading history.</td></tr>';
     }
   }
-  const coachPaymentStatus = JSON.parse(localStorage.getItem('coachPaymentStatus') || '{}');
-  
   function getCoachPaymentStatus(c) {
-    return coachPaymentStatus[c.id] || 'Pending';
+    return c.payment_status || 'Pending';
   }
 
-  window.markCoachPaid = function(id) {
-    coachPaymentStatus[id] = 'Paid';
-    localStorage.setItem('coachPaymentStatus', JSON.stringify(coachPaymentStatus));
-    toast('Coach salary marked as paid', 'success');
-    renderCoachBills();
+  window.markCoachPaid = async function(id) {
+    const btn = event.currentTarget;
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"></span>';
+    btn.disabled = true;
+    
+    try {
+      const res = await apiCall('/api/coaches?id=' + id, {
+        method: 'PUT',
+        body: JSON.stringify({ payment_status: 'Paid' })
+      });
+      if (res.ok) {
+        toast('Coach salary marked as paid', 'success');
+        const coach = allCoaches.find(c => String(c.id) === String(id));
+        if (coach) coach.payment_status = 'Paid';
+        renderCoachBills();
+      } else {
+        toast('Failed to update status', 'error');
+      }
+    } catch(e) {
+      toast('Error saving to database', 'error');
+    } finally {
+      btn.innerHTML = oldText;
+      btn.disabled = false;
+    }
   };
 
-  window.markCoachUnpaid = function(id) {
-    coachPaymentStatus[id] = 'Pending';
-    localStorage.setItem('coachPaymentStatus', JSON.stringify(coachPaymentStatus));
-    toast('Coach salary marked as pending', 'warning');
-    renderCoachBills();
+  window.markCoachUnpaid = async function(id) {
+    const btn = event.currentTarget;
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"></span>';
+    btn.disabled = true;
+    
+    try {
+      const res = await apiCall('/api/coaches?id=' + id, {
+        method: 'PUT',
+        body: JSON.stringify({ payment_status: 'Pending' })
+      });
+      if (res.ok) {
+        toast('Coach salary marked as pending', 'warning');
+        const coach = allCoaches.find(c => String(c.id) === String(id));
+        if (coach) coach.payment_status = 'Pending';
+        renderCoachBills();
+      } else {
+        toast('Failed to update status', 'error');
+      }
+    } catch(e) {
+      toast('Error saving to database', 'error');
+    } finally {
+      btn.innerHTML = oldText;
+      btn.disabled = false;
+    }
   };
 
   window.setBillTab = function(tabName, btn) {

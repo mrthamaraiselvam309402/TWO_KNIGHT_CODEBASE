@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
       availability: c.availability,
       photo_url: c.photo_url || '',
       address: c.address || '',
+      payment_status: c.payment_status || 'Pending',
       created_at: c.created_at,
       updated_at: c.updated_at
     };
@@ -100,6 +101,7 @@ Deno.serve(async (req) => {
         availability: body.availability || '',
         address: body.address || '',
         photo_url: body.photo_url || '',
+        payment_status: body.payment_status || 'Pending',
         role: 'coach',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -157,6 +159,7 @@ Deno.serve(async (req) => {
       if (body.availability !== undefined) updateData.availability = body.availability;
       if (body.address !== undefined) updateData.address = body.address;
       if (body.photo_url !== undefined) updateData.photo_url = body.photo_url;
+      if (body.payment_status !== undefined) updateData.payment_status = body.payment_status;
       
       updateData.updated_at = new Date().toISOString();
       
