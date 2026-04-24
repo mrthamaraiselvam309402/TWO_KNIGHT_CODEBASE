@@ -3890,7 +3890,99 @@ function setAISuggestion(q) {
     toast('Academy Data Exported (CSV)', 'success');
   }
 
-  function exportData() { toast('Data Exported!'); }
+  function exportData() {
+    if (!window.allStudents || window.allStudents.length === 0) {
+      toast('No data available for export', 'warning');
+      return;
+    }
+    
+    toast('Generating Strategic Intelligence Workbook...', 'info');
+    
+    try {
+      const wb = XLSX.utils.book_new();
+      
+      // 1. Dashboard Sheet (KPIs)
+      const collected = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+      const pending = allStudents.filter(s => getStudentPaymentStatus(s) !== 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+      const totalPotential = collected + pending;
+      
+      const dashboardData = [
+        ['IMPERIAL ACADEMY STRATEGIC KPI REPORT'],
+        ['Issued', new Date().toLocaleString()],
+        [],
+        ['Metric', 'Value', 'Context'],
+        ['Total Cadets', allStudents.length, 'Active Roster'],
+        ['Revenue Potential', `₹${totalPotential}`, 'Gross Capacity'],
+        ['Revenue Realized', `₹${collected}`, 'Liquidity'],
+        ['Revenue Pending', `₹${pending}`, 'Risk Exposure'],
+        ['Collection Rate', `${((collected / totalPotential) * 100).toFixed(1)}%`, 'Operational Efficiency'],
+        ['ARPU', `₹${(collected / allStudents.filter(s => s.status === 'active').length || 1).toFixed(0)}`, 'Yield Per Cadet']
+      ];
+      const wsDash = XLSX.utils.aoa_to_sheet(dashboardData);
+      XLSX.utils.book_append_sheet(wb, wsDash, "Executive Summary");
+
+      // 2. Cadets Sheet (Deep Data)
+      const cadetData = allStudents.map(s => ({
+        'ID': s.id,
+        'Name': getStudentName(s),
+        'Email': s.email || 'N/A',
+        'Phone': s.phone || 'N/A',
+        'Parent': s.parent_name || 'N/A',
+        'Level': getStudentLevel(s),
+        'Elo Rating': getStudentRating(s),
+        'Batch Type': s.session_mode || s.batch_type || 'Group',
+        'Session Time': s.session_time || 'N/A',
+        'Monthly Fee': getStudentMonthlyFee(s),
+        'Status': s.status,
+        'Payment Status': getStudentPaymentStatus(s),
+        'Enrollment Date': s.enrollment_date || s.join_date || 'N/A',
+        'Address': s.address || 'N/A',
+        'Notes': s.notes || ''
+      }));
+      const wsCadets = XLSX.utils.json_to_sheet(cadetData);
+      XLSX.utils.book_append_sheet(wb, wsCadets, "Cadet Registry");
+
+      // 3. Faculty Sheet (ROI)
+      const facultyData = allCoaches.map(c => {
+        const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
+        const coachRev = coachStuds.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+        const coachCost = getCoachSalary(c) || 0;
+        return {
+          'Faculty ID': c.id,
+          'Name': getCoachName(c),
+          'Enrolled Units': coachStuds.length,
+          'Gross Revenue': coachRev,
+          'Cost Basis': coachCost,
+          'Net Profit': coachRev - coachCost,
+          'ROI %': coachCost > 0 ? ((coachRev - coachCost) / coachCost * 100).toFixed(0) + '%' : '0%',
+          'Expertise': c.expertise || 'General'
+        };
+      });
+      const wsFaculty = XLSX.utils.json_to_sheet(facultyData);
+      XLSX.utils.book_append_sheet(wb, wsFaculty, "Faculty ROI");
+
+      // 4. Transactions Sheet
+      const transData = allPayments.map(p => ({
+        'Date': p.date || p.created_at || 'N/A',
+        'Student ID': p.student_id,
+        'Student Name': p.student_name || 'Unknown',
+        'Amount': p.amount,
+        'Method': p.method || 'Cash',
+        'Description': p.description || 'Monthly Fee',
+        'ID': p.id
+      }));
+      const wsTrans = XLSX.utils.json_to_sheet(transData);
+      XLSX.utils.book_append_sheet(wb, wsTrans, "Transaction History");
+
+      // Export file
+      XLSX.writeFile(wb, `Chesskidoo_Strategic_Archive_${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast('Strategic Archive Exported Successfully!', 'success');
+      
+    } catch (err) {
+      console.error('Export Error:', err);
+      toast('Strategic Export Failed: System Error', 'error');
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // INIT & EXPOSE
