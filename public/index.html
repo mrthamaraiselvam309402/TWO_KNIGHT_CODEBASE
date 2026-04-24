@@ -527,91 +527,172 @@
 
 <!-- Enroll Modal -->
 <div class="modal" id="enroll-modal">
-  <div class="modal-box">
-    <div class="modal-title">Enroll New Cadet</div>
-    <div class="modal-sub">Student info & parent credentials</div>
-    <input type="text" id="m-name" placeholder="Full Name">
-    <input type="tel" id="m-phone" placeholder="Parent Phone (10 digits)" maxlength="10">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <select id="m-level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Elite</option></select>
-      <div class="form-group">
-        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Join Date</label>
-        <input type="date" id="m-join" style="margin-top:2px">
+  <div class="modal-box" style="max-width: 650px;">
+    <div class="modal-title">ENROLL NEW CADET</div>
+    <div class="modal-sub">STRATEGIC ENLISTMENT PROTOCOL</div>
+    
+    <div class="enroll-sections" style="display: flex; flex-direction: column; gap: 20px; margin-top: 20px;">
+      <!-- Section: Identity -->
+      <div class="enroll-section" style="border: 1px solid var(--border); padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.02);">
+        <h4 style="color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">I. CADET IDENTITY</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Full Name</label>
+            <input type="text" id="m-name" placeholder="Enter Full Name" style="margin-top: 4px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Parent Phone (10 Digits)</label>
+            <input type="tel" id="m-phone" placeholder="9876543210" maxlength="10" style="margin-top: 4px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Training -->
+      <div class="enroll-section" style="border: 1px solid var(--border); padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.02);">
+        <h4 style="color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">II. TRAINING PARAMETERS</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Initial ELO</label>
+            <input type="number" id="m-elo" value="800" style="margin-top: 4px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Strategic Level</label>
+            <select id="m-level" style="margin-top: 4px;">
+              <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Elite</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Assigned Coach</label>
+            <select id="m-coach" style="margin-top: 4px;"><option value="">Loading...</option></select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Batch Type</label>
+            <select id="m-batch-type" style="margin-top: 4px;">
+              <option value="Morning">Morning</option><option value="Evening">Evening</option><option value="Weekend">Weekend</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Session Time</label>
+            <input type="time" id="m-batch-time" value="17:00" style="margin-top: 4px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Enlistment Date</label>
+            <input type="date" id="m-join" style="margin-top: 4px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Financial -->
+      <div class="enroll-section" style="border: 1px solid var(--border); padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.02);">
+        <h4 style="color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">III. FINANCIAL PROTOCOL</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Monthly Tuition (₹)</label>
+            <input type="number" id="m-fee" value="5000" style="margin-top: 4px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Next Due Date</label>
+            <input type="date" id="m-due-date" style="margin-top: 4px;">
+          </div>
+        </div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Fee Due Date</label>
-        <input type="date" id="m-due-date" style="margin-top:2px">
-      </div>
-      <div class="form-group">
-        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Initial ELO</label>
-        <input type="number" id="m-elo" placeholder="ELO" value="800" style="margin-top:2px">
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <input type="number" id="m-fee" placeholder="Monthly Fee ₹" value="5000">
-      <select id="m-batch-type"><option value="Morning">Morning</option><option value="Evening">Evening</option><option value="Weekend">Weekend</option></select>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <input type="time" id="m-batch-time" value="17:00">
-      <div class="form-group">
-        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Assigned Coach</label>
-        <select id="m-coach" style="margin-top:2px"><option value="">Loading coaches...</option></select>
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:14px">
-      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
-      <button class="btn btn-gold" style="flex:1" onclick="saveStudent()">Enroll</button>
+
+    <div style="display:flex;gap:10px;margin-top:25px; border-top: 1px solid var(--border); padding-top: 20px;">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Abort</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveStudent()">Authorize Enlistment</button>
     </div>
   </div>
 </div>
 
 <!-- Edit Modal -->
 <div class="modal" id="edit-modal">
-  <div class="modal-box">
-    <div class="modal-title">Edit Cadet</div>
+  <div class="modal-box" style="max-width: 650px;">
+    <div class="modal-title">EDIT CADET RECORDS</div>
     <input type="hidden" id="e-id">
-    <input type="text" id="e-name" placeholder="Full Name">
-    <input type="tel" id="e-phone" placeholder="Parent Phone" maxlength="10">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <select id="e-level"><option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Elite</option></select>
-      <div class="form-group">
-        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Join Date</label>
-        <input type="date" id="e-join" style="margin-top:2px">
+    
+    <div class="enroll-sections" style="display: flex; flex-direction: column; gap: 20px; margin-top: 20px;">
+      <!-- Section: Identity -->
+      <div class="enroll-section" style="border: 1px solid var(--border); padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.02);">
+        <h4 style="color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">I. IDENTITY UPDATES</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Full Name</label>
+            <input type="text" id="e-name" style="margin-top: 4px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Parent Phone</label>
+            <input type="tel" id="e-phone" maxlength="10" style="margin-top: 4px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Performance -->
+      <div class="enroll-section" style="border: 1px solid var(--border); padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.02);">
+        <h4 style="color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">II. PERFORMANCE & TRAINING</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Current ELO</label>
+            <input type="number" id="e-elo" style="margin-top: 4px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Strategic Level</label>
+            <select id="e-level" style="margin-top: 4px;">
+              <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Elite</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Assigned Coach</label>
+            <select id="e-coach" style="margin-top: 4px;"></select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Batch Type</label>
+            <select id="e-batch-type" style="margin-top: 4px;">
+              <option value="Morning">Morning</option><option value="Evening">Evening</option><option value="Weekend">Weekend</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Session Time</label>
+            <input type="time" id="e-batch-time" style="margin-top: 4px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Join Date</label>
+            <input type="date" id="e-join" style="margin-top: 4px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Financials -->
+      <div class="enroll-section" style="border: 1px solid var(--border); padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.02);">
+        <h4 style="color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">III. FINANCIALS & NOTES</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Status</label>
+            <select id="e-status" style="margin-top: 4px;"><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Monthly Fee (₹)</label>
+            <input type="number" id="e-fee" style="margin-top: 4px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Next Due Date</label>
+            <input type="date" id="e-due-date" style="margin-top: 4px;">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+          <label style="font-size: 10px; color: var(--gold-dim); text-transform: uppercase;">Commander's Notes</label>
+          <textarea id="e-notes" rows="2" placeholder="Operational notes..." style="margin-top: 4px;"></textarea>
+        </div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-       <div class="form-group">
-        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Fee Due Date</label>
-        <input type="date" id="e-due-date" style="margin-top:2px">
-      </div>
-      <div class="form-group">
-        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Current ELO</label>
-        <input type="number" id="e-elo" placeholder="ELO" value="800" style="margin-top:2px">
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group">
-        <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Assigned Coach</label>
-        <select id="e-coach" style="margin-top:2px"></select>
-      </div>
-      <input type="number" id="e-fee" placeholder="Fee ₹" value="5000">
-    </div>
-    <div style="margin-bottom:12px">
-      <select id="e-status"><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <select id="e-batch-type"><option value="Morning">Morning</option><option value="Evening">Evening</option><option value="Weekend">Weekend</option></select>
-      <input type="time" id="e-batch-time" value="17:00">
-    </div>
-    <div class="form-group" style="margin-top:8px">
-      <label style="font-size:10px;text-transform:uppercase;color:var(--gold)">Coach Notes</label>
-      <textarea id="e-notes" rows="2" placeholder="Coach notes / observations..." style="margin-top:2px"></textarea>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:14px">
-      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
-      <button class="btn btn-gold" style="flex:1" onclick="updateStudent()">Save</button>
+
+    <div style="display:flex;gap:10px;margin-top:25px; border-top: 1px solid var(--border); padding-top: 20px;">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Discard</button>
+      <button class="btn btn-gold" style="flex:1" onclick="updateStudent()">Update Records</button>
     </div>
   </div>
 </div>
@@ -956,7 +1037,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-   <script src="scripts.js?v=2026-04-23-v70"></script>
+   <script src="scripts.js?v=2026-04-23-v71"></script>
    <script src="js/reporting.js?v=v1"></script>
    <script src="js/ai-assistant.js?v=v1"></script>
    <script src="js/auth.js?v=v1"></script>
