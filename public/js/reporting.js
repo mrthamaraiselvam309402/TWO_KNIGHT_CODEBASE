@@ -274,7 +274,7 @@ window.generateReportPDF = async function() {
           labels: ['Profit', 'Payroll', 'Pending'],
           datasets: [{
             data: [${netProfit > 0 ? netProfit : 0}, ${payroll}, ${pending}],
-            backgroundColor: ['#c9960c', '#1a1a1a', '#333'],
+            backgroundColor: ['#52c41a', '#1a1a1a', '#e8a830'],
             borderColor: 'rgba(201,150,12,0.5)',
             borderWidth: 1
           }]
@@ -295,7 +295,7 @@ window.generateReportPDF = async function() {
           labels: ['Group', 'Single'],
           datasets: [{
             data: [${batches['Group']}, ${batches['Single']}],
-            backgroundColor: ['#c9960c', '#444'],
+            backgroundColor: ['#c9960c', '#5a9fff'],
             borderColor: '#0a0a0b',
             borderWidth: 5
           }]

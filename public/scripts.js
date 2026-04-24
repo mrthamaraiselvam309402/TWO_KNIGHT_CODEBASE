@@ -1375,7 +1375,7 @@ function setPage(p) {
           labels: ['Paid', 'Pending', 'Due'], 
           datasets: [{ 
             data: [paid, pending, due], 
-            backgroundColor: ['#c9960c', '#e8a830', '#ff4d4f'], 
+            backgroundColor: ['#52c41a', '#e8a830', '#ff4d4f'], 
             borderWidth: 0 
           }] 
         },
@@ -1398,7 +1398,7 @@ function setPage(p) {
           labels: ['Group', 'Single'], 
           datasets: [{ 
             data: [groupCount, singleCount], 
-            backgroundColor: ['#c9960c', '#f0c05a'], 
+            backgroundColor: ['#c9960c', '#5a9fff'], 
             borderWidth: 0 
           }] 
         },
