@@ -3756,6 +3756,40 @@ function setAISuggestion(q) {
   };
   
   // ── ENHANCED AI QUERY HANDLER ──
+  function animateAIResponse(element, markdownText) {
+    let html = (markdownText || '')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 4px;border-radius:4px;font-family:var(--font-mono);font-size:0.9em">$1</code>')
+      .replace(/\n/g, '<br>');
+      
+    let i = 0;
+    let isTag = false;
+    let currentHTML = '';
+    element.innerHTML = '';
+    
+    function type() {
+      if (i < html.length) {
+        let char = html.charAt(i);
+        currentHTML += char;
+        if (char === '<') isTag = true;
+        if (char === '>') isTag = false;
+        
+        element.innerHTML = currentHTML + (i < html.length - 1 && !isTag ? '<span style="border-right: 2px solid var(--gold); animation: blink 1s step-end infinite; margin-left: 2px;">&nbsp;</span>' : '');
+        
+        const container = document.getElementById('ai-workspace-msgs');
+        if (container) container.scrollTop = container.scrollHeight;
+        
+        let speed = isTag ? 0 : (char === '.' || char === '?' || char === '!') ? 200 : (char === ',' ? 100 : 15);
+        i++;
+        setTimeout(type, speed);
+      } else {
+        element.innerHTML = currentHTML; 
+      }
+    }
+    type();
+  }
+
   async function sendAIQuery() {
     const input = $('ai-query');
     if (!input || !input.value.trim()) {
@@ -3777,8 +3811,9 @@ function setAISuggestion(q) {
         
         const botMsg = document.createElement('div');
         botMsg.className = 'ai-ws-msg bot';
-        botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">${PARENT_DENIED_MESSAGE}</div>`;
+        botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble"></div>`;
         chatContainer.appendChild(botMsg);
+        animateAIResponse(botMsg.querySelector('.ai-ws-bubble'), PARENT_DENIED_MESSAGE);
         chatContainer.scrollTop = chatContainer.scrollHeight;
         return;
       }
@@ -3856,8 +3891,9 @@ function setAISuggestion(q) {
       
       const botMsg = document.createElement('div');
       botMsg.className = 'ai-ws-msg bot';
-      botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">${botResponse}</div>`;
+      botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble"></div>`;
       chatContainer.appendChild(botMsg);
+      animateAIResponse(botMsg.querySelector('.ai-ws-bubble'), botResponse);
       chatContainer.scrollTop = chatContainer.scrollHeight;
       
     } catch (e) {
