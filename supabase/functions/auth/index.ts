@@ -79,7 +79,22 @@ Deno.serve(async (req) => {
       }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
-    // Check parent credentials (username = student name, password = parent phone)
+    // 3. Check Supabase Auth (Built-in users from Dashboard)
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: username,
+      password: password,
+    });
+
+    if (!authError && authData.user) {
+      return new Response(JSON.stringify({
+        success: true,
+        token: authData.session?.access_token || 'dash-token-' + Date.now(),
+        role: 'admin',
+        user: authData.user.email
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
+    // 4. Check parent credentials (username = student name, password = parent phone)
     const { data: student, error: studentError } = await supabase
       .from('students')
       .select('id, name, parent_phone')
@@ -98,7 +113,10 @@ Deno.serve(async (req) => {
     }
 
     // Failed attempt
-    return new Response(JSON.stringify({ error: 'Invalid credentials. Use Student Name + Parent Phone for Portal access.' }), { 
+    return new Response(JSON.stringify({ 
+      error: 'Invalid credentials.',
+      details: 'Check if user exists in Supabase Auth or as a Student Name + Parent Phone.' 
+    }), { 
       status: 401, 
       headers: { 'Content-Type': 'application/json', ...corsHeaders } 
     });
