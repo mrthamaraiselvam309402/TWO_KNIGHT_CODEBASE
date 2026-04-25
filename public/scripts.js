@@ -4072,9 +4072,25 @@ function setAISuggestion(q) {
   window.getStudentMonthlyFee = getStudentMonthlyFee;
   window.getStudentPaymentStatus = getStudentPaymentStatus;
   window.getStudentLevel = getStudentLevel;
+  window.getStudentRating = getStudentRating;
+  window.getStudentDate = getStudentDate;
+  window.getStudentPhone = getStudentPhone;
+  window.getStudentEmail = getStudentEmail;
+  window.getStudentBatchType = getStudentBatchType;
+  window.getStudentStatus = getStudentStatus;
   window.getCoachName = getCoachName;
   window.getCoachSalary = getCoachSalary;
   window.getCoachSpecialty = getCoachSpecialty;
+  window.getCoachExperience = getCoachExperience;
+  window.getCoachRating = getCoachRating;
+  window.getCoachAvailability = getCoachAvailability;
+  window.getCoachEmail = getCoachEmail;
+  window.getCoachStatus = getCoachStatus;
+  window.getEventDate = getEventDate;
+  window.getEventType = getEventType;
+  window.getEventLocation = getEventLocation;
+  window.getEventTime = getEventTime;
+
   window.getStudentSessionTime = getStudentSessionTime;
   window.getMessagePriority = getMessagePriority;
   window.getMessageIsRead = getMessageIsRead;
