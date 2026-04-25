@@ -402,21 +402,38 @@ window.generateReportPDF = async function() {
 </body>
 </html>`;
 
-    // 3. Trigger Download using html2pdf
-    const element = document.createElement('div');
-    element.innerHTML = reportHTML;
+    // 3. Trigger Download using hidden iframe (to allow Chart.js to render)
+    const iframe = document.createElement('iframe');
+    iframe.style.visibility = 'hidden';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '1000px';
+    iframe.style.height = '1400px';
+    document.body.appendChild(iframe);
     
-    // Configuration for html2pdf
-    const opt = {
-      margin:       0,
-      filename:     `Academy_Report_${dateStr.replace(/ /g, '_')}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(reportHTML);
+    iframeDoc.close();
+    
+    // Wait for scripts and charts to initialize in the iframe
+    setTimeout(() => {
+        const opt = {
+          margin:       0,
+          filename:     `Academy_Report_${dateStr.replace(/ /g, '_')}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#0a0a0b' },
+          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
 
-    // New Promise-based usage:
-    html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
-      toast('Academy Performance Report downloaded successfully! ✨', 'success');
-    }).save();
+        html2pdf().set(opt).from(iframeDoc.body).save().then(() => {
+            document.body.removeChild(iframe);
+            toast('Academy Performance Report downloaded successfully! ✨', 'success');
+        }).catch(err => {
+            console.error('PDF Generation Error:', err);
+            document.body.removeChild(iframe);
+            toast('Failed to generate PDF. Please try again.', 'error');
+        });
+    }, 2500); // Allow time for Chart.js and fonts to load
 };
