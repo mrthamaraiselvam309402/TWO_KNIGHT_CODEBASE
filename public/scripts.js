@@ -4075,10 +4075,17 @@ function setAISuggestion(q) {
   window.getCoachName = getCoachName;
   window.getCoachSalary = getCoachSalary;
   window.getCoachSpecialty = getCoachSpecialty;
+  window.getStudentSessionTime = getStudentSessionTime;
+  window.getMessagePriority = getMessagePriority;
+  window.getMessageIsRead = getMessageIsRead;
+  window.makeAvSrc = makeAvSrc;
+
   window.toggleTheme = toggleTheme;
   window.toggleSidebar = toggleSidebar;
   window.toggleEye = toggleEye;
   window.setPage = setPage;
+  window.switchTab = setPage;
+
   window.finishLogin = finishLogin;
   window.openModal = openModal;
   window.closeModals = closeModals;
