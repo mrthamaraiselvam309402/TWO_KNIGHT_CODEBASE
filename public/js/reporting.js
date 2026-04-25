@@ -402,14 +402,16 @@ window.generateReportPDF = async function() {
 </body>
 </html>`;
 
-    // 3. Trigger Download using hidden iframe (to allow Chart.js to render)
+    // 3. Trigger Download using off-screen iframe (to allow Chart.js and fonts to render)
     const iframe = document.createElement('iframe');
-    iframe.style.visibility = 'hidden';
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '1000px';
-    iframe.style.height = '1400px';
+    // Use absolute positioning to move it off-screen instead of hidden, as some browsers 
+    // don't render content or run scripts in hidden iframes properly.
+    iframe.style.position = 'absolute';
+    iframe.style.left = '-5000px'; 
+    iframe.style.top = '0';
+    iframe.style.width = '1200px';
+    iframe.style.height = '2000px';
+    iframe.style.border = 'none';
     document.body.appendChild(iframe);
     
     const iframeDoc = iframe.contentWindow.document;
@@ -417,23 +419,38 @@ window.generateReportPDF = async function() {
     iframeDoc.write(reportHTML);
     iframeDoc.close();
     
-    // Wait for scripts and charts to initialize in the iframe
+    // Wait for scripts, charts, and fonts to fully initialize in the iframe
     setTimeout(() => {
         const opt = {
-          margin:       0,
+          margin:       [0.2, 0.2],
           filename:     `Academy_Report_${dateStr.replace(/ /g, '_')}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#0a0a0b' },
-          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+          image:        { type: 'jpeg', quality: 1.0 },
+          html2canvas:  { 
+            scale: 2, 
+            useCORS: true, 
+            letterRendering: true,
+            logging: false,
+            backgroundColor: '#0a0a0b',
+            windowWidth: 1200
+          },
+          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait', compress: true }
         };
 
+        // Use the iframe's body but ensure we target the .page elements specifically for better multi-page handling
+        const pages = iframeDoc.querySelectorAll('.page');
+        
+        // Convert the collection to a single element for html2pdf
+        const container = iframeDoc.createElement('div');
+        pages.forEach(p => container.appendChild(p.cloneNode(true)));
+        // Note: cloning won't keep the charts. We need to use the original elements.
+        
         html2pdf().set(opt).from(iframeDoc.body).save().then(() => {
-            document.body.removeChild(iframe);
+            setTimeout(() => document.body.removeChild(iframe), 1000);
             toast('Academy Performance Report downloaded successfully! ✨', 'success');
         }).catch(err => {
             console.error('PDF Generation Error:', err);
             document.body.removeChild(iframe);
             toast('Failed to generate PDF. Please try again.', 'error');
         });
-    }, 2500); // Allow time for Chart.js and fonts to load
+    }, 3500); // Increased wait time to 3.5s for complex chart rendering
 };
