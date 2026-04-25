@@ -2929,17 +2929,19 @@ function setPage(p) {
 </body>
 </html>`;
     
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast('Please allow popups to print receipt', 'error');
-      return;
-    }
-    printWindow.document.write(receiptHTML);
-    printWindow.document.close();
-    printWindow.onload = () => {
-      printWindow.print();
+    // Trigger Direct Download using html2pdf
+    const element = document.createElement('div');
+    element.innerHTML = receiptHTML;
+    const opt = {
+      margin:       0.2,
+      filename:     `Receipt_${name.replace(/ /g, '_')}_${receiptId}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
-    toast('Receipt opened for printing!', 'success');
+
+    html2pdf().set(opt).from(element).save();
+    toast('Receipt downloaded successfully!', 'success');
   }
   
   function numberToWords(num) {

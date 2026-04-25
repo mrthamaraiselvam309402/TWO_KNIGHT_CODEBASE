@@ -402,14 +402,21 @@ window.generateReportPDF = async function() {
 </body>
 </html>`;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast('Please allow popups to export report', 'error');
-      return;
-    }
+    // 3. Trigger Download using html2pdf
+    const element = document.createElement('div');
+    element.innerHTML = reportHTML;
     
-    printWindow.document.write(reportHTML);
-    printWindow.document.close();
-    
-    toast('Academy Performance Report ready! Authorized access only. ✨', 'success');
+    // Configuration for html2pdf
+    const opt = {
+      margin:       0,
+      filename:     `Academy_Report_${dateStr.replace(/ /g, '_')}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    // New Promise-based usage:
+    html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
+      toast('Academy Performance Report downloaded successfully! ✨', 'success');
+    }).save();
 };
