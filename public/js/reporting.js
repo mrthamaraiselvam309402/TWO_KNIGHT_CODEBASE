@@ -402,10 +402,8 @@ window.generateReportPDF = async function() {
 </body>
 </html>`;
 
-    // 3. Trigger Download using off-screen iframe (to allow Chart.js and fonts to render)
+    // 3. Trigger Download using off-screen iframe (Optimized Speed)
     const iframe = document.createElement('iframe');
-    // Use absolute positioning to move it off-screen instead of hidden, as some browsers 
-    // don't render content or run scripts in hidden iframes properly.
     iframe.style.position = 'absolute';
     iframe.style.left = '-5000px'; 
     iframe.style.top = '0';
@@ -414,13 +412,27 @@ window.generateReportPDF = async function() {
     iframe.style.border = 'none';
     document.body.appendChild(iframe);
     
+    // Add a listener for the iframe to signal it is ready
+    const handleMessage = (event) => {
+      if (event.data === 'report-ready') {
+        window.removeEventListener('message', handleMessage);
+        generatePDF();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+
     const iframeDoc = iframe.contentWindow.document;
     iframeDoc.open();
-    iframeDoc.write(reportHTML);
+    // Inject signal script into the report
+    const injectedReportHTML = reportHTML.replace('window.onload = () => {', 'window.onload = () => { \n const signalReady = () => window.parent.postMessage("report-ready", "*");');
+    // We need to trigger signalReady after Chart animations. 
+    // Chart.js animations take about 500ms by default.
+    const finalReportHTML = injectedReportHTML.replace('plugins: { legend: { position: \'bottom\'', 'animation: { onComplete: () => signalReady() }, plugins: { legend: { position: \'bottom\'');
+    
+    iframeDoc.write(finalReportHTML);
     iframeDoc.close();
     
-    // Wait for scripts, charts, and fonts to fully initialize in the iframe
-    setTimeout(() => {
+    async function generatePDF() {
         const opt = {
           margin:       [0.2, 0.2],
           filename:     `Academy_Report_${dateStr.replace(/ /g, '_')}.pdf`,
@@ -429,28 +441,27 @@ window.generateReportPDF = async function() {
             scale: 2, 
             useCORS: true, 
             letterRendering: true,
-            logging: false,
             backgroundColor: '#0a0a0b',
             windowWidth: 1200
           },
           jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait', compress: true }
         };
 
-        // Use the iframe's body but ensure we target the .page elements specifically for better multi-page handling
-        const pages = iframeDoc.querySelectorAll('.page');
-        
-        // Convert the collection to a single element for html2pdf
-        const container = iframeDoc.createElement('div');
-        pages.forEach(p => container.appendChild(p.cloneNode(true)));
-        // Note: cloning won't keep the charts. We need to use the original elements.
-        
         html2pdf().set(opt).from(iframeDoc.body).save().then(() => {
-            setTimeout(() => document.body.removeChild(iframe), 1000);
-            toast('Academy Performance Report downloaded successfully! ✨', 'success');
+            setTimeout(() => document.body.removeChild(iframe), 500);
+            toast('Academy Performance Report downloaded! ✨', 'success');
         }).catch(err => {
             console.error('PDF Generation Error:', err);
             document.body.removeChild(iframe);
             toast('Failed to generate PDF. Please try again.', 'error');
         });
-    }, 3500); // Increased wait time to 3.5s for complex chart rendering
+    }
+
+    // Fallback if message is never received
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        window.removeEventListener('message', handleMessage);
+        generatePDF();
+      }
+    }, 5000); 
 };
