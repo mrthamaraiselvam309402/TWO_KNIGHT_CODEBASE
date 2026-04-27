@@ -2395,3 +2395,21 @@ body[data-theme="light"] .status-unpaid { background: rgba(255, 77, 79, 0.1); co
   .p-title { font-size: 18px !important; }
   .table-wrap { -webkit-overflow-scrolling: touch; border-radius: 8px; box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.5); }
 }
+
+/* Enhanced Status Styles */
+.status-paid { background: rgba(82, 196, 26, 0.15); color: #52c41a; border: 1px solid rgba(82, 196, 26, 0.2); }
+.status-pending { background: rgba(201, 150, 12, 0.15); color: var(--gold); border: 1px solid rgba(201, 150, 12, 0.2); }
+.status-due { 
+  background: rgba(255, 77, 79, 0.15); 
+  color: #ff4d4f; 
+  border: 1px solid rgba(255, 77, 79, 0.3); 
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(255, 77, 79, 0.3);
+  animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.2); }
+  70% { box-shadow: 0 0 0 6px rgba(255, 77, 79, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0); }
+}

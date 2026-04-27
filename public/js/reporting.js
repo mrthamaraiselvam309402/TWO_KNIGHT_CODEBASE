@@ -9,17 +9,31 @@ window.generateReportPDF = async function() {
         return;
     }
 
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    toast('Generating Financial Performance Report...', 'info');
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
+    const now = new Date(targetYear, targetMonth, 1);
+    const dateStr = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    toast(`Generating Financial Report for ${dateStr}...`, 'info');
 
-    // 1. Data Aggregation
+    // 1. Data Aggregation (Filtered by Period)
     const totalStudents = allStudents.length;
-    const activeStudents = allStudents.filter(s => s.status === 'active').length;
-    const collected = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-    const pending = allStudents.filter(s => getStudentPaymentStatus(s) !== 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-    const potential = collected + pending;
+    // For historical, we assume active students are those joined before or during the target month
+    const activeStudents = allStudents.filter(s => {
+        const join = new Date(s.joining_date || s.enrollment_date || s.created_at);
+        return join <= new Date(targetYear, targetMonth + 1, 0); 
+    }).length;
+
+    // Real Payment Data from allPayments
+    const monthlyPayments = allPayments.filter(p => {
+        const pDate = new Date(p.payment_date || p.created_at);
+        return pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear;
+    });
+
+    const collected = monthlyPayments.reduce((a, p) => a + (p.amount || 0), 0);
+    const potential = allStudents.filter(s => s.status === 'active').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    const pending = potential > collected ? potential - collected : 0;
+    
     const payroll = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     const netProfit = collected - payroll;
     
@@ -29,15 +43,21 @@ window.generateReportPDF = async function() {
     const opMargin = collected > 0 ? ((netProfit / collected) * 100).toFixed(1) : 0;
     
     // Growth & Attendance Metrics
-    const lastMonth = new Date(); lastMonth.setMonth(now.getMonth() - 1);
-    const newStudsThisMonth = allStudents.filter(s => new Date(s.created_at) > lastMonth).length;
+    const lastMonthLimit = new Date(targetYear, targetMonth, 1);
+    const monthEndLimit = new Date(targetYear, targetMonth + 1, 0);
+    const newStudsThisMonth = allStudents.filter(s => {
+        const join = new Date(s.joining_date || s.enrollment_date || s.created_at);
+        return join >= lastMonthLimit && join <= monthEndLimit;
+    }).length;
     const growthRate = totalStudents > 0 ? ((newStudsThisMonth / totalStudents) * 100).toFixed(1) : 0;
     
-    // Attendance Real-Time (Calculated from allAttendance)
-    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(now.getDate() - 30);
-    const recentAtt = (window.allAttendance || []).filter(a => new Date(a.date) > thirtyDaysAgo);
-    const presentCount = recentAtt.filter(a => a.status === 'present').length;
-    const attendanceHealth = recentAtt.length > 0 ? ((presentCount / recentAtt.length) * 100).toFixed(1) : 88.5; // Fallback to healthy avg if no data
+    // Attendance Real-Time (Calculated from allAttendance for target period)
+    const monthAtt = (window.allAttendance || []).filter(a => {
+        const aDate = new Date(a.date);
+        return aDate.getMonth() === targetMonth && aDate.getFullYear() === targetYear;
+    });
+    const presentCount = monthAtt.filter(a => a.status === 'present').length;
+    const attendanceHealth = monthAtt.length > 0 ? ((presentCount / monthAtt.length) * 100).toFixed(1) : 88.5; 
 
     const batches = { 'Group': 0, 'Single': 0 };
     const timings = { 'Morning': 0, 'Evening': 0, 'Weekend': 0 };
@@ -54,7 +74,9 @@ window.generateReportPDF = async function() {
 
     const coachMetrics = allCoaches.map(c => {
       const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
-      const coachRev = coachStuds.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+      const coachRev = monthlyPayments
+        .filter(p => coachStuds.some(s => String(s.id) === String(p.student_id)))
+        .reduce((a, p) => a + (p.amount || 0), 0);
       const coachCost = getCoachSalary(c) || 0;
       const profit = coachRev - coachCost;
       const roi = coachCost > 0 ? ((profit / coachCost) * 100).toFixed(0) : '0';
@@ -68,8 +90,9 @@ window.generateReportPDF = async function() {
       };
     });
 
+    const paidStudentIds = monthlyPayments.map(p => String(p.student_id));
     const topPending = allStudents
-      .filter(s => getStudentPaymentStatus(s) !== 'Paid')
+      .filter(s => s.status === 'active' && !paidStudentIds.includes(String(s.id)))
       .sort((a, b) => getStudentMonthlyFee(b) - getStudentMonthlyFee(a))
       .slice(0, 5);
 

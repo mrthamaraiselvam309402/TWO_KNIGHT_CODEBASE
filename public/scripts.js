@@ -28,6 +28,9 @@
   let allRatingHistory = [];
   let allResources = [];
   
+  window.reportMonth = new Date().getMonth(); // 0-11
+  window.reportYear = new Date().getFullYear();
+  
   let currentStudent = null;
   let role = null;
   let chartInstances = {};
@@ -546,12 +549,18 @@
   }
   function getStudentPaymentStatus(s) { 
     if (!s) return 'Due';
-    const status = (s.status || '').toLowerCase();
     const payStatus = (s.payment_status || '').toLowerCase();
+    if (payStatus === 'paid') return 'Paid';
     
-    if (status === 'active' || payStatus === 'paid') return 'Paid';
-    if (status === 'pending' || payStatus === 'pending') return 'Pending';
-    return 'Due'; 
+    // Check for "Due" based on date
+    if (s.due_date) {
+      const today = new Date();
+      const dueDate = new Date(s.due_date);
+      if (today > dueDate) return 'Due';
+    }
+    
+    if (payStatus === 'pending') return 'Pending';
+    return 'Pending'; // Default to Pending if not yet due
   }
   function getStudentBatchType(s) { 
     if (!s) return 'Group';
@@ -992,7 +1001,16 @@ function setPage(p) {
     btnArea.innerHTML = '';
     if (role === 'admin' || role === 'master') {
       if (p === 'dash') {
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        let monthOptions = months.map((m, i) => `<option value="${i}" ${i === reportMonth ? 'selected' : ''}>${m}</option>`).join('');
+        let yearOptions = [2025, 2026].map(y => `<option value="${y}" ${y === reportYear ? 'selected' : ''}>${y}</option>`).join('');
+
         btnArea.innerHTML = `
+          <div style="display:flex;gap:8px;align-items:center;background:rgba(255,255,255,0.05);padding:4px 12px;border-radius:6px;border:1px solid var(--border)">
+            <span style="font-size:11px;color:var(--ivory3);font-weight:600;text-transform:uppercase">Period:</span>
+            <select id="report-month" class="selector-minimal" onchange="updateReportContext()">${monthOptions}</select>
+            <select id="report-year" class="selector-minimal" onchange="updateReportContext()">${yearOptions}</select>
+          </div>
           <button class="btn btn-outline" onclick="generateReportPDF()">📄 Financial Report</button>
           <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
         `;
@@ -1021,6 +1039,12 @@ function setPage(p) {
     if (p === 'child') renderChild();
   }, 10);
 }
+
+window.updateReportContext = function() {
+  window.reportMonth = parseInt($('report-month').value);
+  window.reportYear = parseInt($('report-year').value);
+  renderDash();
+};
 
   // ═══════════════════════════════════════════════════════════════
   // AUTHENTICATION
