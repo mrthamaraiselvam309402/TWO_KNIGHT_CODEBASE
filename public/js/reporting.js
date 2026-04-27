@@ -12,7 +12,7 @@ window.generateReportPDF = async function() {
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    toast('Generating Academy Performance Report...', 'info');
+    toast('Generating Financial Performance Report...', 'info');
 
     // 1. Data Aggregation
     const totalStudents = allStudents.length;
@@ -96,7 +96,7 @@ window.generateReportPDF = async function() {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Academy Performance Report - ${dateStr}</title>
+  <title>Financial Performance Report - ${dateStr}</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cormorant+Garamond:wght@400;600&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -168,11 +168,11 @@ window.generateReportPDF = async function() {
   </div>
 
   <div class="page">
-    <div class="watermark">ACADEMY RECORD</div>
+    <div class="watermark">FINANCIAL AUDIT</div>
     <div class="header">
-      <h1>ACADEMY PERFORMANCE</h1>
+      <h1>FINANCIAL PERFORMANCE REPORT</h1>
       <div class="header-meta">
-        <div>REPORT ID: CKD-PERF-${now.getFullYear()}-${Math.floor(Math.random()*10000)}</div>
+        <div>REPORT ID: CKD-FIN-${now.getFullYear()}-${Math.floor(Math.random()*10000)}</div>
         <div class="confidential">EXECUTIVE SUMMARY // INTERNAL USE ONLY</div>
         <div class="heartbeat">SYNCED: ${timeStr}</div>
       </div>
@@ -433,28 +433,15 @@ window.generateReportPDF = async function() {
     iframeDoc.close();
     
     async function generatePDF() {
-        const opt = {
-          margin:       [0.2, 0.2],
-          filename:     `Academy_Report_${dateStr.replace(/ /g, '_')}.pdf`,
-          image:        { type: 'jpeg', quality: 1.0 },
-          html2canvas:  { 
-            scale: 2, 
-            useCORS: true, 
-            letterRendering: true,
-            backgroundColor: '#0a0a0b',
-            windowWidth: 1200
-          },
-          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait', compress: true }
-        };
-
-        html2pdf().set(opt).from(iframeDoc.body).save().then(() => {
-            setTimeout(() => document.body.removeChild(iframe), 500);
-            toast('Academy Performance Report downloaded! ✨', 'success');
-        }).catch(err => {
-            console.error('PDF Generation Error:', err);
-            document.body.removeChild(iframe);
-            toast('Failed to generate PDF. Please try again.', 'error');
-        });
+        // Stability Fix: Using window.open + window.print for perfect high-fidelity output
+        const reportWindow = window.open('', '_blank');
+        reportWindow.document.write(finalReportHTML);
+        reportWindow.document.close();
+        
+        // Remove the hidden background iframe
+        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+        
+        toast('Financial Report generated! Please save/print from the new tab. ✨', 'success');
     }
 
     // Fallback if message is never received
