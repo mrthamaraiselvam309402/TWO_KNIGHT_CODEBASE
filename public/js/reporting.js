@@ -164,7 +164,7 @@ window.generateReportPDF = async function() {
 </head>
 <body>
   <div class="no-print" style="position:fixed;top:20px;z-index:100;text-align:center;width:100%">
-    <button class="print-btn" onclick="window.print()">Export Academy Report</button>
+    <button class="print-btn" onclick="window.print()">EXPORT FINANCIAL REPORT</button>
   </div>
 
   <div class="page">
@@ -331,7 +331,7 @@ window.generateReportPDF = async function() {
   </div>
 
   <script>
-    window.onload = () => {
+    const initCharts = () => {
       // ── COMPOSITION CHART ──
       new Chart(document.getElementById('revChart').getContext('2d'), {
         type: 'doughnut',
@@ -398,57 +398,23 @@ window.generateReportPDF = async function() {
         }
       });
     };
+    
+    // Immediate execution for popup stability
+    if (document.readyState === 'complete') initCharts();
+    else window.addEventListener('load', initCharts);
   </script>
 </body>
 </html>`;
 
-    // 3. Trigger Download using off-screen iframe (Optimized Speed)
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.left = '-5000px'; 
-    iframe.style.top = '0';
-    iframe.style.width = '1200px';
-    iframe.style.height = '2000px';
-    iframe.style.border = 'none';
-    document.body.appendChild(iframe);
-    
-    // Add a listener for the iframe to signal it is ready
-    const handleMessage = (event) => {
-      if (event.data === 'report-ready') {
-        window.removeEventListener('message', handleMessage);
-        generatePDF();
-      }
-    };
-    window.addEventListener('message', handleMessage);
-
-    const iframeDoc = iframe.contentWindow.document;
-    iframeDoc.open();
-    // Inject signal script into the report
-    const injectedReportHTML = reportHTML.replace('window.onload = () => {', 'window.onload = () => { \n const signalReady = () => window.parent.postMessage("report-ready", "*");');
-    // We need to trigger signalReady after Chart animations. 
-    // Chart.js animations take about 500ms by default.
-    const finalReportHTML = injectedReportHTML.replace('plugins: { legend: { position: \'bottom\'', 'animation: { onComplete: () => signalReady() }, plugins: { legend: { position: \'bottom\'');
-    
-    iframeDoc.write(finalReportHTML);
-    iframeDoc.close();
-    
-    async function generatePDF() {
-        // Stability Fix: Using window.open + window.print for perfect high-fidelity output
-        const reportWindow = window.open('', '_blank');
-        reportWindow.document.write(finalReportHTML);
-        reportWindow.document.close();
-        
-        // Remove the hidden background iframe
-        if (document.body.contains(iframe)) document.body.removeChild(iframe);
-        
-        toast('Financial Report generated! Please save/print from the new tab. ✨', 'success');
+    // 3. Open Report in New Tab Directly
+    const reportWindow = window.open('', '_blank');
+    if (!reportWindow) {
+        toast('Popup blocked! Please allow popups for this site to view the report.', 'error');
+        return;
     }
-
-    // Fallback if message is never received
-    setTimeout(() => {
-      if (document.body.contains(iframe)) {
-        window.removeEventListener('message', handleMessage);
-        generatePDF();
-      }
-    }, 5000); 
+    
+    reportWindow.document.write(reportHTML);
+    reportWindow.document.close();
+    
+    toast('Financial Report generated! Please save/print from the new tab. ✨', 'success');
 };
