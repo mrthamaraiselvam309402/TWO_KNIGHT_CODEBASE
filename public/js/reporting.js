@@ -114,11 +114,10 @@ window.generateReportPDF = async function() {
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     @media print {
-      body { background: #fff !important; color: #000 !important; padding: 0 !important; }
-      .page { border: none !important; box-shadow: none !important; page-break-after: always; margin: 0 !important; width: 100% !important; background: #fff !important; }
+      body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       .no-print { display: none !important; }
-      .kpi-card { background: #fff !important; border: 1px solid #ddd !important; color: #000 !important; }
-      .watermark { opacity: 0.05 !important; color: #000 !important; }
+      .page { border: none !important; box-shadow: none !important; margin: 0 !important; width: 100% !important; page-break-after: always; }
+      .watermark { opacity: 0.1 !important; }
     }
     body { background: var(--bg); font-family: 'Cormorant Garamond', serif; color: var(--text); line-height: 1.5; padding: 50px 0; display: flex; flex-direction: column; align-items: center; }
     .page { width: 950px; padding: 80px; position: relative; min-height: 1300px; background: var(--card-bg); margin-bottom: 50px; box-shadow: 0 40px 100px rgba(0,0,0,0.6); border: 1px solid var(--border); overflow: hidden; }
