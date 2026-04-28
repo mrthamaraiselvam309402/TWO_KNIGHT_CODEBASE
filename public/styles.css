@@ -2417,3 +2417,5 @@ body[data-theme="light"] .status-unpaid { background: rgba(255, 77, 79, 0.1); co
 .selector-minimal { background: transparent; border: none; color: var(--gold); font-family: var(--font-ui); font-weight: 800; font-size: 13px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all 0.2s; outline: none; text-transform: uppercase; letter-spacing: 0.5px; }
 .selector-minimal:hover { background: rgba(220, 163, 62, 0.1); }
 .selector-minimal option { background: var(--surface); color: var(--ivory); text-transform: none; font-weight: 400; }
+
+input[type='month']::-webkit-calendar-picker-indicator { filter: invert(0.8) sepia(1) saturate(5) hue-rotate(5deg); cursor: pointer; }

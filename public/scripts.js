@@ -1041,17 +1041,11 @@ function setPage(p) {
     btnArea.innerHTML = '';
     if (role === 'admin' || role === 'master') {
       if (p === 'dash') {
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        let monthOptions = months.map((m, i) => `<option value="${i}" ${i === reportMonth ? 'selected' : ''}>${m}</option>`).join('');
-        let yearOptions = [2025, 2026].map(y => `<option value="${y}" ${y === reportYear ? 'selected' : ''}>${y}</option>`).join('');
-
+        const periodValue = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}`;
         btnArea.innerHTML = `
-          <div style="display:flex;gap:12px;align-items:center;background:var(--surface2);padding:6px 16px;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-amber)">
-            <span style="font-size:11px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:1px">Period:</span>
-            <div style="display:flex;gap:4px">
-              <select id="report-month" class="selector-minimal" onchange="updateReportContext()">${monthOptions}</select>
-              <select id="report-year" class="selector-minimal" onchange="updateReportContext()">${yearOptions}</select>
-            </div>
+          <div style="display:flex;gap:12px;align-items:center;background:var(--surface2);padding:6px 14px;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-amber)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <input type="month" id="report-period" class="selector-minimal" onchange="updateReportContext()" value="${periodValue}">
           </div>
           <button class="btn btn-outline" onclick="generateReportPDF()">📄 Financial Report</button>
           <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
@@ -1080,11 +1074,15 @@ function setPage(p) {
     if (p === 'msgs') renderMsgs();
     if (p === 'child') renderChild();
   }, 10);
+  }, 10);
 }
 
 window.updateReportContext = function() {
-  window.reportMonth = parseInt($('report-month').value);
-  window.reportYear = parseInt($('report-year').value);
+  const val = $('report-period')?.value;
+  if (!val) return;
+  const [y, m] = val.split('-');
+  window.reportMonth = parseInt(m) - 1;
+  window.reportYear = parseInt(y);
   renderDash();
 };
 
