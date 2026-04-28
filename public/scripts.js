@@ -477,37 +477,60 @@
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
     const html = `
       <html><head><title>Strategic Audit - ${getCoachName(coach)}</title><style>
-        body { font-family: sans-serif; padding: 30px; color: #333; }
-        .hdr { border-bottom: 2px solid #dca33e; margin-bottom: 20px; }
-        h1 { color: #dca33e; margin: 0; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
-        th { background: #fdfaf4; color: #dca33e; text-transform: uppercase; font-size: 0.8em; }
-        .total { font-size: 1.2em; font-weight: bold; text-align: right; color: #dca33e; margin-top: 20px; padding: 10px; border-top: 2px solid #dca33e; }
-        .footer { font-size: 0.7em; color: #999; text-align: center; margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; }
+        body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+        .hdr { border-bottom: 3px solid #dca33e; margin-bottom: 30px; padding-bottom: 10px; }
+        h1 { color: #dca33e; margin: 0; font-size: 28px; letter-spacing: 1px; }
+        .meta { color: #666; margin-top: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .intro { margin: 20px 0; font-size: 15px; }
+        table { width: 100%; border-collapse: collapse; margin: 25px 0; }
+        th, td { text-align: left; padding: 14px; border-bottom: 1px solid #eee; }
+        th { background: #fdfaf4; color: #dca33e; text-transform: uppercase; font-size: 11px; font-weight: bold; letter-spacing: 1px; }
+        td { font-size: 14px; }
+        .status-badge { font-weight: bold; color: #ff4d4f; }
+        .total { font-size: 20px; font-weight: bold; text-align: right; color: #dca33e; margin-top: 30px; padding-top: 15px; border-top: 2px solid #dca33e; }
+        .footer { font-size: 10px; color: #999; text-align: center; margin-top: 60px; border-top: 1px solid #eee; padding-top: 20px; text-transform: uppercase; letter-spacing: 2px; }
       </style></head><body>
         <div class="hdr">
           <h1>STRATEGIC FEE AUDIT</h1>
-          <p>Assigned Coach: <strong>${getCoachName(coach).toUpperCase()}</strong> | Audit Cycle: ${dateStr}</p>
+          <div class="meta">Assigned Coach: <strong>${getCoachName(coach).toUpperCase()}</strong> | Audit Cycle: ${dateStr.toUpperCase()}</div>
         </div>
+        
+        <div class="intro">
+          The following students under your mentorship have been identified with <strong>outstanding receivables</strong> for the current billing cycle. Please facilitate immediate settlement coordination.
+        </div>
+
         <table>
           <thead>
-            <tr><th>Ref #</th><th>Student Identity</th><th>Development Level</th><th>Outstanding Fee</th></tr>
+            <tr>
+              <th>Ref #</th>
+              <th>Student Identity</th>
+              <th>Session Type</th>
+              <th>Current Status</th>
+              <th style="text-align:right">Outstanding Fee</th>
+            </tr>
           </thead>
           <tbody>
             ${students.map((s, i) => `
               <tr>
-                <td>0${i+1}</td>
-                <td>${getStudentName(s).toUpperCase()}</td>
-                <td>${getStudentLevel(s).toUpperCase()}</td>
-                <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+                <td style="color:#999">#${String(i+1).padStart(2, '0')}</td>
+                <td><strong>${getStudentName(s).toUpperCase()}</strong></td>
+                <td>${getStudentBatchType(s).toUpperCase()}</td>
+                <td class="status-badge">${getStudentPaymentStatus(s).toUpperCase()}</td>
+                <td style="text-align:right"><strong>₹${getStudentMonthlyFee(s).toLocaleString()}</strong></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
-        <div class="total">TOTAL OUTSTANDING RECEIVABLES: ₹${total.toLocaleString()}</div>
-        <div class="footer">AUTHENTICATED BY CHESSKIDOO ADMINISTRATIVE CORE</div>
-        <script>window.print();<\/script></body></html>`;
+        
+        <div class="total">TOTAL OUTSTANDING VOLUME: ₹${total.toLocaleString()}</div>
+        
+        <div class="footer">
+          Authenticated by Chesskidoo Administrative Core<br>
+          <span style="font-size:8px; color:#ccc; margin-top:5px; display:block">Generated on ${new Date().toLocaleString()}</span>
+        </div>
+        
+        <script>window.print();<\/script>
+      </body></html>`;
     const win = window.open('', '_blank');
     if (win) { win.document.write(html); win.document.close(); }
   }
