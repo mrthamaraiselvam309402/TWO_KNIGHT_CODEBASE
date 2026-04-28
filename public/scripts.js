@@ -414,17 +414,18 @@
     const totalDue = pending.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
     
-    let msg = `*CHESSKIDOO ACADEMY - FEE ALERT*\n\n`;
-    msg += `Hello Coach ${getCoachName(c)},\n`;
-    msg += `Below is the list of students with *Pending/Due* fees for *${dateStr}*:\n\n`;
+    let msg = `*CHESSKIDOO ACADEMY - STRATEGIC FEE AUDIT*\n\n`;
+    msg += `Hello Coach *${getCoachName(c)}*,\n\n`;
+    msg += `The following students under your mentorship have outstanding receivables for the *${dateStr}* billing cycle:\n\n`;
     
     pending.forEach((s, i) => {
-      msg += `${i+1}. *${getStudentName(s)}* - ₹${getStudentMonthlyFee(s)}\n`;
+      msg += `▪️ *${getStudentName(s).toUpperCase()}* - ₹${getStudentMonthlyFee(s).toLocaleString()} (Status: ${getStudentPaymentStatus(s).toUpperCase()})\n`;
     });
     
-    msg += `\n*Total Outstanding:* ₹${totalDue}\n\n`;
-    msg += `I have also generated a *Detailed PDF Report* of this list. Please check your downloads/tabs and share it with the students.\n\n`;
-    msg += `Please follow up. Thank you!`;
+    msg += `\n*Total Outstanding Volume:* ₹${totalDue.toLocaleString()}\n\n`;
+    msg += `A *Detailed Strategic PDF* has been generated. Please coordinate with the respective guardians to facilitate immediate settlement. Your assistance is essential for operational excellence.\n\n`;
+    msg += `Regards,\n`;
+    msg += `*Administrative Core* | Chesskidoo Academy`;
     
     const phone = c.phone || c.contact || '0000000000';
     const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
@@ -475,19 +476,37 @@
   function generateCoachPendingPDF(coach, students, total) {
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
     const html = `
-      <html><head><title>Fees - ${getCoachName(coach)}</title><style>
+      <html><head><title>Strategic Audit - ${getCoachName(coach)}</title><style>
         body { font-family: sans-serif; padding: 30px; color: #333; }
-        h1 { color: #dca33e; border-bottom: 2px solid #dca33e; padding-bottom: 10px; }
+        .hdr { border-bottom: 2px solid #dca33e; margin-bottom: 20px; }
+        h1 { color: #dca33e; margin: 0; }
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
         th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
         th { background: #fdfaf4; color: #dca33e; text-transform: uppercase; font-size: 0.8em; }
-        .total { font-size: 1.4em; font-weight: bold; text-align: right; color: #dca33e; margin-top: 20px; }
+        .total { font-size: 1.2em; font-weight: bold; text-align: right; color: #dca33e; margin-top: 20px; padding: 10px; border-top: 2px solid #dca33e; }
+        .footer { font-size: 0.7em; color: #999; text-align: center; margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; }
       </style></head><body>
-        <h1>PENDING FEES: ${getCoachName(coach).toUpperCase()}</h1>
-        <p>Report Period: <strong>${dateStr}</strong></p>
-        <table><thead><tr><th>#</th><th>Student</th><th>Level</th><th>Fee</th></tr></thead>
-        <tbody>${students.map((s,i)=>`<tr><td>${i+1}</td><td>${getStudentName(s).toUpperCase()}</td><td>${getStudentLevel(s)}</td><td>₹${getStudentMonthlyFee(s)}</td></tr>`).join('')}</tbody>
-        </table><div class="total">TOTAL: ₹${total}</div>
+        <div class="hdr">
+          <h1>STRATEGIC FEE AUDIT</h1>
+          <p>Assigned Coach: <strong>${getCoachName(coach).toUpperCase()}</strong> | Audit Cycle: ${dateStr}</p>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Ref #</th><th>Student Identity</th><th>Development Level</th><th>Outstanding Fee</th></tr>
+          </thead>
+          <tbody>
+            ${students.map((s, i) => `
+              <tr>
+                <td>0${i+1}</td>
+                <td>${getStudentName(s).toUpperCase()}</td>
+                <td>${getStudentLevel(s).toUpperCase()}</td>
+                <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="total">TOTAL OUTSTANDING RECEIVABLES: ₹${total.toLocaleString()}</div>
+        <div class="footer">AUTHENTICATED BY CHESSKIDOO ADMINISTRATIVE CORE</div>
         <script>window.print();<\/script></body></html>`;
     const win = window.open('', '_blank');
     if (win) { win.document.write(html); win.document.close(); }
