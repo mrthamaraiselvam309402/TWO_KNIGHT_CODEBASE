@@ -414,18 +414,18 @@
     const totalDue = pending.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
     
-    let msg = `*CHESSKIDOO ACADEMY - STRATEGIC FEE AUDIT*\n\n`;
-    msg += `Hello Coach *${getCoachName(c)}*,\n\n`;
-    msg += `The following students under your mentorship have outstanding receivables for the *${dateStr}* billing cycle:\n\n`;
+    let msg = `*CHESSKIDOO ACADEMY – FEE AUDIT REPORT*\n\n`;
+    msg += `Hello Coach ${getCoachName(c)},\n\n`;
+    msg += `The following ${pending.length === 1 ? 'student' : 'students'} under your mentorship ${pending.length === 1 ? 'has' : 'have'} an outstanding balance for the *${dateStr}* billing cycle:\n\n`;
     
-    pending.forEach((s, i) => {
-      msg += `▪️ *${getStudentName(s).toUpperCase()}* - ₹${getStudentMonthlyFee(s).toLocaleString()} (Status: ${getStudentPaymentStatus(s).toUpperCase()})\n`;
+    pending.forEach((s) => {
+      msg += `▪️ *${getStudentName(s).toUpperCase()}*: ₹${getStudentMonthlyFee(s).toLocaleString()} (Status: ${getStudentPaymentStatus(s).toUpperCase()})\n`;
     });
     
-    msg += `\n*Total Outstanding Volume:* ₹${totalDue.toLocaleString()}\n\n`;
-    msg += `Please coordinate with the respective guardians to facilitate immediate settlement. Your assistance is essential for operational excellence.\n\n`;
+    msg += `\n*Total Outstanding:* ₹${totalDue.toLocaleString()}\n\n`;
+    msg += `Please coordinate with the guardians to ensure this is settled at their earliest convenience. Your support is vital for our continued operational efficiency.\n\n`;
     msg += `Regards,\n`;
-    msg += `*Administrative Core* | Chesskidoo Academy`;
+    msg += `*Administrative Team* | Chesskidoo Academy`;
     
     const phone = c.phone || c.contact || '0000000000';
     const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
