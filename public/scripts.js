@@ -411,7 +411,6 @@
       return;
     }
     
-    const totalDue = pending.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
     
     let msg = `*CHESSKIDOO ACADEMY – FEE AUDIT REPORT*\n\n`;
@@ -419,11 +418,10 @@
     msg += `The following ${pending.length === 1 ? 'student' : 'students'} under your mentorship ${pending.length === 1 ? 'has' : 'have'} an outstanding balance for the *${dateStr}* billing cycle:\n\n`;
     
     pending.forEach((s) => {
-      msg += `▪️ *${getStudentName(s).toUpperCase()}*: ₹${getStudentMonthlyFee(s).toLocaleString()} (Status: ${getStudentPaymentStatus(s).toUpperCase()})\n`;
+      msg += `▪️ *${getStudentName(s).toUpperCase()}* (Status: ${getStudentPaymentStatus(s).toUpperCase()})\n`;
     });
     
-    msg += `\n*Total Outstanding:* ₹${totalDue.toLocaleString()}\n\n`;
-    msg += `Please coordinate with the guardians to ensure this is settled at their earliest convenience. Your support is vital for our continued operational efficiency.\n\n`;
+    msg += `\nPlease coordinate with the guardians to ensure this is settled at their earliest convenience. Your support is vital for our continued operational efficiency.\n\n`;
     msg += `Regards,\n`;
     msg += `*Administrative Team* | Chesskidoo Academy`;
     
