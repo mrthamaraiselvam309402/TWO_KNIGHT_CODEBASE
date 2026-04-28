@@ -1044,8 +1044,8 @@ function setPage(p) {
       if (p === 'dash') {
         const periodValue = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}`;
         btnArea.innerHTML = `
-          <div style="display:flex;gap:12px;align-items:center;background:var(--surface2);padding:6px 14px;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-amber)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <div style="display:flex;gap:6px;align-items:center;background:var(--surface2);padding:3px 8px;border-radius:8px;border:1px solid var(--border);box-shadow:var(--shadow-amber)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             <input type="month" id="report-period" class="selector-minimal" onchange="updateReportContext()" value="${periodValue}">
           </div>
           <button class="btn btn-outline" onclick="generateReportPDF()">📄 Financial Report</button>

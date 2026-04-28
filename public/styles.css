@@ -2414,7 +2414,7 @@ body[data-theme="light"] .status-unpaid { background: rgba(255, 77, 79, 0.1); co
   100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0); }
 }
 
-.selector-minimal { background: transparent; border: none; color: var(--gold); font-family: var(--font-ui); font-weight: 800; font-size: 13px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all 0.2s; outline: none; text-transform: uppercase; letter-spacing: 0.5px; }
+.selector-minimal { background: transparent; border: none; color: var(--gold); font-family: system-ui, -apple-system, sans-serif; font-weight: 600; font-size: 11px; cursor: pointer; padding: 2px 0; border-radius: 6px; transition: all 0.2s; outline: none; text-transform: none; letter-spacing: 0px; width: auto; max-width: 120px; }
 .selector-minimal:hover { background: rgba(220, 163, 62, 0.1); }
 .selector-minimal option { background: var(--surface); color: var(--ivory); text-transform: none; font-weight: 400; }
 
