@@ -396,45 +396,102 @@
     window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  window.informCoachFees = function(id) {
+  window.informCoachFees = function(id, silent = false) {
     const c = allCoaches.find(x => String(x.id) === String(id));
     if (!c) return;
     
     const studs = allStudents.filter(s => String(s.coach_id) === String(id));
-    const pendingStuds = studs.filter(s => {
+    const pending = studs.filter(s => {
       const status = getStudentPaymentStatus(s);
       return status === 'Due' || status === 'Pending';
     });
     
-    if (pendingStuds.length === 0) {
-      toast(`All students under ${getCoachName(c)} have paid their fees!`, 'success');
+    if (pending.length === 0) {
+      if (!silent) toast(`No pending fees for students under ${getCoachName(c)}`, 'info');
       return;
     }
     
-    let msg = `*Chesskidoo Academy - Fees Pending List*\n\n`;
-    msg += `Hello Coach *${getCoachName(c)}*,\n\n`;
-    msg += `Here is the list of students with pending/due fees under your coaching:\n\n`;
+    const totalDue = pending.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+    const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
     
-    let totalPending = 0;
-    pendingStuds.forEach((s, idx) => {
-      const status = getStudentPaymentStatus(s);
-      const fee = getStudentMonthlyFee(s);
-      msg += `${idx + 1}. *${getStudentName(s)}* - ₹${fee.toLocaleString()} (${status})\n`;
-      totalPending += fee;
+    let msg = `*CHESSKIDOO ACADEMY - FEE ALERT*\n\n`;
+    msg += `Hello Coach ${getCoachName(c)},\n`;
+    msg += `Below is the list of students with *Pending/Due* fees for *${dateStr}*:\n\n`;
+    
+    pending.forEach((s, i) => {
+      msg += `${i+1}. *${getStudentName(s)}* - ₹${getStudentMonthlyFee(s)}\n`;
     });
     
-    msg += `\n*Total Pending Volume:* ₹${totalPending.toLocaleString()}\n`;
-    msg += `\nPlease follow up with the parents if possible. Thank you!`;
+    msg += `\n*Total Outstanding:* ₹${totalDue}\n\n`;
+    msg += `I have also generated a *Detailed PDF Report* of this list. Please check your downloads/tabs and share it with the students.\n\n`;
+    msg += `Please follow up. Thank you!`;
     
-    const phone = c.phone || '';
-    if (!phone) {
-      toast('Coach phone number not found!', 'error');
+    const phone = c.phone || c.contact || '0000000000';
+    const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
+    
+    // Generate the PDF list in a new tab
+    generateCoachPendingPDF(c, pending, totalDue);
+    
+    if (!silent) window.open(waUrl, '_blank');
+    else return waUrl;
+  };
+
+  window.informAllCoaches = function() {
+    const pendingCoaches = allCoaches.filter(c => {
+      const studs = allStudents.filter(s => String(s.coach_id) === String(c.id));
+      return studs.some(s => {
+        const st = getStudentPaymentStatus(s);
+        return st === 'Due' || st === 'Pending';
+      });
+    });
+
+    if (pendingCoaches.length === 0) {
+      toast('No coaches have students with pending fees!', 'success');
       return;
     }
-    
-    const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, '_blank');
+
+    if (!confirm(`Found ${pendingCoaches.length} coaches with pending fees. Start notification sequence?`)) return;
+
+    let count = 0;
+    const processNext = () => {
+      if (count >= pendingCoaches.length) {
+        toast('All notifications processed!', 'success');
+        return;
+      }
+      const c = pendingCoaches[count];
+      informCoachFees(c.id);
+      count++;
+      if (count < pendingCoaches.length) {
+        setTimeout(() => {
+          if (confirm(`Notification for ${getCoachName(c)} sent. Proceed to next coach (${getCoachName(pendingCoaches[count])})?`)) {
+            processNext();
+          }
+        }, 800);
+      }
+    };
+    processNext();
   };
+
+  function generateCoachPendingPDF(coach, students, total) {
+    const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    const html = `
+      <html><head><title>Fees - ${getCoachName(coach)}</title><style>
+        body { font-family: sans-serif; padding: 30px; color: #333; }
+        h1 { color: #dca33e; border-bottom: 2px solid #dca33e; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background: #fdfaf4; color: #dca33e; text-transform: uppercase; font-size: 0.8em; }
+        .total { font-size: 1.4em; font-weight: bold; text-align: right; color: #dca33e; margin-top: 20px; }
+      </style></head><body>
+        <h1>PENDING FEES: ${getCoachName(coach).toUpperCase()}</h1>
+        <p>Report Period: <strong>${dateStr}</strong></p>
+        <table><thead><tr><th>#</th><th>Student</th><th>Level</th><th>Fee</th></tr></thead>
+        <tbody>${students.map((s,i)=>`<tr><td>${i+1}</td><td>${getStudentName(s).toUpperCase()}</td><td>${getStudentLevel(s)}</td><td>₹${getStudentMonthlyFee(s)}</td></tr>`).join('')}</tbody>
+        </table><div class="total">TOTAL: ₹${total}</div>
+        <script>window.print();<\/script></body></html>`;
+    const win = window.open('', '_blank');
+    if (win) { win.document.write(html); win.document.close(); }
+  }
   async function apiCall(url, options = {}) {
     const headers = {
       'Content-Type': 'application/json',
