@@ -445,6 +445,7 @@
     const response = await fetch(url, { ...options, headers });
     return response;
   }
+  window.apiCall = apiCall;
 
 
   function escapeHtml(text) {
@@ -1060,11 +1061,13 @@ function setPage(p) {
   }
 
   if (window.innerWidth <= 768) {
-    $('sidebar')?.classList.remove('open');
-    $('sidebar-overlay')?.classList.remove('active');
+    var sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.remove('open');
+    var overlay = document.getElementById('sidebar-overlay');
+    if (overlay) overlay.classList.remove('active');
   }
 
-  setTimeout(() => {
+  setTimeout(function() {
     if (p === 'dash') renderDash();
     if (p === 'stud') renderStudents();
     if (p === 'coach-mgmt') renderCoachMgmt();
@@ -1075,13 +1078,16 @@ function setPage(p) {
     if (p === 'child') renderChild();
   }, 10);
 }
+window.setPage = setPage;
 
 window.updateReportContext = function() {
-  const val = $('report-period')?.value;
+  var el = document.getElementById('report-period');
+  var val = el ? el.value : null;
   if (!val) return;
-  const [y, m] = val.split('-');
-  window.reportMonth = parseInt(m) - 1;
-  window.reportYear = parseInt(y);
+  var parts = val.split('-');
+  if (parts.length < 2) return;
+  window.reportMonth = parseInt(parts[1]) - 1;
+  window.reportYear = parseInt(parts[0]);
   renderDash();
 };
 
@@ -1201,7 +1207,6 @@ window.updateReportContext = function() {
   function getActiveSessions() {
     const sessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
     const now = Date.now();
-    // Only show sessions active in the last 2 hours and deduplicate by user
     const active = sessions.filter(s => s.active && (now - new Date(s.loginAt).getTime() < 3600000 * 2));
     
     const deduped = [];
@@ -1245,6 +1250,7 @@ window.updateReportContext = function() {
       body: JSON.stringify(data)
     }).catch(() => {});
   }
+  window.logAudit = logAudit;
 
   function openProfile() {
     openModal('profile-modal');
