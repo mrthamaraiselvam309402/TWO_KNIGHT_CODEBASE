@@ -1046,10 +1046,12 @@ function setPage(p) {
         let yearOptions = [2025, 2026].map(y => `<option value="${y}" ${y === reportYear ? 'selected' : ''}>${y}</option>`).join('');
 
         btnArea.innerHTML = `
-          <div style="display:flex;gap:8px;align-items:center;background:rgba(255,255,255,0.05);padding:4px 12px;border-radius:6px;border:1px solid var(--border)">
-            <span style="font-size:11px;color:var(--ivory3);font-weight:600;text-transform:uppercase">Period:</span>
-            <select id="report-month" class="selector-minimal" onchange="updateReportContext()">${monthOptions}</select>
-            <select id="report-year" class="selector-minimal" onchange="updateReportContext()">${yearOptions}</select>
+          <div style="display:flex;gap:12px;align-items:center;background:var(--surface2);padding:6px 16px;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-amber)">
+            <span style="font-size:11px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:1px">Period:</span>
+            <div style="display:flex;gap:4px">
+              <select id="report-month" class="selector-minimal" onchange="updateReportContext()">${monthOptions}</select>
+              <select id="report-year" class="selector-minimal" onchange="updateReportContext()">${yearOptions}</select>
+            </div>
           </div>
           <button class="btn btn-outline" onclick="generateReportPDF()">📄 Financial Report</button>
           <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
@@ -1531,15 +1533,13 @@ window.updateReportContext = function() {
     }
     
     // Revenue stats - Realized Revenue from actual payment records
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
     
-    // Sum only payments for the current calendar month
-    // We use a robust year-month check that works across timezones
+    // Sum only payments for the target calendar month
     const monthPayments = allPayments.filter(p => {
       const pDate = new Date(p.created_at || p.payment_date);
-      return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
+      return pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear;
     });
     
     let paidRevenue = monthPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
@@ -1604,15 +1604,14 @@ window.updateReportContext = function() {
     const tbody = $('coach-finance-body');
     if (!tbody) return;
     
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
 
     // Map student IDs to their total payments this month
     const studentPaymentsThisMonth = {};
     (allPayments || []).filter(p => {
       const pDate = new Date(p.created_at || p.payment_date);
-      return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
+      return pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear;
     }).forEach(p => {
       const sid = p.student_id;
       if (!studentPaymentsThisMonth[sid]) studentPaymentsThisMonth[sid] = 0;

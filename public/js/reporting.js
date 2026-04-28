@@ -196,6 +196,7 @@ window.generateReportPDF = async function() {
       <div class="header-meta">
         <div>REPORT ID: CKD-FIN-${now.getFullYear()}-${Math.floor(Math.random()*10000)}</div>
         <div class="confidential">EXECUTIVE SUMMARY // INTERNAL USE ONLY</div>
+        <div style="color:var(--gold);font-weight:700;letter-spacing:1px;margin-top:5px">REPORT PERIOD: ${dateStr.toUpperCase()}</div>
         <div class="heartbeat">SYNCED: ${timeStr}</div>
       </div>
     </div>
