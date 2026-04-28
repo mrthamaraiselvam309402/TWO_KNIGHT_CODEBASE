@@ -1074,7 +1074,6 @@ function setPage(p) {
     if (p === 'msgs') renderMsgs();
     if (p === 'child') renderChild();
   }, 10);
-  }, 10);
 }
 
 window.updateReportContext = function() {
