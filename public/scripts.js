@@ -395,6 +395,46 @@
     const msg = `Hi! This is a friendly reminder from Chesskidoo Academy regarding ${name}'s tuition fee balance of ₹${fee}. You can pay via the portal or reach out if you have questions. Thank you!`;
     window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
+
+  window.informCoachFees = function(id) {
+    const c = allCoaches.find(x => String(x.id) === String(id));
+    if (!c) return;
+    
+    const studs = allStudents.filter(s => String(s.coach_id) === String(id));
+    const pendingStuds = studs.filter(s => {
+      const status = getStudentPaymentStatus(s);
+      return status === 'Due' || status === 'Pending';
+    });
+    
+    if (pendingStuds.length === 0) {
+      toast(`All students under ${getCoachName(c)} have paid their fees!`, 'success');
+      return;
+    }
+    
+    let msg = `*Chesskidoo Academy - Fees Pending List*\n\n`;
+    msg += `Hello Coach *${getCoachName(c)}*,\n\n`;
+    msg += `Here is the list of students with pending/due fees under your coaching:\n\n`;
+    
+    let totalPending = 0;
+    pendingStuds.forEach((s, idx) => {
+      const status = getStudentPaymentStatus(s);
+      const fee = getStudentMonthlyFee(s);
+      msg += `${idx + 1}. *${getStudentName(s)}* - ₹${fee.toLocaleString()} (${status})\n`;
+      totalPending += fee;
+    });
+    
+    msg += `\n*Total Pending Volume:* ₹${totalPending.toLocaleString()}\n`;
+    msg += `\nPlease follow up with the parents if possible. Thank you!`;
+    
+    const phone = c.phone || '';
+    if (!phone) {
+      toast('Coach phone number not found!', 'error');
+      return;
+    }
+    
+    const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+  };
   async function apiCall(url, options = {}) {
     const headers = {
       'Content-Type': 'application/json',
@@ -1628,6 +1668,7 @@ window.updateReportContext = function() {
         <td class="${profitClass}">₹${netProfit.toLocaleString()}</td>
         <td class="${potentialProfitClass}">₹${potentialNetProfit.toLocaleString()}</td>
         <td>${roi}% / <span class="text-gold">${potentialRoi}%</span></td>
+        <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">📢 Inform</button></td>
       </tr>`;
     }).join('');
   }
@@ -1974,12 +2015,13 @@ window.updateReportContext = function() {
               <span class="coach-stat-val ${getCoachStatus(c) === 'active' ? 'text-success' : 'text-danger'}">${getCoachStatus(c) === 'active' ? 'Active' : 'Inactive'}</span>
             </div>
           </div>
-          <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+          <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr; gap: 8px;">
             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️ Edit</button>
+            <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
             <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${getCoachName(c).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
           </div>
-          <button class="btn btn-gold btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
+          <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
         </div>
       `;
     }).join('');
