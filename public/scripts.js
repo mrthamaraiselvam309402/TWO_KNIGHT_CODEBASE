@@ -1642,9 +1642,29 @@ window.updateReportContext = function() {
 
     const totalOutstanding = lastDueAmount + currMonthPending;
     
+    // --- Growth Calculation (MoM Revenue) ---
+    const prevMonthDate = new Date(targetYear, targetMonth - 1, 1);
+    const prevMonth = prevMonthDate.getMonth();
+    const prevYear = prevMonthDate.getFullYear();
+
+    const prevPayments = allPayments.filter(p => {
+      const pDate = new Date(p.payment_date || p.created_at);
+      return pDate.getMonth() === prevMonth && pDate.getFullYear() === prevYear;
+    });
+    const prevRevenue = prevPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
+    const revenueGrowth = paidRevenue - prevRevenue;
+    const growthPercent = prevRevenue > 0 ? ((revenueGrowth / prevRevenue) * 100).toFixed(1) : (revenueGrowth > 0 ? '100' : '0');
+
     // Update UI
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
     if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
+    
+    const growthEl = $('s-due');
+    if (growthEl) {
+      growthEl.textContent = `₹${revenueGrowth.toLocaleString()} (${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)`;
+      growthEl.style.color = revenueGrowth > 0 ? 'var(--emerald)' : (revenueGrowth < 0 ? 'var(--ruby)' : 'var(--ivory-dim)');
+    }
+
     if ($('s-last-due')) $('s-last-due').textContent = '₹' + lastDueAmount.toLocaleString();
     if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currMonthPending.toLocaleString();
     if ($('s-total-outstanding')) $('s-total-outstanding').textContent = '₹' + totalOutstanding.toLocaleString();
