@@ -1588,11 +1588,15 @@ window.updateReportContext = function() {
     const targetMonthDate = new Date(targetYear, targetMonth, 1);
     const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
 
+    // Helper for robust date matching
+    const getYM = (d) => {
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? null : `${dt.getFullYear()}-${dt.getMonth()}`;
+    };
+    const targetYM = `${targetYear}-${targetMonth}`;
+
     // 1. Paid Revenue (Direct from transactions in that period)
-    const monthPayments = allPayments.filter(p => {
-      const pDate = new Date(p.payment_date || p.created_at);
-      return pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear;
-    });
+    const monthPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM);
     const paidRevenue = monthPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
 
     // 2. Identify who SHOULD have paid (Potential)
@@ -1622,7 +1626,6 @@ window.updateReportContext = function() {
         // Historical Logic for past months
         if (!hasPaidThisMonth) {
           // If they didn't pay in this month, were they already in arrears?
-          // Check if they had ANY payment in the months leading up to this one
           const pastPayments = allPayments.filter(p => {
             const pDate = new Date(p.payment_date || p.created_at);
             return String(p.student_id) === String(s.id) && pDate < targetMonthDate;
@@ -1632,9 +1635,9 @@ window.updateReportContext = function() {
           const monthsEnrolled = ((targetMonthDate.getFullYear() - enrollDate.getFullYear()) * 12) + (targetMonthDate.getMonth() - enrollDate.getMonth());
           
           if (monthsEnrolled > pastPayments.length) {
-            lastDueAmount += fee; // They already owed from before
+            lastDueAmount += fee;
           } else {
-            currMonthPending += fee; // This is their first missed month (Pending)
+            currMonthPending += fee;
           }
         }
       }
@@ -1643,19 +1646,8 @@ window.updateReportContext = function() {
     const totalOutstanding = lastDueAmount + currMonthPending;
     
     // --- Growth Calculation (MoM Revenue) ---
-    // Helper to get a normalized "Year-Month" string for consistent comparison
-    const getYM = (d) => {
-      const dt = new Date(d);
-      return isNaN(dt.getTime()) ? null : `${dt.getFullYear()}-${dt.getMonth()}`;
-    };
-
-    const targetYM = `${targetYear}-${targetMonth}`;
     const prevMonthDate = new Date(targetYear, targetMonth - 1, 1);
     const prevYM = `${prevMonthDate.getFullYear()}-${prevMonthDate.getMonth()}`;
-
-    // Filter payments with higher precision
-    const monthPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM);
-    const paidRevenue = monthPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
 
     const prevPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === prevYM);
     const prevRevenue = prevPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
