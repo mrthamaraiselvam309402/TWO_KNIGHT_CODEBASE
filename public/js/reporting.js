@@ -238,7 +238,7 @@ window.generateReportPDF = async function() {
         <div class="kpi-sub">Total Students</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Last Due</div>
+        <div class="kpi-label">Last Month Due</div>
         <div class="kpi-value" style="color:var(--ruby)">₹${lastDueAmount.toLocaleString()}</div>
         <div class="kpi-sub">Historical Arrears</div>
       </div>
