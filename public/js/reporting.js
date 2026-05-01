@@ -141,7 +141,35 @@ window.generateReportPDF = async function() {
           <td class="text-right mono bold">₹${(p.amount || 0).toLocaleString()}</td>
           <td style="font-size:10px;color:var(--text-dim)">#${String(p.id).slice(-8)}</td>
         </tr>`;
-    }).join('');
+    }).join('');    // 5. Monthwise Historical Analysis (Last 6 Months)
+    const monthwiseData = [];
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(targetYear, targetMonth - i, 1);
+        const mName = d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+        const m = d.getMonth();
+        const y = d.getFullYear();
+        
+        const mPayments = allPayments.filter(p => {
+            const pDate = new Date(p.payment_date || p.created_at);
+            return pDate.getMonth() === m && pDate.getFullYear() === y;
+        });
+        
+        const mCollected = mPayments.reduce((a, p) => a + (p.amount || 0), 0);
+        
+        // For historical months, we estimate potential based on students active at that time
+        const mActiveStudents = allStudents.filter(s => {
+            const join = new Date(s.joining_date || s.enrollment_date || s.created_at);
+            return join <= new Date(y, m + 1, 0);
+        });
+        const mPotential = mActiveStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+        
+        // For the current month, pending is potential - collected
+        // For past months, we label it as 'Due/Uncollected'
+        const mOutstanding = Math.max(0, mPotential - mCollected);
+        const mRate = mPotential > 0 ? ((mCollected / mPotential) * 100).toFixed(0) : 0;
+        
+        monthwiseData.push({ month: mName, potential: mPotential, collected: mCollected, outstanding: mOutstanding, rate: mRate });
+    }
 
     const reportHTML = `
 <!DOCTYPE html>
@@ -209,7 +237,7 @@ window.generateReportPDF = async function() {
 -
     .footer { position: absolute; bottom: 50px; left: 80px; right: 80px; display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 25px; font-size: 10px; color: var(--text-dim); font-family: 'DM Mono', monospace; letter-spacing: 1px; }
     
-    .print-btn { background: var(--gold); color: #000; border: none; padding: 18px 45px; font-family: 'Syne', sans-serif; font-weight: 800; cursor: pointer; margin-bottom: 40px; border-radius: 4px; letter-spacing: 3px; transition: all 0.4s; box-shadow: 0 15px 40px rgba(201,150,12,0.3); text-transform: uppercase; }
+    .print-btn { background: var(--gold); color: #000; border: none; padding: 18px 45px; font-family: 'Syne', sans-serif; font-weight: 800; cursor: pointer; margin-bottom: 40px; border-radius: 4px; letter-spacing: 3px; transition: all 0.4s; box-shadow: 0 15px 40px rgba(201, 150, 12, 0.3); text-transform: uppercase; }
     .print-btn:hover { background: #fff; transform: translateY(-3px); box-shadow: 0 20px 50px rgba(255,255,255,0.2); }
   </style>
 </head>
@@ -271,7 +299,7 @@ window.generateReportPDF = async function() {
         </div>
       </div>
     </div>
-
+-
     <h3>II. Faculty ROI Analysis (Verified Data)</h3>
     <table>
       <thead>
@@ -296,14 +324,14 @@ window.generateReportPDF = async function() {
         </tr>`).join('')}
       </tbody>
     </table>
-
+-
     <div class="footer">
       <div>© CHESSKIDOO ACADEMY MANAGEMENT</div>
       <div>CLASSIFICATION: EXECUTIVE</div>
       <div>PAGE 01 / 03</div>
     </div>
   </div>
-
+-
   <div class="page">
     <div class="watermark">DETAILED ANALYSIS</div>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 30px;">
@@ -320,10 +348,33 @@ window.generateReportPDF = async function() {
         </div>
       </div>
     </div>
-
+-
+    <h3>V. Monthwise Revenue & Arrears Analysis</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Billing Period</th>
+          <th class="text-right">Potential Revenue</th>
+          <th class="text-right">Collected</th>
+          <th class="text-right">Outstanding (Due/Pending)</th>
+          <th class="text-right">Efficiency</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${monthwiseData.map(m => `
+        <tr>
+          <td class="bold">${m.month.toUpperCase()}</td>
+          <td class="text-right mono">₹${m.potential.toLocaleString()}</td>
+          <td class="text-right mono gain">₹${m.collected.toLocaleString()}</td>
+          <td class="text-right mono ${m.outstanding > 0 ? 'loss' : ''}">₹${m.outstanding.toLocaleString()}</td>
+          <td class="text-right mono bold">${m.rate}%</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+-
     <div style="display:grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px; margin-top: 20px;">
       <div>
-        <h3>V. Accounts Receivable (Primary Arrears)</h3>
+        <h3>VI. Top Accounts Receivable</h3>
         <table>
           <thead>
             <tr>
@@ -343,7 +394,7 @@ window.generateReportPDF = async function() {
         </table>
       </div>
       <div>
-        <h3>VI. Performance Gainers</h3>
+        <h3>VII. Performance Gainers</h3>
         <table>
           <thead>
             <tr>
@@ -361,11 +412,11 @@ window.generateReportPDF = async function() {
         </table>
       </div>
     </div>
-
-    <h3>VII. Strategic Recommendations</h3>
+-
+    <h3>VIII. Strategic Recommendations</h3>
     <div class="data-story" style="margin-top:20px;">
       <div style="margin-bottom:15px; border-bottom: 1px solid var(--border); padding-bottom:10px; font-size: 15px;">
-        <strong style="color:var(--gold)">1. LIQUIDITY OPTIMIZATION:</strong> Targeted follow-up with the top 5 arrears accounts is required to inject <span class="bold">₹${topPending.reduce((a, s) => a + getStudentMonthlyFee(s), 0).toLocaleString()}</span> in working capital.
+        <strong style="color:var(--gold)">1. LIQUIDITY OPTIMIZATION:</strong> Total uncollected capital across last 6 months is <span class="bold">₹${monthwiseData.reduce((a, m) => a + m.outstanding, 0).toLocaleString()}</span>. A focused recovery drive is recommended.
       </div>
       <div style="margin-bottom:15px; border-bottom: 1px solid var(--border); padding-bottom:10px; font-size: 15px;">
         <strong style="color:var(--gold)">2. FACULTY PERFORMANCE:</strong> <span class="bold">${coachMetrics.sort((a,b)=>b.roi-a.roi)[0]?.name || 'Top coaches'}</span> is demonstrating optimal unit management. Consider faculty-wide training based on these patterns.
@@ -374,17 +425,17 @@ window.generateReportPDF = async function() {
         <strong style="color:var(--gold)">3. GROWTH VECTOR:</strong> ${timings['Evening'] > timings['Morning'] ? 'Evening batches are approaching peak saturation. Expansion should focus on weekend morning slots.' : 'Current morning utilization is healthy. Potential for expansion in evening group sessions.'}
       </div>
     </div>
-
+-
     <div class="footer">
       <div>© CHESSKIDOO ACADEMY MANAGEMENT</div>
       <div>AUTHENTICATED BY: CKD-AI-CORE</div>
       <div>PAGE 02 / 03</div>
     </div>
   </div>
-
+-
   <div class="page">
     <div class="watermark">TRANSACTION LOG</div>
-    <h3>VIII. Verified Transaction Ledger</h3>
+    <h3>IX. Verified Transaction Ledger</h3>
     <p style="font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); margin-bottom: 20px;">
       THE FOLLOWING IS A RECONCILIATION OF ALL ${monthlyPayments.length} PAYMENTS RECORDED FOR ${dateStr.toUpperCase()}.
     </p>
@@ -402,8 +453,8 @@ window.generateReportPDF = async function() {
         ${transactionRows || '<tr><td colspan="5" style="text-align:center">No transactions recorded for this period.</td></tr>'}
       </tbody>
     </table>
-
-    <h3 style="margin-top:60px">IX. Engagement Audit (Top Attendees)</h3>
+-
+    <h3 style="margin-top:60px">X. Engagement Audit (Top Attendees)</h3>
     <table>
       <thead>
         <tr>
@@ -423,18 +474,18 @@ window.generateReportPDF = async function() {
         </tr>`).join('')}
       </tbody>
     </table>
-
+-
     <div class="strategic-insight" style="margin-top:50px; font-size:14px">
       <strong>Audit Affirmation:</strong> This report represents a high-fidelity snapshot of academy operations as of ${timeStr}. All metrics are derived directly from the synchronized data lake.
     </div>
-
+-
     <div class="footer">
       <div>© CHESSKIDOO ACADEMY MANAGEMENT</div>
       <div>AUDIT TRAIL: ${now.getTime()}</div>
       <div>PAGE 03 / 03</div>
     </div>
   </div>
-
+-
   <script>
     const initCharts = () => {
       new Chart(document.getElementById('revChart').getContext('2d'), {
@@ -456,7 +507,7 @@ window.generateReportPDF = async function() {
           }
         }
       });
-
+-
       new Chart(document.getElementById('levelChart').getContext('2d'), {
         type: 'bar',
         data: {
@@ -479,7 +530,7 @@ window.generateReportPDF = async function() {
           plugins: { legend: { display: false } }
         }
       });
-
+-
       new Chart(document.getElementById('timingChart').getContext('2d'), {
         type: 'pie',
         data: {
@@ -504,6 +555,8 @@ window.generateReportPDF = async function() {
     if (document.readyState === 'complete') initCharts();
     else window.addEventListener('load', initCharts);
   </script>
+</body>
+</html>`;  </script>
 </body>
 </html>`;
 
