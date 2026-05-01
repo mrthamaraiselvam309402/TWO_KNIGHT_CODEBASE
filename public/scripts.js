@@ -1643,17 +1643,27 @@ window.updateReportContext = function() {
     const totalOutstanding = lastDueAmount + currMonthPending;
     
     // --- Growth Calculation (MoM Revenue) ---
-    const prevMonthDate = new Date(targetYear, targetMonth - 1, 1);
-    const prevMonth = prevMonthDate.getMonth();
-    const prevYear = prevMonthDate.getFullYear();
+    // Helper to get a normalized "Year-Month" string for consistent comparison
+    const getYM = (d) => {
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? null : `${dt.getFullYear()}-${dt.getMonth()}`;
+    };
 
-    const prevPayments = allPayments.filter(p => {
-      const pDate = new Date(p.payment_date || p.created_at);
-      return pDate.getMonth() === prevMonth && pDate.getFullYear() === prevYear;
-    });
+    const targetYM = `${targetYear}-${targetMonth}`;
+    const prevMonthDate = new Date(targetYear, targetMonth - 1, 1);
+    const prevYM = `${prevMonthDate.getFullYear()}-${prevMonthDate.getMonth()}`;
+
+    // Filter payments with higher precision
+    const monthPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM);
+    const paidRevenue = monthPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
+
+    const prevPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === prevYM);
     const prevRevenue = prevPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
+
     const revenueGrowth = paidRevenue - prevRevenue;
-    const growthPercent = prevRevenue > 0 ? ((revenueGrowth / prevRevenue) * 100).toFixed(1) : (revenueGrowth > 0 ? '100' : '0');
+    const growthPercent = prevRevenue > 0 
+      ? ((revenueGrowth / prevRevenue) * 100).toFixed(1) 
+      : (paidRevenue > 0 ? '100' : '0');
 
     // Update UI
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
@@ -1661,7 +1671,7 @@ window.updateReportContext = function() {
     
     const growthEl = $('s-due');
     if (growthEl) {
-      growthEl.textContent = `₹${revenueGrowth.toLocaleString()} (${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)`;
+      growthEl.innerHTML = `₹${revenueGrowth.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)</span>`;
       growthEl.style.color = revenueGrowth > 0 ? 'var(--emerald)' : (revenueGrowth < 0 ? 'var(--ruby)' : 'var(--ivory-dim)');
     }
 
