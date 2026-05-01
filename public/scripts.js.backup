@@ -20,22 +20,13 @@
   // ═══════════════════════════════════════════════════════════════
   let allCoaches = [];
   let allStudents = [];
-  let allPayments = [];
-  let allAttendance = [];
-  
-  // Expose to window for external modules (like reporting.js)
-  window.allCoaches = allCoaches;
-  window.allStudents = allStudents;
-  window.allPayments = allPayments;
-  window.allAttendance = allAttendance;
-  
   let achievementsData = [];
   let eventsData = [];
   let allMessages = [];
+  let allAttendance = [];
+  let allPayments = [];
   let allRatingHistory = [];
   let allResources = [];
-  
-  window.allRatingHistory = allRatingHistory; // Also needed for ELO gainers in report
   
   window.reportMonth = new Date().getMonth(); // 0-11
   window.reportYear = new Date().getFullYear();
@@ -1601,35 +1592,13 @@ window.updateReportContext = function() {
     });
     
     const statusRevenue = paidStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
-    const isCurrentMonth = targetMonth === new Date().getMonth() && targetYear === new Date().getFullYear();
-
-    // If transactions are missing but students are marked paid, use students as source (current month only)
-    if (paidRevenue === 0 && isCurrentMonth && statusRevenue > 0) {
+    // If transactions are missing but students are marked paid, use students as source
+    if (paidRevenue === 0 && statusRevenue > 0) {
       paidRevenue = statusRevenue;
     }
     
     // Total Potential Revenue = Sum of all students' active monthly fees
-    
-    let potentialStudents = [];
-    if (isCurrentMonth) {
-      // Current month: all currently active/on-roster students
-      potentialStudents = allStudents.filter(s => {
-        const status = getStudentStatus(s);
-        return status === 'active' || status === 'pending' || getStudentPaymentStatus(s) === 'Paid';
-      });
-    } else {
-      // Historical month: only students enrolled during or before this specific month
-      potentialStudents = allStudents.filter(s => {
-        const enrollDateStr = getStudentDate(s);
-        if (!enrollDateStr) return false;
-        const enrollDate = new Date(enrollDateStr);
-        // Student was enrolled during or before target month
-        return enrollDate <= new Date(targetYear, targetMonth + 1, 0);
-      });
-    }
-    
-    // Total Potential Revenue for this specific month view
-    const totalPotential = potentialStudents.reduce((a, s) => {
+    const totalPotential = allStudents.reduce((a, s) => {
       const fee = getStudentMonthlyFee(s);
       return a + (fee || 0);
     }, 0);
@@ -1717,33 +1686,17 @@ window.updateReportContext = function() {
       };
     });
     
-    // Add isCurrentMonth check for coach aggregation
-    const isCurrentMonthLocal = targetMonth === new Date().getMonth() && targetYear === new Date().getFullYear();
-    
-    // Aggregate student data - for historical months, only count enrolled students
+    // Aggregate student data
     allStudents.forEach(s => {
       const coachId = s.coach_id;
       if (coachData[coachId]) {
-        let shouldInclude = true;
-        if (!isCurrentMonthLocal) {
-          const enrollDateStr = getStudentDate(s);
-          if (enrollDateStr) {
-            const enrollDate = new Date(enrollDateStr);
-            shouldInclude = enrollDate <= new Date(targetYear, targetMonth + 1, 0);
-          } else {
-            shouldInclude = false;
-          }
-        }
+        const fee = getStudentMonthlyFee(s) || 0;
+        const paidThisMonth = studentPaymentsThisMonth[s.id] || 0;
         
-        if (shouldInclude) {
-          const fee = getStudentMonthlyFee(s) || 0;
-          const paidThisMonth = studentPaymentsThisMonth[s.id] || 0;
-        
-          coachData[coachId].students++;
-          coachData[coachId].revenue += paidThisMonth;
-          coachData[coachId].projected += fee;
-          coachData[coachId].pending += Math.max(0, fee - paidThisMonth);
-        }
+        coachData[coachId].students++;
+        coachData[coachId].revenue += paidThisMonth;
+        coachData[coachId].projected += fee;
+        coachData[coachId].pending += Math.max(0, fee - paidThisMonth);
       }
     });
     
@@ -2938,27 +2891,12 @@ window.updateReportContext = function() {
         status = getStudentPaymentStatus(s);
         statusClass = status === 'Paid' ? 'badge-success' : (status === 'Pending' ? 'badge-warning' : 'badge-danger');
       } else {
-        // For historical months (past months with no payment record)
-        // Mark as Unpaid to distinguish from current "Due" status
-        status = 'Unpaid';
+        // For past months, no payment = Arrears (Due)
+        status = 'Due';
         statusClass = 'badge-danger';
       }
 
       const invoiceId = 'INV-' + (s.id ? s.id.toString().slice(-6) : '000000');
-      
-      let actionButtons = '';
-      if (status === 'Unpaid' || status === 'Due' || status === 'Pending') {
-        actionButtons = `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-          <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-          <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>`;
-      } else if (status === 'Paid') {
-        const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
-        const coachName = coach ? getCoachName(coach) : 'N/A';
-        actionButtons = `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}', '${getStudentLevel(s)}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
-          <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>`;
-      } else {
-        actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
-      }
       
       return `<tr>
         <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">${invoiceId}</span></td>
@@ -2970,7 +2908,15 @@ window.updateReportContext = function() {
         <td><span class="badge ${statusClass}" style="font-size:10px;padding:4px 8px">${status}</span></td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-            ${actionButtons}
+            ${status === 'Due' || status === 'Pending' ? 
+              `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+               <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+               <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>` : 
+              (status === 'Paid' ? 
+                `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}', '${getStudentLevel(s)}', '${getStudentRating(s)}', '${(function(){ var c=allCoaches.find(c => String(c.id) === String(s.coach_id)); return c ? getCoachName(c) : 'N/A'; })()}')">📄 Receipt</button>
+                 <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>` : 
+                `<span style="color:var(--ivory-dim);font-size:11px">—</span>`
+              )}
           </div>
         </td>
       </tr>`;

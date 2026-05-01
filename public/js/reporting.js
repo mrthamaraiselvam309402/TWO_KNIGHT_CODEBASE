@@ -484,8 +484,9 @@ window.generateReportPDF = async function() {
       <div>AUDIT TRAIL: ${now.getTime()}</div>
       <div>PAGE 03 / 03</div>
     </div>
-  </div>
--
+  </div>`;
+
+    reportHTML += `
   <script>
     const initCharts = () => {
       new Chart(document.getElementById('revChart').getContext('2d'), {
@@ -507,7 +508,7 @@ window.generateReportPDF = async function() {
           }
         }
       });
--
+
       new Chart(document.getElementById('levelChart').getContext('2d'), {
         type: 'bar',
         data: {
@@ -530,7 +531,7 @@ window.generateReportPDF = async function() {
           plugins: { legend: { display: false } }
         }
       });
--
+
       new Chart(document.getElementById('timingChart').getContext('2d'), {
         type: 'pie',
         data: {
@@ -555,8 +556,6 @@ window.generateReportPDF = async function() {
     if (document.readyState === 'complete') initCharts();
     else window.addEventListener('load', initCharts);
   </script>
-</body>
-</html>`;  </script>
 </body>
 </html>`;
 
