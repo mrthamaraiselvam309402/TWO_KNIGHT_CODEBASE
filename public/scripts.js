@@ -2925,36 +2925,39 @@ window.updateReportContext = function() {
       return;
     }
 
-    // Pre-calculate which students have paid for the target month
-    const paidStudentIds = new Set();
+    // Helper for robust date matching
+    const getYM = (d) => {
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? null : `${dt.getFullYear()}-${dt.getMonth()}`;
+    };
+    const targetYM = `${targetYear}-${targetMonth}`;
+
+    // Map payments for this specific month
+    const monthPaymentMap = {};
     (allPayments || []).forEach(p => {
-      const pDate = new Date(p.payment_date || p.created_at);
-      if (pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear) {
-        paidStudentIds.add(String(p.student_id));
+      if (getYM(p.payment_date || p.created_at) === targetYM) {
+        monthPaymentMap[String(p.student_id)] = p;
       }
     });
 
     const isCurrentMonth = targetMonth === new Date().getMonth() && targetYear === new Date().getFullYear();
+    const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
     
     tbody.innerHTML = allStudents.map(s => {
       const enrollDateStr = getStudentDate(s);
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
-      const enrollMonth = enrollDate ? enrollDate.getMonth() : -1;
-      const enrollYear = enrollDate ? enrollDate.getFullYear() : -1;
 
       // Check if student was enrolled during or before the target month
-      const wasEnrolled = enrollDate && (
-        targetYear > enrollYear || 
-        (targetYear === enrollYear && targetMonth >= enrollMonth)
-      );
+      const wasEnrolled = enrollDate && enrollDate <= targetMonthEnd;
 
       let status = 'Due';
       let statusClass = 'badge-danger';
+      const paymentRecord = monthPaymentMap[String(s.id)];
 
       if (!wasEnrolled) {
         status = 'Not Enrolled';
         statusClass = 'badge-outline-grey';
-      } else if (paidStudentIds.has(String(s.id))) {
+      } else if (paymentRecord) {
         status = 'Paid';
         statusClass = 'badge-success';
       } else if (isCurrentMonth) {
@@ -2962,9 +2965,8 @@ window.updateReportContext = function() {
         status = getStudentPaymentStatus(s);
         statusClass = status === 'Paid' ? 'badge-success' : (status === 'Pending' ? 'badge-warning' : 'badge-danger');
       } else {
-        // For historical months (past months with no payment record)
-        // Mark as Unpaid to distinguish from current "Due" status
-        status = 'Unpaid';
+        // For past months, if no payment was found, they are "Due" (Arrears)
+        status = 'Due';
         statusClass = 'badge-danger';
       }
 
