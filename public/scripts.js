@@ -1604,6 +1604,15 @@ window.updateReportContext = function() {
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
     if ($('s-due')) $('s-due').textContent = '₹' + dueRevenue.toLocaleString();
     
+    // Last Due and Current Pending Calculation
+    const lastDueAmount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due')
+                                     .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+    const currPendingAmount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Pending')
+                                         .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+    
+    if ($('s-last-due')) $('s-last-due').textContent = '₹' + lastDueAmount.toLocaleString();
+    if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currPendingAmount.toLocaleString();
+    
     // Coach expenses
     const totalCoachCost = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     if ($('s-coach-exp')) $('s-coach-exp').textContent = '₹' + totalCoachCost.toLocaleString();
@@ -1616,14 +1625,16 @@ window.updateReportContext = function() {
     if ($('s-profit')) $('s-profit').textContent = '₹' + netProfit.toLocaleString();
     
     // Session counts
-    let groupCount = 0, singleCount = 0;
+    let groupCount = 0, singleCount = 0, activeEnroll = 0;
     allStudents.forEach(s => {
+      if (s.status === 'active') activeEnroll++;
       const type = getStudentBatchType(s);
       if (type === 'Single') singleCount++;
       else groupCount++;
     });
     if ($('s-group')) $('s-group').textContent = groupCount;
     if ($('s-single')) $('s-single').textContent = singleCount;
+    if ($('s-active-enroll')) $('s-active-enroll').textContent = activeEnroll;
     
     // Collection rate
     const collectionRate = totalPotential > 0 ? ((paidRevenue / totalPotential) * 100).toFixed(1) : '0';

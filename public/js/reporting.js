@@ -45,6 +45,13 @@ window.generateReportPDF = async function() {
     // Growth & Attendance Metrics
     const lastMonthLimit = new Date(targetYear, targetMonth, 1);
     const monthEndLimit = new Date(targetYear, targetMonth + 1, 0);
+    
+    // Last Due and Current Pending Calculation
+    const lastDueAmount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due')
+                                     .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+    const currPendingAmount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Pending')
+                                         .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+
     const newStudsThisMonth = allStudents.filter(s => {
         const join = new Date(s.joining_date || s.enrollment_date || s.created_at);
         return join >= lastMonthLimit && join <= monthEndLimit;
@@ -168,26 +175,26 @@ window.generateReportPDF = async function() {
     .page { width: 950px; padding: 80px; position: relative; min-height: 1300px; background: var(--card-bg); margin-bottom: 50px; box-shadow: 0 40px 100px rgba(0,0,0,0.6); border: 1px solid var(--border); overflow: hidden; }
     
     .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Cinzel', serif; font-size: 100px; font-weight: 900; color: rgba(201, 150, 12, 0.04); pointer-events: none; white-space: nowrap; z-index: 0; }
-
+-
     .header { text-align: left; margin-bottom: 60px; border-bottom: 2px solid var(--gold); padding-bottom: 30px; position: relative; z-index: 1; }
     .header h1 { font-family: 'Cinzel', serif; font-size: 42px; font-weight: 900; letter-spacing: 2px; color: var(--gold); margin-bottom: 5px; text-transform: uppercase; }
     .header h2 { font-family: 'Syne', sans-serif; font-size: 14px; letter-spacing: 6px; color: var(--text-dim); font-weight: 600; margin-bottom: 25px; }
     .header-meta { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); text-transform: uppercase; }
     .confidential { color: var(--gold); font-weight: 700; letter-spacing: 2px; }
     .heartbeat { color: var(--emerald); font-weight: 600; }
-
+-
     .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 50px; position: relative; z-index: 1; }
     .kpi-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px 10px; text-align: center; border-radius: 4px; position: relative; }
     .kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 10px; font-family: 'Syne', sans-serif; }
     .kpi-value { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 600; color: var(--gold); }
     .kpi-sub { font-size: 10px; color: #555; margin-top: 5px; font-style: italic; }
-
+-
     .analytics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-bottom: 60px; align-items: center; position: relative; z-index: 1; }
     .chart-box { background: rgba(255,255,255,0.01); padding: 30px; border: 1px solid var(--border); border-radius: 8px; height: 350px; position: relative; }
     .data-story { font-size: 18px; color: var(--text); }
     .data-story p { margin-bottom: 20px; }
     .strategic-insight { background: rgba(201, 150, 12, 0.05); border-left: 5px solid var(--gold); padding: 20px; font-style: italic; margin-top: 30px; border-radius: 0 8px 8px 0; font-size: 16px; }
-
+-
     h3 { font-family: 'Cinzel', serif; font-size: 18px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin: 50px 0 25px 0; display: flex; align-items: center; }
     h3::after { content: ''; flex: 1; height: 1px; background: var(--border); margin-left: 20px; }
     
@@ -199,7 +206,7 @@ window.generateReportPDF = async function() {
     .loss { color: var(--ruby) !important; font-weight: 600; }
     .gain { color: var(--emerald) !important; font-weight: 600; }
     .bold { font-weight: 700; color: #fff; }
-
+-
     .footer { position: absolute; bottom: 50px; left: 80px; right: 80px; display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 25px; font-size: 10px; color: var(--text-dim); font-family: 'DM Mono', monospace; letter-spacing: 1px; }
     
     .print-btn { background: var(--gold); color: #000; border: none; padding: 18px 45px; font-family: 'Syne', sans-serif; font-weight: 800; cursor: pointer; margin-bottom: 40px; border-radius: 4px; letter-spacing: 3px; transition: all 0.4s; box-shadow: 0 15px 40px rgba(201,150,12,0.3); text-transform: uppercase; }
@@ -210,7 +217,7 @@ window.generateReportPDF = async function() {
   <div class="no-print" style="position:fixed;top:20px;z-index:100;text-align:center;width:100%">
     <button class="print-btn" onclick="window.print()">EXPORT STRATEGIC AUDIT</button>
   </div>
-
+-
   <div class="page">
     <div class="watermark">FINANCIAL AUDIT</div>
     <div class="header">
@@ -222,7 +229,7 @@ window.generateReportPDF = async function() {
         <div class="heartbeat">SYNC STATUS: REAL-TIME</div>
       </div>
     </div>
-
+-
     <h3>I. Strategic Key Metrics</h3>
     <div class="kpi-grid">
       <div class="kpi-card">
@@ -231,9 +238,14 @@ window.generateReportPDF = async function() {
         <div class="kpi-sub">Total Students</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Rev Realization</div>
-        <div class="kpi-value">${collectionRate}%</div>
-        <div class="kpi-sub">Efficiency Index</div>
+        <div class="kpi-label">Last Due</div>
+        <div class="kpi-value" style="color:var(--ruby)">₹${lastDueAmount.toLocaleString()}</div>
+        <div class="kpi-sub">Historical Arrears</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Curr Pending</div>
+        <div class="kpi-value">₹${currPendingAmount.toLocaleString()}</div>
+        <div class="kpi-sub">Expected Pipeline</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Unit Revenue</div>
@@ -241,17 +253,12 @@ window.generateReportPDF = async function() {
         <div class="kpi-sub">Monthly ARPU</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Expansion Rate</div>
-        <div class="kpi-value">+${growthRate}%</div>
-        <div class="kpi-sub">Growth Velocity</div>
-      </div>
-      <div class="kpi-card">
         <div class="kpi-label">Engagement</div>
         <div class="kpi-value">${attendanceHealth}%</div>
         <div class="kpi-sub">Avg Attendance</div>
       </div>
     </div>
-
+-
     <div class="analytics-row">
       <div class="chart-box">
         <canvas id="revChart"></canvas>
@@ -260,7 +267,7 @@ window.generateReportPDF = async function() {
         <p><strong>Revenue Verification:</strong> Gross potential for ${dateStr} is <span class="bold">₹${potential.toLocaleString()}</span>. Verified collections totaled <span class="bold">₹${collected.toLocaleString()}</span> across ${monthlyPayments.length} transactions.</p>
         <p>Operating margin for this period is <span class="bold">${opMargin}%</span>. Total Faculty overhead is capped at <span class="bold">₹${payroll.toLocaleString()}</span>.</p>
         <div class="strategic-insight">
-          Audit Note: System confirms ${newStudsThisMonth} new unit additions. Average Academy ELO has reached <span class="bold">${avgElo}</span>. Collection deficit currently stands at <span class="bold">₹${pending.toLocaleString()}</span>.
+          Audit Note: System confirms ${newStudsThisMonth} new unit additions. Average Academy ELO has reached <span class="bold">${avgElo}</span>. Total outstanding (Last Due + Current) stands at <span class="bold">₹${(lastDueAmount + currPendingAmount).toLocaleString()}</span>.
         </div>
       </div>
     </div>
