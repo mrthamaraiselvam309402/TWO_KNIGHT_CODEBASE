@@ -623,10 +623,14 @@
   }
   function getStudentPaymentStatus(s) { 
     if (!s) return 'Due';
-    const payStatus = (s.payment_status || '').toLowerCase();
-    if (payStatus === 'paid') return 'Paid';
+    // Use 'status' column (aliased as payment_status in some places)
+    const payStatus = (s.status || s.payment_status || '').toLowerCase();
     
-    // Check for "Due" based on date
+    // Explicitly handle 'due' status for arrears
+    if (payStatus === 'due' || payStatus === 'overdue') return 'Due';
+    if (payStatus === 'paid' || payStatus === 'active' && s.status !== 'pending') return 'Paid';
+    
+    // Fallback to date-based check
     if (s.due_date) {
       const today = new Date();
       const dueDate = new Date(s.due_date);
@@ -634,7 +638,7 @@
     }
     
     if (payStatus === 'pending') return 'Pending';
-    return 'Pending'; // Default to Pending if not yet due
+    return 'Pending'; // Default
   }
   function getStudentBatchType(s) { 
     if (!s) return 'Group';
@@ -4344,4 +4348,6 @@ function setAISuggestion(q) {
   window.setBillTab = setBillTab;
   window.markCoachPaid = markCoachPaid;
   window.markCoachUnpaid = markCoachUnpaid;
+  window.getStudentPaymentStatus = getStudentPaymentStatus;
+  window.getStudentMonthlyFee = getStudentMonthlyFee;
 })();
