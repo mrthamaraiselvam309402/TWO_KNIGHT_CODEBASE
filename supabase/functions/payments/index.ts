@@ -72,10 +72,23 @@ Deno.serve(async (req) => {
           })
         }
 
-        // Also update student's payment_status in students table
+        // Check current status for sequential transition
+        const { data: student } = await supabase.from('students').select('status').eq('id', student_id).single();
+        const currentStatus = (student?.status || '').toLowerCase();
+        
+        let nextStatus = 'active';
+        let nextPaymentStatus = 'Paid';
+        
+        // If they were 'due' (arrears), they move to 'pending' (current month still owed)
+        if (currentStatus === 'due' || currentStatus === 'overdue') {
+          nextStatus = 'pending';
+          nextPaymentStatus = 'Pending';
+        }
+
+        // Update student's status in students table
         await supabase.from('students').update({ 
-          payment_status: 'Paid',
-          status: 'active'
+          payment_status: nextPaymentStatus,
+          status: nextStatus
         }).eq('id', student_id)
 
         return new Response(JSON.stringify({ success: true, payment }), {

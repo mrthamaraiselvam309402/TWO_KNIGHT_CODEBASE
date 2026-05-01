@@ -1608,11 +1608,16 @@ window.updateReportContext = function() {
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
     if ($('s-due')) $('s-due').textContent = '₹' + dueRevenue.toLocaleString();
     
-    // Last Due and Current Pending Calculation
+    // Last Month Due and Cumulative Pending Calculation
     const lastDueAmount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due')
                                      .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
-    const currPendingAmount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Pending')
-                                         .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+    
+    // Cumulative Pending: Everyone who hasn't fully paid for the current month 
+    // (This includes those who still owe from last month)
+    const currPendingAmount = allStudents.filter(s => {
+        const ps = getStudentPaymentStatus(s);
+        return ps === 'Pending' || ps === 'Due';
+    }).reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
     
     if ($('s-last-due')) $('s-last-due').textContent = '₹' + lastDueAmount.toLocaleString();
     if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currPendingAmount.toLocaleString();
