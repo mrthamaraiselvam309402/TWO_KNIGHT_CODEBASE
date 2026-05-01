@@ -1613,7 +1613,6 @@ window.updateReportContext = function() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    const isCurrentMonth = targetMonth === currentMonth && targetYear === currentYear;
     const isPastMonth = (targetYear < currentYear) || (targetYear === currentYear && targetMonth < currentMonth);
 
     // Map total payments per student for ALL TIME (to use for credit-based auditing)
