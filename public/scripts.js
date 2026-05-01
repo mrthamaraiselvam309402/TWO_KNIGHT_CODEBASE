@@ -1610,8 +1610,11 @@ window.updateReportContext = function() {
     const totalPotential = targetStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
 
     // 3. Dynamic Status Mapping for the selected month
-    let lastDueAmount = 0;
-    let currMonthPending = 0;
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const isCurrentMonth = targetMonth === currentMonth && targetYear === currentYear;
+    const isPastMonth = (targetYear < currentYear) || (targetYear === currentYear && targetMonth < currentMonth);
 
     // Map total payments per student for ALL TIME (to use for credit-based auditing)
     const totalPaymentsMap = {};
@@ -1621,7 +1624,9 @@ window.updateReportContext = function() {
       totalPaymentsMap[sid]++;
     });
 
-    // 3. Dynamic Status Mapping for the selected month
+    let lastDueAmount = 0;
+    let currMonthPending = 0;
+
     targetStudents.forEach(s => {
       const fee = getStudentMonthlyFee(s) || 0;
       const enrollDate = new Date(getStudentDate(s));
@@ -2925,7 +2930,7 @@ window.updateReportContext = function() {
       return;
     }
 
-    // Map total payments per student for ALL TIME (to use for credit-based auditing)
+    // Map total payments per student for ALL TIME
     const totalPaymentsMap = {};
     (allPayments || []).forEach(p => {
       const sid = String(p.student_id);
@@ -2933,45 +2938,62 @@ window.updateReportContext = function() {
       totalPaymentsMap[sid]++;
     });
 
-    const isCurrentMonth = targetMonth === new Date().getMonth() && targetYear === new Date().getFullYear();
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const isCurrentMonth = targetMonth === currentMonth && targetYear === currentYear;
+    const isPastMonth = (targetYear < currentYear) || (targetYear === currentYear && targetMonth < currentMonth);
     const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
     
     tbody.innerHTML = allStudents.map(s => {
       const enrollDateStr = getStudentDate(s);
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
 
-      // 1. Check if student was enrolled during or before the target month
+      // 1. Enrollment Check
       const wasEnrolled = enrollDate && enrollDate <= targetMonthEnd;
-
-      // 2. Calculate "Months Required" up to target month
-      // If joined Feb 2024 and target is April 2024, months required = 3 (Feb, Mar, Apr)
-      let monthsRequired = 0;
-      if (wasEnrolled) {
-        monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
+      if (!wasEnrolled) {
+        return `<tr>
+          <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">INV-${(s.id?s.id.toString().slice(-6):'000000')}</span></td>
+          <td><div style="font-weight:600;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div></td>
+          <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+          <td><span class="badge badge-outline-grey" style="font-size:10px;padding:4px 8px">Not Enrolled</span></td>
+          <td><span style="color:var(--ivory-dim);font-size:11px">—</span></td>
+        </tr>`;
       }
 
-      // 3. Get total credits (payments made ever)
+      // 2. Slot Calculation
+      // Calculate how many months of tuition are required up to the TARGET month
+      const monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
       const totalCredits = totalPaymentsMap[String(s.id)] || 0;
 
+      // 3. Status Determination Logic
       let status = 'Due';
       let statusClass = 'badge-danger';
 
-      if (!wasEnrolled) {
-        status = 'Not Enrolled';
-        statusClass = 'badge-outline-grey';
-      } else if (totalCredits >= monthsRequired) {
-        // They have enough credits to cover up to this month
+      if (totalCredits >= monthsRequired) {
         status = 'Paid';
         statusClass = 'badge-success';
       } else {
-        // They are behind. 
-        // If it's the current month and they haven't paid yet, it might be "Pending" or "Due"
+        // They haven't paid for this slot yet.
         if (isCurrentMonth) {
-          status = getStudentPaymentStatus(s); // Use live status for current month UI
-          statusClass = status === 'Paid' ? 'badge-success' : (status === 'Pending' ? 'badge-warning' : 'badge-danger');
-        } else {
+          // If it's the current month, they might be "Pending" (Waiting) or "Due" (Arrears from before)
+          // We check if they were already behind BEFORE this month started
+          const monthsRequiredLastMonth = monthsRequired - 1;
+          if (totalCredits < monthsRequiredLastMonth) {
+            status = 'Due'; // Already owed money before this month
+            statusClass = 'badge-danger';
+          } else {
+            status = 'Pending'; // This is their first missed month (Current)
+            statusClass = 'badge-warning';
+          }
+        } else if (isPastMonth) {
+          // If it's a past month and they haven't paid for this slot yet, it's definitely "Due"
           status = 'Due';
           statusClass = 'badge-danger';
+        } else {
+          // Future months (shouldn't happen with targetMonthEnd filter but for safety)
+          status = 'Scheduled';
+          statusClass = 'badge-outline-grey';
         }
       }
 
