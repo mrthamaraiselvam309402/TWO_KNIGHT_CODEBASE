@@ -1613,28 +1613,36 @@ window.updateReportContext = function() {
     let lastDueAmount = 0;
     let currMonthPending = 0;
 
+    // Map total payments per student for ALL TIME (to use for credit-based auditing)
+    const totalPaymentsMap = {};
+    allPayments.forEach(p => {
+      const sid = String(p.student_id);
+      if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
+      totalPaymentsMap[sid]++;
+    });
+
+    // 3. Dynamic Status Mapping for the selected month
     targetStudents.forEach(s => {
       const fee = getStudentMonthlyFee(s) || 0;
-      const hasPaidThisMonth = monthPayments.some(p => String(p.student_id) === String(s.id));
-      
-      if (isCurrentMonth) {
-        // Use Live Status for current month
-        const status = getStudentPaymentStatus(s);
-        if (status === 'Due') lastDueAmount += fee;
-        else if (status === 'Pending') currMonthPending += fee;
+      const enrollDate = new Date(getStudentDate(s));
+      const monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
+      const totalCredits = totalPaymentsMap[String(s.id)] || 0;
+      const hasPaidUpToThisMonth = totalCredits >= monthsRequired;
+
+      if (hasPaidUpToThisMonth) {
+        // They are paid up. No debt for this month.
       } else {
-        // Historical Logic for past months
-        if (!hasPaidThisMonth) {
-          // If they didn't pay in this month, were they already in arrears?
-          const pastPayments = allPayments.filter(p => {
-            const pDate = new Date(p.payment_date || p.created_at);
-            return String(p.student_id) === String(s.id) && pDate < targetMonthDate;
-          });
-          
-          const enrollDate = new Date(getStudentDate(s));
-          const monthsEnrolled = ((targetMonthDate.getFullYear() - enrollDate.getFullYear()) * 12) + (targetMonthDate.getMonth() - enrollDate.getMonth());
-          
-          if (monthsEnrolled > pastPayments.length) {
+        // They are behind.
+        if (isCurrentMonth) {
+          const status = getStudentPaymentStatus(s);
+          if (status === 'Due') lastDueAmount += fee;
+          else if (status === 'Pending') currMonthPending += fee;
+        } else {
+          // Historical Logic: 
+          // If they are behind by more than 1 month relative to the target month, it's "Last Due" (Arrears)
+          // Otherwise it's "Pending" for that month.
+          const monthsRequiredLastMonth = monthsRequired - 1;
+          if (totalCredits < monthsRequiredLastMonth) {
             lastDueAmount += fee;
           } else {
             currMonthPending += fee;
@@ -2917,19 +2925,12 @@ window.updateReportContext = function() {
       return;
     }
 
-    // Helper for robust date matching
-    const getYM = (d) => {
-      const dt = new Date(d);
-      return isNaN(dt.getTime()) ? null : `${dt.getFullYear()}-${dt.getMonth()}`;
-    };
-    const targetYM = `${targetYear}-${targetMonth}`;
-
-    // Map payments for this specific month
-    const monthPaymentMap = {};
+    // Map total payments per student for ALL TIME (to use for credit-based auditing)
+    const totalPaymentsMap = {};
     (allPayments || []).forEach(p => {
-      if (getYM(p.payment_date || p.created_at) === targetYM) {
-        monthPaymentMap[String(p.student_id)] = p;
-      }
+      const sid = String(p.student_id);
+      if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
+      totalPaymentsMap[sid]++;
     });
 
     const isCurrentMonth = targetMonth === new Date().getMonth() && targetYear === new Date().getFullYear();
@@ -2939,27 +2940,39 @@ window.updateReportContext = function() {
       const enrollDateStr = getStudentDate(s);
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
 
-      // Check if student was enrolled during or before the target month
+      // 1. Check if student was enrolled during or before the target month
       const wasEnrolled = enrollDate && enrollDate <= targetMonthEnd;
+
+      // 2. Calculate "Months Required" up to target month
+      // If joined Feb 2024 and target is April 2024, months required = 3 (Feb, Mar, Apr)
+      let monthsRequired = 0;
+      if (wasEnrolled) {
+        monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
+      }
+
+      // 3. Get total credits (payments made ever)
+      const totalCredits = totalPaymentsMap[String(s.id)] || 0;
 
       let status = 'Due';
       let statusClass = 'badge-danger';
-      const paymentRecord = monthPaymentMap[String(s.id)];
 
       if (!wasEnrolled) {
         status = 'Not Enrolled';
         statusClass = 'badge-outline-grey';
-      } else if (paymentRecord) {
+      } else if (totalCredits >= monthsRequired) {
+        // They have enough credits to cover up to this month
         status = 'Paid';
         statusClass = 'badge-success';
-      } else if (isCurrentMonth) {
-        // For current month, respect the live state (Pending vs Due)
-        status = getStudentPaymentStatus(s);
-        statusClass = status === 'Paid' ? 'badge-success' : (status === 'Pending' ? 'badge-warning' : 'badge-danger');
       } else {
-        // For past months, if no payment was found, they are "Due" (Arrears)
-        status = 'Due';
-        statusClass = 'badge-danger';
+        // They are behind. 
+        // If it's the current month and they haven't paid yet, it might be "Pending" or "Due"
+        if (isCurrentMonth) {
+          status = getStudentPaymentStatus(s); // Use live status for current month UI
+          statusClass = status === 'Paid' ? 'badge-success' : (status === 'Pending' ? 'badge-warning' : 'badge-danger');
+        } else {
+          status = 'Due';
+          statusClass = 'badge-danger';
+        }
       }
 
       const invoiceId = 'INV-' + (s.id ? s.id.toString().slice(-6) : '000000');
