@@ -171,7 +171,7 @@ window.generateReportPDF = async function() {
         monthwiseData.push({ month: mName, potential: mPotential, collected: mCollected, outstanding: mOutstanding, rate: mRate });
     }
 
-    const reportHTML = `
+    let reportHTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
