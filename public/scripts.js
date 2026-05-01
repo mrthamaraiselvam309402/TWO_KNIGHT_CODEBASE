@@ -1674,10 +1674,6 @@ window.updateReportContext = function() {
     if ($('s-single')) $('s-single').textContent = singleCount;
     if ($('s-active-enroll')) $('s-active-enroll').textContent = activeEnroll;
     
-    // Collection rate
-    const collectionRate = totalPotential > 0 ? ((paidRevenue / totalPotential) * 100).toFixed(1) : '0';
-    if ($('s-rate')) $('s-rate').textContent = collectionRate + '%';
-    
     // Build charts
     if (typeof Chart !== 'undefined') buildCharts(allStudents);
     
