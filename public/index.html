@@ -159,10 +159,11 @@
       </div>
       <div class="dash-grid" style="margin-bottom:32px">
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Last Month Due</div><div class="stat-value text-danger" id="s-last-due">₹0</div></div>
-        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Pending</div><div class="stat-value" style="color:var(--gold)" id="s-curr-pending">₹0</div></div>
-        <div class="card"><div class="stat-label">Collection Rate</div><div class="stat-value" style="color:var(--blue)" id="s-rate">—</div></div>
+        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Month Pending</div><div class="stat-value" style="color:var(--gold)" id="s-curr-pending">₹0</div></div>
+        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Total Outstanding</div><div class="stat-value text-danger" id="s-total-outstanding">₹0</div></div>
       </div>
       <div class="dash-grid" style="margin-bottom:32px">
+        <div class="card"><div class="stat-label">Collection Rate</div><div class="stat-value" style="color:var(--blue)" id="s-rate">—</div></div>
         <div class="card"><div class="stat-label">Group Sessions</div><div class="stat-value" id="s-group">—</div></div>
         <div class="card"><div class="stat-label">Single Sessions</div><div class="stat-value" id="s-single">—</div></div>
       </div>
@@ -354,6 +355,14 @@
       <div class="tabs-nav" style="margin-bottom:20px;">
         <button class="tab-link active" onclick="setBillTab('students', this)">Student Fees</button>
         <button class="tab-link" onclick="setBillTab('coaches', this)">Coach Salaries</button>
+      </div>
+
+      <div class="filter-bar" style="margin-bottom:20px; background:var(--glass); padding:12px; border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; gap:12px">
+        <div style="display:flex; align-items:center; gap:8px">
+          <span style="font-size:13px; color:var(--ivory-dim)">View Month:</span>
+          <input type="month" id="f-bill-month" onchange="renderBills()" style="width:160px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+        </div>
+        <button class="btn btn-outline-grey btn-sm" onclick="resetBillMonth()">This Month</button>
       </div>
 
       <div id="bills-tab-students" class="bill-tab-content" style="display:block;">

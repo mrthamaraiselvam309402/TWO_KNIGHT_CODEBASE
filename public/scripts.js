@@ -1608,19 +1608,20 @@ window.updateReportContext = function() {
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
     if ($('s-due')) $('s-due').textContent = '₹' + dueRevenue.toLocaleString();
     
-    // Last Month Due and Cumulative Pending Calculation
+    // 1. Last Month Due (Arrears)
     const lastDueAmount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due')
                                      .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
     
-    // Cumulative Pending: Everyone who hasn't fully paid for the current month 
-    // (This includes those who still owe from last month)
-    const currPendingAmount = allStudents.filter(s => {
-        const ps = getStudentPaymentStatus(s);
-        return ps === 'Pending' || ps === 'Due';
-    }).reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+    // 2. Current Month Pending Only (Newly reset students)
+    const currMonthPending = allStudents.filter(s => s.status === 'pending')
+                                        .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+    
+    // 3. Total Outstanding (Cumulative Debt)
+    const totalOutstanding = lastDueAmount + currMonthPending;
     
     if ($('s-last-due')) $('s-last-due').textContent = '₹' + lastDueAmount.toLocaleString();
-    if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currPendingAmount.toLocaleString();
+    if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currMonthPending.toLocaleString();
+    if ($('s-total-outstanding')) $('s-total-outstanding').textContent = '₹' + totalOutstanding.toLocaleString();
     
     // Coach expenses
     const totalCoachCost = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
@@ -2817,20 +2818,68 @@ window.updateReportContext = function() {
     }).join('');
   }
 
+  window.resetBillMonth = function() {
+    const el = $('f-bill-month');
+    if (el) {
+      const now = new Date();
+      el.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+    renderBills();
+  };
+
   function renderBills() {
     renderCoachBills();
     const tbody = $('bill-body');
     if (!tbody) return;
+
+    // Set initial value for month filter if empty
+    const filterEl = $('f-bill-month');
+    if (filterEl && !filterEl.value) {
+      const now = new Date();
+      filterEl.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
     
+    const selectedMonthVal = filterEl ? filterEl.value : null;
+    let targetMonth = new Date().getMonth();
+    let targetYear = new Date().getFullYear();
+    
+    if (selectedMonthVal) {
+      const parts = selectedMonthVal.split('-');
+      targetYear = parseInt(parts[0]);
+      targetMonth = parseInt(parts[1]) - 1;
+    }
+
     if (!allStudents || allStudents.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No payment records found</div></td></tr>';
       return;
     }
+
+    // Pre-calculate which students have paid for the target month
+    const paidStudentIds = new Set();
+    (allPayments || []).forEach(p => {
+      const pDate = new Date(p.payment_date || p.created_at);
+      if (pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear) {
+        paidStudentIds.add(String(p.student_id));
+      }
+    });
+
+    const isCurrentMonth = targetMonth === new Date().getMonth() && targetYear === new Date().getFullYear();
     
     tbody.innerHTML = allStudents.map(s => {
-      const status = getStudentPaymentStatus(s);
-      const statusClass = status === 'Paid' ? 'text-success' : (status === 'Pending' ? 'text-warning' : 'text-danger');
+      let status = 'Due';
+      if (paidStudentIds.has(String(s.id))) {
+        status = 'Paid';
+      } else if (isCurrentMonth) {
+        // For current month, fallback to student's live status if no payment record yet
+        status = getStudentPaymentStatus(s);
+      } else {
+        // For past months, if no payment record, it's definitely 'Due' (Arrears)
+        status = 'Due';
+      }
+
+      const statusClass = status === 'Paid' ? 'badge-success' : (status === 'Pending' ? 'badge-warning' : 'badge-danger');
       const invoiceId = 'INV-' + (s.id ? s.id.toString().slice(-6) : '000000');
+      
       return `<tr>
         <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">${invoiceId}</span></td>
         <td>
@@ -2838,7 +2887,7 @@ window.updateReportContext = function() {
           <div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(getStudentLevel(s))}</div>
         </td>
         <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-        <td><span class="badge ${status === 'Paid' ? 'badge-success' : (status === 'Pending' ? 'badge-warning' : 'badge-danger')}" style="font-size:10px;padding:4px 8px">${status}</span></td>
+        <td><span class="badge ${statusClass}" style="font-size:10px;padding:4px 8px">${status}</span></td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             ${status === 'Due' || status === 'Pending' ? 
