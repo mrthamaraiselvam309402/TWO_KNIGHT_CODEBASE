@@ -1581,78 +1581,76 @@ window.updateReportContext = function() {
       pendingEl.style.color = 'var(--gold2)';
     }
     
-    // Revenue stats - Realized Revenue from actual payment records
+    // --- Time-Machine Financial Calculation ---
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
-    
-    // Sum only payments for the target calendar month
+    const isCurrentMonth = targetMonth === new Date().getMonth() && targetYear === new Date().getFullYear();
+    const targetMonthDate = new Date(targetYear, targetMonth, 1);
+    const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
+
+    // 1. Paid Revenue (Direct from transactions in that period)
     const monthPayments = allPayments.filter(p => {
-      const pDate = new Date(p.created_at || p.payment_date);
+      const pDate = new Date(p.payment_date || p.created_at);
       return pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear;
     });
-    
-    let paidRevenue = monthPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
-    
-    // Fallback logic: If no payments are found in the transactions table, 
-    // we sum the fees of students marked as 'Paid' in the student registry.
-    const paidStudents = allStudents.filter(s => {
-      const status = getStudentPaymentStatus(s);
-      return status && status.toLowerCase() === 'paid';
-    });
-    
-    const statusRevenue = paidStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
-    const isCurrentMonth = targetMonth === new Date().getMonth() && targetYear === new Date().getFullYear();
+    const paidRevenue = monthPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
 
-    // If transactions are missing but students are marked paid, use students as source (current month only)
-    if (paidRevenue === 0 && isCurrentMonth && statusRevenue > 0) {
-      paidRevenue = statusRevenue;
-    }
-    
-    // Total Potential Revenue = Sum of all students' active monthly fees
-    
-    let potentialStudents = [];
-    if (isCurrentMonth) {
-      // Current month: all currently active/on-roster students
-      potentialStudents = allStudents.filter(s => {
-        const status = getStudentStatus(s);
-        return status === 'active' || status === 'pending' || getStudentPaymentStatus(s) === 'Paid';
-      });
-    } else {
-      // Historical month: only students enrolled during or before this specific month
-      potentialStudents = allStudents.filter(s => {
-        const enrollDateStr = getStudentDate(s);
-        if (!enrollDateStr) return false;
-        const enrollDate = new Date(enrollDateStr);
-        // Student was enrolled during or before target month
-        return enrollDate <= new Date(targetYear, targetMonth + 1, 0);
-      });
-    }
-    
-    // Total Potential Revenue for this specific month view
-    const totalPotential = potentialStudents.reduce((a, s) => {
-      const fee = getStudentMonthlyFee(s);
-      return a + (fee || 0);
-    }, 0);
-    
-    // Outstanding Dues
-    const dueRevenue = Math.max(0, totalPotential - paidRevenue);
-    if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
-    if ($('s-due')) $('s-due').textContent = '₹' + dueRevenue.toLocaleString();
-    
-    // 1. Last Month Due (Arrears)
-    const lastDueAmount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due')
-                                     .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
-    
-    // 2. Current Month Pending Only (Newly reset students)
-    const currMonthPending = allStudents.filter(s => s.status === 'pending')
-                                        .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
-    
-    // 3. Total Outstanding (Cumulative Debt)
+    // 2. Identify who SHOULD have paid (Potential)
+    const targetStudents = allStudents.filter(s => {
+      const enrollDateStr = getStudentDate(s);
+      if (!enrollDateStr) return false;
+      const enrollDate = new Date(enrollDateStr);
+      return enrollDate <= targetMonthEnd; // Enrolled during or before target month
+    });
+
+    const totalPotential = targetStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+
+    // 3. Dynamic Status Mapping for the selected month
+    let lastDueAmount = 0;
+    let currMonthPending = 0;
+
+    targetStudents.forEach(s => {
+      const fee = getStudentMonthlyFee(s) || 0;
+      const hasPaidThisMonth = monthPayments.some(p => String(p.student_id) === String(s.id));
+      
+      if (isCurrentMonth) {
+        // Use Live Status for current month
+        const status = getStudentPaymentStatus(s);
+        if (status === 'Due') lastDueAmount += fee;
+        else if (status === 'Pending') currMonthPending += fee;
+      } else {
+        // Historical Logic for past months
+        if (!hasPaidThisMonth) {
+          // If they didn't pay in this month, were they already in arrears?
+          // Check if they had ANY payment in the months leading up to this one
+          const pastPayments = allPayments.filter(p => {
+            const pDate = new Date(p.payment_date || p.created_at);
+            return String(p.student_id) === String(s.id) && pDate < targetMonthDate;
+          });
+          
+          const enrollDate = new Date(getStudentDate(s));
+          const monthsEnrolled = ((targetMonthDate.getFullYear() - enrollDate.getFullYear()) * 12) + (targetMonthDate.getMonth() - enrollDate.getMonth());
+          
+          if (monthsEnrolled > pastPayments.length) {
+            lastDueAmount += fee; // They already owed from before
+          } else {
+            currMonthPending += fee; // This is their first missed month (Pending)
+          }
+        }
+      }
+    });
+
     const totalOutstanding = lastDueAmount + currMonthPending;
     
+    // Update UI
+    if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
+    if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
     if ($('s-last-due')) $('s-last-due').textContent = '₹' + lastDueAmount.toLocaleString();
     if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currMonthPending.toLocaleString();
     if ($('s-total-outstanding')) $('s-total-outstanding').textContent = '₹' + totalOutstanding.toLocaleString();
+    
+    const collectionRate = totalPotential > 0 ? ((paidRevenue / totalPotential) * 100).toFixed(1) : '0';
+    if ($('s-rate')) $('s-rate').textContent = collectionRate + '%';
     
     // Coach expenses
     const totalCoachCost = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
