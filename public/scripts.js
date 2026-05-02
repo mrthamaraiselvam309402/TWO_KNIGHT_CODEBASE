@@ -2101,6 +2101,25 @@ window.updateReportContext = function() {
     try {
       const res = await apiCall(`/api/students?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
       if (res.ok) {
+        // AUTOMATION: Create transaction record if status was manually changed to 'Paid'
+        const newStatus = $('e-payment-status')?.value || s.payment_status || 'Pending';
+        if (s.payment_status !== 'Paid' && newStatus === 'Paid') {
+          try {
+            await apiCall('/api/payments', { 
+              method: 'POST', 
+              body: JSON.stringify({ 
+                student_id: id, 
+                amount: newFee, 
+                status: 'paid', 
+                payment_method: 'Manual Override',
+                description: 'Status updated to Paid via Profile',
+                transaction_id: 'PRF-' + Math.floor(Math.random()*1000000),
+                payment_date: new Date().toISOString()
+              }) 
+            });
+          } catch (pe) { console.warn('Payment logging failed during profile update:', pe); }
+        }
+
         // Log rating history if changed
         if (newElo !== oldElo) {
           try {
