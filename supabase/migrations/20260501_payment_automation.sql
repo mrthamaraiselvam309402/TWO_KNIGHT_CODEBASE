@@ -33,18 +33,23 @@ SELECT cron.schedule('start-of-month-fees', '1 0 1 * *', 'SELECT public.handle_s
 -- Or just run it on the 1st at 00:00 before the reset.
 */
 
--- Alternative: Combined logic that can be run safely
+-- Alternative: Combined logic that can be run safely (e.g. daily)
 CREATE OR REPLACE FUNCTION public.automate_payment_statuses()
 RETURNS void AS $$
-DECLARE
-    today DATE := CURRENT_DATE;
 BEGIN
-    -- If today is the 1st of the month
-    IF EXTRACT(DAY FROM today) = 1 THEN
-        -- Mark previous month's unpaid as Due (if not already done)
-        -- Then reset everyone to Pending for the new month
-        UPDATE public.students SET payment_status = 'Due' WHERE payment_status = 'Pending';
-        UPDATE public.students SET payment_status = 'Pending';
+    -- 1. Mark students as 'Due' if their specific due_date has passed and they are still 'Pending'
+    -- This makes the system "Due Date Based" automatically.
+    UPDATE public.students 
+    SET payment_status = 'Due' 
+    WHERE (payment_status = 'Pending' OR payment_status IS NULL)
+      AND due_date <= CURRENT_DATE;
+
+    -- 2. On the 1st of every month, reset those who were 'Paid' back to 'Pending'
+    -- This assumes a recurring monthly billing cycle.
+    IF EXTRACT(DAY FROM CURRENT_DATE) = 1 THEN
+        UPDATE public.students 
+        SET payment_status = 'Pending'
+        WHERE payment_status = 'Paid';
     END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -16,24 +16,55 @@ window.generateReportPDF = async function() {
     const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     toast(`Generating Financial Report for ${dateStr}...`, 'info');
 
-    // 1. Data Aggregation (Filtered by Period)
-    const totalStudents = allStudents.length;
-    // For historical, we assume active students are those joined before or during the target month
-    const activeStudents = allStudents.filter(s => {
-        const join = new Date(s.joining_date || s.enrollment_date || s.created_at);
-        return join <= new Date(targetYear, targetMonth + 1, 0); 
-    }).length;
+    // Helper for robust date matching (Consolidated)
+    const getYM = (d) => {
+      const dt = new Date(d);
+      return isNaN(dt.getTime()) ? null : `${dt.getFullYear()}-${dt.getMonth()}`;
+    };
+    const targetYM = `${targetYear}-${targetMonth}`;
 
-    // Real Payment Data from allPayments
-    const monthlyPayments = allPayments.filter(p => {
-        const pDate = new Date(p.payment_date || p.created_at);
-        return pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear;
+    // 1. Data Aggregation (Filtered by Period)
+    const monthEndLimit = new Date(targetYear, targetMonth + 1, 0);
+    const targetStudents = allStudents.filter(s => {
+        const joinStr = s.joining_date || s.enrollment_date || s.created_at;
+        return joinStr && new Date(joinStr) <= monthEndLimit;
     });
 
-    const collected = monthlyPayments.reduce((a, p) => a + (p.amount || 0), 0);
-    const potential = allStudents.filter(s => s.status === 'active').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-    const pending = potential > collected ? potential - collected : 0;
-    
+    const totalStudents = allStudents.length;
+    const activeStudents = targetStudents.length;
+
+    // Map total payments per student for ALL TIME
+    const totalPaymentsMap = {};
+    allPayments.forEach(p => {
+      const sid = String(p.student_id);
+      if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
+      totalPaymentsMap[sid]++;
+    });
+
+    // Precise Status Categorization
+    let collected = 0;
+    let lastDueAmount = 0;
+    let currPendingAmount = 0;
+    let potential = 0;
+
+    targetStudents.forEach(s => {
+        const fee = getStudentMonthlyFee(s) || 0;
+        const enrollDate = new Date(getStudentDate(s));
+        const monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
+        const totalCredits = totalPaymentsMap[String(s.id)] || 0;
+        const hasPaidThisSlot = totalCredits >= monthsRequired;
+
+        potential += fee;
+        if (hasPaidThisSlot) {
+            collected += fee;
+        } else {
+            const monthsRequiredLastMonth = monthsRequired - 1;
+            if (totalCredits < monthsRequiredLastMonth) lastDueAmount += fee;
+            else currPendingAmount += fee;
+        }
+    });
+
+    const pending = potential - collected;
     const payroll = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     const netProfit = collected - payroll;
     
@@ -43,20 +74,11 @@ window.generateReportPDF = async function() {
     const opMargin = collected > 0 ? ((netProfit / collected) * 100).toFixed(1) : 0;
     
     // Growth & Attendance Metrics
-    const lastMonthLimit = new Date(targetYear, targetMonth, 1);
-    const monthEndLimit = new Date(targetYear, targetMonth + 1, 0);
-    
-    // Last Due and Current Pending Calculation
-    const lastDueAmount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due')
-                                     .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
-    const currPendingAmount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Pending')
-                                         .reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
-
+    const monthStartLimit = new Date(targetYear, targetMonth, 1);
     const newStudsThisMonth = allStudents.filter(s => {
         const join = new Date(s.joining_date || s.enrollment_date || s.created_at);
-        return join >= lastMonthLimit && join <= monthEndLimit;
+        return join >= monthStartLimit && join <= monthEndLimit;
     }).length;
-    const growthRate = totalStudents > 0 ? ((newStudsThisMonth / totalStudents) * 100).toFixed(1) : 0;
     
     // Attendance Real-Time (Calculated from allAttendance for target period)
     const monthAtt = (window.allAttendance || []).filter(a => {
@@ -66,30 +88,28 @@ window.generateReportPDF = async function() {
     const presentCount = monthAtt.filter(a => a.status === 'present').length;
     const attendanceHealth = monthAtt.length > 0 ? ((presentCount / monthAtt.length) * 100).toFixed(1) : 88.5; 
 
-    const batches = { 'Group': 0, 'Single': 0 };
-    const timings = { 'Morning': 0, 'Evening': 0, 'Weekend': 0 };
-    
-    allStudents.forEach(s => {
-        const type = s.session_mode || s.batch_type || 'Group';
-        if (batches[type] !== undefined) batches[type]++;
-        
-        const time = getStudentSessionTime(s).toUpperCase();
-        if (time.includes('MORNING')) timings['Morning']++;
-        else if (time.includes('WEEKEND')) timings['Weekend']++;
-        else timings['Evening']++;
-    });
-
+    // Coach Performance ROI
     const coachMetrics = allCoaches.map(c => {
+      let coachRev = 0;
       const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
-      const coachRev = monthlyPayments
-        .filter(p => coachStuds.some(s => String(s.id) === String(p.student_id)))
-        .reduce((a, p) => a + (p.amount || 0), 0);
+      coachStuds.forEach(s => {
+          const enrollDateStr = getStudentDate(s);
+          if (enrollDateStr) {
+              const enrollDate = new Date(enrollDateStr);
+              if (enrollDate <= monthEndLimit) {
+                  const monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
+                  const totalCredits = totalPaymentsMap[String(s.id)] || 0;
+                  if (totalCredits >= monthsRequired) coachRev += (getStudentMonthlyFee(s) || 0);
+              }
+          }
+      });
+      
       const coachCost = getCoachSalary(c) || 0;
       const profit = coachRev - coachCost;
       const roi = coachCost > 0 ? ((profit / coachCost) * 100).toFixed(0) : '0';
       return { 
         name: getCoachName(c), 
-        students: coachStuds.length, 
+        students: coachStuds.filter(s => new Date(getStudentDate(s)) <= monthEndLimit).length, 
         revenue: coachRev, 
         cost: coachCost, 
         profit: profit, 
@@ -97,29 +117,83 @@ window.generateReportPDF = async function() {
       };
     });
 
-    const paidStudentIds = monthlyPayments.map(p => String(p.student_id));
     const topPending = allStudents
-      .filter(s => s.status === 'active' && !paidStudentIds.includes(String(s.id)))
+      .filter(s => {
+          const enrollDate = new Date(getStudentDate(s));
+          if (enrollDate > monthEndLimit) return false;
+          const monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
+          const totalCredits = totalPaymentsMap[String(s.id)] || 0;
+          return totalCredits < monthsRequired;
+      })
       .sort((a, b) => getStudentMonthlyFee(b) - getStudentMonthlyFee(a))
       .slice(0, 5);
 
+    // Monthwise Historical Analysis (Last 6 Months)
+    const monthwiseData = [];
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(targetYear, targetMonth - i, 1);
+        const mName = d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+        const m = d.getMonth();
+        const y = d.getFullYear();
+        const mEnd = new Date(y, m + 1, 0);
+        
+        let mCollected = 0;
+        let mPotential = 0;
+        
+        allStudents.forEach(s => {
+            const enrollDate = new Date(getStudentDate(s));
+            if (enrollDate <= mEnd) {
+                const fee = getStudentMonthlyFee(s) || 0;
+                const mReq = ((y - enrollDate.getFullYear()) * 12) + (m - enrollDate.getMonth()) + 1;
+                const mCredits = totalPaymentsMap[String(s.id)] || 0;
+                mPotential += fee;
+                if (mCredits >= mReq) mCollected += fee;
+            }
+        });
+        
+        const mOutstanding = Math.max(0, mPotential - mCollected);
+        const mRate = mPotential > 0 ? ((mCollected / mPotential) * 100).toFixed(0) : 0;
+        monthwiseData.push({ month: mName, potential: mPotential, collected: mCollected, outstanding: mOutstanding, rate: mRate });
+    }
+
+    // Preparing Category Distributions
+    const batches = { 'Group': 0, 'Single': 0 };
+    const timings = { 'Morning': 0, 'Evening': 0, 'Weekend': 0 };
     const levels = { 'Beginner': 0, 'Intermediate': 0, 'Advanced': 0, 'Elite': 0 };
-    allStudents.forEach(s => {
+    
+    targetStudents.forEach(s => {
+        const type = getStudentBatchType(s);
+        if (batches[type] !== undefined) batches[type]++;
+        
+        const time = getStudentSessionTime(s).toUpperCase();
+        if (time.includes('MORNING')) timings['Morning']++;
+        else if (time.includes('WEEKEND')) timings['Weekend']++;
+        else timings['Evening']++;
+
         const lvl = getStudentLevel(s);
         if (levels[lvl] !== undefined) levels[lvl]++;
         else levels['Beginner']++;
     });
 
-    // Top ELO Gainers (From Rating History)
-    const eloGainers = allStudents.map(s => {
+    // Performance Metrics
+    const avgElo = targetStudents.length > 0 ? (targetStudents.reduce((a, s) => a + getStudentRating(s), 0) / targetStudents.length).toFixed(0) : 0;
+
+    const eloGainers = targetStudents.map(s => {
         const history = (window.allRatingHistory || []).filter(h => String(h.student_id) === String(s.id)).sort((a,b) => new Date(a.recorded_at) - new Date(b.recorded_at));
-        if (history.length < 2) return { name: getStudentName(s), gain: 0 };
-        const gain = history[history.length - 1].rating - history[0].rating;
-        return { name: getStudentName(s), gain: gain };
+        if (history.length < 1) return { name: getStudentName(s), gain: 0 };
+        
+        // Find rating at start of month (last record before month start)
+        const beforeMonth = history.filter(h => new Date(h.recorded_at) < monthStartLimit);
+        const startRating = beforeMonth.length > 0 ? beforeMonth[beforeMonth.length - 1].rating : (history[0].rating || 800);
+        
+        // Find rating at end of month (last record before month end)
+        const duringMonth = history.filter(h => new Date(h.recorded_at) <= monthEndLimit);
+        const endRating = duringMonth.length > 0 ? duringMonth[duringMonth.length - 1].rating : startRating;
+        
+        return { name: getStudentName(s), gain: endRating - startRating };
     }).sort((a, b) => b.gain - a.gain).slice(0, 3);
 
-    // 4. Attendance Detail Construction
-    const attendanceStats = allStudents.map(s => {
+    const attendanceStats = targetStudents.map(s => {
         const studAtt = monthAtt.filter(a => String(a.student_id) === String(s.id));
         const present = studAtt.filter(a => a.status === 'present').length;
         const total = studAtt.length;
@@ -127,49 +201,19 @@ window.generateReportPDF = async function() {
         return { name: getStudentName(s), rate, present, total };
     }).filter(x => x.total > 0).sort((a, b) => b.rate - a.rate).slice(0, 8);
 
-    const avgElo = allStudents.length > 0 ? (allStudents.reduce((a, s) => a + getStudentRating(s), 0) / allStudents.length).toFixed(0) : 0;
-
-    // 2. HTML Template Construction
-    // 3. Page 03 Construction (Transaction Detail Audit)
-    const transactionRows = monthlyPayments.map(p => {
+    // Prepare transaction rows for the ledger (Actual transactions in that specific month)
+    const monthlyTransactions = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM);
+    const transactionRows = monthlyTransactions.map(p => {
         const s = allStudents.find(x => String(x.id) === String(p.student_id));
         return `
         <tr>
           <td class="mono" style="font-size:10px">${new Date(p.payment_date || p.created_at).toLocaleDateString('en-IN')}</td>
           <td class="bold">${(s ? getStudentName(s) : (p.student_name || 'Unknown Student')).toUpperCase()}</td>
-          <td>${p.method || 'Transfer'}</td>
-          <td class="text-right mono bold">₹${(p.amount || 0).toLocaleString()}</td>
+          <td>${p.payment_method || 'Transfer'}</td>
+          <td class="text-right mono bold">₹${(parseFloat(p.amount) || 0).toLocaleString()}</td>
           <td style="font-size:10px;color:var(--text-dim)">#${String(p.id).slice(-8)}</td>
         </tr>`;
-    }).join('');    // 5. Monthwise Historical Analysis (Last 6 Months)
-    const monthwiseData = [];
-    for (let i = 5; i >= 0; i--) {
-        const d = new Date(targetYear, targetMonth - i, 1);
-        const mName = d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
-        const m = d.getMonth();
-        const y = d.getFullYear();
-        
-        const mPayments = allPayments.filter(p => {
-            const pDate = new Date(p.payment_date || p.created_at);
-            return pDate.getMonth() === m && pDate.getFullYear() === y;
-        });
-        
-        const mCollected = mPayments.reduce((a, p) => a + (p.amount || 0), 0);
-        
-        // For historical months, we estimate potential based on students active at that time
-        const mActiveStudents = allStudents.filter(s => {
-            const join = new Date(s.joining_date || s.enrollment_date || s.created_at);
-            return join <= new Date(y, m + 1, 0);
-        });
-        const mPotential = mActiveStudents.reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-        
-        // For the current month, pending is potential - collected
-        // For past months, we label it as 'Due/Uncollected'
-        const mOutstanding = Math.max(0, mPotential - mCollected);
-        const mRate = mPotential > 0 ? ((mCollected / mPotential) * 100).toFixed(0) : 0;
-        
-        monthwiseData.push({ month: mName, potential: mPotential, collected: mCollected, outstanding: mOutstanding, rate: mRate });
-    }
+    }).join('');
 
     let reportHTML = `
 <!DOCTYPE html>
