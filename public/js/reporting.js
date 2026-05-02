@@ -202,8 +202,8 @@ window.generateReportPDF = async function() {
     }).filter(x => x.total > 0).sort((a, b) => b.rate - a.rate).slice(0, 8);
 
     // Prepare transaction rows for the ledger (Actual transactions in that specific month)
-    const monthlyTransactions = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM);
-    const transactionRows = monthlyTransactions.map(p => {
+    const monthlyPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM);
+    const transactionRows = monthlyPayments.map(p => {
         const s = allStudents.find(x => String(x.id) === String(p.student_id));
         return `
         <tr>
