@@ -452,73 +452,32 @@
 <!-- Toast -->
 <div id="toast-container"></div>
 
-<!-- Advanced Payment History Modal -->
+<!-- Payment History Modal -->
 <div id="payment-history-modal" class="modal">
-  <div class="modal-box" style="max-width:900px; padding:0; overflow:hidden; background:var(--bg2)">
-    <div style="padding:24px; background:linear-gradient(135deg, var(--bg3) 0%, var(--bg2) 100%); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start">
-      <div style="display:flex; align-items:center; gap:20px">
-        <div id="p-history-av-wrap" style="position:relative">
-          <img id="p-history-av" src="" style="width:80px;height:80px;border-radius:16px;border:3px solid var(--gold);object-fit:cover;box-shadow:var(--shadow)">
-          <div id="p-history-status-badge" style="position:absolute; bottom:-8px; right:-8px; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; border:2px solid var(--bg2)">PAID</div>
-        </div>
-        <div>
-          <h2 id="p-history-name" style="font-family:var(--font-head); color:var(--gold); font-size:32px; margin-bottom:4px; letter-spacing:0.5px">Student Name</h2>
-          <div id="p-history-meta" style="font-size:13px; color:var(--ivory-dim); display:flex; gap:12px; align-items:center">
-            <span>ID: #123456</span>
-            <span style="width:4px;height:4px;background:var(--ivory-dim);border-radius:50%"></span>
-            <span id="p-history-fee">Monthly Fee: ₹5000</span>
-          </div>
-        </div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:12px; color:var(--ivory-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px">Lifetime Value</div>
-        <div id="p-history-ltv" style="font-size:28px; font-weight:800; color:var(--success); font-family:var(--font-head)">₹0</div>
-      </div>
+  <div class="modal-box" style="max-width:800px">
+    <div class="modal-title">Payment History</div>
+    <div id="p-history-student-info" style="margin-bottom:20px;padding:15px;background:var(--bg3);border-radius:10px">
+      <h3 id="p-history-name" style="color:var(--gold);margin-bottom:5px">Student Name</h3>
+      <p id="p-history-meta" style="font-size:13px;color:var(--ivory-dim)">Current Level: -</p>
     </div>
-
-    <div style="padding:24px">
-      <!-- Stats Row -->
-      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:24px">
-        <div style="background:var(--glass); padding:16px; border-radius:12px; border:1px solid var(--border)">
-          <div style="font-size:11px; color:var(--ivory-dim); text-transform:uppercase; margin-bottom:8px">Total Records</div>
-          <div id="p-history-count" style="font-size:20px; font-weight:700; color:var(--ivory)">0 Payments</div>
-        </div>
-        <div style="background:var(--glass); padding:16px; border-radius:12px; border:1px solid var(--border)">
-          <div style="font-size:11px; color:var(--ivory-dim); text-transform:uppercase; margin-bottom:8px">Last Payment</div>
-          <div id="p-history-last-date" style="font-size:20px; font-weight:700; color:var(--ivory)">N/A</div>
-        </div>
-        <div style="background:var(--glass); padding:16px; border-radius:12px; border:1px solid var(--border)">
-          <div style="font-size:11px; color:var(--ivory-dim); text-transform:uppercase; margin-bottom:8px">Average Paid</div>
-          <div id="p-history-avg" style="font-size:20px; font-weight:700; color:var(--gold)">₹0</div>
-        </div>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
-        <h4 style="font-size:14px; color:var(--ivory); font-weight:600">Transaction History</h4>
-        <div style="font-size:12px; color:var(--ivory-dim)">Sorted by most recent</div>
-      </div>
-
-      <div class="table-wrap" style="max-height:380px; overflow-y:auto; border-radius:12px; border:1px solid var(--border)">
-        <table style="border-collapse:separate; border-spacing:0">
-          <thead style="position:sticky; top:0; z-index:10">
-            <tr style="background:var(--bg3)">
-              <th style="padding:16px; border-bottom:1px solid var(--border)">Date & Time</th>
-              <th style="padding:16px; border-bottom:1px solid var(--border)">Transaction Details</th>
-              <th style="padding:16px; border-bottom:1px solid var(--border)">Amount</th>
-              <th style="padding:16px; border-bottom:1px solid var(--border)">Status</th>
-              <th style="padding:16px; border-bottom:1px solid var(--border); text-align:right">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="p-history-body">
-            <tr><td colspan="5"><div class="loading-state">Loading...</div></td></tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>ID</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="p-history-body">
+          <tr><td colspan="5"><div class="loading-state">Loading...</div></td></tr>
+        </tbody>
+      </table>
     </div>
-    
-    <div style="padding:16px 24px; background:var(--bg3); border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:12px">
-      <button class="btn btn-outline-grey" onclick="closeModals()">Close Window</button>
-      <button class="btn btn-gold" onclick="toast('Report generated in reports section','info')">Export PDF</button>
+    <div style="margin-top:20px">
+      <button class="btn btn-outline-grey" style="width:100%" onclick="closeModals()">Close</button>
     </div>
   </div>
 </div>

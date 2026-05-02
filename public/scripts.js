@@ -2832,22 +2832,8 @@ window.updateReportContext = function() {
     const s = allStudents.find(x => String(x.id) === String(studentId));
     if (!s) return;
 
-    // Set Header Info
     $('p-history-name').textContent = getStudentName(s);
-    $('p-history-meta').innerHTML = `<span>ID: #${String(s.id).slice(0,6).toUpperCase()}</span><span style="width:4px;height:4px;background:var(--ivory-dim);border-radius:50%"></span><span>Joined: ${getStudentDate(s)}</span>`;
-    $('p-history-fee').textContent = `Monthly Fee: ₹${getStudentMonthlyFee(s).toLocaleString()}`;
-    
-    const av = $('p-history-av');
-    if (av) av.src = makeAvSrc(s);
-
-    const statusBadge = $('p-history-status-badge');
-    const status = getStudentPaymentStatus(s);
-    if (statusBadge) {
-      statusBadge.textContent = status;
-      statusBadge.style.background = status === 'Paid' ? 'var(--success)' : (status === 'Due' ? 'var(--danger)' : 'var(--gold)');
-      statusBadge.style.color = 'white';
-    }
-
+    $('p-history-meta').textContent = `ID: ${String(s.id).slice(0,8)} • Monthly Fee: ₹${getStudentMonthlyFee(s).toLocaleString()}`;
     openModal('payment-history-modal');
 
     const myPayments = (window.allPayments || []).filter(p => {
@@ -2856,56 +2842,26 @@ window.updateReportContext = function() {
       return psid === sid;
     }).sort((a,b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at));
 
-    // Calculate Stats
-    const totalLtv = myPayments.reduce((acc, p) => acc + (parseInt(p.amount) || 0), 0);
-    const avgPaid = myPayments.length > 0 ? Math.round(totalLtv / myPayments.length) : 0;
-    const lastDate = myPayments.length > 0 ? new Date(myPayments[0].payment_date || myPayments[0].created_at).toLocaleDateString() : 'N/A';
-
-    $('p-history-ltv').textContent = `₹${totalLtv.toLocaleString()}`;
-    $('p-history-count').textContent = `${myPayments.length} Payments`;
-    $('p-history-avg').textContent = `₹${avgPaid.toLocaleString()}`;
-    $('p-history-last-date').textContent = lastDate;
-
     const body = $('p-history-body');
     if (myPayments.length === 0) {
-      body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:60px;color:var(--ivory-dim)"><div><span style="font-size:40px;display:block;margin-bottom:10px">📑</span>No payment records found for this student.</div></td></tr>';
+      body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--ivory-dim)">No payment records found.</td></tr>';
       return;
     }
 
-    body.innerHTML = myPayments.map(p => {
-      const pDate = new Date(p.payment_date || p.created_at);
-      const isRecent = (new Date() - pDate) < (7 * 24 * 60 * 60 * 1000); // Last 7 days
-      return `
-        <tr style="background:${isRecent ? 'rgba(var(--success-rgb), 0.03)' : 'transparent'}">
-          <td style="padding:16px">
-            <div style="font-weight:600; color:var(--ivory)">${pDate.toLocaleDateString()}</div>
-            <div style="font-size:11px; color:var(--ivory-dim)">${pDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-          </td>
-          <td style="padding:16px">
-            <div style="display:flex; align-items:center; gap:8px">
-              <span style="font-size:18px">${p.payment_method === 'Online' ? '💳' : (p.payment_method === 'Cash' ? '💵' : '🏦')}</span>
-              <div>
-                <div style="font-weight:500; color:var(--ivory)">${p.payment_method || 'Manual'}</div>
-                <div style="font-size:11px; font-family:var(--font-mono); color:var(--ivory-dim)">${p.transaction_id || 'REF-N/A'}</div>
-              </div>
-            </div>
-          </td>
-          <td style="padding:16px">
-            <div style="color:var(--success); font-weight:700; font-size:16px">₹${(p.amount || 0).toLocaleString()}</div>
-            <div style="font-size:10px; color:var(--ivory-dim)">${p.description || 'Monthly Tuition'}</div>
-          </td>
-          <td style="padding:16px">
-            <span class="badge" style="background:rgba(var(--success-rgb), 0.1); color:var(--success); border:1px solid rgba(var(--success-rgb), 0.2); font-size:10px">COMPLETED</span>
-          </td>
-          <td style="padding:16px; text-align:right">
-            <div style="display:flex; gap:8px; justify-content:flex-end">
-              <button class="btn btn-outline btn-sm" style="padding:4px 8px" onclick="downloadReceipt('${s.id}','${getStudentName(s)}','${p.amount}','${getStudentLevel(s)}','${getStudentRating(s)}','N/A','${p.payment_method || 'Online'}')">📄</button>
-              <button class="btn btn-outline-danger btn-sm" style="padding:4px 8px" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
+    body.innerHTML = myPayments.map(p => `
+      <tr>
+        <td>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
+        <td style="color:var(--success);font-weight:600">₹${(p.amount || 0).toLocaleString()}</td>
+        <td>${p.payment_method || 'Cash'}</td>
+        <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || 'N/A'}</td>
+        <td>
+          <div style="display:flex;gap:5px">
+            <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${p.amount}', '${getStudentLevel(s)}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">📄</button>
+            <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
   };
 
   window.deletePayment = async function(paymentId, studentId) {
@@ -3060,7 +3016,7 @@ window.updateReportContext = function() {
     }
 
     if (!allStudents || allStudents.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No payment records found</div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No payment records found</div></td></tr>';
       return;
     }
 
@@ -3090,6 +3046,9 @@ window.updateReportContext = function() {
         return `<tr>
           <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">INV-${(s.id?s.id.toString().slice(-6):'000000')}</span></td>
           <td><div style="font-weight:600;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div></td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
           <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
           <td><span class="badge badge-outline-grey" style="font-size:10px;padding:4px 8px">Not Enrolled</span></td>
           <td><span style="color:var(--ivory-dim);font-size:11px">—</span></td>
@@ -3141,16 +3100,24 @@ window.updateReportContext = function() {
 
       const invoiceId = 'INV-' + (s.id ? s.id.toString().slice(-6) : '000000');
       
+      // Get Coach Info
+      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+      const coachName = coach ? getCoachName(coach) : 'N/A';
+      const sessionType = getStudentBatchType(s) || 'Regular';
+      const scheduleTime = getStudentSessionTime(s) || 'TBD';
+
       let actionButtons = '';
       if (status === 'Unpaid' || status === 'Due' || status === 'Pending') {
-        actionButtons = `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+        actionButtons = `
+          <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
           <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-          <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>`;
+          <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
+        `;
       } else if (status === 'Paid') {
-        const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
-        const coachName = coach ? getCoachName(coach) : 'N/A';
-        actionButtons = `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}', '${getStudentLevel(s)}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
-          <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>`;
+        actionButtons = `
+          <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}', '${getStudentLevel(s)}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+          <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+        `;
       } else {
         actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
       }
@@ -3161,6 +3128,9 @@ window.updateReportContext = function() {
           <div style="font-weight:600;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div>
           <div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(getStudentLevel(s))}</div>
         </td>
+        <td><div style="font-size:12px;color:var(--ivory)">${escapeHtml(coachName)}</div></td>
+        <td><div style="font-size:12px;color:var(--ivory-dim)">${escapeHtml(sessionType)}</div></td>
+        <td><div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(scheduleTime)}</div></td>
         <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
         <td><span class="badge ${statusClass}" style="font-size:10px;padding:4px 8px">${status}</span></td>
         <td>
