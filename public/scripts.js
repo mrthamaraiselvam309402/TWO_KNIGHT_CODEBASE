@@ -2541,7 +2541,7 @@ window.updateReportContext = function() {
     openModal('ev-modal');
   }
 
-  window.editEvent = function(id) {
+  function editEvent(id) {
     const e = eventsData.find(x => String(x.id) === String(id));
     if (!e) { toast('Event not found', 'error'); return; }
     $('ev-id').value = e.id;
@@ -2563,9 +2563,9 @@ window.updateReportContext = function() {
     }
     $('ev-modal-title').textContent = 'Edit Event';
     openModal('ev-modal');
-  };
-  
-  window.archiveEvent = function(id) {
+  }
+
+  function archiveEvent(id) {
     const e = eventsData.find(x => String(x.id) === String(id));
     if (!e) { toast('Event not found', 'error'); return; }
     const newStatus = (e.archived || e.status === 'archived') ? 'active' : 'archived';
@@ -2577,15 +2577,16 @@ window.updateReportContext = function() {
       toast(`Event ${newStatus === 'archived' ? 'archived' : 'unarchived'}!`, 'success');
       loadAllData(true);
     }).catch(() => toast('Failed to update', 'error'));
-  };
-  
-  window.confirmDeleteEvent = function(id, title) {
+  }
+
+  function deleteEvent(id, title) {
     $('delete-item-type').textContent = 'Event';
     $('delete-item-name').textContent = title;
     $('delete-item-id').value = id;
     $('delete-type').value = 'event';
     openModal('delete-confirm-modal');
-  };
+  }
+  const confirmDeleteEvent = deleteEvent;
   
   function generateClientId() {
     return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
