@@ -2051,7 +2051,7 @@ window.updateReportContext = function() {
     $('e-level').value = getStudentLevel(s);
     $('e-elo').value = getStudentRating(s);
     $('e-fee').value = getStudentMonthlyFee(s);
-    $('e-enroll-status').value = s.status || 'active';
+    if ($('e-enroll-status')) $('e-enroll-status').value = s.status || 'active';
     if ($('e-payment-status')) $('e-payment-status').value = s.payment_status || 'Pending';
     $('e-join').value = getStudentDate(s);
     $('e-batch-type').value = getStudentBatchType(s);
@@ -2082,7 +2082,7 @@ window.updateReportContext = function() {
       grade: $('e-level').value,
       rating: newElo,
       coach_id: $('e-coach').value,
-      status: $('e-enroll-status').value,
+      status: $('e-enroll-status')?.value || s.status || 'active',
       payment_status: $('e-payment-status')?.value || s.payment_status || 'Pending',
       enrollment_date: $('e-join').value,
       due_date: $('e-due-date')?.value || null,
