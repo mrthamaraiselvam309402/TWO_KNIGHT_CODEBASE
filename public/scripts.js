@@ -407,8 +407,8 @@
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
     const enrollDateStr = getStudentDate(s);
-    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 4, 1);
-    const baselineDate = new Date(2026, 4, 1);
+    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 3, 1);
+    const baselineDate = new Date(2026, 3, 1);
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
 
     if (!window.totalPaymentsMap) {
@@ -574,9 +574,9 @@ Thank you for your cooperation.
       
       unpaid.forEach(s => {
         const status = getStudentPaymentStatus(s);
-        // Calculate missing months since May 1, 2026
+        // Calculate missing months since April 1, 2026
         const enrollDate = new Date(getStudentDate(s));
-        const systemStart = new Date(2026, 4, 1);
+        const systemStart = new Date(2026, 3, 1);
         const effectiveStart = enrollDate < systemStart ? systemStart : enrollDate;
         const targetDate = new Date(window.reportYear, window.reportMonth, 1);
         
@@ -763,7 +763,7 @@ Thank you for your cooperation.
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
-    const baselineDate = new Date(2026, 4, 1);
+    const baselineDate = new Date(2026, 3, 1);
 
     // 1. Enrollment Check
     const enrollDateStr = getStudentDate(s);
@@ -1746,7 +1746,7 @@ window.updateReportContext = function() {
   function calculateSlotRevenue(year, month, paymentsMap) {
     let rev = 0;
     const targetMonthEnd = new Date(year, month + 1, 0);
-    const baselineDate = new Date(2026, 4, 1);
+    const baselineDate = new Date(2026, 3, 1);
     
     allStudents.forEach(s => {
       const enrollDateStr = getStudentDate(s);
@@ -3168,7 +3168,7 @@ window.updateReportContext = function() {
       }
 
       // 2. Migration-Aware Slot Calculation
-      const systemStartDate = new Date(2026, 4, 1); // Start tracking arrears from May 2026
+      const systemStartDate = new Date(2026, 3, 1); // Start tracking arrears from April 1, 2026 (Month 3 is April)
       const effectiveEnrollDate = (enrollDate && !isNaN(enrollDate)) ? (enrollDate < systemStartDate ? systemStartDate : enrollDate) : systemStartDate;
       const monthsRequired = ((targetYear - effectiveEnrollDate.getFullYear()) * 12) + (targetMonth - effectiveEnrollDate.getMonth()) + 1;
       

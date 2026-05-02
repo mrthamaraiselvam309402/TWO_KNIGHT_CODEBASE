@@ -16,10 +16,11 @@ BEGIN
 
     -- STEP A: Mark overdue students as 'Due'
     -- Runs every time the cron runs (daily)
+    -- April 1, 2026 baseline (Month 4)
     UPDATE public.students 
     SET payment_status = 'Due' 
     WHERE (payment_status = 'Pending' OR payment_status IS NULL)
-      AND (due_date < CURRENT_DATE OR (due_date IS NULL AND today_day > 5)); -- Grace period if no due date
+      AND (due_date < CURRENT_DATE OR (due_date IS NULL AND today_day > 5 AND CURRENT_DATE >= '2026-04-01')); 
 
     -- STEP B: On the 1st of the month, roll over 'Paid' to 'Pending' for the new month
     IF today_day = 1 THEN
