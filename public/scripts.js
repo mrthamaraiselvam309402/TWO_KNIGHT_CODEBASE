@@ -491,46 +491,82 @@ Thank you for your cooperation.
   };
 
   window.informAllCoaches = function() {
-    const pendingCoaches = allCoaches.filter(c => {
-      const studs = allStudents.filter(s => String(s.coach_id) === String(c.id));
-      return studs.some(s => {
+    const pendingCoaches = (allCoaches || []).filter(coach => {
+      const myStudents = (allStudents || []).filter(s => String(s.coach_id) === String(coach.id));
+      return myStudents.some(s => {
         const st = getStudentPaymentStatus(s);
         return st === 'Due' || st === 'Pending';
       });
     });
 
     if (pendingCoaches.length === 0) {
-      toast('No coaches have students with pending fees!', 'success');
+      toast('All coaches are up to date!', 'success');
       return;
     }
 
-    if (!confirm(`Found ${pendingCoaches.length} coaches with pending fees. Start notification sequence?`)) return;
+    if (!confirm(`Found ${pendingCoaches.length} coaches with pending/due fees. Start WhatsApp notification sequence?`)) return;
 
     let count = 0;
     const processNext = () => {
       if (count >= pendingCoaches.length) {
-        toast('All notifications processed!', 'success');
+        toast('All coach notifications initiated!', 'success');
         return;
       }
-      const c = pendingCoaches[count];
-      informCoachFees(c.id);
+      
+      const coach = pendingCoaches[count];
+      const myStudents = allStudents.filter(s => String(s.coach_id) === String(coach.id));
+      const unpaid = myStudents.filter(s => {
+        const status = getStudentPaymentStatus(s);
+        return status === 'Due' || status === 'Pending';
+      });
+
+      if (unpaid.length > 0) {
+        let list = `*Student Fee Status Update*\n\nHello ${getCoachName(coach)},\nHere is the list of your students with pending or due fees:\n\n`;
+        
+        unpaid.forEach(s => {
+          const status = getStudentPaymentStatus(s);
+          const enrollDateStr = getStudentDate(s);
+          const systemStart = new Date(2026, 2, 1); // March 1st Baseline
+          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : systemStart;
+          const effectiveStart = enrollDate < systemStart ? systemStart : enrollDate;
+          const targetDate = new Date(window.reportYear, window.reportMonth, 1);
+          
+          let dueMonths = [];
+          let temp = new Date(effectiveStart.getFullYear(), effectiveStart.getMonth(), 1);
+          while (temp <= targetDate) {
+            dueMonths.push(temp.toLocaleDateString('en-IN', { month: 'long' }));
+            temp.setMonth(temp.getMonth() + 1);
+          }
+          
+          const credits = window.totalPaymentsMap ? (window.totalPaymentsMap[String(s.id)] || 0) : 0;
+          const actualDueMonths = dueMonths.slice(credits);
+          list += `- *${getStudentName(s)}*: ${status} (${actualDueMonths.join(', ') || 'Current Month'})\n`;
+        });
+
+        list += `\nPlease check in with them. Thank you!\n– Chesskidoo Academy`;
+        const phone = coach.phone ? coach.phone.replace(/\D/g, '') : '';
+        if (phone) window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(list)}`, '_blank');
+      }
+
       count++;
       if (count < pendingCoaches.length) {
         setTimeout(() => {
-          if (confirm(`Notification for ${getCoachName(c)} sent. Proceed to next coach (${getCoachName(pendingCoaches[count])})?`)) {
+          if (confirm(`Notification for ${getCoachName(coach)} sent. Proceed to next coach (${getCoachName(pendingCoaches[count])})?`)) {
             processNext();
           }
-        }, 800);
+        }, 300);
+      } else {
+        toast('All notifications processed!', 'success');
       }
     };
     processNext();
   };
 
   window.informAllDueStudents = function() {
-    const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+    const dueStudents = (allStudents || []).filter(s => getStudentPaymentStatus(s) === 'Due');
     
     if (dueStudents.length === 0) {
-      toast('No students have fees due based on their due dates!', 'info');
+      toast('No students have fees due!', 'info');
       return;
     }
 
@@ -547,61 +583,15 @@ Thank you for your cooperation.
       count++;
       if (count < dueStudents.length) {
         setTimeout(() => {
-          if (confirm(`Notification for ${getStudentName(s)} initiated. Proceed to next due student (${getStudentName(dueStudents[count])})?`)) {
+          if (confirm(`Notification for ${getStudentName(s)} initiated. Proceed to next student (${getStudentName(dueStudents[count])})?`)) {
             processNext();
           }
-        }, 800);
+        }, 500);
+      } else {
+        toast('All due notifications initiated!', 'success');
       }
     };
     processNext();
-  };
-
-  window.informAllCoaches = function() {
-    if (!allCoaches || allCoaches.length === 0) return;
-    
-    if (!confirm(`This will generate summary lists for all coaches. Open WhatsApp for each coach?`)) return;
-
-    allCoaches.forEach(coach => {
-      const myStudents = allStudents.filter(s => String(s.coach_id) === String(coach.id));
-      const unpaid = myStudents.filter(s => {
-        const status = getStudentPaymentStatus(s);
-        return status === 'Due' || status === 'Pending';
-      });
-
-      if (unpaid.length === 0) return;
-
-      let list = `*Student Fee Status Update*\n\nHello ${getCoachName(coach)},\nHere is the list of your students with pending or due fees:\n\n`;
-      
-      unpaid.forEach(s => {
-        const status = getStudentPaymentStatus(s);
-        // Calculate missing months since their own Joining Date (Mapping)
-        const enrollDateStr = getStudentDate(s);
-        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 2, 1);
-        const systemStart = new Date(2026, 2, 1);
-        const effectiveStart = enrollDate < systemStart ? systemStart : enrollDate;
-        const targetDate = new Date(window.reportYear, window.reportMonth, 1);
-        
-        let dueMonths = [];
-        let temp = new Date(effectiveStart.getFullYear(), effectiveStart.getMonth(), 1);
-        while (temp <= targetDate) {
-          const mName = temp.toLocaleDateString('en-IN', { month: 'long' });
-          dueMonths.push(mName);
-          temp.setMonth(temp.getMonth() + 1);
-        }
-        
-        const credits = window.totalPaymentsMap ? (window.totalPaymentsMap[String(s.id)] || 0) : 0;
-        const actualDueMonths = dueMonths.slice(credits);
-        
-        list += `- *${getStudentName(s)}*: ${status} (${actualDueMonths.join(', ') || 'Current Month'})\n`;
-      });
-
-      list += `\nPlease check in with them or their parents. Thank you!\n– Chesskidoo Academy`;
-
-      const phone = coach.phone ? coach.phone.replace(/\D/g, '') : '';
-      if (phone) {
-        window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(list)}`, '_blank');
-      }
-    });
   };
 
   async function apiCall(url, options = {}) {
@@ -626,6 +616,24 @@ Thank you for your cooperation.
 
   const isValidPhone = p => /^\d{10}$/.test(p);
   const capitalizeFirst = str => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
+  
+  function formatTimeAgo(dateInput) {
+    if (!dateInput) return '—';
+    const date = new Date(dateInput);
+    if (isNaN(date)) return '—';
+    const seconds = Math.floor((new Date() - date) / 1000);
+    let interval = Math.floor(seconds / 31536000);
+    if (interval >= 1) return interval + "y ago";
+    interval = Math.floor(seconds / 2592000);
+    if (interval >= 1) return interval + "mo ago";
+    interval = Math.floor(seconds / 86400);
+    if (interval >= 1) return interval + "d ago";
+    interval = Math.floor(seconds / 3600);
+    if (interval >= 1) return interval + "h ago";
+    interval = Math.floor(seconds / 60);
+    if (interval >= 1) return interval + "m ago";
+    return "Just now";
+  }
   const formatTime = time24 => {
     if (!time24) return '—';
     // Handle cases like "12", "12:", "12:00"
