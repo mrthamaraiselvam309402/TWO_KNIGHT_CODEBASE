@@ -407,8 +407,8 @@
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
     const enrollDateStr = getStudentDate(s);
-    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 0, 1);
-    const baselineDate = new Date(2026, 0, 1);
+    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 4, 1);
+    const baselineDate = new Date(2026, 4, 1);
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
 
     if (!window.totalPaymentsMap) {
@@ -716,7 +716,7 @@ Thank you for your cooperation.
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
-    const baselineDate = new Date(2026, 0, 1);
+    const baselineDate = new Date(2026, 4, 1);
 
     // 1. Enrollment Check
     const enrollDateStr = getStudentDate(s);
@@ -1672,7 +1672,7 @@ window.updateReportContext = function() {
   function calculateSlotRevenue(year, month, paymentsMap) {
     let rev = 0;
     const targetMonthEnd = new Date(year, month + 1, 0);
-    const baselineDate = new Date(2026, 0, 1);
+    const baselineDate = new Date(2026, 4, 1);
     
     allStudents.forEach(s => {
       const enrollDateStr = getStudentDate(s);
@@ -2052,6 +2052,7 @@ window.updateReportContext = function() {
     $('e-elo').value = getStudentRating(s);
     $('e-fee').value = getStudentMonthlyFee(s);
     $('e-enroll-status').value = s.status || 'active';
+    if ($('e-payment-status')) $('e-payment-status').value = s.payment_status || 'Pending';
     $('e-join').value = getStudentDate(s);
     $('e-batch-type').value = getStudentBatchType(s);
     $('e-batch-time').value = getStudentBatchTime(s);
@@ -2082,6 +2083,7 @@ window.updateReportContext = function() {
       rating: newElo,
       coach_id: $('e-coach').value,
       status: $('e-enroll-status').value,
+      payment_status: $('e-payment-status')?.value || s.payment_status || 'Pending',
       enrollment_date: $('e-join').value,
       due_date: $('e-due-date')?.value || null,
       session_mode: $('e-batch-type').value,
@@ -3059,7 +3061,7 @@ window.updateReportContext = function() {
       }
 
       // 2. Migration-Aware Slot Calculation
-      const systemStartDate = new Date(2026, 0, 1);
+      const systemStartDate = new Date(2026, 4, 1); // Start tracking arrears from May 2026
       const effectiveEnrollDate = (enrollDate && !isNaN(enrollDate)) ? (enrollDate < systemStartDate ? systemStartDate : enrollDate) : systemStartDate;
       const monthsRequired = ((targetYear - effectiveEnrollDate.getFullYear()) * 12) + (targetMonth - effectiveEnrollDate.getMonth()) + 1;
       
