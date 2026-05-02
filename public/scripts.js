@@ -2651,7 +2651,43 @@ window.updateReportContext = function() {
     }
   }
 
-  window.editAchievement = function(id) {
+  function renderFame() {
+    const gridEl = $('fame-grid');
+    const loadingEl = $('fame-loading');
+    if (!gridEl) return;
+    
+    if (loadingEl) loadingEl.style.display = 'none';
+    gridEl.style.display = 'grid';
+
+    if (!achievementsData || achievementsData.length === 0) {
+      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">🏆</span><p>No achievements recorded yet</p></div>';
+      return;
+    }
+
+    const isAdmin = role === 'admin' || role === 'master';
+    gridEl.innerHTML = achievementsData.sort((a,b) => new Date(b.date_achieved || b.created_at) - new Date(a.date_achieved || a.created_at)).map(a => {
+      const student = allStudents.find(s => String(s.id) === String(a.student_id));
+      const studentName = student ? getStudentName(student) : 'Unknown Student';
+      return `
+        <div class="ach-card">
+          ${a.img_url ? `<img src="${a.img_url}" class="ach-img" alt="Achievement">` : '<div class="ach-img-placeholder">🏆</div>'}
+          <div class="ach-body">
+            <div class="ach-title">${a.title}</div>
+            <div class="ach-student">${studentName}</div>
+            <div class="ach-date">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
+          </div>
+          ${isAdmin ? `
+            <div class="ach-actions">
+              <button class="btn btn-outline-grey btn-sm" onclick="editAchievement('${a.id}')">Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmDeleteAchievement('${a.id}', '${a.title.replace(/'/g, "\\'")}')">Delete</button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function editAchievement(id) {
     const a = achievementsData.find(x => String(x.id) === String(id));
     if (!a) { toast('Achievement not found', 'error'); return; }
     $('award-sid').value = a.id;
@@ -2659,23 +2695,41 @@ window.updateReportContext = function() {
     $('award-title').value = a.title || '';
     $('award-img-url').value = a.img_url || '';
     openModal('award-modal');
-  };
-  
-  window.confirmDeleteAchievement = function(id, title) {
+  }
+
+  function confirmDeleteAchievement(id, title) {
     $('delete-item-type').textContent = 'Achievement';
     $('delete-item-name').textContent = title;
     $('delete-item-id').value = id;
     $('delete-type').value = 'achievement';
     openModal('delete-confirm-modal');
-  };
-  
-  window.openAwardModal = function() { 
+  }
+
+  async function deleteAchievement(id) {
+    try {
+      const res = await apiCall(`/api/achievements?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast('Achievement deleted!', 'success');
+        loadAllData(true);
+      }
+    } catch (e) { toast('Delete failed', 'error'); }
+  }
+
+  function openAwardModal() { 
     $('award-sid').value = '';
     $('award-student').value = '';
     $('award-title').value = '';
     $('award-img-url').value = '';
     openModal('award-modal'); 
-  };
+  }
+
+  function onAwardStudentChange() {
+    const sid = $('award-student').value;
+    const s = allStudents.find(x => String(x.id) === String(sid));
+    if (s) {
+      console.log('Student selected for award:', s.full_name);
+    }
+  }
 
   async function uploadToImgbb(file) {
     const formData = new FormData();
@@ -2694,7 +2748,7 @@ window.updateReportContext = function() {
     }
   }
 
-  window.saveAward = async function() {
+  async function saveAward() {
     const id = $('award-sid').value;
     const fileInput = $('award-img-file');
     const urlInput = $('award-img-url');
@@ -2729,7 +2783,7 @@ window.updateReportContext = function() {
         loadAllData(true);
       }
     } catch (e) { toast('Error saving achievement', 'error'); }
-  };
+  }
 
   window.markPaid = async function(id, amount, method = 'Cash', desc = 'Monthly Tuition Fee') {
     try {
