@@ -1,55 +1,42 @@
--- Payment Status Automation Logic
--- 1. Function to mark Pending as Due at end of month
-CREATE OR REPLACE FUNCTION public.handle_end_of_month_payments()
+-- ==========================================
+-- CHESSKIDOO PAYMENT AUTOMATION (CRON JOB)
+-- ==========================================
+
+-- 1. Enable pg_cron if available (requires superuser in some environments)
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- 2. Refined Automation Function
+-- This handles the transition from Pending to Due and resets Paid to Pending on the 1st
+CREATE OR REPLACE FUNCTION public.automate_payment_rollover()
 RETURNS void AS $$
+DECLARE
+    today_day INTEGER;
 BEGIN
-    -- Change 'Pending' to 'Due' for all students who haven't paid by the end of the month
-    UPDATE public.students 
-    SET payment_status = 'Due' 
-    WHERE payment_status = 'Pending';
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+    today_day := EXTRACT(DAY FROM CURRENT_DATE);
 
--- 2. Function to reset statuses to Pending at start of month
-CREATE OR REPLACE FUNCTION public.handle_start_of_month_payments()
-RETURNS void AS $$
-BEGIN
-    -- Every student (even those who were 'Paid' last month) starts the new month as 'Pending'
-    -- This assumes they have a recurring monthly fee
-    UPDATE public.students 
-    SET payment_status = 'Pending';
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 3. Attempting to schedule with pg_cron (requires pg_cron extension to be enabled)
--- Note: You may need to run 'CREATE EXTENSION IF NOT EXISTS pg_cron;' first in the SQL Editor.
-
-/*
--- Schedule: 1st of every month at 00:01 AM
-SELECT cron.schedule('start-of-month-fees', '1 0 1 * *', 'SELECT public.handle_start_of_month_payments()');
-
--- Schedule: Last day of every month at 23:55 PM
--- Since cron doesn't have a "last day" syntax easily, we can run it daily and check if tomorrow is the 1st
--- Or just run it on the 1st at 00:00 before the reset.
-*/
-
--- Alternative: Combined logic that can be run safely (e.g. daily)
-CREATE OR REPLACE FUNCTION public.automate_payment_statuses()
-RETURNS void AS $$
-BEGIN
-    -- 1. Mark students as 'Due' if their specific due_date has passed and they are still 'Pending'
-    -- This makes the system "Due Date Based" automatically.
+    -- STEP A: Mark overdue students as 'Due'
+    -- Runs every time the cron runs (daily)
     UPDATE public.students 
     SET payment_status = 'Due' 
     WHERE (payment_status = 'Pending' OR payment_status IS NULL)
-      AND due_date <= CURRENT_DATE;
+      AND (due_date < CURRENT_DATE OR (due_date IS NULL AND today_day > 5)); -- Grace period if no due date
 
-    -- 2. On the 1st of every month, reset those who were 'Paid' back to 'Pending'
-    -- This assumes a recurring monthly billing cycle.
-    IF EXTRACT(DAY FROM CURRENT_DATE) = 1 THEN
+    -- STEP B: On the 1st of the month, roll over 'Paid' to 'Pending' for the new month
+    IF today_day = 1 THEN
         UPDATE public.students 
         SET payment_status = 'Pending'
         WHERE payment_status = 'Paid';
+        
+        -- Log the rollover event so the frontend can notify the admin
+        INSERT INTO public.audit_logs (table_name, action, new_value)
+        VALUES ('students', 'MONTHLY_ROLLOVER', jsonb_build_object('month', EXTRACT(MONTH FROM CURRENT_DATE), 'year', EXTRACT(YEAR FROM CURRENT_DATE)));
     END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 3. Schedule the job to run at 00:01 AM every day
+-- Running daily is safer than once a month in case of temporary database downtime
+SELECT cron.schedule('daily-payment-audit', '1 0 * * *', 'SELECT public.automate_payment_rollover()');
+
+-- 4. Initial Run
+SELECT public.automate_payment_rollover();

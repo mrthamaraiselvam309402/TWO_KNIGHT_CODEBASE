@@ -556,6 +556,53 @@ Thank you for your cooperation.
     processNext();
   };
 
+  window.informAllCoaches = function() {
+    if (!allCoaches || allCoaches.length === 0) return;
+    
+    if (!confirm(`This will generate summary lists for all coaches. Open WhatsApp for each coach?`)) return;
+
+    allCoaches.forEach(coach => {
+      const myStudents = allStudents.filter(s => String(s.coach_id) === String(coach.id));
+      const unpaid = myStudents.filter(s => {
+        const status = getStudentPaymentStatus(s);
+        return status === 'Due' || status === 'Pending';
+      });
+
+      if (unpaid.length === 0) return;
+
+      let list = `*Student Fee Status Update*\n\nHello ${getCoachName(coach)},\nHere is the list of your students with pending or due fees:\n\n`;
+      
+      unpaid.forEach(s => {
+        const status = getStudentPaymentStatus(s);
+        // Calculate missing months since May 1, 2026
+        const enrollDate = new Date(getStudentDate(s));
+        const systemStart = new Date(2026, 4, 1);
+        const effectiveStart = enrollDate < systemStart ? systemStart : enrollDate;
+        const targetDate = new Date(window.reportYear, window.reportMonth, 1);
+        
+        let dueMonths = [];
+        let temp = new Date(effectiveStart.getFullYear(), effectiveStart.getMonth(), 1);
+        while (temp <= targetDate) {
+          const mName = temp.toLocaleDateString('en-IN', { month: 'long' });
+          dueMonths.push(mName);
+          temp.setMonth(temp.getMonth() + 1);
+        }
+        
+        const credits = window.totalPaymentsMap ? (window.totalPaymentsMap[String(s.id)] || 0) : 0;
+        const actualDueMonths = dueMonths.slice(credits);
+        
+        list += `- *${getStudentName(s)}*: ${status} (${actualDueMonths.join(', ') || 'Current Month'})\n`;
+      });
+
+      list += `\nPlease check in with them or their parents. Thank you!\n– Chesskidoo Academy`;
+
+      const phone = coach.phone ? coach.phone.replace(/\D/g, '') : '';
+      if (phone) {
+        window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(list)}`, '_blank');
+      }
+    });
+  };
+
   async function apiCall(url, options = {}) {
     const headers = {
       'Content-Type': 'application/json',
@@ -1003,6 +1050,7 @@ Thank you for your cooperation.
           renderMsgs(); 
           renderCoachMgmt();
           renderStudents();
+          checkMonthlyRollover();
         }
         else if (role === 'parent') { renderChild(); renderEvents(); }
 
@@ -1015,6 +1063,32 @@ Thank you for your cooperation.
 
     if (forceRefresh) { await executeLoad(); }
     else { loadDebounceTimer = setTimeout(executeLoad, 50); }
+  }
+
+  function checkMonthlyRollover() {
+    const today = new Date();
+    const monthKey = `${today.getFullYear()}-${today.getMonth()}`;
+    const lastNotified = localStorage.getItem('last_rollover_notified');
+
+    // Only show between 1st and 5th of the month
+    if (today.getDate() <= 5 && lastNotified !== monthKey) {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.id = 'rollover-notification';
+      modal.style.display = 'flex';
+      modal.style.zIndex = '9999';
+      modal.innerHTML = `
+        <div class="modal-box" style="max-width:400px; text-align:center; border:2px solid var(--gold); background:var(--bg2)">
+          <h2 style="color:var(--gold); margin-bottom:15px; font-family:var(--font-head)">🆕 New Billing Month!</h2>
+          <p style="color:var(--ivory-dim); margin-bottom:25px; font-size:14px">It's a new month. The system has automatically updated student statuses. Would you like to inform all coaches about their student due lists now?</p>
+          <div style="display:flex; gap:10px">
+            <button class="btn btn-outline" style="flex:1" onclick="this.closest('.modal').remove()">Later</button>
+            <button class="btn btn-gold" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">📢 Inform Coaches</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
   }
 
   function syncCoachDropdowns() {
@@ -2837,6 +2911,20 @@ window.updateReportContext = function() {
 
       toast('Payment logged and due date advanced!', 'success');
       loadAllData(true);
+
+      // 3. Auto-Notify Parent with Receipt Link
+      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+      const coachName = coach ? getCoachName(coach) : 'N/A';
+      const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(getStudentName(s))}&amount=${amt}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
+      
+      const message = `Hello Sir/Madam,\n\nThis is to inform you about the chess class fee payment you have completed for *${getStudentName(s)}* (₹${amt.toLocaleString()}).\n\nHere is your receipt link for download:\n${receiptUrl}\n\nThank you for your continued support and cooperation.\n– Chesskidoo Academy`;
+
+      const parentPhone = getStudentPhone(s).replace(/\D/g, '');
+      if (parentPhone) {
+        if (confirm(`Payment logged! Send WhatsApp confirmation & receipt to parent?`)) {
+          window.open(`https://wa.me/91${parentPhone}?text=${encodeURIComponent(message)}`, '_blank');
+        }
+      }
     } catch (e) { toast('Failed to process payment', 'error'); }
   };
 

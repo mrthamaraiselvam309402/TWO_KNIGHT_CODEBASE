@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Receipt - Chesskidoo Academy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;600;700&family=Cormorant+Garamond:ital,wght@1,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #c9960c;
+      --bg: #ffffff;
+      --text: #1a1a1a;
+      --border: #e0e0e0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f4f4f4; color: var(--text); padding: 40px 20px; display: flex; justify-content: center; }
+
+    .receipt-card {
+      background: var(--bg);
+      width: 100%;
+      max-width: 800px;
+      padding: 60px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+      position: relative;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 60px;
+      border-bottom: 2px solid var(--gold);
+      padding-bottom: 20px;
+    }
+
+    .logo-area h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 28px;
+      color: var(--gold);
+      letter-spacing: 2px;
+    }
+
+    .logo-area p {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .receipt-title {
+      text-align: right;
+    }
+
+    .receipt-title h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 32px;
+      color: #333;
+    }
+
+    .receipt-title p {
+      font-size: 14px;
+      color: #888;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 60px;
+    }
+
+    .info-section h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+
+    .info-section p {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 40px;
+    }
+
+    .table th {
+      text-align: left;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--text);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .table td {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+    }
+
+    .total-area {
+      text-align: right;
+      padding-top: 20px;
+    }
+
+    .total-label {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .total-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-top: 5px;
+    }
+
+    .footer {
+      margin-top: 80px;
+      text-align: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      color: #888;
+      font-size: 18px;
+    }
+
+    .watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-family: 'Cinzel', serif;
+      font-size: 100px;
+      color: rgba(201, 150, 12, 0.03);
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .no-print {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+    }
+
+    .btn {
+      background: var(--gold);
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(201, 150, 12, 0.3);
+      transition: 0.3s;
+    }
+
+    .btn:hover { background: #b0830a; transform: translateY(-2px); }
+
+    @media print {
+      body { padding: 0; background: white; }
+      .receipt-card { box-shadow: none; border: none; max-width: 100%; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print">
+    <button class="btn" onclick="window.print()">Download as PDF</button>
+  </div>
+
+  <div class="receipt-card">
+    <div class="watermark">OFFICIAL RECEIPT</div>
+    
+    <div class="header">
+      <div class="logo-area">
+        <h1>CHESSKIDOO</h1>
+        <p>Premium Chess Academy</p>
+      </div>
+      <div class="receipt-title">
+        <h2>RECEIPT</h2>
+        <p id="r-id">INV-000000</p>
+      </div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-section">
+        <h4>Billed To</h4>
+        <p id="r-name">Student Name</p>
+        <p id="r-level" style="font-weight: 400; color: #666; font-size: 13px;">Level: -</p>
+      </div>
+      <div class="info-section" style="text-align: right;">
+        <h4>Date of Payment</h4>
+        <p id="r-date">May 02, 2026</p>
+      </div>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th style="text-align: right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div style="font-weight: 600;">Monthly Tuition Fee</div>
+            <div id="r-coach" style="font-size: 12px; color: #888; margin-top: 4px;">Coach: -</div>
+          </td>
+          <td style="text-align: right; font-weight: 600;" id="r-amount-table">₹0.00</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="total-area">
+      <p class="total-label">Total Amount Paid</p>
+      <p class="total-value" id="r-amount-total">₹0.00</p>
+    </div>
+
+    <div class="footer">
+      Thank you for being part of the Chesskidoo family.
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Populate data from URL
+    document.getElementById('r-name').textContent = (urlParams.get('name') || 'Student Name').toUpperCase();
+    document.getElementById('r-id').textContent = 'INV-' + (urlParams.get('id') || '000000').slice(-6).toUpperCase();
+    document.getElementById('r-level').textContent = 'Level: ' + (urlParams.get('level') || 'Beginner');
+    document.getElementById('r-coach').textContent = 'Coach: ' + (urlParams.get('coach') || 'N/A');
+    
+    const amount = parseFloat(urlParams.get('amount') || 0).toLocaleString();
+    document.getElementById('r-amount-table').textContent = '₹' + amount;
+    document.getElementById('r-amount-total').textContent = '₹' + amount;
+
+    const date = urlParams.get('date') ? new Date(urlParams.get('date')) : new Date();
+    document.getElementById('r-date').textContent = date.toLocaleDateString('en-IN', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+
+    // Auto-open print dialog if 'print' param is present
+    if (urlParams.has('print')) {
+      setTimeout(() => window.print(), 500);
+    }
+  </script>
+</body>
+</html>
