@@ -2832,8 +2832,11 @@ window.updateReportContext = function() {
     const s = allStudents.find(x => String(x.id) === String(studentId));
     if (!s) return;
 
-    $('p-history-name').textContent = getStudentName(s);
-    $('p-history-meta').textContent = `ID: ${String(s.id).slice(0,8)} • Monthly Fee: ₹${getStudentMonthlyFee(s).toLocaleString()}`;
+    const nameEl = $('p-history-name');
+    if (nameEl) nameEl.textContent = getStudentName(s);
+    const metaEl = $('p-history-meta');
+    if (metaEl) metaEl.textContent = `ID: ${String(s.id).slice(0,8)} • Monthly Fee: ₹${getStudentMonthlyFee(s).toLocaleString()}`;
+    
     openModal('payment-history-modal');
 
     const myPayments = (window.allPayments || []).filter(p => {
