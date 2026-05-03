@@ -1012,7 +1012,7 @@
           loadWithRetry('/api/events'),
           loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || [])),
           loadWithRetry('/api/attendance').then(r => r || []),
-          loadWithRetry('/api/payments').then(r => r && r.data ? r.data : (r || [])),
+          loadWithRetry('/api/payments?order=payment_date.desc&limit=1000').then(r => r && r.data ? r.data : (r || [])),
           loadWithRetry('/api/rating_history').then(r => r || [])
         ]);
 
@@ -1921,10 +1921,11 @@
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
 
-    // Map total payments per student for ALL TIME
+    // Map total payments per student for ALL TIME (Normalized)
     const totalPaymentsMap = {};
     (allPayments || []).forEach(p => {
-      const sid = String(p.student_id);
+      const sid = String(p.student_id || '').trim().toLowerCase();
+      if (!sid) return;
       if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
       totalPaymentsMap[sid]++;
     });
@@ -1942,37 +1943,47 @@
     });
 
     // Aggregate student data using Slot-Based Reconciliation
+    const unassignedData = { name: 'Unassigned / Academy', students: 0, revenue: 0, pending: 0, projected: 0, cost: 0 };
+
     allStudents.forEach(s => {
       const coachId = s.coach_id;
-      if (coachData[coachId]) {
-        const enrollDateStr = getStudentDate(s);
-        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
+      const targetData = coachData[coachId] || unassignedData;
+      
+      const enrollDateStr = getStudentDate(s);
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
 
-        // 1. Enrollment Check for selected month
-        if (enrollDate && enrollDate <= targetMonthEnd) {
-          const fee = getStudentMonthlyFee(s) || 0;
-          const monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
-          const totalCredits = totalPaymentsMap[String(s.id)] || 0;
-          const hasPaidThisSlot = totalCredits >= monthsRequired;
+      // 1. Enrollment Check for selected month
+      if (enrollDate && enrollDate <= targetMonthEnd) {
+        const fee = getStudentMonthlyFee(s) || 0;
+        targetData.students++;
+        targetData.projected += fee;
 
-          coachData[coachId].students++;
-          coachData[coachId].projected += fee;
-
-          if (hasPaidThisSlot) {
-            coachData[coachId].revenue += fee;
-          } else {
-            coachData[coachId].pending += fee;
-          }
+        // Status-Based Pending Check (for the 'Pending' column)
+        const status = getStudentPaymentStatus(s);
+        if (status !== 'Paid') {
+          targetData.pending += fee;
         }
       }
     });
 
-    // Sort by projected profit (descending)
-    const sorted = Object.entries(coachData).sort((a, b) => {
-      const profitA = a[1].projected - a[1].cost;
-      const profitB = b[1].projected - b[1].cost;
-      return profitB - profitA;
+    // 2. Add ACTUAL Revenue from Transactions
+    (allPayments || []).forEach(p => {
+      const pDate = new Date(p.payment_date || p.created_at);
+      if (pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear) {
+        const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
+        const coachId = s?.coach_id;
+        const targetData = coachData[coachId] || unassignedData;
+        targetData.revenue += (parseFloat(p.amount) || 0);
+      }
     });
+
+    // Merge unassigned data if it has activity
+    if (unassignedData.students > 0 || unassignedData.revenue > 0) {
+      coachData['unassigned'] = unassignedData;
+    }
+
+    // Sort by revenue (descending)
+    const sorted = Object.entries(coachData).sort((a, b) => b[1].revenue - a[1].revenue);
 
     tbody.innerHTML = sorted.map(([id, d]) => {
       const netProfit = d.revenue - d.cost;  // Current cash flow
