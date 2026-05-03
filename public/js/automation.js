@@ -191,21 +191,22 @@
       const data   = coachMap[cid];
       const getName = s => (s.full_name || s.name || 'Unknown');
 
-      let msg = `*CHESSKIDOO ACADEMY — FEE ALERT 🎓*\n\n`;
-      msg += `Hello Coach *${coach.name || 'Coach'}*, this is the fee status for *${monthName}*:\n\n`;
+      let msg = `CHESSKIDOO ACADEMY - FEE AUDIT REPORT\n\n`;
+      msg += `Hello Coach ${coach.name || 'Coach'},\n\n`;
+      msg += `The following student under your mentorship has an outstanding balance for the ${monthName} billing cycle:\n\n`;
 
+      const studentLines = [];
       if (data.due.length > 0) {
-        msg += `⚠️ *ARREARS (Previous Month Unpaid):*\n`;
-        data.due.forEach(s => { msg += `  • ${getName(s)}\n`; });
-        msg += '\n';
+        data.due.forEach(s => { studentLines.push(`${getName(s)} (Arrears)`); });
       }
       if (data.pending.length > 0) {
-        msg += `⏳ *PENDING (Current Month):*\n`;
-        data.pending.forEach(s => { msg += `  • ${getName(s)}\n`; });
-        msg += '\n';
+        data.pending.forEach(s => { studentLines.push(`${getName(s)} (Pending)`); });
       }
+      msg += studentLines.join(', ') + '\n\n';
 
-      msg += `Please follow up with the guardians at the earliest.\n\n_Thank you — Chesskidoo Admin_`;
+      msg += `Please coordinate with the guardians to ensure this balance is settled.\n`;
+      msg += `Note: Arrears indicates unpaid fees from previous months, while Pending refers to the current cycle.\n\n`;
+      msg += `Regards,\nAdministrative Team | Chesskidoo Academy`;
       window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 
       count++;
@@ -285,7 +286,7 @@
 
     const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&date=${new Date().toISOString()}&level=${encodeURIComponent(s.grade || s.level || 'Beginner')}&coach=${encodeURIComponent(coachName)}`;
 
-    const waMsg = `Hello Sir/Madam 🙏\n\n*CHESSKIDOO ACADEMY — Payment Confirmation*\n\nStudent: *${name}*\nAmount Paid: *₹${Number(fee).toLocaleString()}*\nDate: ${today}\n\n📄 Download Receipt:\n${receiptUrl}\n\nThank you — Chesskidoo Academy`;
+    const waMsg = `CHESSKIDOO ACADEMY - PAYMENT CONFIRMATION\n\nStudent: ${name}\nAmount Paid: INR ${Number(fee).toLocaleString()}\nDate: ${today}\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Chesskidoo Academy.`;
 
     if (phone && phone.length >= 10) {
       setTimeout(() => {
