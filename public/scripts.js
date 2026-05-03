@@ -467,9 +467,9 @@
 
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
-    let msg = `*CHESSKIDOO ACADEMY - FEE AUDIT REPORT*\n\n`;
+    let msg = `✅ *CHESSKIDOO ACADEMY - FEE AUDIT REPORT*\n\n`;
     msg += `Hello Coach ${cleanText(getCoachName(c))},\n\n`;
-    msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:\n\n`;
+    msg += `📢 The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:\n\n`;
 
     pending.forEach((s) => {
       const status = getStudentPaymentStatus(s);
@@ -733,8 +733,8 @@
   // Helper accessors
   function cleanText(t) {
     if (!t) return '';
-    // Strip all non-ASCII characters and invisible control codes
-    return t.toString().replace(/[^\x20-\x7E]/g, '').trim();
+    // Strip all non-ASCII characters EXCEPT for explicitly allowed emojis (✅, 📢)
+    return t.toString().replace(/[^\x20-\x7E\u2705\u1F4E2]/g, '').trim();
   }
   function getStudentName(s) { 
     const raw = s.full_name || s.name || '';
@@ -2936,7 +2936,7 @@
       const coachName = coach ? getCoachName(coach) : 'N/A';
       const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(getStudentName(s))}&amount=${amt}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
 
-      const message = `Hello Sir/Madam,\n\nThis is to inform you about the chess class fee payment you have completed for ${cleanText(getStudentName(s))} (INR ${amt.toLocaleString()}).\n\nHere is your receipt link for download:\n${receiptUrl}\n\nThank you for your continued support and cooperation.\n- Chesskidoo Academy`;
+      const message = `✅ Hello Sir/Madam,\n\nThis is to inform you about the chess class fee payment you have completed for ${cleanText(getStudentName(s))} (INR ${amt.toLocaleString()}).\n\nHere is your receipt link for download:\n${receiptUrl}\n\nThank you for your continued support and cooperation.\n- Chesskidoo Academy`;
 
       const parentPhone = getStudentPhone(s).replace(/\D/g, '');
       if (parentPhone) {
