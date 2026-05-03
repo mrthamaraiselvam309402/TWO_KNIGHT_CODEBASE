@@ -471,14 +471,15 @@ Thank you for your cooperation.
 
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
-    let msg = `*CHESSKIDOO ACADEMY – FEE AUDIT REPORT*\n\n`;
-    msg += `Hello Coach ${getCoachName(c)},\n\n`;
+    let msg = `*CHESSKIDOO ACADEMY - FEE AUDIT REPORT*\n\n`;
+    msg += `Hello Coach ${cleanText(getCoachName(c))},\n\n`;
     msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:\n\n`;
 
     pending.forEach((s) => {
       const status = getStudentPaymentStatus(s);
       const label = status === 'Due' ? 'ARREARS' : 'PENDING';
-      msg += `*${getStudentName(s).toUpperCase()}* (${label})\n`;
+      const sName = cleanText(getStudentName(s).toUpperCase());
+      msg += `*${sName}* (${label})\n`;
     });
 
     msg += `\nPlease coordinate with the guardians to ensure these balances are settled. 'ARREARS' indicates unpaid fees from previous months, while 'PENDING' is for the current cycle.\n\n`;
@@ -734,7 +735,15 @@ Thank you for your cooperation.
   }
 
   // Helper accessors
-  function getStudentName(s) { return s.full_name || s.name || ''; }
+  function cleanText(t) {
+    if (!t) return '';
+    // Strip all non-ASCII characters and invisible control codes
+    return t.toString().replace(/[^\x20-\x7E]/g, '').trim();
+  }
+  function getStudentName(s) { 
+    const raw = s.full_name || s.name || '';
+    return cleanText(raw);
+  }
   function getStudentLevel(s) { return capitalizeFirst(s.level || s.grade || 'Beginner'); }
   function getStudentRating(s) { return s.rating || s.current_rating || 800; }
   function getStudentDate(s) {
