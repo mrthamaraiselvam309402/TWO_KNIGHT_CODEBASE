@@ -55,7 +55,7 @@ async function getEncryptionKey() {
 /**
  * Encrypt a plaintext string
  */
-export async function encryptField(plaintext) {
+async function encryptField(plaintext) {
   if (!plaintext || typeof plaintext !== 'string') return plaintext;
   
   try {
@@ -85,7 +85,7 @@ export async function encryptField(plaintext) {
 /**
  * Decrypt a ciphertext string
  */
-export async function decryptField(ciphertext) {
+async function decryptField(ciphertext) {
   if (!ciphertext || typeof ciphertext !== 'string') return ciphertext;
   
   try {
@@ -113,7 +113,7 @@ export async function decryptField(ciphertext) {
 /**
  * Check if a value looks like encrypted data
  */
-export function isEncrypted(value) {
+function isEncrypted(value) {
   if (typeof value !== 'string') return false;
   // Encrypted values are base64 and typically longer
   try {
@@ -125,39 +125,9 @@ export function isEncrypted(value) {
 }
 
 /**
- * Encrypt sensitive fields in a student object
+ * Encrypt payment data object
  */
-export async function encryptStudentData(student) {
-  if (!student || typeof student !== 'object') return student;
-  
-  const encrypted = { ...student };
-  for (const field of SENSITIVE_FIELDS) {
-    if (student[field]) {
-      encrypted[field] = await encryptField(student[field]);
-    }
-  }
-  return encrypted;
-}
-
-/**
- * Decrypt sensitive fields in a student object
- */
-export async function decryptStudentData(student) {
-  if (!student || typeof student !== 'object') return student;
-  
-  const decrypted = { ...student };
-  for (const field of SENSITIVE_FIELDS) {
-    if (student[field] && isEncrypted(student[field])) {
-      decrypted[field] = await decryptField(student[field]);
-    }
-  }
-  return decrypted;
-}
-
-/**
- * Encrypt sensitive fields in a payment object
- */
-export async function encryptPaymentData(payment) {
+async function encryptPaymentData(payment) {
   if (!payment || typeof payment !== 'object') return payment;
   
   const encrypted = { ...payment };
@@ -170,7 +140,7 @@ export async function encryptPaymentData(payment) {
 /**
  * Initialize encryption module
  */
-export async function initEncryption() {
+async function initEncryption() {
   try {
     await getEncryptionKey();
     console.log('[Encryption] Module initialized');
