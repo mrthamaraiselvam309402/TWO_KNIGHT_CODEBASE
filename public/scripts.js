@@ -3110,12 +3110,18 @@ Thank you for your cooperation.
     }).join('');
   }
 
+  window.syncBillMonth = function(val) {
+    if (!val) return;
+    const parts = val.split('-');
+    window.reportYear = parseInt(parts[0]);
+    window.reportMonth = parseInt(parts[1]) - 1;
+    renderBills();
+  };
+
   window.resetBillMonth = function () {
-    const el = $('f-bill-month');
-    if (el) {
-      const now = new Date();
-      el.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    }
+    const now = new Date();
+    window.reportYear = now.getFullYear();
+    window.reportMonth = now.getMonth();
     renderBills();
   };
 
@@ -3124,22 +3130,16 @@ Thank you for your cooperation.
     const tbody = $('bill-body');
     if (!tbody) return;
 
-    // Set initial value for month filter if empty
+    // Sync with global report context if filter is empty or just loaded
     const filterEl = $('f-bill-month');
-    if (filterEl && !filterEl.value) {
-      const now = new Date();
-      filterEl.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const globalPeriod = `${window.reportYear}-${String(window.reportMonth + 1).padStart(2, '0')}`;
+    
+    if (filterEl) {
+      filterEl.value = globalPeriod;
     }
 
-    const selectedMonthVal = filterEl ? filterEl.value : null;
-    let targetMonth = new Date().getMonth();
-    let targetYear = new Date().getFullYear();
-
-    if (selectedMonthVal) {
-      const parts = selectedMonthVal.split('-');
-      targetYear = parseInt(parts[0]);
-      targetMonth = parseInt(parts[1]) - 1;
-    }
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
 
     if (!allStudents || allStudents.length === 0) {
       tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No payment records found</div></td></tr>';
