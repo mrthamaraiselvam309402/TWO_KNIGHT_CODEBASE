@@ -15,6 +15,11 @@
     else console.log('[Automation]', type.toUpperCase(), msg);
   }
 
+  function cleanText (t) {
+    if (!t) return '';
+    return t.toString().replace(/[^\x20-\x7E]/g, '').trim();
+  }
+
   async function rpc (fn, params = {}) {
     // SECURITY: Use proxy if available, fallback to direct but wrap in try/catch
     const url = `/api/rpc/${fn}`; // Prefer proxied route
@@ -195,11 +200,11 @@
       if (!phone || phone.length < 10) { count++; processNext(); return; }
 
       const data   = coachMap[cid];
-      const getName = s => (s.full_name || s.name || 'Unknown');
+      const getName = s => cleanText(s.full_name || s.name || 'Unknown');
 
       let msg = `CHESSKIDOO ACADEMY - FEE AUDIT REPORT\n\n`;
-      msg += `Hello Coach ${coach.name || 'Coach'},\n\n`;
-      msg += `The following student under your mentorship has an outstanding balance for the ${monthName} billing cycle:\n\n`;
+      msg += `Hello Coach ${cleanText(coach.name || 'Coach')},\n\n`;
+      msg += `The following student under your mentorship has an outstanding balance for the ${cleanText(monthName)} billing cycle:\n\n`;
 
       const studentLines = [];
       if (data.due.length > 0) {
@@ -259,7 +264,7 @@
 
     const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&date=${new Date().toISOString()}&level=${encodeURIComponent(s.grade || s.level || 'Beginner')}&coach=${encodeURIComponent(coachName)}`;
 
-    const waMsg = `CHESSKIDOO ACADEMY - PAYMENT CONFIRMATION\n\nStudent: ${name}\nAmount Paid: INR ${Number(fee).toLocaleString()}\nDate: ${today}\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Chesskidoo Academy.`;
+    const waMsg = `CHESSKIDOO ACADEMY - PAYMENT CONFIRMATION\n\nStudent: ${cleanText(name)}\nAmount Paid: INR ${Number(fee).toLocaleString()}\nDate: ${cleanText(today)}\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Chesskidoo Academy.`;
 
     if (phone && phone.length >= 10) {
       setTimeout(() => {

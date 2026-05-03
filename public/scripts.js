@@ -445,11 +445,7 @@
       dueDateStr = `5th ${monthName} ${targetYear}`;
     }
 
-    const msg = `Hello Sir/Madam,
-This is a gentle reminder regarding the pending chess class fee of ₹${totalPending} for your child ${name}. We kindly request you to please pay at least ₹500 on or before ${dueDateStr}.
-You may make the payment to: 9025846663 (Ranjith).
-Thank you for your cooperation.
-– Chesskidoo Academy`;
+    const msg = `Hello Sir/Madam,\n\nThis is a gentle reminder regarding the pending chess class fee of INR ${totalPending.toLocaleString()} for your child ${cleanText(name)}. We kindly request you to please settle this on or before ${cleanText(dueDateStr)}.\n\nYou may make the payment to: 9025846663 (Ranjith).\n\nThank you for your cooperation.\n- Chesskidoo Academy`;
 
     window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
@@ -2940,7 +2936,7 @@ Thank you for your cooperation.
       const coachName = coach ? getCoachName(coach) : 'N/A';
       const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(getStudentName(s))}&amount=${amt}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
 
-      const message = `Hello Sir/Madam,\n\nThis is to inform you about the chess class fee payment you have completed for *${getStudentName(s)}* (₹${amt.toLocaleString()}).\n\nHere is your receipt link for download:\n${receiptUrl}\n\nThank you for your continued support and cooperation.\n– Chesskidoo Academy`;
+      const message = `Hello Sir/Madam,\n\nThis is to inform you about the chess class fee payment you have completed for ${cleanText(getStudentName(s))} (INR ${amt.toLocaleString()}).\n\nHere is your receipt link for download:\n${receiptUrl}\n\nThank you for your continued support and cooperation.\n- Chesskidoo Academy`;
 
       const parentPhone = getStudentPhone(s).replace(/\D/g, '');
       if (parentPhone) {
