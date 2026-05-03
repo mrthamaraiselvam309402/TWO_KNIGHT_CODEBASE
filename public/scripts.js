@@ -1048,7 +1048,7 @@
 
         const [coaches, students, achievements, events, messages, attendance, payments, ratingHistory, resources] = await Promise.all([
           loadWithRetry('/api/coaches'),
-          loadWithRetry('/api/students?limit=1000'),
+          loadWithRetry('/api/students?limit=10000'),
           loadWithRetry('/api/achievements'),
           loadWithRetry('/api/events'),
           loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || [])),
@@ -1950,6 +1950,7 @@
     }, 0);
 
     let totalArrears = 0;
+    let lastMonthDue = 0;
     let currMonthPending = 0;
     let totalPotential = 0;
 
@@ -2187,7 +2188,7 @@
         <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
         <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
         <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
-        <td>${getStudentLevel(s)} - ${getStudentRating(s)} ELO</td>
+        <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
         <td>${coachName}</td>
         <td>${getStudentDate(s) || '-'}</td>
         <td>${session}</td>
@@ -2381,6 +2382,11 @@
           };
         }
 
+        // FIX C2: If this student is the currently logged-in parent's child, refresh currentStudent
+        if (currentStudent && String(currentStudent.id) === String(id)) {
+          setCurrentStudent(allStudents[idx]);
+        }
+
         toast('Student updated!', 'success');
         closeModals();
         
@@ -2435,7 +2441,7 @@
     if (!data.full_name) { toast('Student name is required', 'error'); return; }
     if (!data.phone) { toast('Parent phone is required', 'error'); return; }
     const phoneDigits = data.phone.replace(/\D/g, '');
-    if (phoneDigits.length < 10) { toast('Phone must be at least 10 digits', 'error'); return; }
+    if (!/^\d{10}$/.test(phoneDigits)) { toast('Phone number must be exactly 10 digits', 'error'); return; }
 
     try {
       const res = await apiCall('/api/students', { method: 'POST', body: JSON.stringify(data) });
@@ -3308,6 +3314,14 @@
       totalPaymentsMap[sid]++;
     });
 
+    // Pre-compute payment statuses for performance
+    const statusCache = new Map();
+    allStudents.forEach(s => {
+      const key = s.id;
+      const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+      statusCache.set(key, status);
+    });
+
     const now = new Date();
     const currentMonth = now.getUTCMonth();
     const currentYear = now.getUTCFullYear();
@@ -3335,7 +3349,7 @@
       }
 
       // 2. Status Determination (Using Unified Intelligence Core)
-      const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+      const status = statusCache.get(s.id);
       let statusClass = 'badge-danger';
       if (status === 'Paid') statusClass = 'badge-success';
       else if (status === 'Pending') statusClass = 'badge-warning';
@@ -3414,24 +3428,29 @@
         updates.due_date = nextDate.toISOString().split('T')[0];
       }
 
-      await apiCall(`${API_BASE}/students?id=${studentId}`, {
-        method: 'PUT',
-        body: JSON.stringify(updates)
-      });
+      try {
+        await apiCall(`${API_BASE}/students?id=${studentId}`, {
+          method: 'PUT',
+          body: JSON.stringify(updates)
+        });
 
-      // Log history
-      await apiCall(`${API_BASE}/payments`, {
-        method: 'POST',
-        body: JSON.stringify({
-          student_id: studentId,
-          amount: amt,
-          status: 'paid',
-          payment_method: 'Bulk Admin',
-          description: 'Bulk mark as paid by administrator',
-          transaction_id: 'BLK-' + Math.floor(Math.random() * 1000000),
-          payment_date: new Date().toISOString()
-        })
-      });
+        // Log history
+        await apiCall(`${API_BASE}/payments`, {
+          method: 'POST',
+          body: JSON.stringify({
+            student_id: studentId,
+            amount: amt,
+            status: 'paid',
+            payment_method: 'Bulk Admin',
+            description: 'Bulk mark as paid by administrator',
+            transaction_id: 'BLK-' + Math.floor(Math.random() * 1000000),
+            payment_date: new Date().toISOString()
+          })
+        });
+      } catch (e) {
+        console.error('Bulk mark paid error for student', studentId, e);
+        toast(`Failed to process student ${getStudentName(s)}: ${e.message}`, 'error');
+      }
      }
      toast('Bulk payments processed and due dates advanced!', 'success');
      
@@ -4414,10 +4433,16 @@
   // THEME & PDF
   // ═══════════════════════════════════════════════════════════════
   function toggleTheme() {
-    document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.body.dataset.theme = newTheme;
+    localStorage.setItem('chesskidoo_theme', newTheme);
     // Re-render dashboard if visible to update chart colors
     if ($('page-dash').classList.contains('active')) renderDash();
   }
+
+  // Load theme on page load
+  const savedTheme = localStorage.getItem('chesskidoo_theme');
+  if (savedTheme) document.body.dataset.theme = savedTheme;
 
   // BOARDROOM REPORTING LOGIC MOVED TO js/reporting.js
 
@@ -4687,6 +4712,7 @@
   window.API_BASE = API_BASE;
   window.role = role;
   window.currentStudent = currentStudent;
+  window.escapeHtml = escapeHtml;
 
   // Data Arrays
   window.allStudents = allStudents;

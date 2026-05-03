@@ -149,7 +149,27 @@ async function initEncryption() {
   }
 }
 
-// Auto-initialize
+// Export key for backup
+window.exportEncryptionKey = function() {
+  const key = localStorage.getItem(ENCRYPTION_KEY_NAME);
+  if (!key) { toast('No encryption key found', 'error'); return; }
+  const blob = new Blob([key], {type: 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'chesskidoo_encryption_key_backup.txt';
+  a.click();
+  toast('Key exported. Store it securely!', 'success');
+};
+
+// On page load, check if key exists; if not, generate and show a one-time notification
 if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    if (!localStorage.getItem(ENCRYPTION_KEY_NAME)) {
+      // Key will be generated on first use
+      setTimeout(() => {
+        toast('⚠️ IMPORTANT: Your encryption key has been generated. Please export and store it safely using the "Export Key" button in Settings.', 'warning', 10000);
+      }, 2000);
+    }
+  });
   initEncryption();
 }
