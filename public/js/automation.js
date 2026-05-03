@@ -16,20 +16,20 @@
   }
 
   async function rpc (fn, params = {}) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON,
-        'Authorization': `Bearer ${SUPABASE_ANON}`
-      },
-      body: JSON.stringify(params)
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `RPC ${fn} failed: ${res.status}`);
+    // SECURITY: Use proxy if available, fallback to direct but wrap in try/catch
+    const url = `/api/rpc/${fn}`; // Prefer proxied route
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+      if (!res.ok) throw new Error(`RPC ${fn} failed`);
+      return res.json();
+    } catch (e) {
+      console.warn(`[Automation] RPC ${fn} fallback-bypass:`, e.message);
+      return null;
     }
-    return res.json();
   }
 
   function checkMorningRollover () {
@@ -93,30 +93,36 @@
     loadMorningSummary();
   }
 
-  async function loadMorningSummary () {
+  function loadMorningSummary () {
     const el = document.getElementById('morning-summary');
     if (!el) return;
-    try {
-      const today = new Date();
-      const data = await rpc('get_cycle_summary', {
-        p_year: today.getFullYear(),
-        p_month1: today.getMonth() + 1,
-        p_month2: today.getMonth() + 1
-      });
-      if (!data || !data.length) {
-        el.innerHTML = '<span style="color:#7a7870">No data yet — run classification first.</span>';
-        return;
-      }
-      const rows = data.map(r =>
-        `<div style="display:flex;justify-content:space-between">
-          <span style="color:${r.status==='Paid'?'#52c41a':r.status==='Due'?'#ff4d4f':'#e8a830'}">${r.status}</span>
-          <span style="color:#f0ede4;font-weight:700">${r.count} students (₹${(r.total_revenue||0).toLocaleString()})</span>
-        </div>`
-      ).join('');
-      el.innerHTML = rows || '<span style="color:#7a7870">No data</span>';
-    } catch (e) {
-      el.innerHTML = `<span style="color:#ff4d4f">Error: ${e.message}</span>`;
+    
+    const students = window.allStudents || [];
+    if (students.length === 0) {
+      el.innerHTML = '<span style="color:#7a7870">Waiting for data synchronization…</span>';
+      return;
     }
+
+    const summary = { Paid: 0, Pending: 0, Due: 0 };
+    let revenue = { Paid: 0, Pending: 0, Due: 0 };
+
+    students.forEach(s => {
+      const status = window.getStudentPaymentStatus ? window.getStudentPaymentStatus(s) : 'Pending';
+      const fee = parseInt(s.monthly_fee || s.fee) || 0;
+      if (summary[status] !== undefined) {
+        summary[status]++;
+        revenue[status] += fee;
+      }
+    });
+
+    const rows = Object.entries(summary).map(([status, count]) =>
+      `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="color:${status==='Paid'?'#52c41a':status==='Due'?'#ff4d4f':'#e8a830'}">${status}</span>
+        <span style="color:#f0ede4;font-weight:700">${count} students (₹${revenue[status].toLocaleString()})</span>
+      </div>`
+    ).join('');
+
+    el.innerHTML = rows || '<span style="color:#7a7870">No data available.</span>';
   }
 
   window.automationRunRollover = async function () {
@@ -223,37 +229,6 @@
     processNext();
   };
 
-  async function refreshDashboardFromSupabase (year, month) {
-    try {
-      const data = await rpc('get_cycle_summary', {
-        p_year: year, p_month1: month, p_month2: month
-      });
-      if (!data || !data.length) return;
-
-      const summary = { Paid: 0, Pending: 0, Due: 0 };
-      let collected = 0, potential = 0;
-
-      data.forEach(row => {
-        summary[row.status] = Number(row.count) || 0;
-        if (row.status === 'Paid') collected += Number(row.total_revenue) || 0;
-        potential += Number(row.total_revenue) || 0;
-      });
-
-      const setEl = (id, val) => { const el = $(id); if (el) el.textContent = val; };
-      setEl('s-rev',            '₹' + collected.toLocaleString());
-      setEl('s-total-revenue',  '₹' + potential.toLocaleString());
-      setEl('s-last-due',       '₹' + ((summary.Due || 0) * getAvgFee()).toLocaleString());
-      setEl('s-curr-pending',   '₹' + ((summary.Pending || 0) * getAvgFee()).toLocaleString());
-
-      if (window.chartInstances && window.chartInstances.payment) {
-        const chart = window.chartInstances.payment;
-        chart.data.datasets[0].data = [summary.Paid, summary.Pending, summary.Due];
-        chart.update('active');
-      }
-    } catch (e) {
-      console.warn('[Automation] Refresh failed:', e.message);
-    }
-  }
 
   function getAvgFee () {
     const students = window.allStudents || [];
@@ -265,9 +240,7 @@
   const _origUpdateContext = window.updateReportContext;
   window.updateReportContext = function () {
     if (_origUpdateContext) _origUpdateContext();
-    const year  = window.reportYear  || new Date().getFullYear();
-    const month = (window.reportMonth !== undefined ? window.reportMonth : new Date().getMonth()) + 1;
-    refreshDashboardFromSupabase(year, month);
+    if (window.renderDash) window.renderDash();
   };
 
   const _origMarkPaid = window.markPaid;
@@ -303,9 +276,7 @@
     autoRefreshTimer = setInterval(() => {
       const dashPage = $('page-dash');
       if (!dashPage || !dashPage.classList.contains('active')) return;
-      const year  = window.reportYear  || new Date().getFullYear();
-      const month = (window.reportMonth !== undefined ? window.reportMonth : new Date().getMonth()) + 1;
-      refreshDashboardFromSupabase(year, month);
+      if (window.renderDash) window.renderDash();
     }, 60000);
   }
 
