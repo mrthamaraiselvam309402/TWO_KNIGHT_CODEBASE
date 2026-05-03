@@ -1,21 +1,15 @@
 /**
  * Chesskidoo AI Assistant Module
- * Handles floating chat interactions and AI queries.
+ * Handles floating chat interactions and AI queries with High-Fidelity Intelligence.
  */
-
-window.toggleChatbot = function() {
-    const panel = document.getElementById('chat-panel');
-    if (panel) panel.style.display = 'flex';
-};
-
-window.sendChatMessage = function() {
-    toast('Chat feature initialized.');
-};
 
 window.toggleChat = function() {
     const panel = document.getElementById('chat-panel');
     if (panel) {
         panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+        if (panel.style.display === 'flex' && !window.pillsInitialized) {
+            initSmartPills();
+        }
     }
 };
 
@@ -26,37 +20,32 @@ window.toggleLoginChat = function() {
     }
 };
 
-window.sendLoginChat = async function() {
-    const input = document.getElementById('login-chat-input');
-    if (!input || !input.value.trim()) return;
-    
-    const msg = input.value.trim();
-    input.value = '';
-    
-    const container = document.getElementById('login-chat-body');
+function initSmartPills() {
+    const suggestions = [
+        "Audit May Arrears",
+        "Top Performing Coach?",
+        "Growth Recommendation",
+        "Summarize Academy Health"
+    ];
+    const container = document.getElementById('ai-suggestions');
     if (container) {
-        container.innerHTML += `<div class="chat-msg user">${escapeHtml(msg)}</div>`;
-        container.scrollTop = container.scrollHeight;
-    }
-    
-    try {
-        const res = await apiCall('/api/ai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: msg, role: 'visitor', context: {} })
+        container.innerHTML = '';
+        suggestions.forEach(text => {
+            const pill = document.createElement('div');
+            pill.className = 'ai-ws-pill';
+            pill.textContent = text;
+            pill.onclick = () => {
+                const input = document.getElementById('chat-input');
+                if (input) {
+                    input.value = text;
+                    sendChat();
+                }
+            };
+            container.appendChild(pill);
         });
-        
-        const data = await res.json();
-        if (container) {
-            container.innerHTML += `<div class="chat-msg bot">${data.message || 'AI is thinking...'}</div>`;
-            container.scrollTop = container.scrollHeight;
-        }
-    } catch (e) {
-        if (container) {
-            container.innerHTML += `<div class="chat-msg bot" style="color:var(--danger)">Error: ${e.message}</div>`;
-        }
+        window.pillsInitialized = true;
     }
-};
+}
 
 window.sendChat = async function() {
     const input = document.getElementById('chat-input');
@@ -66,17 +55,13 @@ window.sendChat = async function() {
     input.value = '';
     
     const body = document.getElementById('ai-chat-body');
-    const userMsg = document.createElement('div');
-    userMsg.className = 'chat-msg user';
-    userMsg.textContent = msg;
-    body.appendChild(userMsg);
-    body.scrollTop = body.scrollHeight;
+    appendMsg('user', msg);
     
-    // Build context for AI
-    const lastDue = document.getElementById('s-last-due')?.textContent || '₹0';
-    const currPending = document.getElementById('s-curr-pending')?.textContent || '₹0';
-    const revenue = document.getElementById('s-rev')?.textContent || '₹0';
-    const activeModule = window.location.hash || 'Dashboard';
+    // Show "Grandmaster is calculating..."
+    const thinking = showThinking();
+    
+    // Fetch Real-Time Academy Intelligence
+    const snapshot = window.getAcademySnapshot ? window.getAcademySnapshot() : null;
 
     try {
         const res = await apiCall('/api/ai', {
@@ -85,33 +70,46 @@ window.sendChat = async function() {
             body: JSON.stringify({ 
                 message: msg, 
                 role: window.role || 'admin', 
-                context: { 
-                    students: window.allStudents?.length || 0,
-                    activeStudents: window.allStudents?.filter(s => s.status === 'active').length || 0,
-                    coaches: window.allCoaches?.length || 0,
-                    revenue: parseFloat(revenue.replace(/[^\d.]/g, '') || 0),
-                    lastDue: parseFloat(lastDue.replace(/[^\d.]/g, '') || 0),
-                    pendingPayments: parseFloat(currPending.replace(/[^\d.]/g, '') || 0),
-                    moduleFocus: activeModule
-                } 
+                context: snapshot || { status: 'basic' },
+                systemPrompt: "You are the ChessKidoo Grandmaster Assistant. Use the provided academy data to give strategic, encouraging, and highly accurate advice. Speak like a professional chess coach."
             })
         });
         
         const data = await res.json();
-        const botMsg = document.createElement('div');
-        botMsg.className = 'chat-msg bot';
-        botMsg.textContent = data.message || "I'm processing your request...";
-        body.appendChild(botMsg);
-        body.scrollTop = body.scrollHeight;
+        hideThinking(thinking);
+        appendMsg('bot', data.message || "My calculations are complete. How can I assist further?");
+        
     } catch (e) {
-        const botMsg = document.createElement('div');
-        botMsg.className = 'chat-msg bot';
-        botMsg.style.color = 'var(--danger)';
-        botMsg.textContent = 'Connection error. AI is offline.';
-        body.appendChild(botMsg);
-        body.scrollTop = body.scrollHeight;
+        hideThinking(thinking);
+        appendMsg('bot', 'Neural link interrupted. Please check your connection.', true);
     }
 };
+
+function appendMsg(type, text, isError = false) {
+    const body = document.getElementById('ai-chat-body');
+    if (!body) return;
+    
+    const div = document.createElement('div');
+    div.className = `ai-msg ${type}`;
+    if (isError) div.style.color = 'var(--danger)';
+    div.textContent = text;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+}
+
+function showThinking() {
+    const body = document.getElementById('ai-chat-body');
+    const div = document.createElement('div');
+    div.className = 'ai-msg bot thinking';
+    div.innerHTML = '<span class="spinner" style="width:12px; height:12px; margin-right:8px"></span>Grandmaster is calculating strategy...';
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+    return div;
+}
+
+function hideThinking(el) {
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+}
 
 function escapeHtml(text) {
     const div = document.createElement('div');

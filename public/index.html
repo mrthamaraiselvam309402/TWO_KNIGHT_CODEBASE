@@ -1014,17 +1014,21 @@
 <!-- Chat Panel (Chess Design) -->
 <div class="chat-panel" id="chat-panel" style="display:none">
   <div class="chat-head">
-    <div class="chat-head-av">⚡</div>
+    <div class="chat-head-av">👑</div>
     <div class="chat-head-info">
-      <h4>Chesskidoo AI</h4>
-      <p><span style="display:inline-block;width:6px;height:6px;background:var(--emerald);border-radius:50%;margin-right:4px;"></span>Online</p>
+      <h4 style="color:var(--gold)">Chesskidoo Grandmaster</h4>
+      <p><span class="online-dot"></span>Strategist Active</p>
     </div>
+    <button onclick="toggleChat()" style="background:none;border:none;color:var(--ivory3);cursor:pointer;font-size:20px;margin-left:auto">&times;</button>
   </div>
   <div class="chat-body" id="ai-chat-body">
-    <div class="chat-msg bot">Hi! I'm your AI assistant. Ask me anything about the academy!</div>
+    <div class="ai-msg bot">Greetings! I am the Academy Grandmaster. I have synchronized with your latest financial and student data. How shall we strategize today?</div>
+  </div>
+  <div id="ai-suggestions" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 14px;background:var(--surface2);border-top:1px solid var(--border)">
+    <!-- Pills injected by JS -->
   </div>
   <div class="chat-input-row">
-    <input type="text" id="chat-input" placeholder="Type a message…" onkeypress="if(event.key==='Enter')sendChat()">
+    <input type="text" id="chat-input" placeholder="Ask about revenue, coaches, or growth..." onkeypress="if(event.key==='Enter')sendChat()">
     <button class="chat-send" onclick="sendChat()">↑</button>
   </div>
 </div>

@@ -408,13 +408,14 @@
     const targetYear = window.reportYear;
     const enrollDateStr = getStudentDate(s);
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 2, 1); // Fallback to March 1, 2026
-    const baselineDate = new Date(2026, 2, 1); // Global System Baseline (March 1, 2026)
+    const baselineDate = new Date(2026, 3, 1); // Global System Baseline (April 1st, 2026)
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
 
     if (!window.totalPaymentsMap) {
       window.totalPaymentsMap = {};
       (allPayments || []).forEach(p => {
-        const sid = String(p.student_id);
+        const sid = String(p.student_id || '').trim().toLowerCase();
+        if (!sid) return;
         if (!window.totalPaymentsMap[sid]) window.totalPaymentsMap[sid] = 0;
         window.totalPaymentsMap[sid]++;
       });
@@ -793,7 +794,8 @@
     if (!window.totalPaymentsMap) {
       window.totalPaymentsMap = {};
       (window.allPayments || []).forEach(p => {
-        const sid = String(p.student_id);
+        const sid = String(p.student_id || '').trim().toLowerCase();
+        if (!sid) return;
         if (!window.totalPaymentsMap[sid]) window.totalPaymentsMap[sid] = 0;
         window.totalPaymentsMap[sid]++;
       });
@@ -1747,33 +1749,17 @@
   }
 
   function calculateSlotRevenue(year, month, paymentsMap) {
-    let rev = 0;
-    const targetMonthEnd = new Date(year, month + 1, 0);
-    const baselineDate = new Date(2026, 3, 1);
-
-    allStudents.forEach(s => {
-      const enrollDateStr = getStudentDate(s);
-      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baselineDate;
-      if (enrollDate > targetMonthEnd) return;
-
-      const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
-      const fee = getStudentMonthlyFee(s) || 0;
-      const monthsRequired = ((year - effectiveEnroll.getFullYear()) * 12) + (month - effectiveEnroll.getMonth()) + 1;
-      const totalCredits = paymentsMap[String(s.id)] || 0;
-
-      const hasDirect = (allPayments || []).some(p => {
+    // 1. Calculate Revenue from ACTUAL Transactions (Flawless Accuracy)
+    const targetYM = `${year}-${month}`;
+    const directRevenue = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
-        return String(p.student_id).toLowerCase() === String(s.id).toLowerCase() && pDate.getMonth() === month && pDate.getFullYear() === year;
-      });
+        if (pDate.getMonth() === month && pDate.getFullYear() === year) {
+            return sum + (parseFloat(p.amount) || 0);
+        }
+        return sum;
+    }, 0);
 
-      const isPaid = (totalCredits >= monthsRequired) || hasDirect;
-
-      // Fallback
-      const finalPaid = isPaid || (totalCredits === 0 && (s.payment_status || '').toLowerCase() === 'paid');
-
-      if (finalPaid) rev += fee;
-    });
-    return rev;
+    return directRevenue;
   }
 
   function renderDash() {
@@ -3184,50 +3170,13 @@
         </tr>`;
       }
 
-      // 2. Dynamic Slot Calculation based on Student's Joining Date
-      const systemStartDate = new Date(2026, 3, 1); // April 1st, 2026 Baseline
-      const enrollDateParsed = (enrollDateStr && !isNaN(new Date(enrollDateStr))) ? new Date(enrollDateStr) : systemStartDate;
-      const effectiveEnrollDate = enrollDateParsed < systemStartDate ? systemStartDate : enrollDateParsed;
-
-      const monthsRequired = ((targetYear - effectiveEnrollDate.getFullYear()) * 12) + (targetMonth - effectiveEnrollDate.getMonth()) + 1;
-
-      const s_id_key = String(s.id || '').trim().toLowerCase();
-      const totalCredits = totalPaymentsMap[s_id_key] || 0;
-
-      // Check for Direct Month Match (Migration Override)
-      const hasDirectPayment = (allPayments || []).some(p => {
-        const pDate = new Date(p.payment_date || p.created_at);
-        const psid = String(p.student_id || '').trim().toLowerCase();
-        return psid === s_id_key &&
-          pDate.getMonth() === targetMonth &&
-          pDate.getFullYear() === targetYear;
-      });
-
-      // Status Determination Logic (Status-First Priority)
-      const manualStatus = (s.payment_status || '').toLowerCase();
-      const isAuditPaid = (totalCredits >= monthsRequired || hasDirectPayment);
-
-      const now = new Date();
-      const isCurrent = targetMonth === now.getMonth() && targetYear === now.getFullYear();
-
-      let status = 'Due';
+      // 2. Status Determination (Using Unified Intelligence Core)
+      const status = getStudentPaymentStatus(s);
       let statusClass = 'badge-danger';
-
-      if (manualStatus === 'paid' || isAuditPaid) {
-        status = 'Paid';
-        statusClass = 'badge-success';
-      } else if (totalCredits < (monthsRequired - 1)) {
-        // They owe for a previous month -> DUE
-        status = 'Due';
-        statusClass = 'badge-danger';
-      } else if (isCurrent) {
-        // They only owe for the current month -> PENDING
-        status = 'Pending';
-        statusClass = 'badge-warning';
-      } else {
-        status = 'Due';
-        statusClass = 'badge-danger';
-      }
+      if (status === 'Paid') statusClass = 'badge-success';
+      else if (status === 'Pending') statusClass = 'badge-warning';
+      else if (status === 'Due') statusClass = 'badge-danger';
+      else if (status === 'Not Enrolled') statusClass = 'badge-outline-grey';
 
       const invoiceId = 'INV-' + (s.id ? s.id.toString().slice(-6) : '000000');
 
