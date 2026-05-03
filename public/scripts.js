@@ -1053,7 +1053,8 @@ Thank you for your cooperation.
 
         setLoading('data', false);
       } catch (err) {
-        toast('Failed to load data - please refresh', 'error');
+        console.error('CRITICAL DATA LOAD ERROR:', err);
+        toast(`Failed to load data: ${err.message || 'Unknown error'}. Please refresh.`, 'error');
         setLoading('data', false);
       }
     };
@@ -1844,8 +1845,9 @@ Thank you for your cooperation.
       if (status === 'Due') {
         // Calculate exactly how many months behind
         const enrollDateStr = getStudentDate(s);
-        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : systemStartDate;
-        const effectiveEnroll = enrollDate < systemStartDate ? systemStartDate : enrollDate;
+        const baseline = new Date(2026, 3, 1); // April 1st Baseline
+        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+        const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
         const monthsRequired = ((targetYear - effectiveEnroll.getFullYear()) * 12) + (targetMonth - effectiveEnroll.getMonth()) + 1;
         const totalCredits = s_id_map[String(s.id).toLowerCase()] || 0;
         
