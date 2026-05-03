@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
 
     if (req.method === 'POST') {
       const newMessage = {
-        id: 'm' + Date.now(),
+        id: crypto.randomUUID(),
         sender_type: body.sender_type || 'parent',
         sender_id: body.sender_id || null,
         receiver_type: body.receiver_type || 'admin',

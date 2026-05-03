@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Chesskidoo — Premium Chess Academy</title>
   <meta name="description" content="Chesskidoo Academy — Premium chess coaching management system for students, coaches, and parents."/>
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="styles.css?v=2026-04-23-v55"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -701,7 +700,11 @@
     <div class="modal-title">📅 Mark Attendance</div>
     <div class="modal-sub">
       <span style="margin-right:12px">Session Date:</span>
-      <input type="date" id="att-date" style="display:inline;width:auto;padding:6px 10px">
+      <input type="date" id="att-date" style="display:inline;width:auto;padding:6px 10px" onchange="renderAttendanceList()">
+      <span style="margin:0 12px">Coach:</span>
+      <select id="att-coach-filter" style="display:inline;width:auto;padding:6px 10px" onchange="renderAttendanceList()">
+        <option value="">All Coaches</option>
+      </select>
     </div>
     
     <div id="att-stats" style="text-align:center;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:12px;font-size:13px;font-weight:600">
@@ -1039,11 +1042,11 @@
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-   <script src="js/reporting.js?v=v5"></script>
-   <script src="js/ai-assistant.js?v=v2"></script>
-   <script src="scripts.js?v=3.1"></script>
-   <script src="js/auth.js?v=v2"></script>
-   <script src="js/scripts_patch.js?v=2.1"></script>
-   <script src="js/automation.js?v=3.0"></script>
+    <script src="scripts.js?v=3.1"></script>
+    <script src="js/reporting.js?v=v5"></script>
+    <script src="js/ai-assistant.js?v=v2"></script>
+    <script src="js/auth.js?v=v2"></script>
+    <script src="js/scripts_patch.js?v=2.1"></script>
+    <script src="js/automation.js?v=3.0"></script>
  </body>
 </html>

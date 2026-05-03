@@ -19,7 +19,7 @@ window.generateReportPDF = async function() {
     // Helper for robust date matching (Consolidated)
     const getYM = (d) => {
       const dt = new Date(d);
-      return isNaN(dt.getTime()) ? null : `${dt.getFullYear()}-${dt.getMonth()}`;
+      return isNaN(dt.getTime()) ? null : `${dt.getUTCFullYear()}-${dt.getUTCMonth()}`;
     };
     const targetYM = `${targetYear}-${targetMonth}`;
 
@@ -49,7 +49,7 @@ window.generateReportPDF = async function() {
     // Precise Status Categorization (Transaction-First Accuracy)
     let collected = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear) {
+        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
             // Respect Manual Overrides
             const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
             if (s) {
@@ -78,7 +78,7 @@ window.generateReportPDF = async function() {
         const hasDirectPayment = (allPayments || []).some(p => {
           const pDate = new Date(p.payment_date || p.created_at);
           const psid = String(p.student_id || '').trim().toLowerCase();
-          return psid === s_id_key && pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear;
+          return psid === s_id_key && pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear;
         });
         
         const hasPaidThisSlot = (totalCredits >= monthsRequired) || hasDirectPayment;
@@ -110,7 +110,7 @@ window.generateReportPDF = async function() {
     // Attendance Real-Time (Calculated from allAttendance for target period)
     const monthAtt = (window.allAttendance || []).filter(a => {
         const aDate = new Date(a.date);
-        return aDate.getMonth() === targetMonth && aDate.getFullYear() === targetYear;
+        return aDate.getUTCMonth() === targetMonth && aDate.getUTCFullYear() === targetYear;
     });
     const presentCount = monthAtt.filter(a => a.status === 'present').length;
     const attendanceHealth = monthAtt.length > 0 ? ((presentCount / monthAtt.length) * 100).toFixed(1) : 88.5; 
@@ -206,16 +206,16 @@ window.generateReportPDF = async function() {
     const avgElo = targetStudents.length > 0 ? (targetStudents.reduce((a, s) => a + getStudentRating(s), 0) / targetStudents.length).toFixed(0) : 0;
 
     const eloGainers = targetStudents.map(s => {
-        const history = (window.allRatingHistory || []).filter(h => String(h.student_id) === String(s.id)).sort((a,b) => new Date(a.recorded_at) - new Date(b.recorded_at));
+        const history = (window.allRatingHistory || []).filter(h => String(h.student_id) === String(s.id)).sort((a,b) => new Date(a.recorded_at || a.created_at) - new Date(b.recorded_at || b.created_at));
         if (history.length < 1) return { name: getStudentName(s), gain: 0 };
         
         // Find rating at start of month (last record before month start)
-        const beforeMonth = history.filter(h => new Date(h.recorded_at) < monthStartLimit);
-        const startRating = beforeMonth.length > 0 ? (beforeMonth[beforeMonth.length - 1].new_rating || beforeMonth[beforeMonth.length - 1].rating) : (history[0].old_rating || history[0].rating || 800);
+        const beforeMonth = history.filter(h => new Date(h.recorded_at || h.created_at) < monthStartLimit);
+        const startRating = beforeMonth.length > 0 ? (beforeMonth[beforeMonth.length - 1].rating || 800) : (history[0].rating || 800);
         
-        // Find rating at end of month (last record before month end)
-        const duringMonth = history.filter(h => new Date(h.recorded_at) <= monthEndLimit);
-        const endRating = duringMonth.length > 0 ? (duringMonth[duringMonth.length - 1].new_rating || duringMonth[duringMonth.length - 1].rating) : startRating;
+        // Find rating at end of month (last record during month)
+        const duringMonth = history.filter(h => new Date(h.recorded_at || h.created_at) <= monthEndLimit);
+        const endRating = duringMonth.length > 0 ? (duringMonth[duringMonth.length - 1].rating || 800) : startRating;
         
         return { name: getStudentName(s), gain: endRating - startRating };
     }).sort((a, b) => b.gain - a.gain).slice(0, 3);

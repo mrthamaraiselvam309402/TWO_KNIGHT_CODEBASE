@@ -48,19 +48,23 @@ function initSmartPills() {
 }
 
 window.sendChat = async function() {
-    const input = document.getElementById('chat-input');
+    await handleAITask('chat-input', 'ai-chat-body');
+};
+
+window.sendLoginChat = async function() {
+    await handleAITask('login-chat-input', 'login-chat-body');
+};
+
+async function handleAITask(inputId, bodyId) {
+    const input = document.getElementById(inputId);
     if (!input || !input.value.trim()) return;
     
     const msg = input.value.trim();
     input.value = '';
     
-    const body = document.getElementById('ai-chat-body');
-    appendMsg('user', msg);
+    appendMsg(bodyId, 'user', msg);
     
-    // Show "Grandmaster is calculating..."
-    const thinking = showThinking();
-    
-    // Fetch Real-Time Academy Intelligence
+    const thinking = showThinking(bodyId);
     const snapshot = window.getAcademySnapshot ? window.getAcademySnapshot() : null;
 
     try {
@@ -69,24 +73,24 @@ window.sendChat = async function() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 message: msg, 
-                role: window.role || 'admin', 
-                context: snapshot || { status: 'basic' },
-                systemPrompt: "You are the ChessKidoo Grandmaster Assistant. Use the provided academy data to give strategic, encouraging, and highly accurate advice. Speak like a professional chess coach."
+                role: window.role || 'guest', 
+                context: snapshot || { status: 'landing_page' },
+                systemPrompt: "You are the ChessKidoo Landing Assistant. Be welcoming, helpful, and encourage visitors to join the premium chess academy. If they ask about fees or schedule, suggest they log in or contact admin."
             })
         });
         
         const data = await res.json();
         hideThinking(thinking);
-        appendMsg('bot', data.message || "My calculations are complete. How can I assist further?");
+        appendMsg(bodyId, 'bot', data.message || "My calculations are complete. How can I assist further?");
         
     } catch (e) {
         hideThinking(thinking);
-        appendMsg('bot', 'Neural link interrupted. Please check your connection.', true);
+        appendMsg(bodyId, 'bot', 'Neural link interrupted. Please check your connection.', true);
     }
-};
+}
 
-function appendMsg(type, text, isError = false) {
-    const body = document.getElementById('ai-chat-body');
+function appendMsg(bodyId, type, text, isError = false) {
+    const body = document.getElementById(bodyId);
     if (!body) return;
     
     const div = document.createElement('div');
@@ -97,8 +101,8 @@ function appendMsg(type, text, isError = false) {
     body.scrollTop = body.scrollHeight;
 }
 
-function showThinking() {
-    const body = document.getElementById('ai-chat-body');
+function showThinking(bodyId) {
+    const body = document.getElementById(bodyId);
     const div = document.createElement('div');
     div.className = 'ai-msg bot thinking';
     div.innerHTML = '<span class="spinner" style="width:12px; height:12px; margin-right:8px"></span>Grandmaster is calculating strategy...';

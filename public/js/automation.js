@@ -17,7 +17,8 @@
 
   function cleanText (t) {
     if (!t) return '';
-    return t.toString().replace(/[^\x20-\x7E\u2705\u1F4E2]/g, '').trim();
+    // Strip HTML tags but preserve all Unicode characters (Tamil, Arabic, etc.)
+    return t.toString().replace(/<[^>]*>?/gm, '').trim();
   }
 
   async function rpc (fn, params = {}) {
@@ -42,7 +43,7 @@
     if (role !== 'admin' && role !== 'master') return;
 
     const today = new Date();
-    const monthKey = `${today.getFullYear()}-${today.getMonth()}`;
+    const monthKey = `${today.getUTCFullYear()}-${today.getUTCMonth()}`;
     const lastShown = localStorage.getItem('automation_morning_shown');
     if (lastShown === monthKey) return;
     if (today.getDate() > 5) return;
@@ -136,9 +137,9 @@
     try {
       const today = new Date();
       const result = await rpc('update_payment_status', {
-        p_year:   today.getFullYear(),
-        p_month1: today.getMonth() + 1,
-        p_month2: today.getMonth() + 2 > 12 ? 1 : today.getMonth() + 2
+        p_year:   today.getUTCFullYear(),
+        p_month1: today.getUTCMonth() + 1,
+        p_month2: today.getUTCMonth() + 2 > 12 ? 1 : today.getUTCMonth() + 2
       });
       toast(`✅ Classified: Paid=${result.paid}, Pending=${result.pending}, Due=${result.due}`, 'success');
       loadMorningSummary();
@@ -187,7 +188,7 @@
       if (count >= coachIds.length) {
         toast(`✅ Informed ${coachIds.length} coaches!`, 'success');
         if (panel) panel.style.opacity = '1';
-        localStorage.setItem('automation_morning_shown', `${today.getFullYear()}-${today.getMonth()}`);
+        localStorage.setItem('automation_morning_shown', `${today.getUTCFullYear()}-${today.getUTCMonth()}`);
         setTimeout(() => { if (panel) panel.remove(); }, 2000);
         return;
       }

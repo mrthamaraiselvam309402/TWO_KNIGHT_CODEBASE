@@ -59,6 +59,9 @@
     { "source": "/api/audit", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/audit" },
     { "source": "/api/audit/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/audit/:match*" },
     { "source": "/api/user_sessions", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/user_sessions" },
-    { "source": "/api/user_sessions/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/user_sessions/:match*" }
+    { "source": "/api/user_sessions/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/user_sessions/:match*" },
+    { "source": "/api/payment_cycle", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/payment_cycle" },
+    { "source": "/api/payment_cycle/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/payment_cycle/:match*" },
+    { "source": "/api/upload", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/upload" }
   ]
 }

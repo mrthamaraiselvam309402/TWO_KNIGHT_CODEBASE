@@ -56,8 +56,14 @@ Deno.serve(async (req) => {
     });
 
     if (!authError && authData.user) {
-      // If user has metadata for role, use it; otherwise default to admin
-      const userRole = authData.user.user_metadata?.role || 'admin';
+      // Enforce explicit role metadata - Fix #25
+      const userRole = authData.user.user_metadata?.role;
+      if (!userRole) {
+        return new Response(JSON.stringify({ error: 'Access denied: No role assigned in metadata.' }), { 
+          status: 403, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        });
+      }
       
       return new Response(JSON.stringify({
         success: true,

@@ -464,12 +464,12 @@ input[type='month']::-webkit-calendar-picker-indicator { filter: invert(0.8) sep
 
 /* ── FILTERS ── */
 .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 16px; background: var(--surface2); border-radius: var(--radius-sm); margin-bottom: 20px; border: 1px solid rgba(232,168,48,0.1); }
-.filter-bar select, .filter-bar input { margin-bottom: 0; padding: 8px 12px; font-size: 13px; max-width: 140px; }
+.filter-bar select, .filter-bar input { margin-bottom: 0; padding: 8px 12px; font-size: 13px; min-width: 130px; flex: 1; }
 
 /* ── PAGE VISIBILITY ── */
 body.admin-mode .parent-only,
 body.parent-mode .admin-only,
-body.admin-mode .master-only { display: none !important; }
+body.admin-mode:not(.master-mode) .master-only { display: none !important; }
 .page { display: none; animation: fadeUp 0.4s ease; }
 .page.active { display: block; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
@@ -571,8 +571,8 @@ body.admin-mode .master-only { display: none !important; }
 }
 .ai-chat-btn:hover { transform: scale(1.1) translateY(-2px); box-shadow: 0 10px 30px rgba(220,163,62,0.6), 0 0 0 6px rgba(220,163,62,0.12); animation: none; }
 @keyframes chatBtnPulse {
-  0%, 100% { box-shadow: 0 6px 20px rgba(220,163,62,0.45), 0 0 0 0 rgba(220,163,62,0.35); }
-  50%       { box-shadow: 0 6px 20px rgba(220,163,62,0.45), 0 0 0 10px rgba(220,163,62,0); }
+  0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(220,163,62,0.45); }
+  50%       { transform: scale(1.05); box-shadow: 0 6px 30px rgba(220,163,62,0.6); }
 }
 
 .ai-chat-panel {

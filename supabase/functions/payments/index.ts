@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
         // Try to parse from URL search params
         const url = new URL(req.url)
         body = {
+          id: crypto.randomUUID(),
           student_id: url.searchParams.get('student_id'),
           amount: Number(url.searchParams.get('amount')) || 5000,
           status: url.searchParams.get('status'),
@@ -98,7 +99,7 @@ Deno.serve(async (req) => {
 
       // Create new payment record
       const { data: payment, error } = await supabase.from('payments').insert({
-        id: 'p' + Date.now() + Math.random().toString(36).slice(2, 8),
+        id: crypto.randomUUID(),
         student_id,
         amount: amount || 5000,
         currency: 'USD',

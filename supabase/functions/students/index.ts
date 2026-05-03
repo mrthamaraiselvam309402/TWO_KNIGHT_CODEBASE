@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
         join_date: s.enrollment_date || '',      // alias
         address: s.address || '',
         status: status,
-        payment_status: status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due'),
+        payment_status: s.payment_status || (status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due')),
         coach_id: s.coach_id || null,
         rating: s.rating || 800,
         current_rating: s.rating || 800,         // alias
@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
       }
 
       const newStudent: Record<string, unknown> = {
-        id: 's' + Date.now() + Math.random().toString(36).slice(2, 8),
+        id: crypto.randomUUID(),
         name: name,
         phone: validatePhone(rawBody.phone || rawBody.parent_phone),
         parent_phone: validatePhone(rawBody.parent_phone || rawBody.phone),
@@ -195,11 +195,14 @@ Deno.serve(async (req) => {
         updateData.account_status = validateStatus(rawBody.status);
       }
       if (rawBody.payment_status !== undefined) {
-        const pstatus = String(rawBody.payment_status).toLowerCase();
-        if (pstatus === 'paid') updateData.status = 'active';
-        else if (pstatus === 'pending') updateData.status = 'pending';
-        else updateData.status = 'pending';
-        updateData.account_status = updateData.status;
+        const pstatus = String(rawBody.payment_status);
+        updateData.payment_status = pstatus;
+        
+        // Convenience: sync status for backwards compatibility if needed
+        const lowStatus = pstatus.toLowerCase();
+        if (lowStatus === 'paid') updateData.status = 'active';
+        else if (lowStatus === 'pending') updateData.status = 'pending';
+        updateData.account_status = updateData.status || 'active';
       }
       if (rawBody.coach_id !== undefined) updateData.coach_id = rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null;
       if (rawBody.rating !== undefined || rawBody.current_rating !== undefined) {

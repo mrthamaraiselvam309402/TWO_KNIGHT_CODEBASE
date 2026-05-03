@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
 
     if (req.method === 'POST') {
       const newSession = {
-        id: 'sess_' + Date.now(),
+        id: crypto.randomUUID(),
         user_type: body.user_type || 'admin',
         user_id: body.user_id || 'admin',
         user_name: body.user_name || 'Admin',

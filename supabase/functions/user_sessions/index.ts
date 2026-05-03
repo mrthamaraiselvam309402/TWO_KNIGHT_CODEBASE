@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       const { data, error } = await supabase
         .from('user_sessions')
         .insert({
-          id: body.id || 'sess_' + Date.now(),
+          id: body.id || crypto.randomUUID(),
           user_name: body.user_name,
           role: body.role,
           student_id: body.student_id,
