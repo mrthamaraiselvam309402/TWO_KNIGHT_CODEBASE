@@ -2939,10 +2939,8 @@
       const message = `✅ Hello Sir/Madam,\n\nThis is to inform you about the chess class fee payment you have completed for ${cleanText(getStudentName(s))} (INR ${amt.toLocaleString()}).\n\nHere is your receipt link for download:\n${receiptUrl}\n\nThank you for your continued support and cooperation.\n- Chesskidoo Academy`;
 
       const parentPhone = getStudentPhone(s).replace(/\D/g, '');
-      if (parentPhone) {
-        if (confirm(`Payment logged! Send WhatsApp confirmation & receipt to parent?`)) {
-          window.open(`https://wa.me/91${parentPhone}?text=${encodeURIComponent(message)}`, '_blank');
-        }
+      if (parentPhone && parentPhone.length >= 10) {
+        window.open(`https://wa.me/91${parentPhone}?text=${encodeURIComponent(message)}`, '_blank');
       }
     } catch (e) { toast('Failed to process payment', 'error'); }
   };

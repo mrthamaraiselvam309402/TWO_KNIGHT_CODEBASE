@@ -268,9 +268,7 @@
 
     if (phone && phone.length >= 10) {
       setTimeout(() => {
-        if (confirm(`✅ Payment logged! Send WhatsApp receipt to parent of ${name}?`)) {
-          window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(waMsg)}`, '_blank');
-        }
+        window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(waMsg)}`, '_blank');
       }, 500);
     }
   };
