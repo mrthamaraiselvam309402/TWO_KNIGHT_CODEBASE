@@ -52,13 +52,11 @@ window.generateReportPDF = async function() {
     let collected = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
         if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
-            // Respect Manual Overrides: only count if student is marked Paid
+            // Validate student exists and their slot status is 'Paid' for this month
             const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
-            if (s) {
-                const status = getStudentPaymentStatus(s, targetMonth, targetYear);
-                if (status !== 'Paid') return sum;
+            if (s && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
+                return sum + (parseFloat(p.amount) || 0);
             }
-            return sum + (parseFloat(p.amount) || 0);
         }
         return sum;
     }, 0);
@@ -117,7 +115,7 @@ window.generateReportPDF = async function() {
     const presentCount = monthAtt.filter(a => a.status === 'present').length;
     const attendanceHealth = monthAtt.length > 0 ? ((presentCount / monthAtt.length) * 100).toFixed(1) : 88.5; 
 
-    // Coach Performance ROI
+    // Coach Performance ROI (count only students with 'Paid' status for this month)
     const coachMetrics = allCoaches.map(c => {
       let coachRev = 0;
       const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));

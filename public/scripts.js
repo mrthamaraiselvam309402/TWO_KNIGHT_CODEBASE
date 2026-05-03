@@ -790,8 +790,8 @@
     // Time-Machine Context (Use override if provided, otherwise default to global)
     const targetMonth = monthOverride !== null ? monthOverride : window.reportMonth;
     const targetYear = yearOverride !== null ? yearOverride : window.reportYear;
-    const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
-     const baselineDate = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st, 2026 baseline (UTC)
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+    const baselineDate = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st, 2026 baseline (UTC)
 
     // 1. Enrollment Check
     const enrollDateStr = getStudentDate(s);
@@ -1874,29 +1874,31 @@
     const targetMonthDate = new Date(targetYear, targetMonth, 1);
     const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
 
-    // Helper for robust date matching
-    const getYM = (d) => {
-      const dt = new Date(d);
-      return isNaN(dt.getTime()) ? null : `${dt.getFullYear()}-${dt.getMonth()}`;
-    };
+     // Helper for robust date matching (UTC)
+     const getYM = (d) => {
+       const dt = new Date(d);
+       return isNaN(dt.getTime()) ? null : `${dt.getUTCFullYear()}-${dt.getUTCMonth()}`;
+     };
     const targetYM = `${targetYear}-${targetMonth}`;
 
-    // 1. Target Dataset Preparation
-    const s_id_map = {};
-    (allPayments || []).forEach(p => {
-      const sid = String(p.student_id || '').trim().toLowerCase();
-      if (!sid) return;
-      if (!s_id_map[sid]) s_id_map[sid] = 0;
-      s_id_map[sid]++;
-    });
+     // 1. Target Dataset Preparation
+     const s_id_map = {};
+     (allPayments || []).forEach(p => {
+       if (p.status === 'paid') {
+         const sid = String(p.student_id || '').trim().toLowerCase();
+         if (!sid) return;
+         if (!s_id_map[sid]) s_id_map[sid] = 0;
+         s_id_map[sid]++;
+       }
+     });
 
     const targetStudents = allStudents.filter(s => {
       const sStatus = (s.status || 'active').toLowerCase();
       if (sStatus === 'archived') return false;
 
-      const enrollDateStr = getStudentDate(s);
-      const baseline = new Date(2026, 3, 1); // April 1st Baseline
-      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+     const enrollDateStr = getStudentDate(s);
+     const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
+     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       return enrollDate <= targetMonthEnd;
     });
 
@@ -1904,9 +1906,9 @@
     const paidRevenue = (allPayments || []).reduce((sum, p) => {
       const pDate = new Date(p.payment_date || p.created_at);
       if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
-        // Validation: Only count if student is not archived
+        // Validation: Only count if student is not archived AND their slot-status is 'Paid' for this month
         const s = allStudents.find(x => String(x.id) === String(p.student_id));
-        if (s && (s.status || 'active').toLowerCase() !== 'archived') {
+        if (s && (s.status || 'active').toLowerCase() !== 'archived' && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
            return sum + (parseFloat(p.amount) || 0);
         }
       }
@@ -2056,14 +2058,16 @@
       }
     });
 
-     // 2. Add ACTUAL Revenue from 'paid' Transactions
+     // 2. Add ACTUAL Revenue from 'paid' Transactions (only for students with 'Paid' slot status)
      (allPayments || []).forEach(p => {
        const pDate = new Date(p.payment_date || p.created_at);
        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
          const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
-         const coachId = s?.coach_id;
-         const targetData = coachData[coachId] || unassignedData;
-         targetData.revenue += (parseFloat(p.amount) || 0);
+         if (s && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
+           const coachId = s?.coach_id;
+           const targetData = coachData[coachId] || unassignedData;
+           targetData.revenue += (parseFloat(p.amount) || 0);
+         }
        }
      });
 
