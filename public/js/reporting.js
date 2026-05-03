@@ -25,9 +25,14 @@ window.generateReportPDF = async function() {
 
     // 1. Data Aggregation (Filtered by Period)
     const monthEndLimit = new Date(targetYear, targetMonth + 1, 0);
+    const baseline = new Date(2026, 3, 1); // April 1st Baseline
     const targetStudents = allStudents.filter(s => {
-        const joinStr = s.joining_date || s.enrollment_date || s.created_at;
-        return joinStr && new Date(joinStr) <= monthEndLimit;
+        const sStatus = (s.status || 'active').toLowerCase();
+        if (sStatus === 'archived') return false;
+        
+        const joinStr = getStudentDate(s);
+        const enrollDate = joinStr ? new Date(joinStr) : baseline;
+        return enrollDate <= monthEndLimit;
     });
 
     const totalStudents = allStudents.length;
@@ -49,10 +54,19 @@ window.generateReportPDF = async function() {
 
     targetStudents.forEach(s => {
         const fee = getStudentMonthlyFee(s) || 0;
-        const enrollDate = new Date(getStudentDate(s));
-        const monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
+        const enrollDateStr = getStudentDate(s);
+        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+        const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+        
+        const monthsRequired = ((targetYear - effectiveEnroll.getFullYear()) * 12) + (targetMonth - effectiveEnroll.getMonth()) + 1;
         const totalCredits = totalPaymentsMap[String(s.id)] || 0;
-        const hasPaidThisSlot = totalCredits >= monthsRequired;
+        
+        const hasDirectPayment = (allPayments || []).some(p => {
+          const pDate = new Date(p.payment_date || p.created_at);
+          return String(p.student_id) === String(s.id) && pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear;
+        });
+        
+        const hasPaidThisSlot = (totalCredits >= monthsRequired) || hasDirectPayment;
 
         potential += fee;
         if (hasPaidThisSlot) {
@@ -141,13 +155,22 @@ window.generateReportPDF = async function() {
         let mPotential = 0;
         
         allStudents.forEach(s => {
-            const enrollDate = new Date(getStudentDate(s));
+            if ((s.status || 'active').toLowerCase() === 'archived') return;
+            const enrollDateStr = getStudentDate(s);
+            const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
             if (enrollDate <= mEnd) {
+                const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
                 const fee = getStudentMonthlyFee(s) || 0;
-                const mReq = ((y - enrollDate.getFullYear()) * 12) + (m - enrollDate.getMonth()) + 1;
+                const mReq = ((y - effectiveEnroll.getFullYear()) * 12) + (m - effectiveEnroll.getMonth()) + 1;
                 const mCredits = totalPaymentsMap[String(s.id)] || 0;
+                
+                const hasDirect = (allPayments || []).some(p => {
+                  const pDate = new Date(p.payment_date || p.created_at);
+                  return String(p.student_id) === String(s.id) && pDate.getMonth() === m && pDate.getFullYear() === y;
+                });
+                
                 mPotential += fee;
-                if (mCredits >= mReq) mCollected += fee;
+                if (mCredits >= mReq || hasDirect) mCollected += fee;
             }
         });
         
@@ -184,11 +207,11 @@ window.generateReportPDF = async function() {
         
         // Find rating at start of month (last record before month start)
         const beforeMonth = history.filter(h => new Date(h.recorded_at) < monthStartLimit);
-        const startRating = beforeMonth.length > 0 ? beforeMonth[beforeMonth.length - 1].rating : (history[0].rating || 800);
+        const startRating = beforeMonth.length > 0 ? (beforeMonth[beforeMonth.length - 1].new_rating || beforeMonth[beforeMonth.length - 1].rating) : (history[0].old_rating || history[0].rating || 800);
         
         // Find rating at end of month (last record before month end)
         const duringMonth = history.filter(h => new Date(h.recorded_at) <= monthEndLimit);
-        const endRating = duringMonth.length > 0 ? duringMonth[duringMonth.length - 1].rating : startRating;
+        const endRating = duringMonth.length > 0 ? (duringMonth[duringMonth.length - 1].new_rating || duringMonth[duringMonth.length - 1].rating) : startRating;
         
         return { name: getStudentName(s), gain: endRating - startRating };
     }).sort((a, b) => b.gain - a.gain).slice(0, 3);
