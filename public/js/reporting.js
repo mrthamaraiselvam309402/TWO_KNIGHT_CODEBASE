@@ -50,6 +50,7 @@ window.generateReportPDF = async function() {
     let collected = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
         if (pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear) {
+            // Cash-is-King: Absolute Transactional Revenue
             return sum + (parseFloat(p.amount) || 0);
         }
         return sum;

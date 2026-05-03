@@ -1754,12 +1754,7 @@
     const directRevenue = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
         if (pDate.getMonth() === month && pDate.getFullYear() === year) {
-            // Respect Manual Overrides: If student is manually set to Pending/Due, ignore their money for THIS dashboard view
-            const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
-            if (s) {
-                const status = getStudentPaymentStatus(s);
-                if (status !== 'Paid') return sum;
-            }
+            // Cash-is-King: If there's a payment record for this month, it's revenue.
             return sum + (parseFloat(p.amount) || 0);
         }
         return sum;
