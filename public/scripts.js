@@ -4284,24 +4284,34 @@
       'Fee Due Date', 'Monthly Fee', 'Payment Status', 'Session Mode', 'Session Time',
       'Assigned Coach', 'Coach Phone', 'Coach Specialty'
     ];
-    const rows = allStudents.map(s => {
-      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
-      return [
-        getStudentName(s),
-        getStudentPhone(s),
-        getStudentLevel(s),
-        getStudentRating(s),
-        getStudentDate(s),
-        s.due_date || 'N/A',
-        getStudentMonthlyFee(s),
-        getStudentPaymentStatus(s),
-        getStudentBatchType(s),
-        s.session_time || s.batch_time || 'TBD',
-        coach ? getCoachName(coach) : 'None',
-        coach ? (coach.phone || 'N/A') : 'N/A',
-        coach ? (getCoachSpecialty(coach) || 'N/A') : 'N/A'
-      ].map(val => `"${String(val).replace(/"/g, '""')}"`);
-    });
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
+    const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
+
+    const rows = allStudents
+      .filter(s => {
+          const enrollStr = getStudentDate(s);
+          const enrollDate = enrollStr ? new Date(enrollStr) : new Date(2026, 3, 1);
+          return enrollDate <= targetMonthEnd && (s.status || 'active') !== 'archived';
+      })
+      .map(s => {
+        const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+        return [
+          getStudentName(s),
+          getStudentPhone(s),
+          getStudentLevel(s),
+          getStudentRating(s),
+          getStudentDate(s),
+          s.due_date || 'N/A',
+          getStudentMonthlyFee(s),
+          getStudentPaymentStatus(s, targetMonth, targetYear),
+          getStudentBatchType(s),
+          s.session_time || s.batch_time || 'TBD',
+          coach ? getCoachName(coach) : 'None',
+          coach ? (coach.phone || 'N/A') : 'N/A',
+          coach ? (getCoachSpecialty(coach) || 'N/A') : 'N/A'
+        ].map(val => `"${String(val).replace(/"/g, '""')}"`);
+      });
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -4330,8 +4340,18 @@
       const wb = XLSX.utils.book_new();
 
       // 1. Dashboard Sheet (KPIs)
-      const collected = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
-      const pending = allStudents.filter(s => getStudentPaymentStatus(s) !== 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+      const targetMonth = window.reportMonth;
+      const targetYear = window.reportYear;
+      const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
+
+      const targetStudents = allStudents.filter(s => {
+          const enrollStr = getStudentDate(s);
+          const enrollDate = enrollStr ? new Date(enrollStr) : new Date(2026, 3, 1);
+          return enrollDate <= targetMonthEnd && (s.status || 'active') !== 'archived';
+      });
+
+      const collected = targetStudents.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+      const pending = targetStudents.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) !== 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
       const totalPotential = collected + pending;
 
       const dashboardData = [
@@ -4350,7 +4370,7 @@
       XLSX.utils.book_append_sheet(wb, wsDash, "Executive Summary");
 
       // 2. Cadets Sheet (Deep Data)
-      const cadetData = allStudents.map(s => ({
+      const cadetData = targetStudents.map(s => ({
         'ID': s.id,
         'Name': getStudentName(s),
         'Email': s.email || 'N/A',
@@ -4362,7 +4382,7 @@
         'Session Time': s.session_time || 'N/A',
         'Monthly Fee': getStudentMonthlyFee(s),
         'Status': s.status,
-        'Payment Status': getStudentPaymentStatus(s),
+        'Payment Status': getStudentPaymentStatus(s, targetMonth, targetYear),
         'Enrollment Date': s.enrollment_date || s.join_date || 'N/A',
         'Address': s.address || 'N/A',
         'Notes': s.notes || ''
@@ -4372,8 +4392,8 @@
 
       // 3. Faculty Sheet (ROI)
       const facultyData = allCoaches.map(c => {
-        const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
-        const coachRev = coachStuds.filter(s => getStudentPaymentStatus(s) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
+        const coachStuds = targetStudents.filter(s => String(s.coach_id) === String(c.id));
+        const coachRev = coachStuds.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
         const coachCost = getCoachSalary(c) || 0;
         return {
           'Faculty ID': c.id,

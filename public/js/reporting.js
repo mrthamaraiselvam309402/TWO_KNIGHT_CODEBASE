@@ -124,9 +124,8 @@ window.generateReportPDF = async function() {
           if (enrollDateStr) {
               const enrollDate = new Date(enrollDateStr);
               if (enrollDate <= monthEndLimit) {
-                  const monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
-                  const totalCredits = totalPaymentsMap[String(s.id)] || 0;
-                  if (totalCredits >= monthsRequired) coachRev += (getStudentMonthlyFee(s) || 0);
+                  const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+                  if (status === 'Paid') coachRev += (getStudentMonthlyFee(s) || 0);
               }
           }
       });
@@ -148,9 +147,8 @@ window.generateReportPDF = async function() {
       .filter(s => {
           const enrollDate = new Date(getStudentDate(s));
           if (enrollDate > monthEndLimit) return false;
-          const monthsRequired = ((targetYear - enrollDate.getFullYear()) * 12) + (targetMonth - enrollDate.getMonth()) + 1;
-          const totalCredits = totalPaymentsMap[String(s.id)] || 0;
-          return totalCredits < monthsRequired;
+          const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+          return status !== 'Paid' && status !== 'Not Enrolled';
       })
       .sort((a, b) => getStudentMonthlyFee(b) - getStudentMonthlyFee(a))
       .slice(0, 5);
@@ -174,16 +172,9 @@ window.generateReportPDF = async function() {
             if (enrollDate <= mEnd) {
                 const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
                 const fee = getStudentMonthlyFee(s) || 0;
-                const mReq = ((y - effectiveEnroll.getFullYear()) * 12) + (m - effectiveEnroll.getMonth()) + 1;
-                const mCredits = totalPaymentsMap[String(s.id)] || 0;
-                
-                const hasDirect = (allPayments || []).some(p => {
-                  const pDate = new Date(p.payment_date || p.created_at);
-                  return String(p.student_id) === String(s.id) && pDate.getMonth() === m && pDate.getFullYear() === y;
-                });
-                
+                const status = getStudentPaymentStatus(s, m, y);
                 mPotential += fee;
-                if (mCredits >= mReq || hasDirect) mCollected += fee;
+                if (status === 'Paid') mCollected += fee;
             }
         });
         
