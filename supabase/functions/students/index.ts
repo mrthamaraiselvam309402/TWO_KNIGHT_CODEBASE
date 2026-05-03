@@ -198,30 +198,7 @@ Deno.serve(async (req) => {
         notes: sanitizeString(rawBody.notes, 2000),
         account_status: 'active',
         created_at: new Date().toISOString()
-      }
-
-      const newStudent: Record<string, unknown> = {
-        id: crypto.randomUUID(),
-        name: name,
-        phone: validatePhone(rawBody.phone || rawBody.parent_phone),
-        parent_phone: validatePhone(rawBody.parent_phone || rawBody.phone),
-        email: sanitizeString(rawBody.email, 254),
-        age: rawBody.age ? parseInt(String(rawBody.age)) || null : null,
-        grade: sanitizeString(rawBody.grade || rawBody.level, 50),
-        parent_name: sanitizeString(rawBody.parent_name, 100),
-        address: sanitizeString(rawBody.address, 500),
-        enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0],
-        status: validateStatus(rawBody.status),
-        coach_id: rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null,
-        rating: validateRating(rawBody.rating || rawBody.current_rating),
-        session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
-        session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
-        monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
-        due_date: rawBody.due_date ? String(rawBody.due_date) : null,
-        notes: sanitizeString(rawBody.notes, 2000),
-        account_status: 'active',
-        created_at: new Date().toISOString()
-      }
+       }
       
       const { data: insertedStudent, error: insertError } = await supabase
         .from('students')

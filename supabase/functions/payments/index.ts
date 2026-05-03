@@ -11,7 +11,13 @@ Deno.serve(async (req) => {
     })
   }
   
-  const supabase = createClient(supabaseUrl, supabaseKey)
+   const supabase = createClient(supabaseUrl, supabaseKey)
+
+  // FIX: sanitizeString was used but never defined in this file
+  function sanitizeString(str: unknown, maxLength = 255): string {
+    if (typeof str !== 'string') return ''
+    return str.slice(0, maxLength).replace(/[<>\"';]/g, '').trim()
+  }
 
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',

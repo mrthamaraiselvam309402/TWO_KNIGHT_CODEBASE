@@ -1,4 +1,4 @@
-import { checkRateLimit } from '../../functions/rate_limit.js';
+import { checkRateLimit } from './rate_limit.js';
 
 Deno.serve(async (req) => {
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
         token: authData.session?.access_token || 'session-' + Date.now(),
         role: userRole,
         user: authData.user.email
-      }), { 
+       }), { 
         headers: { 
           'Content-Type': 'application/json', 
           ...corsHeaders,
@@ -106,6 +106,7 @@ Deno.serve(async (req) => {
           'X-RateLimit-Reset': String(rateLimitResult.resetTime)
         } 
       });
+    }
 
     // 4. Check parent credentials (username = student name, password = parent phone)
     const { data: student, error: studentError } = await supabase
@@ -125,25 +126,26 @@ Deno.serve(async (req) => {
       }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
 
-    // Failed attempt
-    return new Response(JSON.stringify({ 
-      error: 'Invalid credentials.',
-      details: authError ? authError.message : 'Check if user exists in Supabase Auth or as a Student Name + Parent Phone.' 
-    }), { 
-      status: 401, 
-      headers: { 
-        'Content-Type': 'application/json', 
-        ...corsHeaders,
-        'X-RateLimit-Limit': String(rateLimitResult.limit),
-        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-        'X-RateLimit-Reset': String(rateLimitResult.resetTime)
-      } 
-    }); catch (error) {
-    console.error('Auth error:', error.message);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), { 
-      status: 500, 
-      headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-    });
-  }
-});
+     // Failed attempt
+     return new Response(JSON.stringify({ 
+       error: 'Invalid credentials.',
+       details: authError ? authError.message : 'Check if user exists in Supabase Auth or as a Student Name + Parent Phone.' 
+     }), { 
+       status: 401, 
+       headers: { 
+         'Content-Type': 'application/json', 
+         ...corsHeaders,
+         'X-RateLimit-Limit': String(rateLimitResult.limit),
+         'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+         'X-RateLimit-Reset': String(rateLimitResult.resetTime)
+       } 
+     });
+   } catch (error) {
+     console.error('Auth error:', error.message);
+     return new Response(JSON.stringify({ error: 'Internal server error' }), { 
+       status: 500, 
+       headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+     });
+   }
+ });
 

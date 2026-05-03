@@ -69,6 +69,12 @@
   let loadingStates = {};
   const CACHE_DURATION = 5000;
 
+  // Sync local currentStudent with window.currentStudent for external modules
+  function setCurrentStudent(student) {
+    currentStudent = student;
+    window.currentStudent = student;
+  }
+
   // ── Notification Management ──
   let shownNotificationIds = JSON.parse(localStorage.getItem('shown_notifications') || '[]');
   let dismissedNotifications = JSON.parse(localStorage.getItem('dismissed_notifications') || '{"messages":[], "payments":[]}');
@@ -441,18 +447,17 @@
     const baselineDate = new Date(2026, 3, 1); // Global System Baseline (April 1st, 2026)
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
 
-    if (!window.totalPaymentsMap) {
-      window.totalPaymentsMap = {};
-      (allPayments || []).forEach(p => {
+    // FIX #5: Always rebuild — never trust a cached map for financial calculations
+    const freshPaymentsMap = {};
+    (allPayments || []).forEach(p => {
+      if (p.status === 'paid') {
         const sid = String(p.student_id || '').trim().toLowerCase();
-        if (!sid) return;
-        if (!window.totalPaymentsMap[sid]) window.totalPaymentsMap[sid] = 0;
-        window.totalPaymentsMap[sid]++;
-      });
-    }
+        if (sid) freshPaymentsMap[sid] = (freshPaymentsMap[sid] || 0) + 1;
+      }
+    });
 
     const s_id_key = String(s.id || '').trim().toLowerCase();
-    const totalCredits = window.totalPaymentsMap[s_id_key] || 0;
+    const totalCredits = freshPaymentsMap[s_id_key] || 0;
      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
     const pendingMonths = Math.max(1, monthsRequired - totalCredits);
@@ -1496,18 +1501,18 @@
 
     // Load data in background - force refresh to get latest
     dataCache = { timestamp: 0 }; // Reset cache to ensure fresh load
-    loadAllData(true).then(() => {
-      // Set up notification counts after data loads
-      setupNotificationCounts();
+      loadAllData(true).then(() => {
+        // Set up notification counts after data loads
+        setupNotificationCounts();
 
-      // Start polling after counts are set
-      startNotificationPolling();
-      if (userRole === 'parent' && studentId) {
-        currentStudent = allStudents.find(s => String(s.id) === String(studentId));
-        if (currentStudent) renderChild();
-      }
-      resetSessionTimer();
-    });
+        // Start polling after counts are set
+        startNotificationPolling();
+        if (userRole === 'parent' && studentId) {
+          setCurrentStudent(allStudents.find(s => String(s.id) === String(studentId)));
+          if (currentStudent) renderChild();
+        }
+        resetSessionTimer();
+      });
   }
 
   function recordSession(action) {
@@ -3056,7 +3061,10 @@
         })
       });
 
-      toast('Payment logged and due date advanced!', 'success');
+       toast('Payment logged and due date advanced!', 'success');
+      
+      // FIX #3: Invalidate payment cache before reload
+      window.totalPaymentsMap = null;
       
       // SYNC: Force fresh data fetch and re-render dashboard
       await loadAllData(true);
@@ -3247,10 +3255,21 @@
     }).join('');
   }
 
-  window.syncBillMonth = function(val) {
-    if (!val) return;
-    window.updateReportContext(val);
-  };
+   window.syncBillMonth = function(val) {
+     if (!val) return;
+     // FIX #15: Only trigger renderBills if the bills page DOM is present
+     const billBody = document.getElementById('bill-body');
+     if (!billBody) {
+       // Page not active — just update the global context
+       const parts = val.split('-');
+       if (parts.length >= 2) {
+         window.reportYear = parseInt(parts[0]);
+         window.reportMonth = parseInt(parts[1]) - 1;
+       }
+       return;
+     }
+     window.updateReportContext(val);
+   };
 
   window.resetBillMonth = function () {
     const now = new Date();
@@ -3413,10 +3432,14 @@
           payment_date: new Date().toISOString()
         })
       });
-    }
-    toast('Bulk payments processed and due dates advanced!', 'success');
-    loadAllData(true);
-  }
+     }
+     toast('Bulk payments processed and due dates advanced!', 'success');
+     
+     // FIX #4: Invalidate payment cache before reload
+     window.totalPaymentsMap = null;
+     
+     loadAllData(true);
+   }
 
   window.bulkDeleteStudents = async function () {
     const checked = document.querySelectorAll('.stud-check:checked');
@@ -4454,11 +4477,16 @@
     toast('Academy Data Exported (CSV)', 'success');
   }
 
-  function exportData() {
-    if (!window.allStudents || window.allStudents.length === 0) {
-      toast('No data available for export', 'warning');
-      return;
-    }
+   function exportData() {
+     // FIX #8: Guard against missing XLSX library
+     if (typeof XLSX === 'undefined') {
+       toast('Export library not loaded yet. Please wait a moment and try again.', 'error');
+       return;
+     }
+     if (!window.allStudents || window.allStudents.length === 0) {
+       toast('No data available for export', 'warning');
+       return;
+     }
 
     toast('Generating Strategic Intelligence Workbook...', 'info');
 
