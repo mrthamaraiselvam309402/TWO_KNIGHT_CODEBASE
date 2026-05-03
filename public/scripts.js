@@ -4427,6 +4427,47 @@ Thank you for your cooperation.
       const wsTrans = XLSX.utils.json_to_sheet(transData);
       XLSX.utils.book_append_sheet(wb, wsTrans, "Transaction History");
 
+      // 5. Attendance Sheet
+      const attendanceData = (allAttendance || []).map(a => {
+        const student = allStudents.find(s => String(s.id) === String(a.student_id));
+        return {
+          'Date': a.date || 'N/A',
+          'Student Name': student ? getStudentName(student) : 'Unknown',
+          'Status': a.status || 'N/A',
+          'Batch': a.batch_id || 'N/A',
+          'Coach ID': a.coach_id || 'N/A'
+        };
+      });
+      const wsAtt = XLSX.utils.json_to_sheet(attendanceData);
+      XLSX.utils.book_append_sheet(wb, wsAtt, "Attendance Logs");
+
+      // 6. Achievements Sheet
+      const achData = (achievementsData || []).map(a => {
+        const student = allStudents.find(s => String(s.id) === String(a.student_id));
+        return {
+          'Date': a.date_achieved || 'N/A',
+          'Student Name': student ? getStudentName(student) : 'Unknown',
+          'Achievement': a.title || 'N/A',
+          'Category': a.category || 'Tournament'
+        };
+      });
+      const wsAch = XLSX.utils.json_to_sheet(achData);
+      XLSX.utils.book_append_sheet(wb, wsAch, "Achievements Archive");
+
+      // 7. Rating History Sheet
+      const rateData = (allRatingHistory || []).map(r => {
+        const student = allStudents.find(s => String(s.id) === String(r.student_id));
+        return {
+          'Date': r.recorded_at || 'N/A',
+          'Student Name': student ? getStudentName(student) : 'Unknown',
+          'Old ELO': r.old_rating || 0,
+          'New ELO': r.new_rating || 0,
+          'Gain': (r.new_rating || 0) - (r.old_rating || 0)
+        };
+      });
+      const wsRate = XLSX.utils.json_to_sheet(rateData);
+      XLSX.utils.book_append_sheet(wb, wsRate, "Rating Performance");
+
       // Export file
       XLSX.writeFile(wb, `Chesskidoo_Strategic_Archive_${new Date().toISOString().split('T')[0]}.xlsx`);
       toast('Strategic Archive Exported Successfully!', 'success');
