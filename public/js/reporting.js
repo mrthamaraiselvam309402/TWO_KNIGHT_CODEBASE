@@ -51,8 +51,8 @@ window.generateReportPDF = async function() {
     // Precise Status Categorization (Transaction-First Accuracy)
     let collected = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
-            // Respect Manual Overrides
+        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
+            // Respect Manual Overrides: only count if student is marked Paid
             const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
             if (s) {
                 const status = getStudentPaymentStatus(s, targetMonth, targetYear);
