@@ -1748,8 +1748,7 @@ Thank you for your cooperation.
 
     allStudents.forEach(s => {
       const enrollDateStr = getStudentDate(s);
-      if (!enrollDateStr) return;
-      const enrollDate = new Date(enrollDateStr);
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baselineDate;
       if (enrollDate > targetMonthEnd) return;
 
       const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
@@ -1824,9 +1823,12 @@ Thank you for your cooperation.
     });
 
     const targetStudents = allStudents.filter(s => {
+      const sStatus = (s.status || 'active').toLowerCase();
+      if (sStatus === 'archived') return false;
+
       const enrollDateStr = getStudentDate(s);
-      if (!enrollDateStr) return false;
-      const enrollDate = new Date(enrollDateStr);
+      const baseline = new Date(2026, 3, 1); // April 1st Baseline
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       return enrollDate <= targetMonthEnd;
     });
 
@@ -1902,7 +1904,8 @@ Thank you for your cooperation.
     // Session counts
     let groupCount = 0, singleCount = 0, activeEnroll = 0;
     allStudents.forEach(s => {
-      if (s.status === 'active') activeEnroll++;
+      const sStatus = (s.status || 'active').toLowerCase();
+      if (sStatus === 'active') activeEnroll++;
       const type = getStudentBatchType(s);
       if (type === 'Single') singleCount++;
       else groupCount++;
