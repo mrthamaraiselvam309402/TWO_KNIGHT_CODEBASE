@@ -473,15 +473,18 @@ Thank you for your cooperation.
     
     let msg = `*CHESSKIDOO ACADEMY – FEE AUDIT REPORT*\n\n`;
     msg += `Hello Coach ${getCoachName(c)},\n\n`;
-    msg += `The following ${pending.length === 1 ? 'student' : 'students'} under your mentorship ${pending.length === 1 ? 'has' : 'have'} an outstanding balance for the *${dateStr}* billing cycle:\n\n`;
+    msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:\n\n`;
     
     pending.forEach((s) => {
-      msg += `▪️ *${getStudentName(s).toUpperCase()}* (Status: ${getStudentPaymentStatus(s).toUpperCase()})\n`;
+      const status = getStudentPaymentStatus(s);
+      const label = status === 'Due' ? '⚠️ ARREARS' : '⏳ PENDING';
+      msg += `▪️ *${getStudentName(s).toUpperCase()}* (${label})\n`;
     });
     
-    msg += `\nPlease coordinate with the guardians to ensure this is settled at their earliest convenience. Your support is vital for our continued operational efficiency.\n\n`;
+    msg += `\nPlease coordinate with the guardians to ensure these balances are settled. 'ARREARS' indicates unpaid fees from previous months, while 'PENDING' is for the current cycle.\n\n`;
     msg += `Regards,\n`;
     msg += `*Administrative Team* | Chesskidoo Academy`;
+
     
     const phone = c.phone || c.contact || '0000000000';
     const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
@@ -772,7 +775,7 @@ Thank you for your cooperation.
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
-    const baselineDate = new Date(2026, 2, 1);
+    const baselineDate = new Date(2026, 3, 1); // April 1st, 2026 baseline
 
     // 1. Enrollment Check
     const enrollDateStr = getStudentDate(s);
@@ -810,29 +813,13 @@ Thank you for your cooperation.
     // Determination Logic
     if (manualStatus === 'paid' || isAuditPaid) return 'Paid';
     
-    // Due Date Logic (Automated Override)
-    if (s.due_date) {
-      const dDate = new Date(s.due_date);
-      const today = new Date();
-      // Reset hours for accurate date comparison
-      today.setHours(0,0,0,0);
-      dDate.setHours(0,0,0,0);
-      
-      if (today >= dDate) return 'Due';
-    }
-
-    // Arrears Check (More than 1 month behind)
-    const now = new Date();
-    const isCurrent = targetMonth === now.getMonth() && targetYear === now.getFullYear();
-    
-    // If they owe more than just the current month, they are DUE
+    // Arrears Check: If they owe for ANY month prior to the selected target month
     if (totalCredits < (monthsRequired - 1)) return 'Due';
     
-    // Otherwise, if current month, they are PENDING
-    if (isCurrent) return 'Pending';
-    
-    return 'Due';
+    // If they only owe for the current target month
+    return 'Pending';
   }
+
   function getStudentBatchType(s) { 
     if (!s) return 'Group';
     const mode = (s.session_mode || s.batch_type || s.session_type || '').toLowerCase();
@@ -1854,6 +1841,7 @@ window.updateReportContext = function() {
 
       if (status === 'Due') {
         lastDueAmount += fee;
+        currMonthPending += fee; // Contribution to the May collection list
       } else if (status === 'Pending') {
         currMonthPending += fee;
       }

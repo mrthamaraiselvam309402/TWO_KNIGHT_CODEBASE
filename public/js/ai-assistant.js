@@ -58,27 +58,59 @@ window.sendLoginChat = async function() {
     }
 };
 
-window.sendChat = function() {
+window.sendChat = async function() {
     const input = document.getElementById('chat-input');
     if (!input || !input.value.trim()) return;
+    
+    const msg = input.value.trim();
+    input.value = '';
     
     const body = document.getElementById('ai-chat-body');
     const userMsg = document.createElement('div');
     userMsg.className = 'chat-msg user';
-    userMsg.textContent = input.value;
+    userMsg.textContent = msg;
     body.appendChild(userMsg);
-    
-    const msg = input.value;
-    input.value = '';
     body.scrollTop = body.scrollHeight;
     
-    setTimeout(() => {
+    // Build context for AI
+    const lastDue = document.getElementById('s-last-due')?.textContent || '₹0';
+    const currPending = document.getElementById('s-curr-pending')?.textContent || '₹0';
+    const revenue = document.getElementById('s-rev')?.textContent || '₹0';
+    const activeModule = window.location.hash || 'Dashboard';
+
+    try {
+        const res = await apiCall('/api/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                message: msg, 
+                role: window.role || 'admin', 
+                context: { 
+                    students: window.allStudents?.length || 0,
+                    activeStudents: window.allStudents?.filter(s => s.status === 'active').length || 0,
+                    coaches: window.allCoaches?.length || 0,
+                    revenue: parseFloat(revenue.replace(/[^\d.]/g, '') || 0),
+                    lastDue: parseFloat(lastDue.replace(/[^\d.]/g, '') || 0),
+                    pendingPayments: parseFloat(currPending.replace(/[^\d.]/g, '') || 0),
+                    moduleFocus: activeModule
+                } 
+            })
+        });
+        
+        const data = await res.json();
         const botMsg = document.createElement('div');
         botMsg.className = 'chat-msg bot';
-        botMsg.textContent = 'I\'m your AI assistant. For detailed analytics, please use the AI Assistant page.';
+        botMsg.textContent = data.message || "I'm processing your request...";
         body.appendChild(botMsg);
         body.scrollTop = body.scrollHeight;
-    }, 800);
+    } catch (e) {
+        const botMsg = document.createElement('div');
+        botMsg.className = 'chat-msg bot';
+        botMsg.style.color = 'var(--danger)';
+        botMsg.textContent = 'Connection error. AI is offline.';
+        body.appendChild(botMsg);
+        body.scrollTop = body.scrollHeight;
+    }
 };
 
 function escapeHtml(text) {
