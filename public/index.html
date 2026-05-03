@@ -49,41 +49,38 @@
       <span class="logo-tagline">Premium Chess Academy</span>
     </div>
 
-    <!-- Mapping IDs for scripts.js: li-user and li-pass -->
-    <div class="form-group">
-      <label class="label">Admin or Student Name</label>
-      <input type="text" id="li-user" class="input-field" placeholder="Enter username or email" autocomplete="off">
-    </div>
+    <form onsubmit="event.preventDefault(); doLogin();">
+      <div class="form-group">
+        <label class="label">Admin or Student Name</label>
+        <input type="text" id="li-user" class="input-field" placeholder="Enter username or email" autocomplete="username">
+      </div>
 
-    <div class="form-group">
-      <label class="label">Password or Phone Number</label>
-      <form onsubmit="event.preventDefault(); doLogin();">
-        <!-- Accessibility: hidden username field for password managers -->
-        <input type="text" name="username" autocomplete="username" style="display:none;" value="admin">
+      <div class="form-group">
+        <label class="label">Password or Phone Number</label>
         <div style="position:relative">
           <input type="password" id="li-pass" class="input-field" placeholder="Enter password or mobile" autocomplete="current-password">
           <button type="button" id="eye-btn" onclick="toggleEye()" aria-label="Show password" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;padding:8px;z-index:10">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
-      </form>
-      <script>
-        // Defined inline so it's available immediately before scripts.js loads
-        function toggleEye() {
-          const pass = document.getElementById('li-pass');
-          if (!pass) return;
-          if (pass.type === 'password') {
-            pass.type = 'text';
-            document.getElementById('eye-btn').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-          } else {
-            pass.type = 'password';
-            document.getElementById('eye-btn').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+        <script>
+          function toggleEye() {
+            const pass = document.getElementById('li-pass');
+            if (!pass) return;
+            const btn = document.getElementById('eye-btn');
+            if (pass.type === 'password') {
+              pass.type = 'text';
+              btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+            } else {
+              pass.type = 'password';
+              btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+            }
           }
-        }
-      </script>
-    </div>
-
-    <button type="button" id="login-submit-btn" class="login-btn" onclick="doLogin()">Sign In</button>
+        </script>
+      </div>
+      
+      <button type="submit" id="login-submit-btn" class="login-btn" style="margin-top:20px">Sign In</button>
+    </form>
     
     <div id="login-err" style="color:var(--danger);font-size:13px;margin-top:16px;display:none;font-weight:500;text-align:center"></div>
 
