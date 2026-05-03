@@ -477,8 +477,8 @@ Thank you for your cooperation.
 
     pending.forEach((s) => {
       const status = getStudentPaymentStatus(s);
-      const label = status === 'Due' ? '⚠️ ARREARS' : '⏳ PENDING';
-      msg += `▪️ *${getStudentName(s).toUpperCase()}* (${label})\n`;
+      const label = status === 'Due' ? 'ARREARS' : 'PENDING';
+      msg += `*${getStudentName(s).toUpperCase()}* (${label})\n`;
     });
 
     msg += `\nPlease coordinate with the guardians to ensure these balances are settled. 'ARREARS' indicates unpaid fees from previous months, while 'PENDING' is for the current cycle.\n\n`;
@@ -543,7 +543,7 @@ Thank you for your cooperation.
 
           const credits = window.totalPaymentsMap ? (window.totalPaymentsMap[String(s.id)] || 0) : 0;
           const actualDueMonths = dueMonths.slice(credits);
-          list += `- *${getStudentName(s)}*: ${status} (${actualDueMonths.join(', ') || 'Current Month'})\n`;
+          list += `${getStudentName(s)}: ${status} (${actualDueMonths.join(', ') || 'Current Month'})\n`;
         });
 
         list += `\nPlease check in with them. Thank you!\n– Chesskidoo Academy`;
