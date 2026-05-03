@@ -9,10 +9,31 @@
   // ═══════════════════════════════════════════════════════════════
   // CONFIG & CONSTANTS
   // ═══════════════════════════════════════════════════════════════
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
+  // SECURITY: Use environment variables instead of hardcoded keys
+  // For Vercel/Netlify: Set these in project settings → Environment Variables
+  // For local development: Use .env file (add to .gitignore!)
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
   const API_BASE = '/api';
-  const SUPABASE_URL = 'https://vseombfkrvpffnpgbsnk.supabase.co';
   const $ = id => document.getElementById(id);
+
+  // Security validation
+  if (!SUPABASE_ANON_KEY) {
+    console.error('❌ CRITICAL: Supabase Anon Key is missing!');
+    console.error('Please set VITE_SUPABASE_ANON_KEY in your environment variables.');
+    // Show user-friendly error in production
+    if (window.location.hostname !== 'localhost') {
+      document.body.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px">
+          <h1 style="color:var(--danger);margin-bottom:20px">Configuration Error</h1>
+          <p style="color:var(--ivory-dim);max-width:500px;margin-bottom:30px">
+            The application is not configured properly. Please contact the administrator.
+          </p>
+          <p style="font-size:12px;color:var(--ivory3)">Error: Missing Supabase configuration</p>
+        </div>
+      `;
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // STATE
@@ -931,11 +952,11 @@
 
     // Try to save to backend (fire and forget)
     try {
-      fetch('https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/events', {
+      fetch(`${SUPABASE_URL}/functions/v1/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8'
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify({
           action: 'register',

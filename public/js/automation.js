@@ -5,9 +5,8 @@
 (function () {
   'use strict';
 
-  const SUPABASE_URL = 'https://vseombfkrvpffnpgbsnk.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
-
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
   function $ (id) { return document.getElementById(id); }
 
   function toast (msg, type = 'info') {
