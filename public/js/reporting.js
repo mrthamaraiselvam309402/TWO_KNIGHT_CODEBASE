@@ -24,8 +24,9 @@ window.generateReportPDF = async function() {
     const targetYM = `${targetYear}-${targetMonth}`;
 
     // 1. Data Aggregation (Filtered by Period)
-    const monthEndLimit = new Date(targetYear, targetMonth + 1, 0);
-    const baseline = new Date(2026, 3, 1); // April 1st Baseline
+    const monthEndLimit = new Date(Date.UTC(targetYear, targetMonth + 1, 0)); // last day of month at 00:00 UTC
+    const monthStartLimit = new Date(Date.UTC(targetYear, targetMonth, 1)); // first day of month at 00:00 UTC
+    const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
     const targetStudents = allStudents.filter(s => {
         const sStatus = (s.status || 'active').toLowerCase();
         if (sStatus === 'archived') return false;
@@ -156,11 +157,11 @@ window.generateReportPDF = async function() {
     // Monthwise Historical Analysis (Last 6 Months)
     const monthwiseData = [];
     for (let i = 5; i >= 0; i--) {
-        const d = new Date(targetYear, targetMonth - i, 1);
+        const d = new Date(Date.UTC(targetYear, targetMonth - i, 1));
         const mName = d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
-        const m = d.getMonth();
-        const y = d.getFullYear();
-        const mEnd = new Date(y, m + 1, 0);
+        const m = d.getUTCMonth();
+        const y = d.getUTCFullYear();
+        const mEnd = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59));
         
         let mCollected = 0;
         let mPotential = 0;

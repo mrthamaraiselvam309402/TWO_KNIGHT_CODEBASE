@@ -431,7 +431,7 @@
 
     const s_id_key = String(s.id || '').trim().toLowerCase();
     const totalCredits = window.totalPaymentsMap[s_id_key] || 0;
-    const monthsRequired = ((targetYear - effectiveEnroll.getFullYear()) * 12) + (targetMonth - effectiveEnroll.getMonth()) + 1;
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
     const pendingMonths = Math.max(1, monthsRequired - totalCredits);
     const totalPending = pendingMonths * monthlyFee;
@@ -537,14 +537,14 @@
           const enrollDateStr = getStudentDate(s);
           const systemStart = new Date(2026, 2, 1); // March 1st Baseline
           const enrollDate = enrollDateStr ? new Date(enrollDateStr) : systemStart;
-          const effectiveStart = enrollDate < systemStart ? systemStart : enrollDate;
-          const targetDate = new Date(window.reportYear, window.reportMonth, 1);
+           const effectiveStart = enrollDate < systemStart ? systemStart : enrollDate;
+           const targetDate = new Date(Date.UTC(window.reportYear, window.reportMonth, 1));
 
           let dueMonths = [];
-          let temp = new Date(effectiveStart.getFullYear(), effectiveStart.getMonth(), 1);
+           const temp = new Date(Date.UTC(effectiveStart.getUTCFullYear(), effectiveStart.getUTCMonth(), 1));
           while (temp <= targetDate) {
             dueMonths.push(temp.toLocaleDateString('en-IN', { month: 'long' }));
-            temp.setMonth(temp.getMonth() + 1);
+             temp.setUTCMonth(temp.getUTCMonth() + 1);
           }
 
           const credits = window.totalPaymentsMap ? (window.totalPaymentsMap[String(s.id)] || 0) : 0;
@@ -817,7 +817,7 @@
     // 2. Secondary: Transactional Audit (The Auditor's Truth)
     const s_id_key = String(s.id || '').trim().toLowerCase();
     const totalCredits = window.totalPaymentsMap[s_id_key] || 0;
-    const monthsRequired = ((targetYear - effectiveEnroll.getFullYear()) * 12) + (targetMonth - effectiveEnroll.getMonth()) + 1;
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
     const hasDirect = (window.allPayments || []).some(p => {
       const pDate = new Date(p.payment_date || p.created_at);
@@ -1699,20 +1699,20 @@
       // Group students by enrollment month
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const counts = new Array(12).fill(0);
-      const currentYear = new Date().getFullYear();
+     const currentYear = new Date().getUTCFullYear();
 
-      studs.forEach(s => {
-        const d = getStudentDate(s);
-        if (d) {
-          const date = new Date(d);
-          if (date.getFullYear() === currentYear) {
-            counts[date.getMonth()]++;
-          }
-        }
-      });
+       studs.forEach(s => {
+         const d = getStudentDate(s);
+         if (d) {
+           const date = new Date(d);
+           if (date.getUTCFullYear() === currentYear) {
+             counts[date.getUTCMonth()]++;
+           }
+         }
+       });
 
-      // Filter to show last 6 months or valid range
-      const endMonth = new Date().getMonth();
+       // Filter to show last 6 months or valid range
+       const endMonth = new Date().getUTCMonth();
       const startMonth = (endMonth - 5 + 12) % 12;
 
       const labels = [];
@@ -1872,7 +1872,7 @@
     const targetYear = window.reportYear;
     const isCurrentMonth = targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear();
     const targetMonthDate = new Date(targetYear, targetMonth, 1);
-    const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
      // Helper for robust date matching (UTC)
      const getYM = (d) => {
@@ -1948,8 +1948,8 @@
     const totalOutstanding = totalArrears + currMonthPending;
 
     // --- Growth Calculation (MoM Slot-Based) ---
-    const prevMonthDate = new Date(targetYear, targetMonth - 1, 1);
-    const prevRevenue = calculateSlotRevenue(prevMonthDate.getFullYear(), prevMonthDate.getMonth(), s_id_map);
+     const prevMonthDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1));
+     const prevRevenue = calculateSlotRevenue(prevMonthDate.getUTCFullYear(), prevMonthDate.getUTCMonth(), s_id_map);
 
     const revenueGrowth = paidRevenue - prevRevenue;
     const growthPercent = prevRevenue > 0
@@ -2009,7 +2009,7 @@
 
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
-    const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
      // Map total payments per student for ALL TIME (only 'paid' status)
      const totalPaymentsMap = {};
@@ -3006,7 +3006,7 @@
       const updates = { payment_status: 'Paid' };
       if (s && s.due_date) {
         const nextDate = new Date(s.due_date);
-        nextDate.setMonth(nextDate.getMonth() + 1);
+        nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
         updates.due_date = nextDate.toISOString().split('T')[0];
       }
 
@@ -3265,7 +3265,7 @@
     const currentYear = now.getUTCFullYear();
     const isCurrentMonth = targetMonth === currentMonth && targetYear === currentYear;
     const isPastMonth = (targetYear < currentYear) || (targetYear === currentYear && targetMonth < currentMonth);
-    const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
     tbody.innerHTML = allStudents.map(s => {
       const enrollDateStr = getStudentDate(s);
@@ -3362,7 +3362,7 @@
       if (s) {
         const baseDate = s.due_date ? new Date(s.due_date) : new Date();
         const nextDate = new Date(baseDate);
-        nextDate.setMonth(nextDate.getMonth() + 1);
+        nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
         updates.due_date = nextDate.toISOString().split('T')[0];
       }
 
@@ -4383,7 +4383,7 @@
     ];
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
-    const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
     const rows = allStudents
       .filter(s => {
