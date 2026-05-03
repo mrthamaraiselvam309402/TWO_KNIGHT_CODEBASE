@@ -50,7 +50,12 @@ window.generateReportPDF = async function() {
     let collected = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
         if (pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear) {
-            // Cash-is-King: Absolute Transactional Revenue
+            // Respect Manual Overrides
+            const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
+            if (s) {
+                const status = getStudentPaymentStatus(s);
+                if (status !== 'Paid') return sum;
+            }
             return sum + (parseFloat(p.amount) || 0);
         }
         return sum;

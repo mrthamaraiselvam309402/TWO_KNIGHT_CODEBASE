@@ -1750,11 +1750,17 @@
   }
 
   function calculateSlotRevenue(year, month, paymentsMap) {
-    // 1. Calculate Revenue from ACTUAL Transactions (Flawless Accuracy)
+    // 1. Calculate Revenue from ACTUAL Transactions (Perfect Balance)
     const directRevenue = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
         if (pDate.getMonth() === month && pDate.getFullYear() === year) {
-            // Cash-is-King: If there's a payment record for this month, it's revenue.
+            // Respect Manual Overrides: If you manually set a student to Pending/Due, we subtract their money
+            const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
+            if (s) {
+                const status = getStudentPaymentStatus(s);
+                // Only count money for students who are officially "Paid" this month
+                if (status !== 'Paid') return sum;
+            }
             return sum + (parseFloat(p.amount) || 0);
         }
         return sum;
