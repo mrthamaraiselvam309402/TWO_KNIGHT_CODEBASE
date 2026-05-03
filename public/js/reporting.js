@@ -53,7 +53,7 @@ window.generateReportPDF = async function() {
             // Respect Manual Overrides
             const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
             if (s) {
-                const status = getStudentPaymentStatus(s);
+                const status = getStudentPaymentStatus(s, targetMonth, targetYear);
                 if (status !== 'Paid') return sum;
             }
             return sum + (parseFloat(p.amount) || 0);

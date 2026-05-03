@@ -774,12 +774,12 @@
     // (This prevents the 1200 fallback bug from showing stale data)
     return 0;
   }
-  function getStudentPaymentStatus(s) {
+  function getStudentPaymentStatus(s, monthOverride = null, yearOverride = null) {
     if (!s) return 'Due';
 
-    // Time-Machine Context
-    const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
+    // Time-Machine Context (Use override if provided, otherwise default to global)
+    const targetMonth = monthOverride !== null ? monthOverride : window.reportMonth;
+    const targetYear = yearOverride !== null ? yearOverride : window.reportYear;
     const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
     const baselineDate = new Date(2026, 3, 1); // April 1st, 2026 baseline
 
@@ -1757,7 +1757,7 @@
             // Respect Manual Overrides: If you manually set a student to Pending/Due, we subtract their money
             const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
             if (s) {
-                const status = getStudentPaymentStatus(s);
+                const status = getStudentPaymentStatus(s, month, year);
                 // Only count money for students who are officially "Paid" this month
                 if (status !== 'Paid') return sum;
             }
@@ -1840,7 +1840,7 @@
       const fee = getStudentMonthlyFee(s) || 0;
       totalPotential += fee;
 
-      const status = getStudentPaymentStatus(s);
+      const status = getStudentPaymentStatus(s, targetMonth, targetYear);
       
       if (status === 'Due') {
         // Calculate exactly how many months behind
@@ -1965,7 +1965,7 @@
         targetData.projected += fee;
 
         // Status-Based Pending Check (for the 'Pending' column)
-        const status = getStudentPaymentStatus(s);
+        const status = getStudentPaymentStatus(s, targetMonth, targetYear);
         if (status !== 'Paid') {
           targetData.pending += fee;
         }
@@ -3191,7 +3191,7 @@
       }
 
       // 2. Status Determination (Using Unified Intelligence Core)
-      const status = getStudentPaymentStatus(s);
+      const status = getStudentPaymentStatus(s, targetMonth, targetYear);
       let statusClass = 'badge-danger';
       if (status === 'Paid') statusClass = 'badge-success';
       else if (status === 'Pending') statusClass = 'badge-warning';
