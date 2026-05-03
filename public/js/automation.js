@@ -5,8 +5,9 @@
 (function () {
   'use strict';
 
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const APP_CONFIG = window.APP_CONFIG || {};
+  const SUPABASE_URL = APP_CONFIG.SUPABASE_URL || '';
+  const SUPABASE_ANON = APP_CONFIG.SUPABASE_ANON_KEY || '';
   function $ (id) { return document.getElementById(id); }
 
   function toast (msg, type = 'info') {

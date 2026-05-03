@@ -9,11 +9,12 @@
   // ═══════════════════════════════════════════════════════════════
   // CONFIG & CONSTANTS
   // ═══════════════════════════════════════════════════════════════
-  // SECURITY: Use environment variables instead of hardcoded keys
+  // SECURITY: Use environment variables via global config
   // For Vercel/Netlify: Set these in project settings → Environment Variables
   // For local development: Use .env file (add to .gitignore!)
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const APP_CONFIG = window.APP_CONFIG || {};
+  const SUPABASE_URL = APP_CONFIG.SUPABASE_URL || '';
+  const SUPABASE_ANON_KEY = APP_CONFIG.SUPABASE_ANON_KEY || '';
   const API_BASE = '/api';
   const $ = id => document.getElementById(id);
 
