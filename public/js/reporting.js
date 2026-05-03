@@ -38,12 +38,14 @@ window.generateReportPDF = async function() {
     const totalStudents = allStudents.length;
     const activeStudents = targetStudents.length;
 
-    // Map total payments per student for ALL TIME
+    // Map total payments per student for ALL TIME (only 'paid' status)
     const totalPaymentsMap = {};
     allPayments.forEach(p => {
-      const sid = String(p.student_id);
-      if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
-      totalPaymentsMap[sid]++;
+      if (p.status === 'paid') {
+        const sid = String(p.student_id);
+        if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
+        totalPaymentsMap[sid]++;
+      }
     });
 
     // Precise Status Categorization (Transaction-First Accuracy)
@@ -78,7 +80,7 @@ window.generateReportPDF = async function() {
         const hasDirectPayment = (allPayments || []).some(p => {
           const pDate = new Date(p.payment_date || p.created_at);
           const psid = String(p.student_id || '').trim().toLowerCase();
-          return psid === s_id_key && pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear;
+          return psid === s_id_key && pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid';
         });
         
         const hasPaidThisSlot = (totalCredits >= monthsRequired) || hasDirectPayment;
@@ -649,7 +651,7 @@ window.generateReportPDF = async function() {
 window.getAcademySnapshot = function() {
     if (!window.allStudents) return null;
     
-    const totalRev = allPayments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0);
+    const totalRev = allPayments.reduce((a, p) => a + (p.status === 'paid' ? (parseFloat(p.amount) || 0) : 0), 0);
     const activeCount = allStudents.filter(s => (s.status || 'active') === 'active').length;
     const coachData = allCoaches.map(c => ({
         name: getCoachName(c),

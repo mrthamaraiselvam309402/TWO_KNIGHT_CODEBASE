@@ -791,7 +791,7 @@
     const targetMonth = monthOverride !== null ? monthOverride : window.reportMonth;
     const targetYear = yearOverride !== null ? yearOverride : window.reportYear;
     const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
-    const baselineDate = new Date(2026, 3, 1); // April 1st, 2026 baseline
+     const baselineDate = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st, 2026 baseline (UTC)
 
     // 1. Enrollment Check
     const enrollDateStr = getStudentDate(s);
@@ -822,7 +822,7 @@
     const hasDirect = (window.allPayments || []).some(p => {
       const pDate = new Date(p.payment_date || p.created_at);
       const psid = String(p.student_id || '').trim().toLowerCase();
-        return psid === s_id_key && pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear;
+      return psid === s_id_key && pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid';
     });
 
     const isCurrentMonth = targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear();
@@ -1047,11 +1047,13 @@
         }));
         allRatingHistory = ratingHistory || [];
 
-        // Build totalPaymentsMap atomically during load
+        // Build totalPaymentsMap atomically during load (count only 'paid' payments)
         const pMap = {};
         allPayments.forEach(p => {
-          const sid = String(p.student_id || '').trim().toLowerCase();
-          if (sid) pMap[sid] = (pMap[sid] || 0) + 1;
+          if (p.status === 'paid') {
+            const sid = String(p.student_id || '').trim().toLowerCase();
+            if (sid) pMap[sid] = (pMap[sid] || 0) + 1;
+          }
         });
         window.totalPaymentsMap = pMap;
 
@@ -1898,10 +1900,10 @@
       return enrollDate <= targetMonthEnd;
     });
 
-    // 1. Precise Cash-Based Revenue (Actual money collected IN the target month)
+    // 1. Precise Cash-Based Revenue (Only 'paid' transactions IN the target month)
     const paidRevenue = (allPayments || []).reduce((sum, p) => {
       const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
+      if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
         // Validation: Only count if student is not archived
         const s = allStudents.find(x => String(x.id) === String(p.student_id));
         if (s && (s.status || 'active').toLowerCase() !== 'archived') {
@@ -1928,7 +1930,7 @@
         const baseline = new Date(2026, 3, 1); // April 1st Baseline
         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
         const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-        const monthsRequired = ((targetYear - effectiveEnroll.getFullYear()) * 12) + (targetMonth - effectiveEnroll.getMonth()) + 1;
+        const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
         const totalCredits = s_id_map[String(s.id).toLowerCase()] || 0;
         
         const monthsBehind = Math.max(0, monthsRequired - totalCredits);
@@ -2007,14 +2009,16 @@
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
 
-    // Map total payments per student for ALL TIME (Normalized)
-    const totalPaymentsMap = {};
-    (allPayments || []).forEach(p => {
-      const sid = String(p.student_id || '').trim().toLowerCase();
-      if (!sid) return;
-      if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
-      totalPaymentsMap[sid]++;
-    });
+     // Map total payments per student for ALL TIME (only 'paid' status)
+     const totalPaymentsMap = {};
+     (allPayments || []).forEach(p => {
+       if (p.status === 'paid') {
+         const sid = String(p.student_id || '').trim().toLowerCase();
+         if (!sid) return;
+         if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
+         totalPaymentsMap[sid]++;
+       }
+     });
 
     const coachData = {};
     allCoaches.forEach(c => {
@@ -2052,16 +2056,16 @@
       }
     });
 
-    // 2. Add ACTUAL Revenue from Transactions
-    (allPayments || []).forEach(p => {
-      const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
-        const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
-        const coachId = s?.coach_id;
-        const targetData = coachData[coachId] || unassignedData;
-        targetData.revenue += (parseFloat(p.amount) || 0);
-      }
-    });
+     // 2. Add ACTUAL Revenue from 'paid' Transactions
+     (allPayments || []).forEach(p => {
+       const pDate = new Date(p.payment_date || p.created_at);
+       if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
+         const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
+         const coachId = s?.coach_id;
+         const targetData = coachData[coachId] || unassignedData;
+         targetData.revenue += (parseFloat(p.amount) || 0);
+       }
+     });
 
     // Merge unassigned data if it has activity
     if (unassignedData.students > 0 || unassignedData.revenue > 0) {
@@ -4431,7 +4435,7 @@
       // 1. Dashboard Sheet (KPIs)
       const targetMonth = window.reportMonth;
       const targetYear = window.reportYear;
-      const targetMonthEnd = new Date(targetYear, targetMonth + 1, 0);
+      const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
       const targetStudents = allStudents.filter(s => {
           const enrollStr = getStudentDate(s);
