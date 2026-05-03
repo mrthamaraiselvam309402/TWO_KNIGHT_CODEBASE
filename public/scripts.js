@@ -1032,7 +1032,10 @@
         eventsData = events || [];
         allMessages = messages || [];
         allAttendance = attendance || [];
-        allPayments = payments || [];
+        allPayments = (payments || []).map(p => ({
+          ...p,
+          amount: parseFloat(p.amount) || 0
+        }));
         allRatingHistory = ratingHistory || [];
 
         // Sync to window for modules
@@ -1681,9 +1684,11 @@
 
     const paymentCtx = $('chartPayment');
     if (paymentCtx) {
-      const paid = studs.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
-      const pending = studs.filter(s => getStudentPaymentStatus(s) === 'Pending').length;
-      const due = studs.filter(s => getStudentPaymentStatus(s) === 'Due').length;
+      const targetMonth = window.reportMonth;
+      const targetYear = window.reportYear;
+      const paid = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid').length;
+      const pending = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Pending').length;
+      const due = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Due').length;
       chartInstances.payment = new Chart(paymentCtx, {
         type: 'doughnut',
         data: {
@@ -1830,7 +1835,19 @@
       return enrollDate <= targetMonthEnd;
     });
 
-    const paidRevenue = calculateSlotRevenue(targetYear, targetMonth, s_id_map);
+    // 1. Precise Cash-Based Revenue (Actual money collected IN the target month)
+    const paidRevenue = (allPayments || []).reduce((sum, p) => {
+      const pDate = new Date(p.payment_date || p.created_at);
+      if (pDate.getMonth() === targetMonth && pDate.getFullYear() === targetYear) {
+        // Validation: Only count if student is not archived
+        const s = allStudents.find(x => String(x.id) === String(p.student_id));
+        if (s && (s.status || 'active').toLowerCase() !== 'archived') {
+           return sum + (parseFloat(p.amount) || 0);
+        }
+      }
+      return sum;
+    }, 0);
+
     let totalArrears = 0;
     let currMonthPending = 0;
     let totalPotential = 0;
@@ -2261,12 +2278,14 @@
 
         toast('Student updated!', 'success');
         closeModals();
-        // Re-render immediately with patched in-memory data
+        
+        // SYNC: Ensure fresh data is fetched from DB first
+        await loadAllData(true);
+        
+        // Re-render everything with confirmed data
         renderStudents();
         renderDash();
         renderBills();
-        // Then sync fresh data from server in background
-        loadAllData(true);
       } else {
         const err = await res.json().catch(() => ({}));
         toast('Update failed: ' + (err.error || err.message || `Server error ${res.status}`), 'error');
@@ -2935,7 +2954,11 @@
       });
 
       toast('Payment logged and due date advanced!', 'success');
-      loadAllData(true);
+      
+      // SYNC: Force fresh data fetch and re-render dashboard
+      await loadAllData(true);
+      renderDash();
+      renderBills();
 
       // 3. Auto-Notify Parent with Receipt Link
       const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
@@ -2956,7 +2979,9 @@
     try {
       await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Due' }) });
       toast('Status reverted to Due', 'info');
-      loadAllData(true);
+      await loadAllData(true);
+      renderDash();
+      renderBills();
     } catch (e) { toast('Error reverting status', 'error'); }
   };
 
@@ -3005,8 +3030,10 @@
       const res = await apiCall(`${API_BASE}/payments?id=${paymentId}`, { method: 'DELETE' });
       if (res.ok) {
         toast('Record deleted', 'success');
-        loadAllData(true);
-        setTimeout(() => viewPaymentHistory(studentId), 500);
+        await loadAllData(true);
+        renderDash();
+        renderBills();
+        viewPaymentHistory(studentId);
       }
     } catch (e) {
       console.error('Delete payment failed:', e);

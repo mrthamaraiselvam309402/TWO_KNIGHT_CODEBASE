@@ -283,7 +283,7 @@
     autoRefreshTimer = setInterval(() => {
       const dashPage = $('page-dash');
       if (!dashPage || !dashPage.classList.contains('active')) return;
-      if (window.renderDash) window.renderDash();
+      if (window.loadAllData) window.loadAllData(true);
     }, 60000);
   }
 
