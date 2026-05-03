@@ -255,16 +255,20 @@
     const s = (window.allStudents || []).find(x => String(x.id) === String(id));
     if (!s) return;
 
-    const name     = (s.full_name || s.name || 'Student');
-    const phone    = (s.parent_phone || s.phone || '').replace(/\D/g, '');
-    const fee      = amount || s.monthly_fee || 5000;
-    const today    = new Date().toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
-    const coachObj = (window.allCoaches || []).find(c => String(c.id) === String(s.coach_id));
+    const name      = (s.full_name || s.name || 'Student');
+    const phone     = (s.parent_phone || s.phone || '').replace(/\D/g, '');
+    const fee       = amount || s.monthly_fee || 5000;
+    const today     = new Date().toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
+    const coachObj  = (window.allCoaches || []).find(c => String(c.id) === String(s.coach_id));
     const coachName = coachObj ? (coachObj.name || 'Coach') : 'Coach';
 
-    const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&date=${new Date().toISOString()}&level=${encodeURIComponent(s.grade || s.level || 'Beginner')}&coach=${encodeURIComponent(coachName)}`;
+    const cleanName = cleanText(name);
+    const cleanLevel = cleanText(s.grade || s.level || 'Beginner');
+    const cleanCoach = cleanText(coachName);
 
-    const waMsg = `✅ *CHESSKIDOO ACADEMY - PAYMENT CONFIRMATION*\n\nStudent: ${cleanText(name)}\nAmount Paid: INR ${Number(fee).toLocaleString()}\nDate: ${cleanText(today)}\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Chesskidoo Academy.`;
+    const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(cleanName)}&amount=${fee}&date=${new Date().toISOString()}&level=${encodeURIComponent(cleanLevel)}&coach=${encodeURIComponent(cleanCoach)}`;
+
+    const waMsg = `✅ *CHESSKIDOO ACADEMY - PAYMENT CONFIRMATION*\n\nStudent: ${cleanName}\nAmount Paid: INR ${Number(fee).toLocaleString()}\nDate: ${cleanText(today)}\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Chesskidoo Academy.`;
 
     if (phone && phone.length >= 10) {
       setTimeout(() => {
