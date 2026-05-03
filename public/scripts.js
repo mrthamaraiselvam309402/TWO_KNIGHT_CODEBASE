@@ -811,7 +811,11 @@ Thank you for your cooperation.
     const isAuditPaid = (totalCredits >= monthsRequired) || hasDirect;
 
     // Determination Logic
-    if (manualStatus === 'paid' || isAuditPaid) return 'Paid';
+    // Determination Logic: Manual status 'paid' is the Absolute Truth
+    if (manualStatus === 'paid') return 'Paid';
+    
+    // Fallback to Transactional Audit
+    if (isAuditPaid) return 'Paid';
 
     // Arrears Check: If they owe for ANY month prior to the selected target month
     if (totalCredits < (monthsRequired - 1)) return 'Due';
@@ -999,9 +1003,9 @@ Thank you for your cooperation.
           loadWithRetry('/api/achievements'),
           loadWithRetry('/api/events'),
           loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || [])),
-          loadWithRetry('/api/attendance'),
+          loadWithRetry('/api/attendance').then(r => r || []),
           loadWithRetry('/api/payments').then(r => r && r.data ? r.data : (r || [])),
-          loadWithRetry('/api/rating_history')
+          loadWithRetry('/api/rating_history').then(r => r || [])
         ]);
 
         allCoaches = coaches || [];
@@ -3901,12 +3905,13 @@ Thank you for your cooperation.
         name: 'get_academy_stats',
         description: 'Get academy statistics including students, coaches, revenue',
         execute: async () => {
-          const totalStudents = allStudents.length;
-          const totalCoaches = allCoaches.length;
-          const revenue = allStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
-          const paid = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
-          const due = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
-          return { totalStudents, totalCoaches, revenue, paid, due, collectionRate: ((paid / totalStudents) * 100 || 0).toFixed(1) };
+          const totalStudents = allStudents.filter(s => s.status !== 'archived').length;
+          const totalCoaches = allCoaches.filter(c => c.status !== 'archived').length;
+          const revenue = allStudents.filter(s => s.status !== 'archived').reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+          const paid = allStudents.filter(s => s.status !== 'archived' && getStudentPaymentStatus(s) === 'Paid').length;
+          const due = allStudents.filter(s => s.status !== 'archived' && getStudentPaymentStatus(s) === 'Due').length;
+          const pending = allStudents.filter(s => s.status !== 'archived' && getStudentPaymentStatus(s) === 'Pending').length;
+          return { totalStudents, totalCoaches, revenue, paid, due, pending, collectionRate: ((paid / totalStudents) * 100 || 0).toFixed(1) };
         }
       },
       get_market_data: {
