@@ -1115,12 +1115,43 @@
   let lastStudCount = 0;
   let lastDueCount = 0;
   let lastSessionCount = 0;
+  let supabaseClient = null;
 
   function initRealtimeNotifications() {
-    if (notificationPolling) return;
     if (role !== 'admin' && role !== 'master') return;
+    if (typeof supabase === 'undefined') {
+      console.warn('[Realtime] Supabase library not loaded. Falling back to polling.');
+      startNotificationPolling();
+      return;
+    }
 
-    // Initialize counts AFTER data is loaded - will be set in loadAllData callback
+    try {
+      if (supabaseClient) return; // Already active
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      console.log('[Realtime] "Instant Synchronicity" Active.');
+
+      supabaseClient
+        .channel('academy-sync')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => {
+          console.log('[Realtime] Payment detected. Syncing...');
+          loadAllData(true); 
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => {
+          console.log('[Realtime] Student update detected. Syncing...');
+          loadAllData(true);
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+          const msg = payload.new;
+          if (msg.receiver_type === 'admin' && shouldShowNotification('msg_' + msg.id)) {
+             toast(`📬 New Message from ${msg.sender_name || 'User'}!`, 'info');
+             loadAllData(true);
+          }
+        })
+        .subscribe();
+    } catch (e) {
+      console.error('[Realtime] Initialization failed:', e);
+      startNotificationPolling();
+    }
   }
 
   function setupNotificationCounts() {
