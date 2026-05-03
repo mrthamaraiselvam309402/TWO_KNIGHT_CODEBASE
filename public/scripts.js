@@ -801,8 +801,8 @@
       });
     }
 
-    // 1. Priority: Trust the manual Status Column (The Administrator's Truth)
-    const manualStatus = (s.payment_status || s.status || '').toLowerCase();
+    // 1. Priority: Trust the manual Payment Status Column (The Administrator's Truth)
+    const manualStatus = (s.payment_status || '').toLowerCase();
 
     // 2. Secondary: Transactional Audit (The Auditor's Truth)
     const s_id_key = String(s.id || '').trim().toLowerCase();
