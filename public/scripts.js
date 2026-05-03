@@ -446,10 +446,10 @@
     }
 
     const msg = `Hello Sir/Madam,
-This is a gentle reminder regarding the pending chess class fee of ₹${totalPending} for your child ${name}. We kindly request you to please pay at least ₹500 on or before ${dueDateStr}.
+This is a gentle reminder regarding the pending chess class fee of INR ${totalPending} for your child ${name}. We kindly request you to please pay at least INR 500 on or before ${dueDateStr}.
 You may make the payment to: 9025846663 (Ranjith).
 Thank you for your cooperation.
-– Chesskidoo Academy`;
+- Chesskidoo Academy`;
     
     window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
@@ -471,19 +471,18 @@ Thank you for your cooperation.
     
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
     
-    let msg = `*CHESSKIDOO ACADEMY – FEE AUDIT REPORT*\n\n`;
+    let msg = `CHESSKIDOO ACADEMY - FEE AUDIT REPORT\n\n`;
     msg += `Hello Coach ${getCoachName(c)},\n\n`;
-    msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:\n\n`;
+    msg += `The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle:\n\n`;
     
     pending.forEach((s) => {
       const status = getStudentPaymentStatus(s);
-      const label = status === 'Due' ? '⚠️ ARREARS' : '⏳ PENDING';
-      msg += `▪️ *${getStudentName(s).toUpperCase()}* (${label})\n`;
+      msg += `- ${getStudentName(s).toUpperCase()} (${status})\n`;
     });
     
-    msg += `\nPlease coordinate with the guardians to ensure these balances are settled. 'ARREARS' indicates unpaid fees from previous months, while 'PENDING' is for the current cycle.\n\n`;
+    msg += `\nPlease coordinate with the guardians to ensure these balances are settled. 'Arrears' indicates unpaid fees from previous months, while 'Pending' is for the current cycle.\n\n`;
     msg += `Regards,\n`;
-    msg += `*Administrative Team* | Chesskidoo Academy`;
+    msg += `Administrative Team | Chesskidoo Academy`;
 
     
     const phone = c.phone || c.contact || '0000000000';
@@ -524,12 +523,12 @@ Thank you for your cooperation.
       });
 
       if (unpaid.length > 0) {
-        let list = `*Student Fee Status Update*\n\nHello ${getCoachName(coach)},\nHere is the list of your students with pending or due fees:\n\n`;
+        let list = `Student Fee Status Update\n\nHello ${getCoachName(coach)},\nHere is the list of your students with pending or due fees:\n\n`;
         
         unpaid.forEach(s => {
           const status = getStudentPaymentStatus(s);
           const enrollDateStr = getStudentDate(s);
-          const systemStart = new Date(2026, 2, 1); // March 1st Baseline
+          const systemStart = new Date(2026, 3, 1); // April 1st Baseline
           const enrollDate = enrollDateStr ? new Date(enrollDateStr) : systemStart;
           const effectiveStart = enrollDate < systemStart ? systemStart : enrollDate;
           const targetDate = new Date(window.reportYear, window.reportMonth, 1);
@@ -543,10 +542,10 @@ Thank you for your cooperation.
           
           const credits = window.totalPaymentsMap ? (window.totalPaymentsMap[String(s.id)] || 0) : 0;
           const actualDueMonths = dueMonths.slice(credits);
-          list += `- *${getStudentName(s)}*: ${status} (${actualDueMonths.join(', ') || 'Current Month'})\n`;
+          list += `- ${getStudentName(s)}: ${status} (${actualDueMonths.join(', ') || 'Current Month'})\n`;
         });
 
-        list += `\nPlease check in with them. Thank you!\n– Chesskidoo Academy`;
+        list += `\nPlease check in with them. Thank you!\n- Chesskidoo Academy`;
         const phone = coach.phone ? coach.phone.replace(/\D/g, '') : '';
         if (phone) window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(list)}`, '_blank');
       }
@@ -2914,7 +2913,7 @@ window.updateReportContext = function() {
       const coachName = coach ? getCoachName(coach) : 'N/A';
       const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(getStudentName(s))}&amount=${amt}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
       
-      const message = `Hello Sir/Madam,\n\nThis is to inform you about the chess class fee payment you have completed for *${getStudentName(s)}* (₹${amt.toLocaleString()}).\n\nHere is your receipt link for download:\n${receiptUrl}\n\nThank you for your continued support and cooperation.\n– Chesskidoo Academy`;
+      const message = `Hello Sir/Madam,\n\nThis is to inform you about the chess class fee payment you have completed for ${getStudentName(s)} (INR ${amt.toLocaleString()}).\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Chesskidoo Academy.`;
 
       const parentPhone = getStudentPhone(s).replace(/\D/g, '');
       if (parentPhone) {
