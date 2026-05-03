@@ -3178,7 +3178,6 @@ window.updateReportContext = function() {
 
       // 2. Dynamic Slot Calculation based on Student's Joining Date
       const systemStartDate = new Date(2026, 2, 1); // Earliest Joiner Baseline (March 2026)
-      const enrollDateStr = getStudentDate(s);
       const enrollDateParsed = (enrollDateStr && !isNaN(new Date(enrollDateStr))) ? new Date(enrollDateStr) : systemStartDate;
       const effectiveEnrollDate = enrollDateParsed < systemStartDate ? systemStartDate : enrollDateParsed;
       
