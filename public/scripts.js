@@ -1009,13 +1009,10 @@ Thank you for your cooperation.
         // --- Golden State Deduplication ---
         const rawStudents = students || [];
         const seenId = new Set();
-        const seenName = new Set();
         allStudents = rawStudents.filter(s => {
           if (!s || !s.id) return false;
-          const name = getStudentName(s).trim().toUpperCase();
-          if (seenId.has(s.id) || (name && seenName.has(name))) return false;
+          if (seenId.has(s.id)) return false;
           seenId.add(s.id);
-          if (name) seenName.add(name);
           return true;
         });
 
@@ -1829,25 +1826,36 @@ Thank you for your cooperation.
     });
 
     const paidRevenue = calculateSlotRevenue(targetYear, targetMonth, s_id_map);
-    let lastDueAmount = 0;
+    let totalArrears = 0;
     let currMonthPending = 0;
     let totalPotential = 0;
 
     targetStudents.forEach(s => {
+      if (s.status === 'archived') return;
       const fee = getStudentMonthlyFee(s) || 0;
       totalPotential += fee;
 
-      const status = getStudentPaymentStatus(s); // Uses global hardened helper
-
+      const status = getStudentPaymentStatus(s);
+      
       if (status === 'Due') {
-        lastDueAmount += fee;
-        currMonthPending += fee; // Contribution to the May collection list
+        // Calculate exactly how many months behind
+        const enrollDateStr = getStudentDate(s);
+        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : systemStartDate;
+        const effectiveEnroll = enrollDate < systemStartDate ? systemStartDate : enrollDate;
+        const monthsRequired = ((targetYear - effectiveEnroll.getFullYear()) * 12) + (targetMonth - effectiveEnroll.getMonth()) + 1;
+        const totalCredits = s_id_map[String(s.id).toLowerCase()] || 0;
+        
+        const monthsBehind = Math.max(0, monthsRequired - totalCredits);
+        if (monthsBehind > 1) {
+          totalArrears += (fee * (monthsBehind - 1)); // Arrears (Previous months)
+        }
+        currMonthPending += fee; // Pending (Current month)
       } else if (status === 'Pending') {
         currMonthPending += fee;
       }
     });
 
-    const totalOutstanding = lastDueAmount + currMonthPending;
+    const totalOutstanding = totalArrears + currMonthPending;
 
     // --- Growth Calculation (MoM Slot-Based) ---
     const prevMonthDate = new Date(targetYear, targetMonth - 1, 1);
@@ -1868,22 +1876,22 @@ Thank you for your cooperation.
       growthEl.style.color = revenueGrowth > 0 ? 'var(--emerald)' : (revenueGrowth < 0 ? 'var(--ruby)' : 'var(--ivory-dim)');
     }
 
-    if ($('s-last-due')) $('s-last-due').textContent = '₹' + lastDueAmount.toLocaleString();
+    if ($('s-last-due')) $('s-last-due').textContent = '₹' + totalArrears.toLocaleString();
     if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currMonthPending.toLocaleString();
     if ($('s-total-outstanding')) $('s-total-outstanding').textContent = '₹' + totalOutstanding.toLocaleString();
 
     const collectionRate = totalPotential > 0 ? ((paidRevenue / totalPotential) * 100).toFixed(1) : '0';
     if ($('s-rate')) $('s-rate').textContent = collectionRate + '%';
 
-    // Coach expenses
-    const totalCoachCost = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
+    // Coach expenses & Net Profit
+    const totalCoachCost = allCoaches.filter(c => c.status !== 'archived').reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     if ($('s-total-cost')) $('s-total-cost').textContent = '₹' + totalCoachCost.toLocaleString();
-
-    // Financial analytics
+    
     const netProfit = paidRevenue - totalCoachCost;
-
-    if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
-    if ($('s-profit')) $('s-profit').textContent = '₹' + netProfit.toLocaleString();
+    if ($('s-profit')) {
+      $('s-profit').textContent = '₹' + netProfit.toLocaleString();
+      $('s-profit').style.color = netProfit >= 0 ? 'var(--emerald)' : 'var(--ruby)';
+    }
 
     // Session counts
     let groupCount = 0, singleCount = 0, activeEnroll = 0;
