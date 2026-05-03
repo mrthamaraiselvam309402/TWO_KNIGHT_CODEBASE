@@ -817,9 +817,10 @@
 
     const isAuditPaid = (totalCredits >= monthsRequired) || hasDirect;
 
-    // Determination Logic
-    // Determination Logic: Manual status 'paid' is the Absolute Truth
+    // Determination Logic: Manual override is the Absolute Truth
     if (manualStatus === 'paid') return 'Paid';
+    if (manualStatus === 'pending') return 'Pending';
+    if (manualStatus === 'due') return 'Due';
     
     // Fallback to Transactional Audit
     if (isAuditPaid) return 'Paid';
@@ -1750,10 +1751,15 @@
 
   function calculateSlotRevenue(year, month, paymentsMap) {
     // 1. Calculate Revenue from ACTUAL Transactions (Flawless Accuracy)
-    const targetYM = `${year}-${month}`;
     const directRevenue = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
         if (pDate.getMonth() === month && pDate.getFullYear() === year) {
+            // Respect Manual Overrides: If student is manually set to Pending/Due, ignore their money for THIS dashboard view
+            const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
+            if (s) {
+                const status = getStudentPaymentStatus(s);
+                if (status !== 'Paid') return sum;
+            }
             return sum + (parseFloat(p.amount) || 0);
         }
         return sum;
@@ -2187,8 +2193,9 @@
             await apiCall('/api/payments', {
               method: 'POST',
               body: JSON.stringify({
+                id: 'pay_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9), // Required Primary Key
                 student_id: id,
-                amount: newFee,
+                amount: parseFloat(newFee), // Ensure numeric
                 status: 'paid',
                 payment_method: 'Manual Override',
                 description: 'Status updated to Paid via Profile',
@@ -2904,8 +2911,9 @@
       await apiCall(`${API_BASE}/payments`, {
         method: 'POST',
         body: JSON.stringify({
+          id: 'pay_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9), // Required Primary Key
           student_id: id,
-          amount: parseInt(amt),
+          amount: parseFloat(amt), // Ensure numeric
           status: 'paid',
           payment_method: method,
           description: desc,
