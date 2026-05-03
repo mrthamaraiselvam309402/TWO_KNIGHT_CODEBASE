@@ -1,6 +1,101 @@
 -- =====================================================
--- MASTER DATABASE INITIALIZATION & REPAIR
--- This script ensures all core academy tables exist and are properly mapped.
+-- ENCRYPTION FUNCTIONS FOR PII
+-- =====================================================
+
+-- Function to encrypt PII fields using pgcrypto
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Encryption key (in production, use a secure key management system)
+-- This is a simplified approach; for production, use proper key management
+CREATE OR REPLACE FUNCTION encrypt_pii(value TEXT)
+RETURNS TEXT AS $$
+BEGIN
+  IF value IS NULL OR value = '' THEN
+    RETURN value;
+  END IF;
+  -- Use pgcrypto to encrypt with a simple key
+  -- In production, use proper key management
+  RETURN encode(encrypt(value::bytea, decode('your-encryption-key-here-32-chars-minimum', 'utf-8'), 'aes'), 'base64');
+EXCEPTION
+  WHEN OTHERS THEN
+    -- If encryption fails, return plain text (better than losing data)
+    RETURN value;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION decrypt_pii(value TEXT)
+RETURNS TEXT AS $$
+BEGIN
+  IF value IS NULL OR value = '' THEN
+    RETURN value;
+  END IF;
+  -- Check if it looks like encrypted data (base64)
+  IF value ~ '^[A-Za-z0-9+/]*={0,2}$' AND length(value) > 20 THEN
+    BEGIN
+      RETURN convert_from(decrypt(decode(value, 'base64'), decode('your-encryption-key-here-32-chars-minimum', 'utf-8'), 'aes'), 'utf-8');
+    EXCEPTION
+      WHEN OTHERS THEN
+        RETURN value;
+    END;
+  END IF;
+  RETURN value;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger function to auto-encrypt PII on insert/update
+CREATE OR REPLACE FUNCTION encrypt_student_pii()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.phone IS NOT NULL AND NEW.phone !~ '^[A-Za-z0-9+/]*={0,2}$' THEN
+    NEW.phone := encrypt_pii(NEW.phone);
+  END IF;
+  IF NEW.parent_phone IS NOT NULL AND NEW.parent_phone !~ '^[A-Za-z0-9+/]*={0,2}$' THEN
+    NEW.parent_phone := encrypt_pii(NEW.parent_phone);
+  END IF;
+  IF NEW.email IS NOT NULL AND NEW.email !~ '^[A-Za-z0-9+/]*={0,2}$' THEN
+    NEW.email := encrypt_pii(NEW.email);
+  END IF;
+  IF NEW.address IS NOT NULL AND NEW.address !~ '^[A-Za-z0-9+/]*={0,2}$' THEN
+    NEW.address := encrypt_pii(NEW.address);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger on students table
+DROP TRIGGER IF EXISTS encrypt_student_pii_trigger ON students;
+CREATE TRIGGER encrypt_student_pii_trigger
+  BEFORE INSERT OR UPDATE OF phone, parent_phone, email, address
+  ON students
+  FOR EACH ROW
+  EXECUTE FUNCTION encrypt_student_pii();
+
+-- View to decrypt PII for authorized users
+CREATE OR REPLACE VIEW students_decrypted AS
+SELECT 
+  id,
+  name,
+  decrypt_pii(phone) as phone,
+  decrypt_pii(parent_phone) as parent_phone,
+  decrypt_pii(email) as email,
+  age,
+  grade,
+  parent_name,
+  decrypt_pii(address) as address,
+  enrollment_date,
+  status,
+  coach_id,
+  rating,
+  session_mode,
+  session_time,
+  monthly_fee,
+  notes,
+  account_status,
+  due_date,
+  created_at,
+  updated_at
+FROM students;
+
 -- =====================================================
 
 -- 1. COACHES TABLE

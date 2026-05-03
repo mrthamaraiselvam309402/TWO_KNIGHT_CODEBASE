@@ -155,7 +155,7 @@
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Net Profit</div><div class="stat-value" style="color:var(--success)" id="s-profit">—</div></div>
       </div>
       <div class="dash-grid" style="margin-bottom:32px">
-        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Last Month Due</div><div class="stat-value text-danger" id="s-last-due">₹0</div></div>
+           <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Historical Arrears</div><div class="stat-value text-danger" id="s-last-due">₹0</div></div>
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Month Pending</div><div class="stat-value" style="color:var(--gold)" id="s-curr-pending">₹0</div></div>
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Total Outstanding</div><div class="stat-value text-danger" id="s-total-outstanding">₹0</div></div>
       </div>
@@ -1041,12 +1041,13 @@
    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="scripts.js?v=3.3"></script>
-    <script src="js/reporting.js?v=v7"></script>
-    <script src="js/ai-assistant.js?v=v2"></script>
-    <script src="js/auth.js?v=v2"></script>
-    <script src="js/scripts_patch.js?v=2.1"></script>
-    <script src="js/automation.js?v=3.2"></script>
+     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+     <script src="scripts.js?v=3.3"></script>
+     <script src="js/reporting.js?v=v7"></script>
+     <script src="js/ai-assistant.js?v=v2"></script>
+     <script src="js/auth.js?v=v2"></script>
+     <script src="js/encryption.js"></script>
+     <script src="js/scripts_patch.js?v=2.1"></script>
+     <script src="js/automation.js?v=3.2"></script>
  </body>
 </html>

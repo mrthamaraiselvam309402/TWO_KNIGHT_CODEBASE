@@ -1,3 +1,5 @@
+import { checkRateLimit } from '../../functions/rate_limit.js';
+
 Deno.serve(async (req) => {
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
   
@@ -27,6 +29,31 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
       status: 405, 
       headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+    });
+  }
+
+  // Check rate limit
+  const ip = req.headers.get('x-forwarded-for') || 
+             req.headers.get('x-real-ip') || 
+             req.headers.get('cf-connecting-ip') ||
+             'unknown';
+  const rateLimitResult = await checkRateLimit(ip, 'auth');
+  
+  if (!rateLimitResult.allowed) {
+    return new Response(JSON.stringify({ 
+      error: 'Rate limit exceeded',
+      message: 'Too many login attempts. Please try again later.',
+      retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+    }), { 
+      status: 429, 
+      headers: { 
+        'Content-Type': 'application/json', 
+        ...corsHeaders,
+        'X-RateLimit-Limit': String(rateLimitResult.limit),
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetTime),
+        'Retry-After': String(Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000))
+      } 
     });
   }
 
@@ -70,8 +97,15 @@ Deno.serve(async (req) => {
         token: authData.session?.access_token || 'session-' + Date.now(),
         role: userRole,
         user: authData.user.email
-      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-    }
+      }), { 
+        headers: { 
+          'Content-Type': 'application/json', 
+          ...corsHeaders,
+          'X-RateLimit-Limit': String(rateLimitResult.limit),
+          'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          'X-RateLimit-Reset': String(rateLimitResult.resetTime)
+        } 
+      });
 
     // 4. Check parent credentials (username = student name, password = parent phone)
     const { data: student, error: studentError } = await supabase
@@ -97,9 +131,14 @@ Deno.serve(async (req) => {
       details: authError ? authError.message : 'Check if user exists in Supabase Auth or as a Student Name + Parent Phone.' 
     }), { 
       status: 401, 
-      headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-    });
-  } catch (error) {
+      headers: { 
+        'Content-Type': 'application/json', 
+        ...corsHeaders,
+        'X-RateLimit-Limit': String(rateLimitResult.limit),
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetTime)
+      } 
+    }); catch (error) {
     console.error('Auth error:', error.message);
     return new Response(JSON.stringify({ error: 'Internal server error' }), { 
       status: 500, 

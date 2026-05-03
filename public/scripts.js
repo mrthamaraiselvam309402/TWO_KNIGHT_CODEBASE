@@ -997,24 +997,31 @@
       try {
         setLoading('data', true);
 
-        const loadWithRetry = async (url, maxRetries = 1) => {
+         const loadWithRetry = async (url, maxRetries = 1) => {
           for (let i = 0; i <= maxRetries; i++) {
             try {
-              const urlWithBust = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
-              const response = await apiCall(urlWithBust, { cache: 'no-store' });
-              if (response.ok) return await response.json();
-              if (response.status === 404) return null;
-              throw new Error(`HTTP ${response.status}`);
+              const urlWithBust = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`
+              const response = await apiCall(urlWithBust, { cache: 'no-store' })
+              if (response.ok) {
+                const result = await response.json()
+                // Handle paginated responses
+                if (result && result.data !== undefined) {
+                  return result.data
+                }
+                return result
+              }
+              if (response.status === 404) return null
+              throw new Error(`HTTP ${response.status}`)
             } catch (error) {
-              if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return null; }
-              await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
+              if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return null }
+              await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)))
             }
           }
-        };
+        }
 
         const [coaches, students, achievements, events, messages, attendance, payments, ratingHistory, resources] = await Promise.all([
           loadWithRetry('/api/coaches'),
-          loadWithRetry('/api/students'),
+          loadWithRetry('/api/students?limit=1000'),
           loadWithRetry('/api/achievements'),
           loadWithRetry('/api/events'),
           loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || [])),
@@ -1343,7 +1350,7 @@
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             <input type="month" id="report-period" class="selector-minimal" onchange="updateReportContext()" value="${periodValue}">
           </div>
-          <button class="btn btn-outline" onclick="generateReportPDF()">📄 Financial Report</button>
+          <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">📄 Financial Report</button>
           <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
         `;
         }

@@ -47,62 +47,113 @@ Deno.serve(async (req) => {
     return valid.includes(String(status)) ? String(status) : 'pending'
   }
 
-   // Transform DB row to API response (add convenience aliases the frontend expects)
-    function transformStudent(s: Record<string, unknown>) {
-      const status = s.status || 'pending';
-      // Resilience: check all possible fee column names
-      const fee = s.monthly_fee ?? s.fee ?? s.fees ?? s.tuition_fee ?? 0;
-      
-      return {
-        id: s.id,
-        name: s.name || '',
-        full_name: s.name || '',    // alias for frontend compatibility
-        email: s.email || '',
-        phone: s.phone || '',
-        parent_phone: s.parent_phone || s.phone || '',
-        parent_name: s.parent_name || '',
-        age: s.age || null,
-        grade: s.grade || null,
-        level: s.grade || 'Beginner',           // alias
-        enrollment_date: s.enrollment_date || '',
-        join_date: s.enrollment_date || '',      // alias
-        address: s.address || '',
-        status: status,
-        payment_status: s.payment_status || (status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due')),
-        coach_id: s.coach_id || null,
-        rating: s.rating || 800,
-        current_rating: s.rating || 800,         // alias
-        notes: s.notes || '',
-        session_mode: s.session_mode || null,
-        session_time: s.session_time || null,
-        batch_type: s.session_mode || null,
-        batch_time: s.session_time || null,
-        monthly_fee: parseInt(String(fee)) || 0,
-        due_date: s.due_date || null,
-        account_status: s.account_status || 'active',
-        created_at: s.created_at,
-        updated_at: s.updated_at
-      }
-    }
+     // Transform DB row to API response (add convenience aliases the frontend expects)
+     function transformStudent(s: Record<string, unknown>) {
+       const status = s.status || 'pending';
+       // Resilience: check all possible fee column names
+       const fee = s.monthly_fee ?? s.fee ?? s.fees ?? s.tuition_fee ?? 0;
+       
+       // Decrypt sensitive fields if they are encrypted
+       const decrypt = (val: unknown): string => {
+         if (!val || typeof val !== 'string') return String(val || '');
+         // Check if it looks like base64 encrypted data
+         try {
+           if (val.length > 20 && /^[A-Za-z0-9+/]*={0,2}$/.test(val)) {
+             const decoded = atob(val);
+             // Try to decode as UTF-8
+             try {
+               return decodeURIComponent(escape(decoded));
+             } catch {
+               return decoded;
+             }
+           }
+         } catch {
+           // Not encrypted or decryption failed, return as-is
+         }
+         return String(val);
+       };
+       
+       return {
+         id: s.id,
+         name: s.name || '',
+         full_name: s.name || '',    // alias for frontend compatibility
+         email: decrypt(s.email),
+         phone: decrypt(s.phone),
+         parent_phone: decrypt(s.parent_phone),
+         parent_name: s.parent_name || '',
+         age: s.age || null,
+         grade: s.grade || null,
+         level: s.grade || 'Beginner',           // alias
+         enrollment_date: s.enrollment_date || '',
+         join_date: s.enrollment_date || '',      // alias
+         address: decrypt(s.address),
+         status: status,
+         payment_status: s.payment_status || (status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due')),
+         coach_id: s.coach_id || null,
+         rating: s.rating || 800,
+         current_rating: s.rating || 800,         // alias
+         notes: s.notes || '',
+         session_mode: s.session_mode || null,
+         session_time: s.session_time || null,
+         batch_type: s.session_mode || null,
+         batch_time: s.session_time || null,
+         monthly_fee: parseInt(String(fee)) || 0,
+         due_date: s.due_date || null,
+         account_status: s.account_status || 'active',
+         created_at: s.created_at,
+         updated_at: s.updated_at
+       }
+     }
 
   try {
     const url = new URL(req.url)
     const id = url.searchParams.get('id')
     const method = req.method
 
-    // GET - List all students
+    // GET - List all students with pagination
     if (method === 'GET') {
-      const { data: students, error } = await supabase
+      const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
+      const limit = Math.min(1000, Math.max(1, parseInt(url.searchParams.get('limit') || '100')))
+      const offset = (page - 1) * limit
+      const search = sanitizeString(url.searchParams.get('search') || '', 100)
+      const coachFilter = sanitizeString(url.searchParams.get('coach_id') || '', 50)
+      const statusFilter = sanitizeString(url.searchParams.get('status') || '', 50)
+      
+      let query = supabase
         .from('students')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+      
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,parent_phone.ilike.%${search}%`)
+      }
+      if (coachFilter) {
+        query = query.eq('coach_id', coachFilter)
+      }
+      if (statusFilter) {
+        query = query.eq('status', statusFilter)
+      }
+      
+      const { data: students, error, count } = await query
       
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      return new Response(JSON.stringify((students || []).map(transformStudent)), {
+      
+      const transformed = (students || []).map(transformStudent)
+      
+      return new Response(JSON.stringify({
+        data: transformed,
+        pagination: {
+          page,
+          limit,
+          total: count || transformed.length,
+          total_pages: count ? Math.ceil(count / limit) : 1
+        }
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -118,6 +169,35 @@ Deno.serve(async (req) => {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
+      }
+
+      // Encrypt sensitive PII fields
+      const parentPhone = validatePhone(rawBody.parent_phone || rawBody.phone)
+      const phone = validatePhone(rawBody.phone || rawBody.parent_phone)
+      const email = sanitizeString(rawBody.email, 254)
+      const address = sanitizeString(rawBody.address, 500)
+      
+      const newStudent: Record<string, unknown> = {
+        id: crypto.randomUUID(),
+        name: name,
+        phone: phone,  // Will be encrypted via trigger
+        parent_phone: parentPhone,  // Will be encrypted via trigger
+        email: email,  // Will be encrypted via trigger
+        address: address,  // Will be encrypted via trigger
+        parent_name: sanitizeString(rawBody.parent_name, 100),
+        age: rawBody.age ? parseInt(String(rawBody.age)) || null : null,
+        grade: sanitizeString(rawBody.grade || rawBody.level, 50),
+        enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0],
+        status: validateStatus(rawBody.status),
+        coach_id: rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null,
+        rating: validateRating(rawBody.rating || rawBody.current_rating),
+        session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
+        session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
+        monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
+        due_date: rawBody.due_date ? String(rawBody.due_date) : null,
+        notes: sanitizeString(rawBody.notes, 2000),
+        account_status: 'active',
+        created_at: new Date().toISOString()
       }
 
       const newStudent: Record<string, unknown> = {

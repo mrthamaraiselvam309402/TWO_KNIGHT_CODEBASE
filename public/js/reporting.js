@@ -23,18 +23,19 @@ window.generateReportPDF = async function() {
     };
     const targetYM = `${targetYear}-${targetMonth}`;
 
-    // 1. Data Aggregation (Filtered by Period)
-    const monthEndLimit = new Date(Date.UTC(targetYear, targetMonth + 1, 0)); // last day of month at 00:00 UTC
-    const monthStartLimit = new Date(Date.UTC(targetYear, targetMonth, 1)); // first day of month at 00:00 UTC
-    const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
-    const targetStudents = allStudents.filter(s => {
-        const sStatus = (s.status || 'active').toLowerCase();
-        if (sStatus === 'archived') return false;
-        
-        const joinStr = getStudentDate(s);
-        const enrollDate = joinStr ? new Date(joinStr) : baseline;
-        return enrollDate <= monthEndLimit;
-    });
+     // 1. Data Aggregation (Filtered by Period)
+     const monthEndLimit = new Date(Date.UTC(targetYear, targetMonth + 1, 0)); // last day of month at 00:00 UTC
+     const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
+     
+     // Use allStudents from global scope (already loaded)
+     const targetStudents = allStudents.filter(s => {
+         const sStatus = (s.status || 'active').toLowerCase();
+         if (sStatus === 'archived') return false;
+         
+         const joinStr = getStudentDate(s);
+         const enrollDate = joinStr ? new Date(joinStr) : baseline;
+         return enrollDate <= monthEndLimit;
+     });
 
     const totalStudents = allStudents.length;
     const activeStudents = targetStudents.length;
