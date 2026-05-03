@@ -4,7 +4,7 @@
   "description": "Comprehensive chess academy management system with AI assistant, payment processing, and Supabase cloud database",
   "scripts": {
     "dev-local": "vercel dev",
-    "build": "echo 'No build step required - static site'",
+    "build": "node scripts/build.cjs",
     "start": "npx vercel dev",
     "test": "echo 'No tests configured'",
     "lint": "echo 'No linting configured'"
