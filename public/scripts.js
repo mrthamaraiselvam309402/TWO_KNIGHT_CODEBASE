@@ -1742,7 +1742,7 @@ window.updateReportContext = function() {
   function calculateSlotRevenue(year, month, paymentsMap) {
     let rev = 0;
     const targetMonthEnd = new Date(year, month + 1, 0);
-    const baselineDate = new Date(2026, 2, 1);
+    const baselineDate = new Date(2026, 3, 1);
     
     allStudents.forEach(s => {
       const enrollDateStr = getStudentDate(s);
@@ -3165,7 +3165,7 @@ window.updateReportContext = function() {
       }
 
       // 2. Dynamic Slot Calculation based on Student's Joining Date
-      const systemStartDate = new Date(2026, 2, 1); // Earliest Joiner Baseline (March 2026)
+      const systemStartDate = new Date(2026, 3, 1); // April 1st, 2026 Baseline
       const enrollDateParsed = (enrollDateStr && !isNaN(new Date(enrollDateStr))) ? new Date(enrollDateStr) : systemStartDate;
       const effectiveEnrollDate = enrollDateParsed < systemStartDate ? systemStartDate : enrollDateParsed;
       
