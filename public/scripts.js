@@ -903,19 +903,30 @@ Thank you for your cooperation.
 
      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
-     const studentName = (s.full_name || s.name || '').toUpperCase();
-     if (['SUDARSAN', 'SURESHBABU'].includes(studentName) && totalPaidInvoices < monthsRequired) {
-       return 'Due';
-     }
-
-     // Determination Logic:
-     // 1. Paid: Must have a payment in the target month AND total credits cover all required months.
+     // 3. Status Determination Logic:
+     
+     // A. PAID: Audit confirms enough payments and one exists for target month.
      if (totalPaidInvoices >= monthsRequired && hasPaymentThisMonth) return 'Paid';
 
-     // 2. Pending: Missing exactly one payment AND they haven't paid for the target month yet.
-     if (totalPaidInvoices === monthsRequired - 1 && !hasPaymentThisMonth) return 'Pending';
+     // B. MANUAL OVERRIDE: If we edited it in the DB and it's the current month, respect it.
+     // This fixes the "Edit doesn't stick" bug.
+     if (isCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled') {
+        if (s.payment_status === 'Paid' && totalPaidInvoices >= monthsRequired) return 'Paid';
+        if (s.payment_status === 'Pending') return 'Pending';
+        if (s.payment_status === 'Due') return 'Due';
+     }
 
-     // 3. Due: Owe for a previous month OR more than 1 month behind.
+     // C. SPECIAL NAMES: SUDARSAN and SURESHBABU are "Due" if any missing payments.
+     const studentName = (s.full_name || s.name || '').toUpperCase();
+     const isSpecial = ['SUDARSAN', 'SURESHBABU'].some(n => studentName.includes(n));
+     if (isSpecial) return 'Due';
+
+     // D. PENDING: Missing exactly one payment OR user wants others to be pending for this month.
+     if (totalPaidInvoices === monthsRequired - 1 && !hasPaymentThisMonth) return 'Pending';
+     
+     // E. DEFAULT FOR OTHERS: User requested others be "Pending" for this month.
+     if (isCurrentMonth) return 'Pending';
+
      return 'Due';
   }
 
