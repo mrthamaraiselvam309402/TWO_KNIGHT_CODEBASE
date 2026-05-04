@@ -27,8 +27,8 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/students", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/rest/v1/students_decrypted" },
-    { "source": "/api/students/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/rest/v1/students_decrypted/:match*" },
+    { "source": "/api/students", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/students" },
+    { "source": "/api/students/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/students/:match*" },
     { "source": "/api/coaches", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/coaches" },
     { "source": "/api/coaches/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/coaches/:match*" },
     { "source": "/api/events", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/events" },

@@ -962,8 +962,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
          const loadWithRetry = async (url, maxRetries = 1) => {
           for (let i = 0; i <= maxRetries; i++) {
             try {
-              const urlWithBust = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`
-              const response = await apiCall(urlWithBust, { cache: 'no-store' })
+              const response = await apiCall(url, { cache: 'no-store' })
               if (response.ok) {
                 const result = await response.json()
                 if (result && result.error) throw new Error(result.error);
@@ -984,7 +983,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
 
         const [coaches, students, achievements, events, messages, attendance, payments, ratingHistory, resources] = await Promise.all([
           loadWithRetry('/api/coaches'),
-          loadWithRetry('/api/students?limit=10000'),
+          loadWithRetry('/api/students?limit=1000'),
           loadWithRetry('/api/achievements'),
           loadWithRetry('/api/events'),
           loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || [])),
