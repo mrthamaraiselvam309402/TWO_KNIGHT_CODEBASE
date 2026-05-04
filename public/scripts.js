@@ -4837,7 +4837,6 @@ Thank you for your continued support and cooperation.
   window.allAttendance = allAttendance;
   window.allRatingHistory = allRatingHistory;
   window.allResources = allResources;
-
   // Helper Functions
   window.getStudentName = getStudentName;
   window.getStudentMonthlyFee = getStudentMonthlyFee;
