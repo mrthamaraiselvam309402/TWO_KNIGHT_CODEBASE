@@ -1,5 +1,11 @@
 import { checkRateLimit } from './rate_limit.js'
 
+// Helper function for input validation - must be defined before use
+function sanitizeString(str: unknown, maxLength = 255): string {
+  if (typeof str !== 'string') return ''
+  return str.slice(0, maxLength).replace(/[<>"'`;]/g, '').trim()
+}
+
 Deno.serve(async (req) => {
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
   
@@ -14,24 +20,19 @@ Deno.serve(async (req) => {
   }
   
   const supabase = createClient(supabaseUrl, supabaseKey)
-
+  
+  const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || '*'
+  
   const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
   }
-
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
-
-  async function getStudentName(studentId: string) {
-    if (!studentId) return ''
-    const { data } = await supabase.from('students').select('name').eq('id', studentId).single()
-    return data?.name || ''
-  }
-
-
+  
   // --- Rate Limiting ---
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
   const rateLimitResult = await checkRateLimit(ip, 'payments')
@@ -45,125 +46,41 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     })
   }
-
-  // FIX: sanitizeString was used but never defined in this file
-  function sanitizeString(str: unknown, maxLength = 255): string {
-    if (typeof str !== 'string') return ''
-    return str.slice(0, maxLength).replace(/[<>\"';]/g, '').trim()
+  
+  function transformPayment(p: Record<string, unknown>) {
+    return {
+      id: p.id,
+      student_id: p.student_id,
+      amount: parseFloat(p.amount || 0),
+      status: p.status || 'pending',
+      payment_method: p.payment_method || '',
+      description: p.description || '',
+      transaction_id: p.transaction_id || null,
+      payment_date: p.payment_date || p.created_at || new Date().toISOString(),
+      created_at: p.created_at || new Date().toISOString()
+    }
   }
-
+  
   try {
     const url = new URL(req.url)
-    const action = url.searchParams.get('action')
+    const id = url.searchParams.get('id')
     const method = req.method
-
-
-    // CREATE NEW PAYMENT
-    if (method === 'POST' || action === 'create') {
-      let body = {}
-      try {
-        body = await req.json()
-      } catch (e) {
-        // Try to parse from URL search params
-        const url = new URL(req.url)
-        body = {
-          id: crypto.randomUUID(),
-          student_id: url.searchParams.get('student_id'),
-          amount: Number(url.searchParams.get('amount')) || 5000,
-          status: url.searchParams.get('status'),
-          description: url.searchParams.get('description'),
-          payment_method: url.searchParams.get('payment_method'),
-          transaction_id: url.searchParams.get('transaction_id')
-        }
-      }
-      const { student_id, amount, status, description, payment_method, transaction_id } = body
-
-      // If just updating payment status (mark as paid)
-      if (student_id && status === 'paid') {
-        const { data: payment, error } = await supabase.from('payments').insert({
-          student_id,
-          amount: amount || 5000,
-          currency: 'USD',
-          status: 'paid',
-          payment_method: payment_method || 'cash',
-          transaction_id: transaction_id || `TXN_${Date.now()}`,
-          description: description || 'Tuition Payment',
-          payment_date: new Date().toISOString()
-        }).select().single()
-
-        if (error) {
-          return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
-        }
-
-        // Check current status for sequential transition
-        const { data: student } = await supabase.from('students').select('status').eq('id', student_id).single();
-        const currentStatus = (student?.status || '').toLowerCase();
-        
-        let nextStatus = 'active';
-        let nextPaymentStatus = 'Paid';
-        
-        // If they were 'due' (arrears), they move to 'pending' (current month still owed)
-        if (currentStatus === 'due' || currentStatus === 'overdue') {
-          nextStatus = 'pending';
-          nextPaymentStatus = 'Pending';
-        }
-
-        // Update student's status in students table
-        await supabase.from('students').update({ 
-          payment_status: nextPaymentStatus,
-          status: nextStatus
-        }).eq('id', student_id)
-
-        return new Response(JSON.stringify({ success: true, payment }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-      // Create new payment record
-      const { data: payment, error } = await supabase.from('payments').insert({
-        id: crypto.randomUUID(),
-        student_id,
-        amount: amount || 5000,
-        currency: 'USD',
-        status: status || 'pending',
-        description: description || 'Tuition Payment',
-        payment_date: new Date().toISOString()
-      }).select().single()
-
-      if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-      return new Response(JSON.stringify({ success: true, payment }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // GET payments list with pagination
-    if (method === 'GET' || action === 'list') {
+    const studentId = url.searchParams.get('student_id')
+    
+    // GET - List payments with pagination
+    if (method === 'GET') {
       const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
       const limit = Math.min(1000, Math.max(1, parseInt(url.searchParams.get('limit') || '100')))
       const offset = (page - 1) * limit
-      const studentId = sanitizeString(url.searchParams.get('student_id') || '', 50)
-      const statusFilter = sanitizeString(url.searchParams.get('status') || '', 50)
       
       let query = supabase
         .from('payments')
         .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
+        .order('payment_date', { ascending: false })
         .range(offset, offset + limit - 1)
       
       if (studentId) {
         query = query.eq('student_id', studentId)
-      }
-      if (statusFilter) {
-        query = query.eq('status', statusFilter)
       }
       
       const { data: payments, error, count } = await query
@@ -175,21 +92,7 @@ Deno.serve(async (req) => {
         })
       }
       
-      const transformed = await Promise.all(
-        (payments || []).map(async (p) => ({
-          id: p.id,
-          student_id: p.student_id,
-          student_name: await getStudentName(p.student_id),
-          amount: p.amount || 0,
-          currency: p.currency || 'USD',
-          status: p.status || 'pending',
-          payment_method: p.payment_method || '',
-          transaction_id: p.transaction_id || '',
-          description: p.description || '',
-          payment_date: p.payment_date || '',
-          created_at: p.created_at
-        }))
-      )
+      const transformed = (payments || []).map(transformPayment)
       
       return new Response(JSON.stringify({
         data: transformed,
@@ -203,12 +106,63 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
-
-    return new Response(JSON.stringify({ error: 'Invalid action' }), {
-      status: 400,
+    
+    // POST - Create new payment
+    if (method === 'POST') {
+      let rawBody: Record<string, unknown> = {}
+      try { rawBody = await req.json() } catch (_e) {}
+      
+      const studentId = String(rawBody.student_id || '').trim()
+      if (!studentId) {
+        return new Response(JSON.stringify({ error: 'Student ID is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      const amount = parseFloat(String(rawBody.amount || 0))
+      if (isNaN(amount) || amount <= 0) {
+        return new Response(JSON.stringify({ error: 'Amount must be greater than zero' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      const newPayment: Record<string, unknown> = {
+        id: rawBody.id || `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        student_id: studentId,
+        amount: amount,
+        status: 'paid',
+        payment_method: sanitizeString(rawBody.payment_method || 'Online', 50),
+        description: sanitizeString(rawBody.description || 'Monthly Tuition Fee', 200),
+        transaction_id: rawBody.transaction_id || `TXN-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+        payment_date: rawBody.payment_date ? String(rawBody.payment_date) : new Date().toISOString(),
+        created_at: new Date().toISOString()
+      }
+      
+      const { data: insertedPayment, error: insertError } = await supabase
+        .from('payments')
+        .insert(newPayment)
+        .select()
+        .single()
+      
+      if (insertError) {
+        return new Response(JSON.stringify({ error: insertError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      return new Response(JSON.stringify(insertedPayment ? transformPayment(insertedPayment) : { success: true }), {
+        status: 201,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
-
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,

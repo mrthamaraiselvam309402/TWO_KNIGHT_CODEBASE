@@ -1,4 +1,4 @@
-// Demo booking handler
+// Demo booking handler - uses Edge Function to avoid RLS issues
 CK.handleDemoSubmit = async function(event) {
   event.preventDefault();
   const form = event.target;
@@ -6,16 +6,20 @@ CK.handleDemoSubmit = async function(event) {
   try {
     btn.disabled = true;
     btn.textContent = 'Submitting...';
-    const { error } = await SB().from('leads').insert({
-      name: form.fullName.value,
-      phone: form.phone.value,
-      parent_name: form.fullName.value,
-      child_age: parseInt(form.age.value),
-      city: form.city.value,
-      status: 'new',
-      created_at: new Date().toISOString()
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.fullName.value,
+        phone: form.phone.value,
+        parent_name: form.fullName.value,
+        child_age: parseInt(form.age.value),
+        city: form.city.value,
+        status: 'new',
+        created_at: new Date().toISOString()
+      })
     });
-    if (error) throw error;
+    if (!res.ok) throw new Error('Submission failed');
     CK.showToast('✅ Demo booked! We will contact you soon.', 'success');
     CK.closeModal('contactModal');
     form.reset();

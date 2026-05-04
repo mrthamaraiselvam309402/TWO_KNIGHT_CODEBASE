@@ -1,114 +1,74 @@
+import { checkRateLimit } from './rate_limit.js'
+
 Deno.serve(async (req) => {
-  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
   
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   
   if (!supabaseUrl || !supabaseKey) {
     return new Response(JSON.stringify({ error: 'Server configuration error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
-    });
+    })
   }
   
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  function transformSession(s) {
-    return {
-      id: s.id,
-      user_type: s.user_type,
-      user_id: s.user_id,
-      user_name: s.user_name,
-      device: s.device,
-      ip_address: s.ip_address,
-      location: s.location,
-      created_at: s.created_at
-    };
+  const supabase = createClient(supabaseUrl, supabaseKey)
+  
+  const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || '*'
+  
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
   }
-
+  
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
-    });
+    return new Response('ok', { headers: corsHeaders })
   }
-
+  
+  // --- Rate Limiting ---
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+  const rateLimitResult = await checkRateLimit(ip, 'sessions')
+  
+  if (!rateLimitResult.allowed) {
+    return new Response(JSON.stringify({ 
+      error: 'Rate limit exceeded',
+      retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+    }), { 
+      status: 429, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    })
+  }
+  
   try {
-    const url = new URL(req.url);
-    const id = url.searchParams.get('id');
-    const userType = url.searchParams.get('user_type');
-    const userId = url.searchParams.get('user_id');
-    const body = req.method !== 'GET' ? await req.json().catch(() => ({})) : {};
-
-    if (req.method === 'GET') {
-      let query = supabase
-        .from('login_sessions')
+    const url = new URL(req.url)
+    const method = req.method
+    const studentId = url.searchParams.get('student_id')
+    
+    // GET - Get sessions for a student
+    if (method === 'GET' && studentId) {
+      const { data: sessions, error } = await supabase
+        .from('user_sessions')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (id) {
-        const { data: session, error } = await supabase
-          .from('login_sessions')
-          .select('*')
-          .eq('id', id)
-          .single();
-        if (error) throw error;
-        return new Response(JSON.stringify(session ? transformSession(session) : null), {
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
-      }
-
-      if (userType) {
-        query = query.eq('user_type', userType);
-      }
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data: sessions, error } = await query;
-      if (error) throw error;
-      return new Response(JSON.stringify((sessions || []).map(transformSession)), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+        .eq('student_id', studentId)
+        .order('login_at', { ascending: false })
+      
+      if (error) throw error
+      
+      return new Response(JSON.stringify(sessions || []), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
-
-    if (req.method === 'POST') {
-      const newSession = {
-        id: crypto.randomUUID(),
-        user_type: body.user_type || 'admin',
-        user_id: body.user_id || 'admin',
-        user_name: body.user_name || 'Admin',
-        device: body.device || 'Web Browser',
-        ip_address: body.ip_address || 'Unknown',
-        location: body.location || 'Unknown',
-        created_at: new Date().toISOString()
-      };
-
-      const { data: inserted, error: insertError } = await supabase
-        .from('login_sessions')
-        .insert(newSession)
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-      return new Response(JSON.stringify(transformSession(inserted)), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
-    }
-
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    
+    return new Response(JSON.stringify({ error: 'Method not allowed or missing parameters' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    });
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
-});
+})

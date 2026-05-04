@@ -111,13 +111,13 @@ Deno.serve(async (req) => {
             .ilike('id', '%' + eventId.substring(0, 8) + '%');
           console.log('Fuzzy search result:', events2);
           
-          if (!events2 || events2.length === 0) {
-            return new Response(JSON.stringify({ error: 'Event not found', debug: eventId }), { status: 404 });
-          }
-          const currentEvent = events2[0];
-        } else {
-          var currentEvent = events[0];
-        }
+         if (!events2 || events2.length === 0) {
+           return new Response(JSON.stringify({ error: 'Event not found', debug: eventId }), { status: 404 });
+         }
+         let currentEvent = events2[0];
+         } else {
+         let currentEvent = events[0];
+         }
         
         const registeredStudents = currentEvent.registered_students || [];
         

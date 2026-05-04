@@ -10,14 +10,10 @@ WHERE a.ctid > b.ctid
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_transaction_idx ON payments (transaction_id) WHERE transaction_id IS NOT NULL;
 
 -- 3. Normalise student fees into monthly_fee column
+-- The students table already has monthly_fee as the primary fee column
+-- This ensures any NULL or zero values get set to default 5000
 UPDATE students 
-SET monthly_fee = COALESCE(
-  CASE WHEN monthly_fee > 0 THEN monthly_fee ELSE NULL END, 
-  fee, 
-  fees, 
-  tuition_fee, 
-  5000
-) 
+SET monthly_fee = 5000
 WHERE monthly_fee IS NULL OR monthly_fee = 0;
 
 -- Drop redundant columns (Backup logic: we only drop if monthly_fee is now populated)
@@ -32,7 +28,9 @@ UPDATE students SET status = 'active' WHERE status IS NULL OR status = 'pending'
 -- UPDATE students SET phone = phone, parent_phone = parent_phone, email = email, address = address;
 
 -- 6. Set missing coach salaries
-UPDATE coaches SET salary = COALESCE(salary, hourly_rate, 0);
+-- NOTE: The coaches table uses hourly_rate as primary salary field.
+-- If a separate salary column is needed, uncomment and add column first.
+-- UPDATE coaches SET salary = COALESCE(salary, hourly_rate, 0);
 
 -- 7. Create rating_history table if not exists
 CREATE TABLE IF NOT EXISTS rating_history (
@@ -54,15 +52,10 @@ ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rating_history ENABLE ROW LEVEL SECURITY;
 
--- Apply standard permissive policy for authenticated users (Admin Tool default)
-DO $$
-DECLARE t TEXT;
-BEGIN
-  FOR t IN SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' LOOP
-    EXECUTE format('DROP POLICY IF EXISTS "Allow authenticated" ON %I;', t);
-    EXECUTE format('CREATE POLICY "Allow authenticated" ON %I FOR ALL TO authenticated USING (true);', t);
-  END LOOP;
-END$$;
+-- NOTE: Do NOT create permissive "Allow authenticated" policies here.
+-- Use secure-rls-v2.sql instead which implements proper anon restrictions.
+-- Permissive policies would bypass the security model.
+-- DO NOT RUN THE POLICY LOOP FROM THIS FILE.
 
 -- 9. Add missing performance indexes
 CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments (payment_date DESC);
@@ -72,4 +65,6 @@ CREATE INDEX IF NOT EXISTS idx_rate_limits_key ON rate_limits (key);
 CREATE INDEX IF NOT EXISTS idx_rate_limits_timestamp ON rate_limits (timestamp);
 
 -- 10. Cast payments.amount to NUMERIC if it was text
+-- Uncomment and run this if amount column is currently TEXT
 -- ALTER TABLE payments ALTER COLUMN amount TYPE NUMERIC USING amount::NUMERIC;
+-- IMPORTANT: Run this separately after verifying current column type.

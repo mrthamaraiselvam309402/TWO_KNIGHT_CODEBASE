@@ -106,55 +106,54 @@ Deno.serve(async (req) => {
     const id = url.searchParams.get('id')
     const method = req.method
 
-    // GET - List all students with pagination
-    if (method === 'GET') {
-      const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
-      const limit = Math.min(1000, Math.max(1, parseInt(url.searchParams.get('limit') || '100')))
-      const offset = (page - 1) * limit
-      const search = sanitizeString(url.searchParams.get('search') || '', 100)
-      const coachFilter = sanitizeString(url.searchParams.get('coach_id') || '', 50)
-      const statusFilter = sanitizeString(url.searchParams.get('status') || '', 50)
-      
-      let query = supabase
-        .from('students')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1)
-
-      
-      if (search) {
-        query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,parent_phone.ilike.%${search}%`)
-      }
-      if (coachFilter) {
-        query = query.eq('coach_id', coachFilter)
-      }
-      if (statusFilter) {
-        query = query.eq('status', statusFilter)
-      }
-      
-      const { data: students, error, count } = await query
-      
-      if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 500,
+     // GET - List all students with pagination
+     if (method === 'GET') {
+       const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
+       const limit = Math.min(1000, Math.max(1, parseInt(url.searchParams.get('limit') || '100')))
+       const offset = (page - 1) * limit
+       const search = sanitizeString(url.searchParams.get('search') || '', 100)
+       const coachFilter = sanitizeString(url.searchParams.get('coach_id') || '', 50)
+       const statusFilter = sanitizeString(url.searchParams.get('status') || '', 50)
+       
+       let query = supabase
+         .from('students')  // Use raw table (encryption disabled)
+         .select('*', { count: 'exact' })
+         .order('created_at', { ascending: false })
+         .range(offset, offset + limit - 1)
+       
+       if (search) {
+         query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,parent_phone.ilike.%${search}%`)
+       }
+       if (coachFilter) {
+         query = query.eq('coach_id', coachFilter)
+       }
+       if (statusFilter) {
+         query = query.eq('status', statusFilter)
+       }
+       
+       const { data: students, error, count } = await query
+       
+       if (error) {
+         return new Response(JSON.stringify({ error: error.message }), {
+           status: 500,
+           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+         })
+       }
+       
+       const transformed = (students || []).map(transformStudent)
+       
+       return new Response(JSON.stringify({
+         data: transformed,
+         pagination: {
+           page,
+           limit,
+           total: count || transformed.length,
+           total_pages: count ? Math.ceil(count / limit) : 1
+         }
+}), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
-      const transformed = (students || []).map(transformStudent)
-      
-      return new Response(JSON.stringify({
-        data: transformed,
-        pagination: {
-          page,
-          limit,
-          total: count || transformed.length,
-          total_pages: count ? Math.ceil(count / limit) : 1
-        }
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
 
     // POST - Create new student
     if (method === 'POST') {

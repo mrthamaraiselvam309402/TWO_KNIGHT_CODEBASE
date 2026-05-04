@@ -36,39 +36,40 @@
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // STATE
-  // ═══════════════════════════════════════════════════════════════
-  let allCoaches = [];
-  let allStudents = [];
-  let allPayments = [];
-  let allAttendance = [];
+// ═══════════════════════════════════════════════════════════════
+   // STATE
+   // ═══════════════════════════════════════════════════════════════
+   let allCoaches = [];
+   let allStudents = [];
+   let allPayments = [];
+   let allAttendance = [];
 
-  // Expose to window for external modules (like reporting.js)
-  window.allCoaches = allCoaches;
-  window.allStudents = allStudents;
-  window.allPayments = allPayments;
-  window.allAttendance = allAttendance;
+   // Expose to window for external modules (like reporting.js)
+   window.allCoaches = allCoaches;
+   window.allStudents = allStudents;
+   window.allPayments = allPayments;
+   window.allAttendance = allAttendance;
 
-  let achievementsData = [];
-  let eventsData = [];
-  let allMessages = [];
-  let allRatingHistory = [];
-  let allResources = [];
+   let achievementsData = [];
+   let eventsData = [];
+   let allMessages = [];
+   let allRatingHistory = [];
+   let allResources = [];
 
-  window.allRatingHistory = allRatingHistory; // Also needed for ELO gainers in report
+   window.allRatingHistory = allRatingHistory; // Also needed for ELO gainers in report
 
-  window.reportMonth = new Date().getUTCMonth(); // 0-11 (UTC)
-  window.reportYear = new Date().getUTCFullYear();
-  window.isEditing = false;
+   window.reportMonth = new Date().getUTCMonth(); // 0-11 (UTC)
+   window.reportYear = new Date().getUTCFullYear();
+   window.isEditing = false;
 
-  let currentStudent = null;
-  let role = null;
-  let chartInstances = {};
-  let dataCache = { timestamp: 0 };
-  let loadDebounceTimer = null;
-  let loadingStates = {};
-  const CACHE_DURATION = 5000;
+   let currentStudent = null;
+   let role = null;
+   let chartInstances = {};
+   let dataCache = { timestamp: 0 };
+   let loadDebounceTimer = null;
+   let loadingStates = {};
+   // Optimized cache for faster dashboard loading
+   const CACHE_DURATION = 30000; // 30 seconds cache for better performance
   // ── CORE UTILITIES ──
   async function apiCall(endpoint, options = {}) {
     const url = (endpoint.startsWith('http') || endpoint.startsWith(API_BASE)) 
@@ -115,12 +116,34 @@
     return div;
   }
 
-  function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
-  }
+   function escapeHtml(text) {
+     if (!text) return '';
+     const div = document.createElement('div');
+     div.textContent = String(text);
+     return div.innerHTML;
+   }
+
+   // Escape string for safe embedding in JavaScript string literal inside HTML attribute
+   function jsAttrEncode(value) {
+     if (value == null) return '';
+     return String(value)
+       .replace(/\\/g, '\\\\')
+       .replace(/'/g, "\\'")
+       .replace(/"/g, '\\"')
+       .replace(/\n/g, '\\n')
+       .replace(/\r/g, '\\r');
+   }
+
+   function dedupeArray(arr, keyField = 'id') {
+     if (!Array.isArray(arr)) return [];
+     const seen = new Set();
+     return arr.filter(item => {
+       const key = item && item[keyField] ? String(item[keyField]) : '';
+       if (!key || seen.has(key)) return false;
+       seen.add(key);
+       return true;
+     });
+   }
 
 
 
@@ -194,36 +217,36 @@
       return;
     }
 
-    grid.innerHTML = upcoming.slice(0, 10).map(e => {
-      const isRegistered = myRegistrations.some(r => r.id === e.id);
-      const eventDate = e.date ? new Date(e.date).toLocaleDateString() : 'TBD';
-      const eventTime = e.event_time || e.time || 'TBD';
-      return `
-        <div class="ev-card">
-          ${e.img_url ? `<img src="${e.img_url}" class="ev-poster" alt="${e.title}">` : ''}
-          <div class="ev-header">
-            <span class="ev-type-badge">${e.type || 'Event'}</span>
-            <span class="ev-date-badge">${eventDate}</span>
-          </div>
-          <div class="ev-body">
-            <div class="ev-title">${e.title}</div>
-            <div class="ev-meta">
-              <span class="ev-meta-item ev-time">⏰ ${eventTime}</span>
-              <span class="ev-meta-item ev-loc">${e.location || 'TBD'}</span>
-              ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${e.prize_pool}</span>` : ''}
-            </div>
+     grid.innerHTML = upcoming.slice(0, 10).map(e => {
+       const isRegistered = myRegistrations.some(r => r.id === e.id);
+       const eventDate = e.date ? new Date(e.date).toLocaleDateString() : 'TBD';
+       const eventTime = e.event_time || e.time || 'TBD';
+       return `
+         <div class="ev-card">
+           ${e.img_url ? `<img src="${escapeHtml(e.img_url)}" class="ev-poster" alt="${escapeHtml(e.title)}">` : ''}
+           <div class="ev-header">
+             <span class="ev-type-badge">${escapeHtml(e.type || 'Event')}</span>
+             <span class="ev-date-badge">${escapeHtml(eventDate)}</span>
+           </div>
+           <div class="ev-body">
+             <div class="ev-title">${escapeHtml(e.title)}</div>
+             <div class="ev-meta">
+               <span class="ev-meta-item ev-time">⏰ ${escapeHtml(eventTime)}</span>
+               <span class="ev-meta-item ev-loc">${escapeHtml(e.location || 'TBD')}</span>
+               ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${escapeHtml(e.prize_pool)}</span>` : ''}
+             </div>
 
-            ${e.description ? `<div class="ev-desc">${e.description}</div>` : ''}
-          </div>
-          <div class="ev-footer">
-            ${isRegistered ?
-          `<span class="badge badge-success" style="padding:6px 12px">✅ Registered</span>` :
-          `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`
-        }
-          </div>
-        </div>
-      `;
-    }).join('');
+             ${e.description ? `<div class="ev-desc">${escapeHtml(e.description)}</div>` : ''}
+           </div>
+           <div class="ev-footer">
+             ${isRegistered ?
+           `<span class="badge badge-success" style="padding:6px 12px">✅ Registered</span>` :
+           `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`
+         }
+           </div>
+         </div>
+       `;
+     }).join('');
   }
 
   function renderChildGrowth() {
@@ -265,7 +288,7 @@
     const sRank = levelRank[getStudentLevel(currentStudent)] || 0;
     const myRes = allResources.filter(r => (levelRank[r.level_requirement] || 0) <= sRank);
     if (!myRes.length) { grid.innerHTML = `<div class="empty-state">No resources yet.</div>`; return; }
-    grid.innerHTML = myRes.map(r => `<div class="resource-card"><div class="res-type">${r.type.toUpperCase()}</div><div class="res-title">${r.title}</div><div class="res-desc">${r.description || ''}</div><div class="res-action"><a href="${r.url}" target="_blank" class="btn btn-gold btn-sm" style="width:100%">Open</a></div></div>`).join('');
+     grid.innerHTML = myRes.map(r => `<div class="resource-card"><div class="res-type">${escapeHtml(r.type.toUpperCase())}</div><div class="res-title">${escapeHtml(r.title)}</div><div class="res-desc">${escapeHtml(r.description || '')}</div><div class="res-action"><a href="${escapeHtml(r.url)}" target="_blank" class="btn btn-gold btn-sm" style="width:100%">Open</a></div></div>`).join('');
   }
 
   function renderChildBilling() {
@@ -278,53 +301,53 @@
     const dueDate = s.due_date ? new Date(s.due_date).toLocaleDateString() : 'Not set';
     const myPayments = allPayments.filter(p => String(p.student_id) === String(s.id)).slice(0, 10);
 
-    // Current month row
-    let rows = `
-      <tr>
-        <td>${new Date().toLocaleDateString()}</td>
-        <td>Current Month</td>
-        <td>₹${fee}</td>
-        <td class="${status === 'Paid' ? 'text-success' : 'text-danger'}" style="font-weight:600">${status}</td>
-        <td>
-          ${status === 'Due' || status === 'Pending' ?
-        `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}','${getStudentName(s)}','${fee}')">Pay Now</button>` :
-        `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}','${getStudentName(s)}','${fee}','${getStudentLevel(s)}','${getStudentRating(s)}','N/A','Online')">Receipt</button>`
-      }
-        </td>
-      </tr>
-    `;
+     // Current month row
+     let rows = `
+       <tr>
+         <td>${new Date().toLocaleDateString()}</td>
+         <td>Current Month</td>
+         <td>₹${fee}</td>
+         <td class="${status === 'Paid' ? 'text-success' : 'text-danger'}" style="font-weight:600">${status}</td>
+         <td>
+           ${status === 'Due' || status === 'Pending' ?
+         `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}')">Pay Now</button>` :
+         `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', 'Online')">Receipt</button>`
+       }
+         </td>
+       </tr>
+     `;
 
-    // Due date info
-    rows += `
-      <tr style="background:var(--surface2)">
-        <td colspan="2"><strong>Due Date:</strong></td>
-        <td>${dueDate}</td>
-        <td colspan="2" style="font-size:12px;color:var(--ivory-dim)">Monthly tuition fee</td>
-      </tr>
-    `;
+     // Due date info
+     rows += `
+       <tr style="background:var(--surface2)">
+         <td colspan="2"><strong>Due Date:</strong></td>
+         <td>${dueDate}</td>
+         <td colspan="2" style="font-size:12px;color:var(--ivory-dim)">Monthly tuition fee</td>
+       </tr>
+     `;
 
-    // Payment history
-    if (myPayments.length > 0) {
-      myPayments.forEach(p => {
-        const pDate = p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '-';
-        const pAmount = p.amount || fee;
-        const pStatus = p.status === 'completed' ? 'Paid' : (p.status || 'Pending');
-        rows += `
-          <tr>
-            <td>${pDate}</td>
-            <td>Payment</td>
-            <td>₹${pAmount}</td>
-            <td class="${pStatus === 'Paid' ? 'text-success' : 'text-danger'}">${pStatus}</td>
-            <td>
-              ${pStatus === 'Paid' ?
-            `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}','${getStudentName(s)}','${pAmount}','${getStudentLevel(s)}','${getStudentRating(s)}','N/A','${p.payment_method || 'Online'}')">Receipt</button>` :
-            `<span style="color:var(--ivory-dim);font-size:12px">Pending</span>`
-          }
-            </td>
-          </tr>
-        `;
-      });
-    }
+     // Payment history
+     if (myPayments.length > 0) {
+       myPayments.forEach(p => {
+         const pDate = p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '-';
+         const pAmount = p.amount || fee;
+         const pStatus = p.status === 'completed' ? 'Paid' : (p.status || 'Pending');
+         rows += `
+           <tr>
+             <td>${pDate}</td>
+             <td>Payment</td>
+             <td>₹${pAmount}</td>
+             <td class="${pStatus === 'Paid' ? 'text-success' : 'text-danger'}">${pStatus}</td>
+             <td>
+               ${pStatus === 'Paid' ?
+             `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${pAmount}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">Receipt</button>` :
+             `<span style="color:var(--ivory-dim);font-size:12px">Pending</span>`
+           }
+             </td>
+           </tr>
+         `;
+       });
+     }
 
     tbody.innerHTML = rows;
   }
@@ -600,32 +623,77 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
   };
 
   window.informAllCoaches = function () {
-    const pendingCoaches = (allCoaches || []).filter(coach => {
-      const myStudents = (allStudents || []).filter(s => String(s.coach_id) === String(coach.id));
-      return myStudents.some(s => {
-        const st = getStudentPaymentStatus(s);
-        return st === 'Due' || st === 'Pending';
-      });
-    });
+     const pendingCoaches = (allCoaches || []).filter(coach => {
+       const myStudents = (allStudents || []).filter(s => String(s.coach_id) === String(coach.id));
+       return myStudents.some(s => {
+         const st = getStudentPaymentStatus(s);
+         return st === 'Due' || st === 'Pending';
+       });
+     });
 
-    if (pendingCoaches.length === 0) {
-      toast('All coaches are up to date!', 'success');
-      return;
-    }
+     if (pendingCoaches.length === 0) {
+       toast('All coaches are up to date!', 'success');
+       return;
+     }
 
-    if (!confirm(`Found ${pendingCoaches.length} coaches with arrears. Open all WhatsApp tabs at once? (Note: Your browser may block popups)`)) return;
+     if (!confirm(`Found ${pendingCoaches.length} coaches with arrears. Open all WhatsApp tabs at once? (Note: Your browser may block popups)`)) return;
 
-    pendingCoaches.forEach((coach, idx) => {
-       const url = informCoachFees(coach.id, true); 
-       if (url) {
-         setTimeout(() => {
-           window.open(url, '_blank');
-         }, idx * 1000);
-       }
-    });
-    
-    toast(`Initiated ${pendingCoaches.length} notifications.`, 'success');
-  };
+     pendingCoaches.forEach((coach, idx) => {
+        const url = informCoachFees(coach.id, true);
+        if (url) {
+          setTimeout(() => {
+            window.open(url, '_blank');
+          }, idx * 1000);
+        }
+     });
+
+     toast(`Initiated ${pendingCoaches.length} notifications.`, 'success');
+   };
+
+   window.informAllDueStudents = function () {
+     const dueStudents = (allStudents || []).filter(s => {
+       const st = getStudentPaymentStatus(s);
+       return st === 'Due';
+     });
+
+     if (dueStudents.length === 0) {
+       toast('No students with due payments!', 'success');
+       return;
+     }
+
+     if (!confirm(`Notify parents of ${dueStudents.length} students with due payments? This will open multiple WhatsApp tabs.`)) return;
+
+     const now = new Date();
+     const monthName = now.toLocaleString('en-IN', { month: 'long' });
+     const year = now.getFullYear();
+     let sent = 0;
+
+     dueStudents.forEach((s, idx) => {
+       const phone = (s.parent_phone || '').replace(/\D/g, '');
+       if (!phone || phone.length < 10) return;
+
+       const name = getStudentName(s);
+       const fee = getStudentMonthlyFee(s);
+       const dueDateStr = s.due_date
+         ? new Date(s.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+         : `5th ${monthName} ${year}`;
+
+       const msg = `Hello Sir/Madam,
+
+This is a gentle reminder regarding the pending chess class fee of INR ${fee.toLocaleString()} for your child ${name}. The due date is ${dueDateStr}.
+
+Please settle the payment at your earliest convenience.
+
+Thank you for your cooperation.
+- Chesskidoo Academy`;
+
+       setTimeout(() => {
+         window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+         sent++;
+         if (sent === dueStudents.length) toast(`Sent ${sent} payment reminders`, 'success');
+       }, idx * 800);
+     });
+   };
 
 
   function setLoading(key, loading) {
@@ -633,12 +701,21 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
   }
 
   function openModal(id) { const el = $(id); if (el) el.style.display = 'flex'; }
-  function closeModals() {
-    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-    const hardDeleteCheckbox = $('hard-delete');
-    if (hardDeleteCheckbox) hardDeleteCheckbox.checked = false;
-  }
-  document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModals(); }));
+   function closeModals() {
+     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+     const hardDeleteCheckbox = $('hard-delete');
+     if (hardDeleteCheckbox) hardDeleteCheckbox.checked = false;
+   }
+
+   // Setup global UI event handlers once DOM is ready
+   function initUI() {
+     // Close modals when clicking outside modal content
+     document.querySelectorAll('.modal').forEach(m => {
+       m.addEventListener('click', e => {
+         if (e.target === m) closeModals();
+       });
+     });
+   }
 
   window.executeDelete = async function () {
     const id = $('delete-item-id').value;
@@ -748,30 +825,30 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
 
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
 
-    // 2. Credit-Based Reconciliation (Slot Check)
-    if (!window.totalPaymentsMap) {
-      window.totalPaymentsMap = {};
-      (window.allPayments || []).forEach(p => {
-        const sid = String(p.student_id || '').trim().toLowerCase();
-        if (!sid) return;
-        if (!window.totalPaymentsMap[sid]) window.totalPaymentsMap[sid] = 0;
-        window.totalPaymentsMap[sid]++;
-      });
+// 2. Credit-Based Reconciliation (Slot Check)
+// Build a monthly payment map (only count payments within target month/year)
+const paymentsMap = {};
+(allPayments || []).forEach(p => {
+  if (p.status === 'paid') {
+    const pDate = new Date(p.payment_date || p.created_at);
+    if (pDate.getUTCFullYear() === targetYear && pDate.getUTCMonth() === targetMonth) {
+      const sid = String(p.student_id || '').trim().toLowerCase();
+      if (!sid) return;
+      if (!paymentsMap[sid]) paymentsMap[sid] = 0;
+      paymentsMap[sid]++;
     }
+  }
+});
 
-    // 1. Priority: Trust the manual Payment Status Column (The Administrator's Truth)
-    const manualStatus = (s.payment_status || '').toLowerCase();
+const s_id_key = String(s.id || '').trim().toLowerCase();
+const totalCredits = paymentsMap[s_id_key] || 0;
+const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
-    // 2. Secondary: Transactional Audit (The Auditor's Truth)
-    const s_id_key = String(s.id || '').trim().toLowerCase();
-    const totalCredits = window.totalPaymentsMap[s_id_key] || 0;
-     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
-
-    const hasDirect = (window.allPayments || []).some(p => {
-      const pDate = new Date(p.payment_date || p.created_at);
-      const psid = String(p.student_id || '').trim().toLowerCase();
-      return psid === s_id_key && pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid';
-    });
+const hasDirect = (window.allPayments || []).some(p => {
+  const pDate = new Date(p.payment_date || p.created_at);
+  const psid = String(p.student_id || '').trim().toLowerCase();
+  return psid === s_id_key && pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid';
+});
 
     const isCurrentMonth = targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear();
     const isAuditPaid = (totalCredits >= monthsRequired) || hasDirect;
@@ -779,11 +856,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
     // Determination Logic: 
     // 1. For PAST months: Audit is the ONLY absolute truth.
     // 2. For CURRENT month: Manual override > Audit (allows instant marking).
-    if (isCurrentMonth) {
-        if (manualStatus === 'paid') return 'Paid';
-        if (manualStatus === 'pending') return 'Pending';
-        if (manualStatus === 'due') return 'Due';
-    }
+    // Note: Manual override feature requires additional implementation - audit-based status used for now
     
     return isAuditPaid ? 'Paid' : (totalCredits === monthsRequired - 1 ? 'Pending' : 'Due');
   }
@@ -998,32 +1071,32 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
 
         // --- Golden State Deduplication ---
         const rawStudents = Array.isArray(students) ? students : [];
-        const seenId = new Set();
-        allStudents = rawStudents.filter(s => {
-          if (!s || !s.id) return false;
-          if (seenId.has(s.id)) return false;
-          seenId.add(s.id);
-          return true;
-        });
+         const seenId = new Set();
+         allStudents = rawStudents.filter(s => {
+           if (!s || !s.id) return false;
+           if (seenId.has(s.id)) return false;
+           seenId.add(s.id);
+           return true;
+         });
 
-        achievementsData = Array.isArray(achievements) ? achievements : [];
-        eventsData = Array.isArray(events) ? events : [];
-        allMessages = Array.isArray(messages) ? messages : [];
-        allAttendance = Array.isArray(attendance) ? attendance : [];
-        // Deduplicate payments by transaction_id (or id if no transaction_id)
-        const seenPayKeys = new Set();
-        const dedupedPayments = (Array.isArray(payments) ? payments : []).filter(p => {
-          const key = (p.transaction_id || p.id || '').toString().trim();
-          if (!key || seenPayKeys.has(key)) return false;
-          seenPayKeys.add(key);
-          return true;
-        });
+         achievementsData = dedupeArray(achievements, 'id');
+         eventsData = dedupeArray(events, 'id');
+         allMessages = dedupeArray(messages, 'id');
+         allAttendance = Array.isArray(attendance) ? attendance : [];
+         // Deduplicate payments by transaction_id (or id if no transaction_id)
+         const seenPayKeys = new Set();
+         const dedupedPayments = (Array.isArray(payments) ? payments : []).filter(p => {
+           const key = (p.transaction_id || p.id || '').toString().trim();
+           if (!key || seenPayKeys.has(key)) return false;
+           seenPayKeys.add(key);
+           return true;
+         });
 
-        allPayments = dedupedPayments.map(p => ({
-          ...p,
-          amount: parseFloat(p.amount) || 0
-        }));
-        allRatingHistory = ratingHistory || [];
+         allPayments = dedupedPayments.map(p => ({
+           ...p,
+           amount: parseFloat(p.amount) || 0
+         }));
+         allRatingHistory = dedupeArray(ratingHistory, 'id');
 
         // Build totalPaymentsMap atomically during load (count only 'paid' payments)
         const pMap = {};
@@ -1117,7 +1190,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
     if ($('e-coach')) $('e-coach').innerHTML = options;
     if ($('att-coach-filter')) $('att-coach-filter').innerHTML = '<option value="">All Coaches</option>' + options;
     
-    if ($('award-student')) $('award-student').innerHTML = '<option value="">Select Student</option>' + allStudents.map(s => `<option value="${s.id}">${getStudentName(s)}</option>`).join('');
+     if ($('award-student')) $('award-student').innerHTML = '<option value="">Select Student</option>' + allStudents.map(s => `<option value="${s.id}">${escapeHtml(getStudentName(s))}</option>`).join('');
   }
 
 
@@ -1462,31 +1535,26 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       setTimeout(() => setAIModule('parent'), 100);
     }
 
-    // Switch page immediately
-    // Default dashboard and report period to PREVIOUS month on login
-    const dl = new Date();
-    dl.setMonth(dl.getMonth() - 1);
-    window.reportMonth = dl.getUTCMonth();
-    window.reportYear = dl.getUTCFullYear();
+    // Switch page immediately - DEFAULT TO CURRENT MONTH (not previous)
+    window.reportMonth = new Date().getUTCMonth();
+    window.reportYear = new Date().getUTCFullYear();
+    if ($('report-period')) $('report-period').value = `${window.reportYear}-${String(window.reportMonth + 1).padStart(2, '0')}`;
     if ($('report-month-select')) $('report-month-select').value = `${window.reportYear}-${String(window.reportMonth + 1).padStart(2, '0')}`;
 
     if (userRole === 'parent') setPage('child');
     else setPage('dash');
 
-    // Load data in background - force refresh to get latest
-    dataCache = { timestamp: 0 }; // Reset cache to ensure fresh load
-      loadAllData(true).then(() => {
-        // Set up notification counts after data loads
-        setupNotificationCounts();
-
-        // Start polling after counts are set
-        startNotificationPolling();
-        if (userRole === 'parent' && studentId) {
-          setCurrentStudent(allStudents.find(s => String(s.id) === String(studentId)));
-          if (currentStudent) renderChild();
-        }
-        resetSessionTimer();
-      });
+    // Load data in background - use cache for faster initial load
+    dataCache = { timestamp: 0 };
+    loadAllData(true).then(() => {
+      setupNotificationCounts();
+      startNotificationPolling();
+      if (userRole === 'parent' && studentId) {
+        setCurrentStudent(allStudents.find(s => String(s.id) === String(studentId)));
+        if (currentStudent) renderChild();
+      }
+      resetSessionTimer();
+    });
   }
 
   function recordSession(action) {
@@ -2216,23 +2284,23 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
         <td>${session}</td>
         <td>${time}</td>
         <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-        <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
-        <td>${paidThisMonthHtml}</td>
-         <td>
-          <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
-            <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')" title="View">View</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')" title="Edit">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${getStudentName(s)}')" title="Delete">Delete</button>
-            <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')" title="More Options">⋮ More</button>
-            <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
-              <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-              <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-              <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="openPromote('${s.id}')">📈 Promote</button>
-              <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
-            </div>
-          </div>
-        </td>
-      </tr>`;
+         <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
+         <td>${paidThisMonthHtml}</td>
+          <td>
+           <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
+             <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')" title="View">View</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')" title="Edit">Edit</button>
+             <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')" title="Delete">Delete</button>
+             <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')" title="More Options">⋮ More</button>
+             <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
+               <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+               <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+               <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="openPromote('${s.id}')">📈 Promote</button>
+               <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
+             </div>
+           </div>
+         </td>
+       </tr>`;
     }).join('');
   }
 
@@ -2279,25 +2347,25 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
         <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
         <td>${coachName}</td>
         <td>${getStudentDate(s) || '-'}</td>
-        <td>${session}</td>
-        <td>${time}</td>
-        <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-        <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
-         <td>
-          <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
-            <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')" title="View">View</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')" title="Edit">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${getStudentName(s)}')" title="Delete">Delete</button>
-            <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')" title="More Options">⋮ More</button>
-            <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
-              <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-              <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-              <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="openPromote('${s.id}')">📈 Promote</button>
-              <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
-            </div>
-          </div>
-        </td>
-      </tr>`;
+         <td>${session}</td>
+         <td>${time}</td>
+         <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+         <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
+          <td>
+           <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
+             <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')" title="View">View</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')" title="Edit">Edit</button>
+             <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')" title="Delete">Delete</button>
+             <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')" title="More Options">⋮ More</button>
+             <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
+               <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+               <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+               <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="openPromote('${s.id}')">📈 Promote</button>
+               <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
+             </div>
+           </div>
+         </td>
+       </tr>`;
     }).join('');
   }*/
 
@@ -2572,42 +2640,42 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       const avgRating = studs.length ? Math.round(studs.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / studs.length) : 800;
       const photo = c.photo_url || c.photo || c.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000000&bold=true&size=120`;
 
-      return `
-        <div class="coach-card">
-          <div class="coach-card-header">
-            <img src="${photo}" class="coach-card-av" alt="${getCoachName(c)}">
-            <div>
-              <div class="coach-card-title">${getCoachName(c)}</div>
-              <div class="coach-card-subtitle">${getCoachSpecialty(c) || 'Chess Coach'}</div>
-            </div>
-          </div>
-          <div class="coach-card-stats">
-            <div class="coach-stat">
-              <span class="coach-stat-label">Students</span>
-              <span class="coach-stat-val">${studentCount}</span>
-            </div>
-            <div class="coach-stat">
-              <span class="coach-stat-label">Avg ELO</span>
-              <span class="coach-stat-val">${avgRating}</span>
-            </div>
-            <div class="coach-stat">
-              <span class="coach-stat-label">Salary</span>
-              <span class="coach-stat-val">₹${(getCoachSalary(c) || 0).toLocaleString()}</span>
-            </div>
-            <div class="coach-stat">
-              <span class="coach-stat-label">Status</span>
-              <span class="coach-stat-val ${getCoachStatus(c) === 'active' ? 'text-success' : 'text-danger'}">${getCoachStatus(c) === 'active' ? 'Active' : 'Inactive'}</span>
-            </div>
-          </div>
-          <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr; gap: 8px;">
-            <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️ Edit</button>
-            <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${getCoachName(c).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
-          </div>
-          <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
-        </div>
-      `;
+       return `
+         <div class="coach-card">
+           <div class="coach-card-header">
+             <img src="${photo}" class="coach-card-av" alt="${escapeHtml(getCoachName(c))}">
+             <div>
+               <div class="coach-card-title">${escapeHtml(getCoachName(c))}</div>
+               <div class="coach-card-subtitle">${escapeHtml(getCoachSpecialty(c) || 'Chess Coach')}</div>
+             </div>
+           </div>
+           <div class="coach-card-stats">
+             <div class="coach-stat">
+               <span class="coach-stat-label">Students</span>
+               <span class="coach-stat-val">${studentCount}</span>
+             </div>
+             <div class="coach-stat">
+               <span class="coach-stat-label">Avg ELO</span>
+               <span class="coach-stat-val">${avgRating}</span>
+             </div>
+             <div class="coach-stat">
+               <span class="coach-stat-label">Salary</span>
+               <span class="coach-stat-val">₹${(getCoachSalary(c) || 0).toLocaleString()}</span>
+             </div>
+             <div class="coach-stat">
+               <span class="coach-stat-label">Status</span>
+               <span class="coach-stat-val ${getCoachStatus(c) === 'active' ? 'text-success' : 'text-danger'}">${getCoachStatus(c) === 'active' ? 'Active' : 'Inactive'}</span>
+             </div>
+           </div>
+           <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️ Edit</button>
+             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${escapeHtml(getCoachName(c)).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
+           </div>
+           <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
+         </div>
+       `;
     }).join('');
   }
 
@@ -2652,40 +2720,40 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       let scheduleHtml = `<div class="schedule-grid-premium">`;
 
-      days.forEach(day => {
-        const daySlots = assignedStudents.filter(s => s.batch_day === day || s.session_day === day);
-        if (daySlots.length > 0) {
-          scheduleHtml += `
-            <div class="schedule-day-column">
-              <div class="schedule-day-header">${day}</div>
-              ${daySlots.sort((a, b) => (a.batch_time || '').localeCompare(b.batch_time || '')).map(s => `
-                <div class="schedule-slot-card">
-                  <div class="slot-time">${s.batch_time ? formatTime(s.batch_time) : 'TBD'}</div>
-                  <div class="slot-stud">${getStudentName(s)}</div>
-                  <div class="slot-lvl">${getStudentLevel(s)}</div>
-                </div>
-              `).join('')}
-            </div>
-          `;
-        }
-      });
+       days.forEach(day => {
+         const daySlots = assignedStudents.filter(s => s.batch_day === day || s.session_day === day);
+         if (daySlots.length > 0) {
+           scheduleHtml += `
+             <div class="schedule-day-column">
+               <div class="schedule-day-header">${day}</div>
+               ${daySlots.sort((a, b) => (a.batch_time || '').localeCompare(b.batch_time || '')).map(s => `
+                 <div class="schedule-slot-card">
+                   <div class="slot-time">${s.batch_time ? formatTime(s.batch_time) : 'TBD'}</div>
+                   <div class="slot-stud">${escapeHtml(getStudentName(s))}</div>
+                   <div class="slot-lvl">${escapeHtml(getStudentLevel(s))}</div>
+                 </div>
+               `).join('')}
+             </div>
+           `;
+         }
+       });
 
-      // Handle Unscheduled (TBD)
-      const unscheduled = assignedStudents.filter(s => !s.batch_day && !s.session_day);
-      if (unscheduled.length > 0) {
-        scheduleHtml += `
-          <div class="schedule-day-column tbd">
-            <div class="schedule-day-header">Unscheduled / TBD</div>
-            ${unscheduled.map(s => `
-              <div class="schedule-slot-card">
-                <div class="slot-time">TBD</div>
-                <div class="slot-stud">${getStudentName(s)}</div>
-                <div class="slot-lvl">${getStudentLevel(s)}</div>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }
+       // Handle Unscheduled (TBD)
+       const unscheduled = assignedStudents.filter(s => !s.batch_day && !s.session_day);
+       if (unscheduled.length > 0) {
+         scheduleHtml += `
+           <div class="schedule-day-column tbd">
+             <div class="schedule-day-header">Unscheduled / TBD</div>
+             ${unscheduled.map(s => `
+               <div class="schedule-slot-card">
+                 <div class="slot-time">TBD</div>
+                 <div class="slot-stud">${escapeHtml(getStudentName(s))}</div>
+                 <div class="slot-lvl">${escapeHtml(getStudentLevel(s))}</div>
+               </div>
+             `).join('')}
+           </div>
+         `;
+       }
 
       scheduleHtml += `</div>`;
       container.innerHTML = scheduleHtml;
@@ -2820,51 +2888,51 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
 
     const isAdmin = role === 'admin' || role === 'master';
 
-    gridEl.style.display = 'grid';
-    gridEl.innerHTML = visibleEvents.map(e => {
-      const maxSpots = e.max_participants || 50;
-      const regCount = e.registrations_count || (e.registered_students?.length || 0);
-      const spotsLeft = maxSpots - regCount;
-      const isArchived = e.archived === true || e.status === 'archived';
-      return `<div class="ev-card" ${isArchived ? 'style="opacity:0.7"' : ''}>
-        ${e.img_url ? `<img src="${e.img_url}" class="ev-poster" alt="Event Poster">` : ''}
-        <div class="ev-header">
-          <span class="ev-type-badge">${getEventType(e)}</span>
-          <span class="ev-date-badge">${e.date ? new Date(e.date).toLocaleDateString() : ''}</span>
-          ${isArchived ? '<span class="badge" style="background:var(--ivory3);color:var(--obsidian)">Archived</span>' : ''}
-        </div>
-        <div class="ev-body">
-          <div class="ev-title">${e.title}</div>
-          <div class="ev-meta">
-            <span class="ev-meta-item ev-time">${getEventTime(e)}</span>
-            <span class="ev-meta-item ev-loc">${e.location || 'TBD'}</span>
-            ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${e.prize_pool}</span>` : ''}
-          </div>
-          ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">📍 View on Map</a>` : ''}
-          ${e.description ? `<div class="ev-desc">${e.description}</div>` : ''}
-        </div>
-        <div class="ev-progress-wrap">
-          <div class="ev-progress-label">
-            <span>Registrations</span>
-            <span>${regCount}/${maxSpots}</span>
-          </div>
-          <div class="ev-progress-track">
-            <div class="ev-progress-bar" style="width:${(regCount / maxSpots) * 100}%"></div>
-          </div>
-        </div>
-        <div class="ev-footer">
-          <div class="ev-spots"><strong>${spotsLeft}</strong> spots left</div>
-          ${role === 'parent' ? (e.registered_students?.includes(currentStudent?.id) ? '<span class="badge badge-success">✓ Registered</span>' : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`) : ''}
-          ${isAdmin ? `
-            <div style="display:flex;gap:8px;margin-left:auto">
-              <button class="btn btn-outline-grey btn-sm" onclick="editEvent('${e.id}')">Edit</button>
-              <button class="btn btn-outline btn-sm" onclick="archiveEvent('${e.id}')">${isArchived ? 'Unarchive' : 'Archive'}</button>
-              <button class="btn btn-danger btn-sm" onclick="confirmDeleteEvent('${e.id}', '${e.title.replace(/'/g, "\\'")}')">Delete</button>
-            </div>
-          ` : ''}
-        </div>
-      </div>`;
-    }).join('');
+     gridEl.style.display = 'grid';
+     gridEl.innerHTML = visibleEvents.map(e => {
+       const maxSpots = e.max_participants || 50;
+       const regCount = e.registrations_count || (e.registered_students?.length || 0);
+       const spotsLeft = maxSpots - regCount;
+       const isArchived = e.archived === true || e.status === 'archived';
+       return `<div class="ev-card" ${isArchived ? 'style="opacity:0.7"' : ''}>
+         ${e.img_url ? `<img src="${e.img_url}" class="ev-poster" alt="Event Poster">` : ''}
+         <div class="ev-header">
+           <span class="ev-type-badge">${escapeHtml(getEventType(e))}</span>
+           <span class="ev-date-badge">${e.date ? new Date(e.date).toLocaleDateString() : ''}</span>
+           ${isArchived ? '<span class="badge" style="background:var(--ivory3);color:var(--obsidian)">Archived</span>' : ''}
+         </div>
+         <div class="ev-body">
+           <div class="ev-title">${escapeHtml(e.title)}</div>
+           <div class="ev-meta">
+             <span class="ev-meta-item ev-time">${escapeHtml(getEventTime(e))}</span>
+             <span class="ev-meta-item ev-loc">${escapeHtml(e.location || 'TBD')}</span>
+             ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${escapeHtml(e.prize_pool)}</span>` : ''}
+           </div>
+           ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">📍 View on Map</a>` : ''}
+           ${e.description ? `<div class="ev-desc">${escapeHtml(e.description)}</div>` : ''}
+         </div>
+         <div class="ev-progress-wrap">
+           <div class="ev-progress-label">
+             <span>Registrations</span>
+             <span>${regCount}/${maxSpots}</span>
+           </div>
+           <div class="ev-progress-track">
+             <div class="ev-progress-bar" style="width:${(regCount / maxSpots) * 100}%"></div>
+           </div>
+         </div>
+         <div class="ev-footer">
+           <div class="ev-spots"><strong>${spotsLeft}</strong> spots left</div>
+           ${role === 'parent' ? (e.registered_students?.includes(currentStudent?.id) ? '<span class="badge badge-success">✓ Registered</span>' : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`) : ''}
+           ${isAdmin ? `
+             <div style="display:flex;gap:8px;margin-left:auto">
+               <button class="btn btn-outline-grey btn-sm" onclick="editEvent('${e.id}')">Edit</button>
+               <button class="btn btn-outline btn-sm" onclick="archiveEvent('${e.id}')">${isArchived ? 'Unarchive' : 'Archive'}</button>
+               <button class="btn btn-danger btn-sm" onclick="confirmDeleteEvent('${e.id}', '${escapeHtml(e.title).replace(/'/g, "\\'")}')">Delete</button>
+             </div>
+           ` : ''}
+         </div>
+       </div>`;
+     }).join('');
   }
 
   function openEventModal() {
@@ -3005,26 +3073,26 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
     }
 
     const isAdmin = role === 'admin' || role === 'master';
-    gridEl.innerHTML = achievementsData.sort((a, b) => new Date(b.date_achieved || b.created_at) - new Date(a.date_achieved || a.created_at)).map(a => {
-      const student = allStudents.find(s => String(s.id) === String(a.student_id));
-      const studentName = student ? getStudentName(student) : 'Unknown Student';
-      return `
-        <div class="ach-card">
-          ${a.img_url ? `<img src="${a.img_url}" class="ach-img" alt="Achievement">` : '<div class="ach-img-placeholder">🏆</div>'}
-          <div class="ach-body">
-            <div class="ach-title">${a.title}</div>
-            <div class="ach-student">${studentName}</div>
-            <div class="ach-date">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
-          </div>
-          ${isAdmin ? `
-            <div class="ach-actions">
-              <button class="btn btn-outline-grey btn-sm" onclick="editAchievement('${a.id}')">Edit</button>
-              <button class="btn btn-danger btn-sm" onclick="confirmDeleteAchievement('${a.id}', '${a.title.replace(/'/g, "\\'")}')">Delete</button>
-            </div>
-          ` : ''}
-        </div>
-      `;
-    }).join('');
+     gridEl.innerHTML = achievementsData.sort((a, b) => new Date(b.date_achieved || b.created_at) - new Date(a.date_achieved || a.created_at)).map(a => {
+       const student = allStudents.find(s => String(s.id) === String(a.student_id));
+       const studentName = student ? getStudentName(student) : 'Unknown Student';
+       return `
+         <div class="ach-card">
+           ${a.img_url ? `<img src="${a.img_url}" class="ach-img" alt="Achievement">` : '<div class="ach-img-placeholder">🏆</div>'}
+           <div class="ach-body">
+             <div class="ach-title">${escapeHtml(a.title)}</div>
+             <div class="ach-student">${escapeHtml(studentName)}</div>
+             <div class="ach-date">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
+           </div>
+           ${isAdmin ? `
+             <div class="ach-actions">
+               <button class="btn btn-outline-grey btn-sm" onclick="editAchievement('${a.id}')">Edit</button>
+               <button class="btn btn-danger btn-sm" onclick="confirmDeleteAchievement('${a.id}', '${escapeHtml(a.title).replace(/'/g, "\\'")}')">Delete</button>
+             </div>
+           ` : ''}
+         </div>
+       `;
+     }).join('');
   }
 
   function editAchievement(id) {
@@ -3228,20 +3296,20 @@ Thank you for your continued support and cooperation.
       return;
     }
 
-    body.innerHTML = myPayments.map(p => `
-      <tr>
-        <td>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
-        <td style="color:var(--success);font-weight:600">₹${(p.amount || 0).toLocaleString()}</td>
-        <td>${p.payment_method || 'Cash'}</td>
-        <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || 'N/A'}</td>
-        <td>
-          <div style="display:flex;gap:5px">
-            <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${p.amount}', '${getStudentLevel(s)}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">📄</button>
-            <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
+     body.innerHTML = myPayments.map(p => `
+       <tr>
+         <td>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
+         <td style="color:var(--success);font-weight:600">₹${(p.amount || 0).toLocaleString()}</td>
+         <td>${escapeHtml(p.payment_method || 'Cash')}</td>
+         <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || 'N/A'}</td>
+         <td>
+           <div style="display:flex;gap:5px">
+             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">📄</button>
+             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
+           </div>
+         </td>
+       </tr>
+     `).join('');
   };
 
   window.deletePayment = async function (paymentId, studentId) {
@@ -3461,25 +3529,25 @@ Thank you for your continued support and cooperation.
 
       const invoiceId = 'INV-' + (s.id ? s.id.toString().slice(-6) : '000000');
 
-      // Get Coach Info
-      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
-      const coachName = coach ? getCoachName(coach) : 'N/A';
-      const sessionType = getStudentBatchType(s) || 'Regular';
-      const scheduleTime = getStudentSessionTime(s) || 'TBD';
+     // Get Coach Info
+       const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+       const coachName = coach ? escapeHtml(getCoachName(coach)) : 'N/A';
+       const sessionType = getStudentBatchType(s) || 'Regular';
+       const scheduleTime = getStudentSessionTime(s) || 'TBD';
 
-      let actionButtons = '';
-      if (status === 'Unpaid' || status === 'Due' || status === 'Pending') {
-        actionButtons = `
-          <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-          <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-          <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
-        `;
-      } else if (status === 'Paid') {
-        actionButtons = `
-          <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}', '${getStudentLevel(s)}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
-          <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-        `;
-      } else {
+       let actionButtons = '';
+       if (status === 'Unpaid' || status === 'Due' || status === 'Pending') {
+         actionButtons = `
+           <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+           <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+           <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
+         `;
+       } else if (status === 'Paid') {
+         actionButtons = `
+           <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+           <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+         `;
+       } else {
         actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
       }
 
@@ -3685,24 +3753,24 @@ Thank you for your continued support and cooperation.
       return;
     }
 
-    listEl.style.display = 'grid';
-    listEl.innerHTML = allMessages.map(m => `
-      <div class="msg-card ${m.is_read ? '' : 'unread'}">
-        <div class="msg-card-head">
-          <div class="msg-card-sender">
-            ${m.sender_name || 'User'}
-            ${!m.is_read ? '<span class="badge badge-level" style="margin-left:8px">New</span>' : ''}
-          </div>
-          <div class="msg-card-time">${m.created_at ? new Date(m.created_at).toLocaleDateString() : ''}</div>
-        </div>
-        <div class="msg-card-subject">${m.subject || 'No Subject'}</div>
-        <div class="msg-card-body">${m.message || ''}</div>
-        <div class="msg-card-actions">
-          ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')">✓ Mark Read</button>` : ''}
-          <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${m.id}')">🗑️ Delete</button>
-        </div>
-      </div>
-    `).join('');
+     listEl.style.display = 'grid';
+     listEl.innerHTML = allMessages.map(m => `
+       <div class="msg-card ${m.is_read ? '' : 'unread'}">
+         <div class="msg-card-head">
+           <div class="msg-card-sender">
+             ${escapeHtml(m.sender_name || 'User')}
+             ${!m.is_read ? '<span class="badge badge-level" style="margin-left:8px">New</span>' : ''}
+           </div>
+           <div class="msg-card-time">${m.created_at ? new Date(m.created_at).toLocaleDateString() : ''}</div>
+         </div>
+         <div class="msg-card-subject">${escapeHtml(m.subject || 'No Subject')}</div>
+         <div class="msg-card-body">${escapeHtml(m.message || '')}</div>
+         <div class="msg-card-actions">
+           ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')">✓ Mark Read</button>` : ''}
+           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${m.id}')">🗑️ Delete</button>
+         </div>
+       </div>
+     `).join('');
   }
   async function markMsgRead(id) {
     await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'PUT', body: JSON.stringify({ is_read: true }) });
@@ -3793,15 +3861,15 @@ Thank you for your continued support and cooperation.
       return;
     }
 
-    achGrid.innerHTML = myAchs.slice(0, 6).map(a => `
-      <div class="ach-card">
-        ${a.img_url ? `<img src="${a.img_url}" alt="${a.title}">` : '<div class="ach-icon">🏆</div>'}
-        <div class="ach-info">
-          <div class="ach-title">${a.title}</div>
-          <div class="ach-date">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
-        </div>
-      </div>
-    `).join('');
+     achGrid.innerHTML = myAchs.slice(0, 6).map(a => `
+       <div class="ach-card">
+         ${a.img_url ? `<img src="${escapeHtml(a.img_url)}" alt="${escapeHtml(a.title)}">` : '<div class="ach-icon">🏆</div>'}
+         <div class="ach-info">
+           <div class="ach-title">${escapeHtml(a.title)}</div>
+           <div class="ach-date">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
+         </div>
+       </div>
+     `).join('');
   }
   function openContactModal() {
     if (!currentStudent) return;
@@ -4551,10 +4619,10 @@ Thank you for your continued support and cooperation.
     } catch (e) {
       thinkingMsg.remove();
       console.error('AI Query Error:', e);
-      const errorMsg = document.createElement('div');
-      errorMsg.className = 'ai-ws-msg bot';
-      errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️ Sorry, I encountered an error: ${e.message}. Try again or check your connection.</div>`;
-      chatContainer.appendChild(errorMsg);
+       const errorMsg = document.createElement('div');
+       errorMsg.className = 'ai-ws-msg bot';
+       errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️ Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
+       chatContainer.appendChild(errorMsg);
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
   }
@@ -4816,24 +4884,26 @@ Thank you for your continued support and cooperation.
     document.addEventListener(event, resetSessionTimer, { passive: true });
   });
 
-  window.addEventListener('DOMContentLoaded', () => {
-    const auth = localStorage.getItem('chesskidoo_auth');
-    if (auth) {
-      try {
-        const data = JSON.parse(auth);
-        role = data.role;
-        finishLogin(data.user || 'User', data.role, data.studentId);
-        resetSessionTimer();
-      } catch (e) {
-        localStorage.removeItem('chesskidoo_auth');
-        $('login-screen').style.display = 'flex';
-        document.body.classList.add('login-mode');
-      }
-    } else {
-      $('login-screen').style.display = 'flex';
-      document.body.classList.add('login-mode');
-    }
-  });
+   window.addEventListener('DOMContentLoaded', () => {
+     initUI(); // Setup UI event handlers
+
+     const auth = localStorage.getItem('chesskidoo_auth');
+     if (auth) {
+       try {
+         const data = JSON.parse(auth);
+         role = data.role;
+         finishLogin(data.user || 'User', data.role, data.studentId);
+         resetSessionTimer();
+       } catch (e) {
+         localStorage.removeItem('chesskidoo_auth');
+         $('login-screen').style.display = 'flex';
+         document.body.classList.add('login-mode');
+       }
+     } else {
+       $('login-screen').style.display = 'flex';
+       document.body.classList.add('login-mode');
+     }
+   });
 
   // ═══════════════════════════════════════════════════════════════
   // EXPOSE GLOBALS TO WINDOW
@@ -4944,8 +5014,9 @@ Thank you for your continued support and cooperation.
   window.renderChildAchievements = renderChildAchievements;
   window.openContactModal = openContactModal;
   window.sendMsg = sendMsg;
-  window.sendFeedback = sendFeedback;
-  window.viewPaymentHistory = viewPaymentHistory;
+   window.sendFeedback = sendFeedback;
+   window.informAllDueStudents = informAllDueStudents;
+   window.viewPaymentHistory = viewPaymentHistory;
   window.openAttendanceMarking = openAttendanceMarking;
   window.saveBatchAttendance = saveBatchAttendance;
   window.updateAttStats = updateAttStats;
@@ -4963,38 +5034,38 @@ Thank you for your continued support and cooperation.
     const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
     const failedLogins = auditLogs.filter(l => l.action === 'login_failed').slice(-10).reverse();
 
-    let html = '';
+     let html = '';
 
-    if (unread.length > 0) {
-      html += `<div style="padding:12px;background:var(--gold-glow);border-radius:8px;margin-bottom:12px">
-        <div style="font-weight:600;color:var(--gold)">📬 Unread Messages (${unread.length})</div>
-        ${unread.slice(0, 5).map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-size:13px;font-weight:500">${m.subject || 'No Subject'}</div>
-            <div style="font-size:11px;color:var(--ivory-dim)">${m.sender_name || 'User'} • ${new Date(m.created_at).toLocaleDateString()}</div>
-          </div>
-          <button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')" style="padding:2px 8px;font-size:10px">Mark Read</button>
-        </div>`).join('')}
-      </div>`;
-    }
+     if (unread.length > 0) {
+       html += `<div style="padding:12px;background:var(--gold-glow);border-radius:8px;margin-bottom:12px">
+         <div style="font-weight:600;color:var(--gold)">📬 Unread Messages (${unread.length})</div>
+         ${unread.slice(0, 5).map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+           <div>
+             <div style="font-size:13px;font-weight:500">${escapeHtml(m.subject || 'No Subject')}</div>
+             <div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(m.sender_name || 'User')} • ${new Date(m.created_at).toLocaleDateString()}</div>
+           </div>
+           <button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')" style="padding:2px 8px;font-size:10px">Mark Read</button>
+         </div>`).join('')}
+       </div>`;
+     }
 
-    if (due.length > 0) {
-      html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-        <div style="font-weight:600;color:var(--danger)">💰 Due Payments (${due.length})</div>
-        <div style="font-size:12px;color:var(--ivory-dim)">Students with pending fees</div>
-        ${due.slice(0, 5).map(s => `<div style="padding:6px 0;font-size:12px;color:var(--ivory)">${getStudentName(s)}</div>`).join('')}
-      </div>`;
-    }
+     if (due.length > 0) {
+       html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
+         <div style="font-weight:600;color:var(--danger)">💰 Due Payments (${due.length})</div>
+         <div style="font-size:12px;color:var(--ivory-dim)">Students with pending fees</div>
+         ${due.slice(0, 5).map(s => `<div style="padding:6px 0;font-size:12px;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div>`).join('')}
+       </div>`;
+     }
 
-    if (failedLogins.length > 0) {
-      html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-        <div style="font-weight:600;color:var(--danger)">🚫 Failed Logins (${failedLogins.length})</div>
-        ${failedLogins.slice(0, 5).map(l => `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
-          <span>${l.user || 'Unknown'}</span>
-          <span style="color:var(--ivory-dim);float:right">${new Date(l.timestamp).toLocaleString('en-IN')}</span>
-        </div>`).join('')}
-      </div>`;
-    }
+     if (failedLogins.length > 0) {
+       html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
+         <div style="font-weight:600;color:var(--danger)">🚫 Failed Logins (${failedLogins.length})</div>
+         ${failedLogins.slice(0, 5).map(l => `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+           <span>${escapeHtml(l.user || 'Unknown')}</span>
+           <span style="color:var(--ivory-dim);float:right">${new Date(l.timestamp).toLocaleString('en-IN')}</span>
+         </div>`).join('')}
+       </div>`;
+     }
 
     if (!html) {
       html = '<div style="text-align:center;padding:30px;color:var(--ivory-dim)">No new notifications</div>';

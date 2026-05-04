@@ -41,17 +41,20 @@ window.doLogin = async function() {
         
         if (authRes && authRes.ok) {
             const data = await authRes.json();
-            if (data.success) {
-                role = data.role;
-                localStorage.setItem('chesskidoo_auth', JSON.stringify({ 
-                    role, 
-                    user: data.user || user, 
-                    studentId: data.student_id,
-                    token: data.token 
-                }));
-                finishLogin(data.user || user, role, data.student_id);
-                toast(`Welcome back, ${data.role}!`, 'success');
-                return;
+         if (data.success) {
+                 role = data.role;
+                 // Store both the full auth object and a separate token for API calls
+                 localStorage.setItem('chesskidoo_auth', JSON.stringify({
+                     role,
+                     user: data.user || user,
+                     studentId: data.student_id,
+                     token: data.token
+                 }));
+                 // Store token separately for API Authorization header
+                 localStorage.setItem('sb-access-token', data.token);
+                 finishLogin(data.user || user, role, data.student_id);
+                 toast(`Welcome back, ${data.role}!`, 'success');
+                 return;
             } else {
                 errEl.textContent = data.details || data.error || 'Invalid credentials.';
                 errEl.style.display = 'block';
@@ -72,20 +75,21 @@ window.doLogin = async function() {
     }
 };
 
-window.doLogout = function() {
-    localStorage.removeItem('chesskidoo_auth');
-    role = null;
-    if (window.role) window.role = null;
-    
-    document.body.classList.remove('admin-mode', 'parent-mode', 'master-mode');
-    document.body.classList.add('login-mode');
-    
-    const loginScreen = document.getElementById('login-screen');
-    if (loginScreen) loginScreen.style.display = 'flex';
-    
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.classList.remove('active');
-    
-    toast('Logged out safely.', 'info');
-    setTimeout(() => location.reload(), 500); // Reload to clear all state
-};
+ window.doLogout = function() {
+     localStorage.removeItem('chesskidoo_auth');
+     localStorage.removeItem('sb-access-token');
+     role = null;
+     if (window.role) window.role = null;
+     
+     document.body.classList.remove('admin-mode', 'parent-mode', 'master-mode');
+     document.body.classList.add('login-mode');
+     
+     const loginScreen = document.getElementById('login-screen');
+     if (loginScreen) loginScreen.style.display = 'flex';
+     
+     const sidebar = document.getElementById('sidebar');
+     if (sidebar) sidebar.classList.remove('active');
+     
+     toast('Logged out safely.', 'info');
+     setTimeout(() => location.reload(), 500); // Reload to clear all state
+   };
