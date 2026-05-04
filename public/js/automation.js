@@ -46,7 +46,7 @@
     const monthKey = `${today.getUTCFullYear()}-${today.getUTCMonth()}`;
     const lastShown = localStorage.getItem('automation_morning_shown');
     if (lastShown === monthKey) return;
-    if (today.getDate() > 5) return;
+    if (today.getDate() !== 1) return;
 
     const panel = document.createElement('div');
     panel.id = 'morning-action-panel';
