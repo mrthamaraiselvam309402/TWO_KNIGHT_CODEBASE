@@ -714,7 +714,6 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       const totalDebt = Math.max(0, (fee * monthsReq) - totalPaidAmount);
       const monthsBehind = Math.ceil(totalDebt / fee);
       const arrearsNote = monthsBehind > 1 ? ` (including ${monthsBehind - 1} months arrears)` : '';
-      const arrearsNote = monthsBehind > 1 ? ` (including ${monthsBehind - 1} months arrears)` : '';
 
       const dueDateStr = s.due_date
         ? new Date(s.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
