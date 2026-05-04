@@ -863,40 +863,36 @@ Thank you for your cooperation.
 
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
 
-// 2. Credit-Based Reconciliation (Slot Check)
-// Build a monthly payment map (only count payments within target month/year)
-const paymentsMap = {};
-(allPayments || []).forEach(p => {
-  if (p.status === 'paid') {
-    const pDate = new Date(p.payment_date || p.created_at);
-    if (pDate.getUTCFullYear() === targetYear && pDate.getUTCMonth() === targetMonth) {
-      const sid = String(p.student_id || '').trim().toLowerCase();
-      if (!sid) return;
-      if (!paymentsMap[sid]) paymentsMap[sid] = 0;
-      paymentsMap[sid]++;
-    }
-  }
-});
-
-const s_id_key = String(s.id || '').trim().toLowerCase();
-const totalCredits = paymentsMap[s_id_key] || 0;
-const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
-
-const hasDirect = (window.allPayments || []).some(p => {
-  const pDate = new Date(p.payment_date || p.created_at);
-  const psid = String(p.student_id || '').trim().toLowerCase();
-  return psid === s_id_key && pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid';
-});
-
-    const isCurrentMonth = targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear();
-    const isAuditPaid = (totalCredits >= monthsRequired) || hasDirect;
-
-    // Determination Logic: 
-    // 1. For PAST months: Audit is the ONLY absolute truth.
-    // 2. For CURRENT month: Manual override > Audit (allows instant marking).
-    // Note: Manual override feature requires additional implementation - audit-based status used for now
+    // 2. Cumulative Audit (All-Time Payment Count)
+    const s_id_key = String(s.id || '').trim().toLowerCase();
     
-    return isAuditPaid ? 'Paid' : (totalCredits === monthsRequired - 1 ? 'Pending' : 'Due');
+    let totalPaidInvoices = 0;
+    let hasPaymentThisMonth = false;
+
+    (allPayments || []).forEach(p => {
+      const psid = String(p.student_id || '').trim().toLowerCase();
+      if (psid === s_id_key && p.status === 'paid') {
+        const pDate = new Date(p.payment_date || p.created_at);
+        if (pDate <= targetMonthEnd) {
+          totalPaidInvoices++;
+        }
+        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
+          hasPaymentThisMonth = true;
+        }
+      }
+    });
+
+    const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+
+    // Determination Logic:
+    // 1. Paid: Total payments cover all months required up to this point.
+    if (totalPaidInvoices >= monthsRequired) return 'Paid';
+
+    // 2. Pending: Missing exactly one payment AND they haven't paid for the target month yet.
+    if (totalPaidInvoices === monthsRequired - 1 && !hasPaymentThisMonth) return 'Pending';
+
+    // 3. Due: Owe for a previous month OR more than 1 month behind.
+    return 'Due';
   }
 
   function getStudentBatchType(s) {
