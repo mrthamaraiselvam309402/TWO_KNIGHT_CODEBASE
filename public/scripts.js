@@ -2576,23 +2576,23 @@ Thank you for your cooperation.
               })
             });
           } catch (pe) { console.warn('Payment logging failed during profile update:', pe); }
-        }
+         }
 
-        // Log rating history if changed
-        if (newElo !== oldElo) {
-          try {
-            await apiCall('/api/rating_history', {
-              method: 'POST',
-              body: JSON.stringify({ student_id: id, rating: newElo, change_type: 'manual', notes: 'Manual adjustment' })
-            });
-          } catch (e) { console.warn('Rating history table missing, skipping log.'); }
-        }
+         // Log rating history if changed
+         if (newElo !== oldElo) {
+           try {
+             await apiCall('/api/rating_history', {
+               method: 'POST',
+               body: JSON.stringify({ student_id: id, rating: newElo, change_type: 'manual', notes: 'Manual adjustment' })
+             });
+           } catch (e) { console.warn('Rating history table missing, skipping log.'); }
+         }
+
+         // Determine newStatus once (already available from earlier)
+         const paymentStatusVal = $('e-payment-status')?.value || s.payment_status || 'Pending';
 
          // OPTIMISTIC UPDATE: immediately patch the in-memory record so the UI
          // shows the new values without waiting for the next loadAllData fetch.
-         // This prevents stale data from showing if Supabase is slow or if
-         // the column name doesn't match what loadAllData returns.
-         const newStatus = $('e-payment-status')?.value || s.payment_status || 'Pending';
          const idx = allStudents.findIndex(x => String(x.id) === String(id));
          if (idx !== -1) {
            allStudents[idx] = {
@@ -2606,7 +2606,7 @@ Thank you for your cooperation.
              rating: data.rating,
              coach_id: data.coach_id,
              status: data.status,
-             payment_status: newStatus,
+             payment_status: paymentStatusVal,
              enrollment_date: data.enrollment_date,
              due_date: data.due_date,
              session_mode: data.session_mode,
@@ -2621,10 +2621,10 @@ Thank you for your cooperation.
            };
          }
 
-        // FIX C2: If this student is the currently logged-in parent's child, refresh currentStudent
-        if (currentStudent && String(currentStudent.id) === String(id)) {
-          setCurrentStudent(allStudents[idx]);
-        }
+         // FIX C2: If this student is the currently logged-in parent's child, refresh currentStudent
+         if (currentStudent && String(currentStudent.id) === String(id)) {
+           setCurrentStudent(allStudents[idx]);
+         }
 
          toast('Student updated!', 'success');
          closeModals();
