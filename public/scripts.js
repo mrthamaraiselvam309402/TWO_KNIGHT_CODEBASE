@@ -1204,9 +1204,9 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
         const studs = await studsRes.json();
         const rawStuds = studs.data || studs || [];
 
-        // SYNC: Use identical deduplication logic as loadAllData (ID only)
+        const currentRaw = Array.isArray(rawStuds) ? rawStuds : [];
         const seenId = new Set();
-        const dedupedStuds = rawStuds.filter(s => {
+        const dedupedStuds = currentRaw.filter(s => {
           if (!s || !s.id) return false;
           if (seenId.has(s.id)) return false;
           seenId.add(s.id);
