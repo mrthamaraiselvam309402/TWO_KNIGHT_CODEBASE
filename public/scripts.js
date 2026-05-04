@@ -910,8 +910,8 @@ Thank you for your cooperation.
      }
 
      // Determination Logic:
-     // 1. Paid: Total payments cover all months required up to this point.
-     if (totalPaidInvoices >= monthsRequired) return 'Paid';
+     // 1. Paid: Must have a payment in the target month AND total credits cover all required months.
+     if (totalPaidInvoices >= monthsRequired && hasPaymentThisMonth) return 'Paid';
 
      // 2. Pending: Missing exactly one payment AND they haven't paid for the target month yet.
      if (totalPaidInvoices === monthsRequired - 1 && !hasPaymentThisMonth) return 'Pending';
@@ -2021,27 +2021,23 @@ Thank you for your cooperation.
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-     // 1. Target Dataset Preparation
-     const s_id_map = {};
-     (allPayments || []).forEach(p => {
-       if (p.status === 'paid') {
-         const sid = String(p.student_id || '').trim().toLowerCase();
-         if (!sid) return;
-         const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
-         if (!s) return;
+      // 1. Target Dataset Preparation — ONLY count payments in the target month
+      const s_id_map = {};
+      (allPayments || []).forEach(p => {
+        if (p.status === 'paid') {
+          const sid = String(p.student_id || '').trim().toLowerCase();
+          if (!sid) return;
+          const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+          if (!s) return;
 
-         const enrollDateStr = getStudentDate(s);
-         const baseline = new Date(Date.UTC(2026, 3, 1));
-         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-         const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-         
-         const pDate = new Date(p.payment_date || p.created_at);
-         if (pDate >= effectiveEnroll && pDate <= targetMonthEnd) {
-           if (!s_id_map[sid]) s_id_map[sid] = 0;
-           s_id_map[sid]++;
-         }
-       }
-     });
+          const pDate = new Date(p.payment_date || p.created_at);
+          // CRITICAL: Only count payments made in the target month/year
+          if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
+            if (!s_id_map[sid]) s_id_map[sid] = 0;
+            s_id_map[sid]++;
+          }
+        }
+      });
 
     const targetStudents = (allStudents || []).filter(s => {
       const sStatus = (s.status || 'active').toLowerCase();
