@@ -67,7 +67,7 @@
       </style>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div style="color:#dca33e;font-size:18px;font-weight:700">🔄 New Billing Month!</div>
-        <button onclick="document.getElementById('morning-action-panel').remove()"
+        <button onclick="localStorage.setItem('automation_morning_shown','${monthKey}');document.getElementById('morning-action-panel').remove()"
           style="background:none;border:none;color:#7a7870;font-size:20px;cursor:pointer">✕</button>
       </div>
       <p style="color:#c8c4b8;font-size:13px;line-height:1.6;margin-bottom:16px">
