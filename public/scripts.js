@@ -10,6 +10,20 @@
   // ═══════════════════════════════════════════════════════════════
   let allCoaches = [];
   let allStudents = [];
+  window.deletePaymentRecord = async function(pid, sid) {
+    if (!confirm('Are you sure you want to delete this payment record? This cannot be undone.')) return;
+    try {
+      await apiCall(`${API_BASE}/payments?id=${pid}`, { method: 'DELETE' });
+      toast('Payment record deleted', 'success');
+      window.totalPaymentsMap = null;
+      await await loadAllData(true); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card"></i> Bulk Pay'; }
+      // Refresh the history modal if it was open
+      if (sid) viewPaymentHistory(sid);
+    } catch (e) {
+      toast('Failed to delete payment', 'error');
+    }
+  };
+
   let allPayments = [];
   let allAttendance = [];
 
@@ -70,45 +84,49 @@
    // ═══════════════════════════════════════════════════════════════
    
    
+  
   window.viewPaymentHistory = function(id) {
     const s = allStudents.find(x => String(x.id).toLowerCase() === String(id).toLowerCase());
     if (!s) return;
     
     const payments = (allPayments || []).filter(p => String(p.student_id).toLowerCase() === String(id).toLowerCase());
-    const tbody = document.createElement('tbody');
-    
-    if (payments.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center">No payment records found</td></tr>';
-    } else {
-      payments.sort((a,b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at));
-      tbody.innerHTML = payments.map(p => `
-        <tr>
-          <td>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
-          <td>₹${(parseFloat(p.amount) || 0).toLocaleString()}</td>
-          <td>${p.payment_method || 'N/A'}</td>
-          <td>${p.description || '-'}</td>
-        </tr>
-      `).join('');
-    }
+    payments.sort((a,b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at));
 
-    const modalHtml = `
-      <div class="modal-header">
-        <h3 class="modal-title">Payment History: ${getStudentName(s)}</h3>
-        <button class="close-btn" onclick="closeModals()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th></tr>
-            </thead>
-            <tbody id="history-table-body">${tbody.innerHTML}</tbody>
-          </table>
-        </div>
-      </div>
-    `;
+    const tableRows = payments.map(p => {
+      const pId = p.id;
+      const sId = p.student_id;
+      const pDate = new Date(p.payment_date || p.created_at).toLocaleDateString();
+      const pAmt = (parseFloat(p.amount) || 0).toLocaleString();
+      const pMethod = p.payment_method || 'N/A';
+      const pDesc = p.description || '-';
+      
+      return '<tr>' +
+        '<td>' + pDate + '</td>' +
+        '<td>₹' + pAmt + '</td>' +
+        '<td>' + pMethod + '</td>' +
+        '<td style="display:flex; justify-content:space-between; align-items:center">' +
+          '<span>' + pDesc + '</span>' +
+          '<button class="btn btn-outline-ruby btn-xs" onclick="deletePaymentRecord(\'' + pId + '\', \'' + sId + '\')" title="Delete duplicate">' +
+            '<i class="fas fa-trash"></i>' +
+          '</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+
+    const modalContent = 
+      '<div class="modal-header">' +
+        '<h3 class="modal-title">Payment History: ' + getStudentName(s) + '</h3>' +
+        '<button class="close-btn" onclick="closeModals()">&times;</button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div class="table-responsive">' +
+          '<table class="table">' +
+            '<thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th></tr></thead>' +
+            '<tbody>' + (tableRows || '<tr><td colspan="4" class="text-center">No records found</td></tr>') + '</tbody>' +
+          '</table>' +
+        '</div>' +
+      '</div>';
     
-    // We reuse a generic modal container if it exists, or create one
     let m = $('history-modal');
     if (!m) {
       m = document.createElement('div');
@@ -116,9 +134,10 @@
       m.className = 'modal';
       document.body.appendChild(m);
     }
-    m.innerHTML = `<div class="modal-content">${modalHtml}</div>`;
+    m.innerHTML = '<div class="modal-content">' + modalContent + '</div>';
     openModal('history-modal');
   };
+
 
   // Period Sync Singleton
   function ensureReportPeriod() {
@@ -144,7 +163,20 @@
    let allRatingHistory = [];
    let allResources = [];
 
-   window.allRatingHistory = allRatingHistory; // Also needed for ELO gainers in report
+   window.allRatingHistory = allRatingHistory;
+  window.deletePaymentRecord = async function(pid, sid) {
+    if (!confirm('Are you sure you want to delete this payment record? This cannot be undone.')) return;
+    try {
+      await apiCall(API_BASE + '/payments?id=' + pid, { method: 'DELETE' });
+      toast('Payment record deleted', 'success');
+      window.totalPaymentsMap = null;
+      await loadAllData(true);
+      if (sid) viewPaymentHistory(sid);
+    } catch (e) {
+      toast('Failed to delete payment', 'error');
+    }
+  };
+ // Also needed for ELO gainers in report
 
    window.reportMonth = new Date().getUTCMonth(); // 0-11 (UTC)
    window.reportYear = new Date().getUTCFullYear();
@@ -3963,6 +3995,8 @@ Thank you for your continued support and cooperation.
   };
 
   async function bulkMarkPaid() {
+    const btn = document.querySelector('button[onclick="bulkMarkPaid()"]');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; }
     const checked = document.querySelectorAll('.stud-check:checked');
     if (checked.length === 0) {
       toast('Please select students first', 'warning');
