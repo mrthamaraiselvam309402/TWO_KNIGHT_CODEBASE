@@ -910,11 +910,11 @@ Thank you for your cooperation.
      if (totalPaidInvoices >= monthsRequired && hasPaymentThisMonth) return 'Paid';
 
      // B. MANUAL OVERRIDE: If we edited it in the DB and it's the current month, respect it.
-     // This fixes the "Edit doesn't stick" bug.
+     // This fixes the "Edit doesn't stick" and "Keeps showing Paid" bugs.
      if (isCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled') {
-        if (s.payment_status === 'Paid' && totalPaidInvoices >= monthsRequired) return 'Paid';
         if (s.payment_status === 'Pending') return 'Pending';
         if (s.payment_status === 'Due') return 'Due';
+        if (s.payment_status === 'Paid' && totalPaidInvoices >= monthsRequired) return 'Paid';
      }
 
      // C. SPECIAL NAMES: SUDARSAN and SURESHBABU are "Due" if any missing payments.
@@ -2521,7 +2521,7 @@ Thank you for your cooperation.
     $('e-elo').value = getStudentRating(s);
     $('e-fee').value = getStudentMonthlyFee(s);
     if ($('e-enroll-status')) $('e-enroll-status').value = s.status || 'active';
-    if ($('e-payment-status')) $('e-payment-status').value = s.payment_status || 'Pending';
+    if ($('e-payment-status')) $('e-payment-status').value = getStudentPaymentStatus(s);
     $('e-join').value = getStudentDate(s);
     $('e-batch-type').value = getStudentBatchType(s);
     $('e-batch-time').value = getStudentBatchTime(s);
