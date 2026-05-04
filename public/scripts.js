@@ -1254,7 +1254,7 @@ Thank you for your cooperation.
     const lastNotified = localStorage.getItem('last_rollover_notified');
 
     // Only show between 1st and 5th of the month
-    if (today.getDate() <= 5 && lastNotified !== monthKey) {
+    if (today.getDate() === 1 && lastNotified !== monthKey) {
       const modal = document.createElement('div');
       modal.className = 'modal';
       modal.id = 'rollover-notification';
@@ -1265,7 +1265,7 @@ Thank you for your cooperation.
           <h2 style="color:var(--gold); margin-bottom:15px; font-family:var(--font-head)">🆕 New Billing Month!</h2>
           <p style="color:var(--ivory-dim); margin-bottom:25px; font-size:14px">It's a new month. The system has automatically updated student statuses. Would you like to inform all coaches about their student due lists now?</p>
           <div style="display:flex; gap:10px">
-            <button class="btn btn-outline" style="flex:1" onclick="this.closest('.modal').remove()">Later</button>
+            <button class="btn btn-outline" style="flex:1" onclick="localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">Later</button>
             <button class="btn btn-gold" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">📢 Inform Coaches</button>
           </div>
         </div>
