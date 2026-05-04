@@ -1097,6 +1097,28 @@ Thank you for your cooperation.
 
        try {
          setLoading('data', true);
+
+         const loadWithRetry = async (url, maxRetries = 1) => {
+           for (let i = 0; i <= maxRetries; i++) {
+             try {
+               const response = await apiCall(url, { cache: 'no-store' })
+               if (response.ok) {
+                 const result = await response.json()
+                 if (result && result.error) throw new Error(result.error);
+                 if (result && result.data !== undefined) {
+                   return result.data
+                 }
+                 return result
+               }
+               if (response.status === 404) return null
+               throw new Error(`HTTP ${response.status}`)
+             } catch (error) {
+               if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return null }
+               await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)))
+             }
+           }
+         };
+
          const fetchWithLog = async (url, key) => {
            const res = await loadWithRetry(url);
            return res;
