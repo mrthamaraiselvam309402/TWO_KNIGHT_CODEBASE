@@ -686,7 +686,9 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
 
     if (!confirm(`Notify parents of ${dueStudents.length} students with due payments? This will open multiple WhatsApp tabs.`)) return;
 
-    const nowUTC = new Date();
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
     let sent = 0;
 
     dueStudents.forEach((s, idx) => {
@@ -696,12 +698,12 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       const name = getStudentName(s);
       const fee = getStudentMonthlyFee(s);
       
-      // Audit-based debt calculation
+      // Audit-based debt calculation (Respecting the viewed month)
       const enrollDateStr = getStudentDate(s);
       const baseline = new Date(Date.UTC(2026, 3, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-      const monthsReq = ((nowUTC.getUTCFullYear() - effectiveEnroll.getUTCFullYear()) * 12) + (nowUTC.getUTCMonth() - effectiveEnroll.getUTCMonth()) + 1;
+      const monthsReq = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
       
       const sid = String(s.id).toLowerCase();
       let totalPaidAmount = 0;
@@ -717,7 +719,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
 
       const dueDateStr = s.due_date
         ? new Date(s.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-        : `5th ${nowUTC.toLocaleString('en-IN', { month: 'long' })} ${nowUTC.getFullYear()}`;
+        : `5th ${new Date(Date.UTC(targetYear, targetMonth, 5)).toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
 
       const msg = `Hello Sir/Madam,
 
@@ -3412,12 +3414,16 @@ Thank you for your continued support and cooperation.
      const baseline = new Date(Date.UTC(2026, 3, 1));
      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
      let totalPaidAmount = 0;
      (window.allPayments || []).forEach(p => {
        if (p.status === 'paid' && String(p.student_id).toLowerCase() === String(s.id).toLowerCase()) {
-         totalPaidAmount += (parseFloat(p.amount) || 0);
+         const pDate = new Date(p.payment_date || p.created_at);
+         if (pDate <= targetMonthEnd) {
+            totalPaidAmount += (parseFloat(p.amount) || 0);
+         }
        }
      });
      const totalDue = Math.max(0, (monthsRequired * fee) - totalPaidAmount);
@@ -3447,11 +3453,12 @@ Thank you for your continued support and cooperation.
      const fee = getStudentMonthlyFee(s);
      const phone = getStudentPhone(s).replace(/\D/g, '');
      const parentName = s.parent_name || 'Parent';
-     const parentEmail = s.email || ''; // Students table has email column (parent's email)
+     const parentEmail = s.email || ''; 
 
      // Calculate exact pending amount
      const targetMonth = window.reportMonth;
      const targetYear = window.reportYear;
+     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
      const enrollDateStr = getStudentDate(s);
      const baseline = new Date(2026, 3, 1);
      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
@@ -3459,12 +3466,15 @@ Thank you for your continued support and cooperation.
      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
      let totalPaidAmount = 0;
-      (window.allPayments || []).forEach(p => {
-        if (p.status === 'paid' && String(p.student_id).toLowerCase() === String(s.id).toLowerCase()) {
-           totalPaidAmount += (parseFloat(p.amount) || 0);
-        }
-      });
-      const totalDue = Math.max(0, (monthsRequired * fee) - totalPaidAmount);
+     (window.allPayments || []).forEach(p => {
+       if (p.status === 'paid' && String(p.student_id).toLowerCase() === String(s.id).toLowerCase()) {
+          const pDate = new Date(p.payment_date || p.created_at);
+          if (pDate <= targetMonthEnd) {
+             totalPaidAmount += (parseFloat(p.amount) || 0);
+          }
+       }
+     });
+     const totalDue = Math.max(0, (monthsRequired * fee) - totalPaidAmount);
 
      // Build notification content
      let message = customMsg ? `${customMsg}\n\n` : '';
