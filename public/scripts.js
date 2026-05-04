@@ -69,6 +69,50 @@
   let loadDebounceTimer = null;
   let loadingStates = {};
   const CACHE_DURATION = 5000;
+  // ── CORE UTILITIES ──
+  async function apiCall(endpoint, options = {}) {
+    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${localStorage.getItem('sb-access-token') || SUPABASE_ANON_KEY}`,
+      ...options.headers
+    };
+
+    try {
+      const res = await fetch(url, { ...options, headers });
+      return res;
+    } catch (e) {
+      console.error(`API Error (${endpoint}):`, e);
+      throw e;
+    }
+  }
+
+  function toast(msg, type = 'info') {
+    const container = $('toast-container') || createToastContainer();
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.innerHTML = `
+      <div class="toast-content">
+        <span class="toast-icon">${type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️')}</span>
+        <span class="toast-msg">${msg}</span>
+      </div>
+    `;
+    container.appendChild(el);
+    setTimeout(() => { el.classList.add('show'); }, 10);
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 300);
+    }, 4000);
+  }
+
+  function createToastContainer() {
+    const div = document.createElement('div');
+    div.id = 'toast-container';
+    document.body.appendChild(div);
+    return div;
+  }
+
 
   // Sync local currentStudent with window.currentStudent for external modules
   function setCurrentStudent(student) {
@@ -1612,25 +1656,20 @@
 
     const revenueCtx = $('chartRevenue');
     if (revenueCtx) {
-      // Group students by enrollment month
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const counts = new Array(12).fill(0);
-     const currentYear = new Date().getUTCFullYear();
-
-       studs.forEach(s => {
-         const d = getStudentDate(s);
-         if (d) {
-           const date = new Date(d);
-           if (date.getUTCFullYear() === currentYear) {
-             counts[date.getUTCMonth()]++;
-           }
-         }
-       });
-
-       // Filter to show last 6 months or valid range
-       const endMonth = new Date().getUTCMonth();
+      const currentYear = new Date().getUTCFullYear();
+      studs.forEach(s => {
+        const d = getStudentDate(s);
+        if (d) {
+          const date = new Date(d);
+          if (date.getUTCFullYear() === currentYear) {
+            counts[date.getUTCMonth()]++;
+          }
+        }
+      });
+      const endMonth = new Date().getUTCMonth();
       const startMonth = (endMonth - 5 + 12) % 12;
-
       const labels = [];
       const data = [];
       for (let i = 0; i < 6; i++) {
@@ -1638,7 +1677,6 @@
         labels.push(months[mIdx]);
         data.push(counts[mIdx]);
       }
-
       chartInstances.revenue = new Chart(revenueCtx, {
         type: 'line',
         data: {
@@ -1656,9 +1694,7 @@
         options: {
           responsive: true,
           plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
-          }
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } }
         }
       });
     }
@@ -1684,7 +1720,6 @@
       });
     }
 
-    // Session Distribution Chart
     const sessionCtx = $('chartSession');
     if (sessionCtx) {
       let groupCount = 0, singleCount = 0;
@@ -1707,85 +1742,6 @@
       });
     }
 
-      const startMonth = (endMonth - 5 + 12) % 12;
-
-      const labels = [];
-      const data = [];
-      for (let i = 0; i < 6; i++) {
-        const mIdx = (startMonth + i) % 12;
-        labels.push(months[mIdx]);
-        data.push(counts[mIdx]);
-      }
-
-      chartInstances.revenue = new Chart(revenueCtx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'New Students',
-            data,
-            borderColor: '#e8a830',
-            backgroundColor: 'rgba(232, 168, 48, 0.15)',
-            tension: 0.4,
-            pointBackgroundColor: '#e8a830',
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
-          }
-        }
-      });
-    }
-
-    const paymentCtx = $('chartPayment');
-    if (paymentCtx) {
-      const targetMonth = window.reportMonth;
-      const targetYear = window.reportYear;
-      const paid = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid').length;
-      const pending = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Pending').length;
-      const due = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Due').length;
-      chartInstances.payment = new Chart(paymentCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Paid', 'Pending', 'Due'],
-          datasets: [{
-            data: [paid, pending, due],
-            backgroundColor: ['#52c41a', '#e8a830', '#ff4d4f'],
-            borderWidth: 0
-          }]
-        },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-      });
-    }
-
-    // Session Distribution Chart
-    const sessionCtx = $('chartSession');
-    if (sessionCtx) {
-      let groupCount = 0, singleCount = 0;
-      studs.forEach(s => {
-        const type = getStudentBatchType(s);
-        if (type === 'Group') groupCount++;
-        else singleCount++;
-      });
-      chartInstances.session = new Chart(sessionCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Group', 'Single'],
-          datasets: [{
-            data: [groupCount, singleCount],
-            backgroundColor: ['#c9960c', '#5a9fff'],
-            borderWidth: 0
-          }]
-        },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-      });
-    }
-
-    // Coach Load Chart
     const coachCtx = $('chartCoach');
     if (coachCtx && allCoaches.length) {
       const labels = allCoaches.map(c => getCoachName(c));
