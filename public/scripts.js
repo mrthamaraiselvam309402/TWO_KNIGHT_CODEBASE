@@ -2296,74 +2296,83 @@ Thank you for your cooperation.
     toast('Switched to current month view', 'info');
   };
 
-  function renderStudents() {
-    const tbody = $('stud-body');
-    if (!tbody) return;
+   function renderStudents() {
+     const tbody = $('stud-body');
+     if (!tbody) return;
 
-    const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
-    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+     try {
+       // Ensure reportMonth/Year are valid numbers
+       if (typeof window.reportMonth !== 'number' || isNaN(window.reportMonth) ||
+           typeof window.reportYear !== 'number' || isNaN(window.reportYear)) {
+         const now = new Date();
+         window.reportMonth = now.getUTCMonth();
+         window.reportYear = now.getUTCFullYear();
+         console.warn('[renderStudents] Fixed invalid reportMonth/year');
+       }
 
-    // Pre-calculate payments for this month for the new column
-    const paymentsOfMonth = {};
-    (allPayments || []).forEach(p => {
-      const pDate = new Date(p.payment_date || p.created_at);
-      if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
-        const sid = String(p.student_id).toLowerCase();
-        if (!paymentsOfMonth[sid]) paymentsOfMonth[sid] = { total: 0, count: 0 };
-        paymentsOfMonth[sid].total += (parseFloat(p.amount) || 0);
-        paymentsOfMonth[sid].count++;
-      }
-    });
+       const targetMonth = window.reportMonth;
+       const targetYear = window.reportYear;
+       const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-    let studs = (role === 'admin' || role === 'master') ? allStudents : (currentStudent ? [currentStudent] : []);
+       // Pre-calculate payments for this month for the new column
+       const paymentsOfMonth = {};
+       (allPayments || []).forEach(p => {
+         const pDate = new Date(p.payment_date || p.created_at);
+         if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
+           const sid = String(p.student_id).toLowerCase();
+           if (!paymentsOfMonth[sid]) paymentsOfMonth[sid] = { total: 0, count: 0 };
+           paymentsOfMonth[sid].total += (parseFloat(p.amount) || 0);
+           paymentsOfMonth[sid].count++;
+         }
+       });
 
-    // Apply Base Filters (Enrollment Date & Archive Status)
-    studs = studs.filter(s => {
-      if ((s.status || 'active').toLowerCase() === 'archived') return false;
-      const enrollDateStr = getStudentDate(s);
-      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 3, 1);
-      return enrollDate <= targetMonthEnd;
-    });
+       let studs = (role === 'admin' || role === 'master') ? allStudents : (currentStudent ? [currentStudent] : []);
 
-    // Apply UI Filters
-    if (role === 'admin' || role === 'master') {
-      const fSearch = ($('f-search')?.value || '').toLowerCase().trim();
-      const fCoach = $('f-coach')?.value;
-      const fSession = $('f-session')?.value;
-      const fStatus = $('f-status')?.value;
-      const fMin = parseInt($('f-min-fee')?.value) || 0;
-      const fMax = parseInt($('f-max-fee')?.value) || 999999;
+       // Apply Base Filters (Enrollment Date & Archive Status)
+       studs = studs.filter(s => {
+         if ((s.status || 'active').toLowerCase() === 'archived') return false;
+         const enrollDateStr = getStudentDate(s);
+         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 3, 1);
+         return enrollDate <= targetMonthEnd;
+       });
 
-      studs = studs.filter(s => {
-        const nameMatch = !fSearch || getStudentName(s).toLowerCase().includes(fSearch);
-        const coachMatch = !fCoach || String(s.coach_id) === String(fCoach);
-        const sessionMatch = !fSession || getStudentBatchType(s) === fSession;
-        const statusMatch = !fStatus || getStudentPaymentStatus(s, targetMonth, targetYear) === fStatus;
-        const fee = getStudentMonthlyFee(s);
-        const feeMatch = fee >= fMin && fee <= fMax;
-        return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch;
-      });
+       // Apply UI Filters
+       if (role === 'admin' || role === 'master') {
+         const fSearch = ($('f-search')?.value || '').toLowerCase().trim();
+         const fCoach = $('f-coach')?.value;
+         const fSession = $('f-session')?.value;
+         const fStatus = $('f-status')?.value;
+         const fMin = parseInt($('f-min-fee')?.value) || 0;
+         const fMax = parseInt($('f-max-fee')?.value) || 999999;
 
-      studs.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
-    }
+         studs = studs.filter(s => {
+           const nameMatch = !fSearch || getStudentName(s).toLowerCase().includes(fSearch);
+           const coachMatch = !fCoach || String(s.coach_id) === String(fCoach);
+           const sessionMatch = !fSession || getStudentBatchType(s) === fSession;
+           const statusMatch = !fStatus || getStudentPaymentStatus(s, targetMonth, targetYear) === fStatus;
+           const fee = getStudentMonthlyFee(s);
+           const feeMatch = fee >= fMin && fee <= fMax;
+           return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch;
+         });
 
-    if (!studs || studs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="12" class="text-center">No students found matching filters for this period</td></tr>';
-      return;
-    }
-    
-    console.log(`[UI] Rendering ${studs.length} students...`);
-    try {
-      tbody.innerHTML = studs.map((s, i) => {
-        try {
-          const status = getStudentPaymentStatus(s, targetMonth, targetYear);
-          const session = getStudentBatchType(s);
-          const time = s.session_time || s.class_time || s.batch_time || '';
-          const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
-          const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
-          const uniqueId = 'more-' + (s.id || 'err').replace(/[^a-zA-Z0-9]/g, '');
-          
+         studs.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
+       }
+
+       if (!studs || studs.length === 0) {
+         tbody.innerHTML = '<tr><td colspan="12" class="text-center">No students found matching filters for this period</td></tr>';
+         return;
+       }
+
+       console.log(`[UI] Rendering ${studs.length} students...`);
+       tbody.innerHTML = studs.map((s, i) => {
+         try {
+           const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+           const session = getStudentBatchType(s);
+           const time = s.session_time || s.class_time || s.batch_time || '';
+           const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+           const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
+           const uniqueId = 'more-' + (s.id || 'err').replace(/[^a-zA-Z0-9]/g, '');
+
            const pInfo = paymentsOfMonth[String(s.id).toLowerCase()];
            const paidThisMonthHtml = pInfo
              ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>`
@@ -2387,16 +2396,151 @@ Thank you for your cooperation.
            } else {
              actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
            }
-        } catch (rowErr) {
-          console.error(`[UI] Error rendering student row ${i}:`, rowErr, s);
-          return `<tr><td colspan="12" style="color:var(--danger)">Error rendering student ${s.name || i}</td></tr>`;
-        }
-      }).join('');
-    } catch (tblErr) {
-      console.error('[UI] Critical Table Error:', tblErr);
-      tbody.innerHTML = `<tr><td colspan="12" class="text-center text-danger">Table Rendering Error. Check console.</td></tr>`;
-    }
-  }
+
+           return `<tr>
+             <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
+             <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
+             <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
+             <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
+             <td>${coachName}</td>
+             <td>${getStudentDate(s) || '-'}</td>
+             <td>${session}</td>
+             <td>${time}</td>
+             <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+             <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
+             <td>${paidThisMonthHtml}</td>
+             <td>
+               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                 ${actionButtons}
+               </div>
+             </td>
+           </tr>`;
+         } catch (rowErr) {
+           console.error(`[UI] Error rendering student row ${i}:`, rowErr, s);
+           return `<tr><td colspan="12" style="color:var(--danger)">Error rendering student ${s.name || i}</td></tr>`;
+         }
+       }).join('');
+     } catch (err) {
+       console.error('[UI] renderStudents critical error:', err);
+       if (tbody) tbody.innerHTML = `<tr><td colspan="12" class="text-center text-danger">Failed to load students. Please refresh the page.</td></tr>`;
+     }
+   }
+
+       const targetMonth = window.reportMonth;
+       const targetYear = window.reportYear;
+       const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+
+       // Pre-calculate payments for this month for the new column
+       const paymentsOfMonth = {};
+       (allPayments || []).forEach(p => {
+         const pDate = new Date(p.payment_date || p.created_at);
+         if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
+           const sid = String(p.student_id).toLowerCase();
+           if (!paymentsOfMonth[sid]) paymentsOfMonth[sid] = { total: 0, count: 0 };
+           paymentsOfMonth[sid].total += (parseFloat(p.amount) || 0);
+           paymentsOfMonth[sid].count++;
+         }
+       });
+
+       let studs = (role === 'admin' || role === 'master') ? allStudents : (currentStudent ? [currentStudent] : []);
+
+       // Apply Base Filters (Enrollment Date & Archive Status)
+       studs = studs.filter(s => {
+         if ((s.status || 'active').toLowerCase() === 'archived') return false;
+         const enrollDateStr = getStudentDate(s);
+         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 3, 1);
+         return enrollDate <= targetMonthEnd;
+       });
+
+       // Apply UI Filters
+       if (role === 'admin' || role === 'master') {
+         const fSearch = ($('f-search')?.value || '').toLowerCase().trim();
+         const fCoach = $('f-coach')?.value;
+         const fSession = $('f-session')?.value;
+         const fStatus = $('f-status')?.value;
+         const fMin = parseInt($('f-min-fee')?.value) || 0;
+         const fMax = parseInt($('f-max-fee')?.value) || 999999;
+
+         studs = studs.filter(s => {
+           const nameMatch = !fSearch || getStudentName(s).toLowerCase().includes(fSearch);
+           const coachMatch = !fCoach || String(s.coach_id) === String(fCoach);
+           const sessionMatch = !fSession || getStudentBatchType(s) === fSession;
+           const statusMatch = !fStatus || getStudentPaymentStatus(s, targetMonth, targetYear) === fStatus;
+           const fee = getStudentMonthlyFee(s);
+           const feeMatch = fee >= fMin && fee <= fMax;
+           return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch;
+         });
+
+         studs.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
+       }
+
+       if (!studs || studs.length === 0) {
+         tbody.innerHTML = '<tr><td colspan="12" class="text-center">No students found matching filters for this period</td></tr>';
+         return;
+       }
+
+       console.log(`[UI] Rendering ${studs.length} students...`);
+       tbody.innerHTML = studs.map((s, i) => {
+         try {
+           const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+           const session = getStudentBatchType(s);
+           const time = s.session_time || s.class_time || s.batch_time || '';
+           const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+           const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
+           const uniqueId = 'more-' + (s.id || 'err').replace(/[^a-zA-Z0-9]/g, '');
+
+           const pInfo = paymentsOfMonth[String(s.id).toLowerCase()];
+           const paidThisMonthHtml = pInfo
+             ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>`
+             : '<span class="text-muted">₹0</span>';
+
+           // Action buttons based on status
+           let actionButtons = '';
+           if (status === 'Paid') {
+             actionButtons = `
+               <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+               <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+               <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
+             `;
+           } else if (status === 'Pending' || status === 'Due') {
+             actionButtons = `
+               <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+               <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+               <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
+               <button class="btn btn-outline-grey btn-sm" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
+             `;
+           } else {
+             actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
+           }
+
+           return `<tr>
+             <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
+             <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
+             <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
+             <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
+             <td>${coachName}</td>
+             <td>${getStudentDate(s) || '-'}</td>
+             <td>${session}</td>
+             <td>${time}</td>
+             <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+             <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
+             <td>${paidThisMonthHtml}</td>
+             <td>
+               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                 ${actionButtons}
+               </div>
+             </td>
+           </tr>`;
+         } catch (rowErr) {
+           console.error(`[UI] Error rendering student row ${i}:`, rowErr, s);
+           return `<tr><td colspan="12" style="color:var(--danger)">Error rendering student ${s.name || i}</td></tr>`;
+         }
+       }).join('');
+     } catch (err) {
+       console.error('[UI] renderStudents critical error:', err);
+       if (tbody) tbody.innerHTML = `<tr><td colspan="12" class="text-center text-danger">Failed to load students. Please refresh the page.</td></tr>`;
+     }
+   }
 
     /*
     // Apply Filters
