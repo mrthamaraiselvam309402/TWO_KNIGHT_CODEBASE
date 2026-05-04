@@ -13,6 +13,17 @@
   };
   window.capitalizeFirst = capitalizeFirst;
 
+  const formatTime = (timeStr) => {
+    if (!timeStr) return 'TBD';
+    if (!timeStr.includes(':')) return timeStr;
+    const [hrs, mins] = timeStr.split(':').map(Number);
+    if (isNaN(hrs)) return timeStr;
+    const ampm = hrs >= 12 ? 'PM' : 'AM';
+    const h = hrs % 12 || 12;
+    return `${h}:${mins.toString().padStart(2, '0')} ${ampm}`;
+  };
+  window.formatTime = formatTime;
+
 
   // ═══════════════════════════════════════════════════════════════
   // CONFIG & CONSTANTS

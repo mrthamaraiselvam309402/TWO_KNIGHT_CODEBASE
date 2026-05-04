@@ -28,3 +28,6 @@ verify_jwt = false
 
 [functions.rating_history]
 verify_jwt = false
+
+[functions.achievements]
+verify_jwt = false
