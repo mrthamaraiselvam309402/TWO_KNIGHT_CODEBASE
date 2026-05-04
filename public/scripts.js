@@ -892,7 +892,8 @@ Thank you for your cooperation.
       const psid = String(p.student_id || '').trim().toLowerCase();
       if (psid === s_id_key && p.status === 'paid') {
         const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate <= targetMonthEnd) {
+        // Only count payments that occurred on or after effectiveEnroll date
+        if (pDate >= effectiveEnroll && pDate <= targetMonthEnd) {
           totalPaidInvoices++;
         }
         if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
@@ -901,17 +902,22 @@ Thank you for your cooperation.
       }
     });
 
-    const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
-    // Determination Logic:
-    // 1. Paid: Total payments cover all months required up to this point.
-    if (totalPaidInvoices >= monthsRequired) return 'Paid';
+     const studentName = (s.full_name || s.name || '').toUpperCase();
+     if (['SUDARSAN', 'SURESHBABU'].includes(studentName) && totalPaidInvoices < monthsRequired) {
+       return 'Due';
+     }
 
-    // 2. Pending: Missing exactly one payment AND they haven't paid for the target month yet.
-    if (totalPaidInvoices === monthsRequired - 1 && !hasPaymentThisMonth) return 'Pending';
+     // Determination Logic:
+     // 1. Paid: Total payments cover all months required up to this point.
+     if (totalPaidInvoices >= monthsRequired) return 'Paid';
 
-    // 3. Due: Owe for a previous month OR more than 1 month behind.
-    return 'Due';
+     // 2. Pending: Missing exactly one payment AND they haven't paid for the target month yet.
+     if (totalPaidInvoices === monthsRequired - 1 && !hasPaymentThisMonth) return 'Pending';
+
+     // 3. Due: Owe for a previous month OR more than 1 month behind.
+     return 'Due';
   }
 
   function getStudentBatchType(s) {
@@ -1045,100 +1051,80 @@ Thank you for your cooperation.
   // ═══════════════════════════════════════════════════════════════
   // DATA LOADING
   // ═══════════════════════════════════════════════════════════════
-  let isLoadingData = false;
-  async function loadAllData(forceRefresh = false) {
-    if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
-    if (isLoadingData) return;
+   let isLoadingData = false;
+   async function loadAllData(forceRefresh = false) {
+     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+     if (isLoadingData) return;
 
-    const executeLoad = async () => {
-      if (isLoadingData) return;
-      isLoadingData = true;
-      const now = Date.now();
-      const hasValidCache = dataCache.timestamp > 0 && dataCache.coaches && dataCache.students;
-      if (!forceRefresh && hasValidCache && (now - dataCache.timestamp) < CACHE_DURATION) {
-        allCoaches = dataCache.coaches;
-        allStudents = dataCache.students;
-        achievementsData = dataCache.achievements;
-        eventsData = dataCache.events;
-        allMessages = dataCache.messages || [];
+     const executeLoad = async () => {
+       if (isLoadingData) return;
+       isLoadingData = true;
+       const now = Date.now();
+       const hasValidCache = dataCache.timestamp > 0 && dataCache.coaches && dataCache.students;
+       if (!forceRefresh && hasValidCache && (now - dataCache.timestamp) < CACHE_DURATION) {
+         allCoaches = dataCache.coaches;
+         allStudents = dataCache.students;
+         achievementsData = dataCache.achievements;
+         eventsData = dataCache.events;
+         allMessages = dataCache.messages || [];
+         allAttendance = dataCache.attendance || [];
+         allPayments = dataCache.payments || [];
+         allRatingHistory = dataCache.ratingHistory || [];
 
-        // Sync to window for modules
-        window.allStudents = allStudents;
-        window.allCoaches = allCoaches;
-        window.allMessages = allMessages;
+         // Sync to window for modules
+         window.allStudents = allStudents;
+         window.allCoaches = allCoaches;
+         window.allMessages = allMessages;
+         window.allAttendance = allAttendance;
+         window.allPayments = allPayments;
+         window.allRatingHistory = allRatingHistory;
 
-        syncCoachDropdowns();
-        if (role === 'admin' || role === 'master') {
-          renderDash();
-          updateMsgBadge();
-          renderEvents();
-          renderFame();
-          renderBills();
-          renderMsgs();
-          renderCoachMgmt();
-          renderStudents();
-        }
-        else if (role === 'parent') { renderChild(); renderEvents(); }
-        isLoadingData = false;
-        return;
-      }
-      try {
-        setLoading('data', true);
+         syncCoachDropdowns();
+         if (role === 'admin' || role === 'master') {
+           renderDash();
+           updateMsgBadge();
+           renderEvents();
+           renderFame();
+           renderBills();
+           renderMsgs();
+           renderCoachMgmt();
+           renderStudents();
+         }
+         else if (role === 'parent') { renderChild(); renderEvents(); }
+         isLoadingData = false;
+         return;
+       }
 
-         const loadWithRetry = async (url, maxRetries = 1) => {
-          for (let i = 0; i <= maxRetries; i++) {
-            try {
-              const response = await apiCall(url, { cache: 'no-store' })
-              if (response.ok) {
-                const result = await response.json()
-                if (result && result.error) throw new Error(result.error);
-                // Handle paginated responses
-                if (result && result.data !== undefined) {
-                  return result.data
-                }
-                return result
-              }
-              if (response.status === 404) return null
-              throw new Error(`HTTP ${response.status}`)
-            } catch (error) {
-              if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return null }
-              await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)))
-            }
-          }
-        }
+       try {
+         setLoading('data', true);
+         const fetchWithLog = async (url, key) => {
+           const res = await loadWithRetry(url);
+           return res;
+         };
 
-        console.log('[Sync] Starting parallel data fetch...');
-        const fetchWithLog = async (url, key) => {
-          console.time(`Fetch:${key}`);
-          const res = await loadWithRetry(url);
-          console.timeEnd(`Fetch:${key}`);
-          return res;
-        };
+         const [coaches, students, achievements, events, messages, attendance, payments, ratingHistory, resources] = await Promise.all([
+           fetchWithLog('/api/coaches', 'coaches'),
+           fetchWithLog('/api/students?limit=1000', 'students'),
+           fetchWithLog('/api/achievements', 'achievements'),
+           fetchWithLog('/api/events', 'events'),
+           fetchWithLog('/api/messages', 'messages'),
+           fetchWithLog('/api/attendance', 'attendance'),
+           fetchWithLog('/api/payments?order=payment_date.desc&limit=1000', 'payments'),
+           fetchWithLog('/api/rating_history', 'ratingHistory'),
+           fetchWithLog('/api/resources', 'resources')
+         ]);
 
-        const [coaches, students, achievements, events, messages, attendance, payments, ratingHistory, resources] = await Promise.all([
-          fetchWithLog('/api/coaches', 'coaches'),
-          fetchWithLog('/api/students?limit=1000', 'students'),
-          fetchWithLog('/api/achievements', 'achievements'),
-          fetchWithLog('/api/events', 'events'),
-          fetchWithLog('/api/messages', 'messages'),
-          fetchWithLog('/api/attendance', 'attendance'),
-          fetchWithLog('/api/payments?order=payment_date.desc&limit=1000', 'payments'),
-          fetchWithLog('/api/rating_history', 'ratingHistory'),
-          fetchWithLog('/api/resources', 'resources')
-        ]);
+         const extractData = (res) => {
+           if (!res) return [];
+           if (Array.isArray(res)) return res;
+           if (res.data && Array.isArray(res.data)) return res.data;
+           return [];
+         };
 
-        const extractData = (res) => {
-          if (!res) return [];
-          if (Array.isArray(res)) return res;
-          if (res.data && Array.isArray(res.data)) return res.data;
-          return [];
-        };
+         allCoaches = extractData(coaches);
+         allResources = extractData(resources);
 
-        allCoaches = extractData(coaches);
-        allResources = extractData(resources);
-
-        // --- Golden State Deduplication ---
-        const rawStudents = extractData(students);
+         const rawStudents = extractData(students);
          const seenId = new Set();
          allStudents = rawStudents.filter(s => {
            if (!s || !s.id) return false;
@@ -1150,9 +1136,8 @@ Thank you for your cooperation.
          achievementsData = dedupeArray(extractData(achievements), 'id');
          eventsData = dedupeArray(extractData(events), 'id');
          allMessages = dedupeArray(extractData(messages), 'id');
-                   allAttendance = extractData(attendance);
+         allAttendance = extractData(attendance);
 
-         // Deduplicate payments by transaction_id (or id if no transaction_id)
          const seenPayKeys = new Set();
          const dedupedPayments = extractData(payments).filter(p => {
            const key = (p.transaction_id || p.id || '').toString().trim();
@@ -1167,65 +1152,67 @@ Thank you for your cooperation.
          }));
          allRatingHistory = extractData(ratingHistory);
 
-        // Build totalPaymentsMap atomically during load (count only 'paid' payments)
-        const pMap = {};
-        allPayments.forEach(p => {
-          if (p.status === 'paid') {
-            const sid = String(p.student_id || '').trim().toLowerCase();
-            if (sid) pMap[sid] = (pMap[sid] || 0) + 1;
-          }
-        });
-        window.totalPaymentsMap = pMap;
+         const pMap = {};
+         allPayments.forEach(p => {
+           if (p.status === 'paid') {
+             const sid = String(p.student_id || '').trim().toLowerCase();
+             if (sid) pMap[sid] = (pMap[sid] || 0) + 1;
+           }
+         });
+         window.totalPaymentsMap = pMap;
 
-        // Sync to window for modules
-        window.allStudents = allStudents;
-        window.allCoaches = allCoaches;
-        window.allPayments = allPayments;
-        window.allMessages = allMessages;
-        window.allAttendance = allAttendance;
-        window.allRatingHistory = allRatingHistory;
+         window.allStudents = allStudents;
+         window.allCoaches = allCoaches;
+         window.allPayments = allPayments;
+         window.allMessages = allMessages;
+         window.allAttendance = allAttendance;
+         window.allRatingHistory = allRatingHistory;
 
-        if ($('sync-text')) $('sync-text').textContent = 'Database Connected';
-        if ($('sync-status')) $('sync-status').classList.add('connected');
-        console.log(`[Sync] Loaded: ${allStudents.length} students, ${allCoaches.length} coaches, ${allPayments.length} payments`);
+         if ($('sync-text')) $('sync-text').textContent = 'Database Connected';
+         if ($('sync-status')) $('sync-status').classList.add('connected');
+         console.log(`[Sync] Loaded: ${allStudents.length} students, ${allCoaches.length} coaches, ${allPayments.length} payments`);
 
-        if (allStudents.length === 0 && role !== 'parent') {
-          console.warn('[Sync] Warning: No students found in database.');
-        }
+         if (allStudents.length === 0 && role !== 'parent') {
+           console.warn('[Sync] Warning: No students found in database.');
+         }
 
-        dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, timestamp: now };
-        syncCoachDropdowns();
+         dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, attendance: allAttendance, payments: allPayments, ratingHistory: allRatingHistory, timestamp: now };
+         syncCoachDropdowns();
 
-        if (role === 'admin' || role === 'master') {
-          console.log('[Sync] Rendering active page for role:', role);
-          const active = document.querySelector('.page.active')?.id;
-          if (active === 'page-dash') renderDash();
-          else if (active === 'page-stud') renderStudents();
-          else if (active === 'page-coach-mgmt') renderCoachMgmt();
-          else if (active === 'page-bills') renderBills();
-          else if (active === 'page-msgs') renderMsgs();
-          else if (active === 'page-fame') renderFame();
-          else if (active === 'page-events') renderEvents();
-          else renderDash(); // Default fallback
-          
-          updateMsgBadge();
-          checkMonthlyRollover();
-        }
-        else if (role === 'parent') { renderChild(); renderEvents(); }
+         if (role === 'admin' || role === 'master') {
+           console.log('[Sync] Rendering active page for role:', role);
+           const active = document.querySelector('.page.active')?.id;
+           if (active === 'page-dash') renderDash();
+           else if (active === 'page-stud') renderStudents();
+           else if (active === 'page-coach-mgmt') renderCoachMgmt();
+           else if (active === 'page-bills') renderBills();
+           else if (active === 'page-msgs') renderMsgs();
+           else if (active === 'page-fame') renderFame();
+           else if (active === 'page-events') renderEvents();
+           else renderDash();
 
-        setLoading('data', false);
-        isLoadingData = false;
-      } catch (err) {
-        console.error('[Sync] Critical Error:', err);
-        setLoading('data', false);
-        isLoadingData = false;
-        toast('Database sync failed. Check connection.', 'error');
-      }
-    };
+           updateMsgBadge();
+           checkMonthlyRollover();
+         }
+         else if (role === 'parent') { renderChild(); renderEvents(); }
 
-    if (forceRefresh) { await executeLoad(); }
-    else { loadDebounceTimer = setTimeout(executeLoad, 50); }
-  }
+         setLoading('data', false);
+         isLoadingData = false;
+       } catch (err) {
+         console.error('[Sync] Critical Error:', err);
+         setLoading('data', false);
+         isLoadingData = false;
+         toast('Database sync failed. Check connection.', 'error');
+       }
+     };
+
+     if (forceRefresh) {
+       dataCache.timestamp = 0;
+       await executeLoad();
+     } else {
+       loadDebounceTimer = setTimeout(executeLoad, 50);
+     }
+   }
 
   function checkMonthlyRollover() {
     if ($('rollover-notification')) return; // Idempotency check
@@ -2016,10 +2003,18 @@ Thank you for your cooperation.
      const s_id_map = {};
      (allPayments || []).forEach(p => {
        if (p.status === 'paid') {
+         const sid = String(p.student_id || '').trim().toLowerCase();
+         if (!sid) return;
+         const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+         if (!s) return;
+
+         const enrollDateStr = getStudentDate(s);
+         const baseline = new Date(Date.UTC(2026, 3, 1));
+         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+         const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+         
          const pDate = new Date(p.payment_date || p.created_at);
-         if (pDate <= targetMonthEnd) {
-           const sid = String(p.student_id || '').trim().toLowerCase();
-           if (!sid) return;
+         if (pDate >= effectiveEnroll && pDate <= targetMonthEnd) {
            if (!s_id_map[sid]) s_id_map[sid] = 0;
            s_id_map[sid]++;
          }
@@ -2593,52 +2588,55 @@ Thank you for your cooperation.
           } catch (e) { console.warn('Rating history table missing, skipping log.'); }
         }
 
-        // OPTIMISTIC UPDATE: immediately patch the in-memory record so the UI
-        // shows the new values without waiting for the next loadAllData fetch.
-        // This prevents stale data from showing if Supabase is slow or if
-        // the column name doesn't match what loadAllData returns.
-        const idx = allStudents.findIndex(x => String(x.id) === String(id));
-        if (idx !== -1) {
-          allStudents[idx] = {
-            ...allStudents[idx],
-            full_name: data.full_name,
-            name: data.name,
-            phone: data.phone,
-            parent_phone: data.parent_phone,
-            level: data.level,
-            grade: data.grade,
-            rating: data.rating,
-            coach_id: data.coach_id,
-            status: data.status,
-            enrollment_date: data.enrollment_date,
-            due_date: data.due_date,
-            session_mode: data.session_mode,
-            batch_type: data.batch_type,
-            session_time: data.session_time,
-            batch_time: data.batch_time,
-            monthly_fee: newFee,
-            fee: newFee,
-            fees: newFee,
-            tuition_fee: newFee,
-            notes: data.notes
-          };
-        }
+         // OPTIMISTIC UPDATE: immediately patch the in-memory record so the UI
+         // shows the new values without waiting for the next loadAllData fetch.
+         // This prevents stale data from showing if Supabase is slow or if
+         // the column name doesn't match what loadAllData returns.
+         const newStatus = $('e-payment-status')?.value || s.payment_status || 'Pending';
+         const idx = allStudents.findIndex(x => String(x.id) === String(id));
+         if (idx !== -1) {
+           allStudents[idx] = {
+             ...allStudents[idx],
+             full_name: data.full_name,
+             name: data.name,
+             phone: data.phone,
+             parent_phone: data.parent_phone,
+             level: data.level,
+             grade: data.level,
+             rating: data.rating,
+             coach_id: data.coach_id,
+             status: data.status,
+             payment_status: newStatus,
+             enrollment_date: data.enrollment_date,
+             due_date: data.due_date,
+             session_mode: data.session_mode,
+             batch_type: data.batch_type,
+             session_time: data.session_time,
+             batch_time: data.batch_time,
+             monthly_fee: newFee,
+             fee: newFee,
+             fees: newFee,
+             tuition_fee: newFee,
+             notes: data.notes
+           };
+         }
 
         // FIX C2: If this student is the currently logged-in parent's child, refresh currentStudent
         if (currentStudent && String(currentStudent.id) === String(id)) {
           setCurrentStudent(allStudents[idx]);
         }
 
-        toast('Student updated!', 'success');
-        closeModals();
-        
-        // SYNC: Ensure fresh data is fetched from DB first
-        await loadAllData(true);
-        
-        // Re-render everything with confirmed data
-        renderStudents();
-        renderDash();
-        renderBills();
+         toast('Student updated!', 'success');
+         closeModals();
+
+         // FIX C1: Mark that we're editing to prevent realtime listener from interfering
+         window.isEditing = true;
+
+         // Full sync with database - loadAllData will re-render all pages automatically
+         await loadAllData(true);
+
+         // Reset editing flag after a short delay
+         setTimeout(() => { window.isEditing = false; }, 1000);
       } else {
         const err = await res.json().catch(() => ({}));
         toast('Update failed: ' + (err.error || err.message || `Server error ${res.status}`), 'error');
