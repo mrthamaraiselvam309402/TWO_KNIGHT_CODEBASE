@@ -892,8 +892,9 @@ Thank you for your cooperation.
       const psid = String(p.student_id || '').trim().toLowerCase();
       if (psid === s_id_key && p.status === 'paid') {
         const pDate = new Date(p.payment_date || p.created_at);
-        // Only count payments that occurred on or after effectiveEnroll date
-        if (pDate >= effectiveEnroll && pDate <= targetMonthEnd) {
+        // Only count payments that occurred in or after the enrollment month
+        const auditStart = new Date(Date.UTC(effectiveEnroll.getUTCFullYear(), effectiveEnroll.getUTCMonth(), 1));
+        if (pDate >= auditStart && pDate <= targetMonthEnd) {
           totalPaidInvoices++;
         }
         if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
