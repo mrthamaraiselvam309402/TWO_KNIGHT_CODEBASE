@@ -1,3 +1,5 @@
+import { checkRateLimit } from './rate_limit.js'
+
 Deno.serve(async (req) => {
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
   
@@ -11,17 +13,12 @@ Deno.serve(async (req) => {
     })
   }
   
-   const supabase = createClient(supabaseUrl, supabaseKey)
-
-  // FIX: sanitizeString was used but never defined in this file
-  function sanitizeString(str: unknown, maxLength = 255): string {
-    if (typeof str !== 'string') return ''
-    return str.slice(0, maxLength).replace(/[<>\"';]/g, '').trim()
-  }
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
   }
 
   if (req.method === 'OPTIONS') {
@@ -34,10 +31,32 @@ Deno.serve(async (req) => {
     return data?.name || ''
   }
 
+
+  // --- Rate Limiting ---
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+  const rateLimitResult = await checkRateLimit(ip, 'payments')
+  
+  if (!rateLimitResult.allowed) {
+    return new Response(JSON.stringify({ 
+      error: 'Rate limit exceeded',
+      retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+    }), { 
+      status: 429, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    })
+  }
+
+  // FIX: sanitizeString was used but never defined in this file
+  function sanitizeString(str: unknown, maxLength = 255): string {
+    if (typeof str !== 'string') return ''
+    return str.slice(0, maxLength).replace(/[<>\"';]/g, '').trim()
+  }
+
   try {
     const url = new URL(req.url)
     const action = url.searchParams.get('action')
     const method = req.method
+
 
     // CREATE NEW PAYMENT
     if (method === 'POST' || action === 'create') {

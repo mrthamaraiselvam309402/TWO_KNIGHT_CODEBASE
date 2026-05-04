@@ -1,3 +1,5 @@
+import { checkRateLimit } from './rate_limit.js'
+
 Deno.serve(async (req) => {
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
   
@@ -17,11 +19,26 @@ Deno.serve(async (req) => {
 
   const corsHeaders = {
     'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
   }
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
+  }
+
+  // --- Rate Limiting ---
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+  const rateLimitResult = await checkRateLimit(ip, 'students')
+  
+  if (!rateLimitResult.allowed) {
+    return new Response(JSON.stringify({ 
+      error: 'Rate limit exceeded',
+      retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+    }), { 
+      status: 429, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    })
   }
 
   // --- Input Validation Helpers ---
@@ -43,67 +60,46 @@ Deno.serve(async (req) => {
   }
 
   function validateStatus(status: unknown): string {
-    const valid = ['active', 'pending', 'inactive']
+    const valid = ['active', 'pending', 'inactive', 'archived']
     return valid.includes(String(status)) ? String(status) : 'pending'
   }
 
-     // Transform DB row to API response (add convenience aliases the frontend expects)
-     function transformStudent(s: Record<string, unknown>) {
-       const status = s.status || 'pending';
-       // Resilience: check all possible fee column names
-       const fee = s.monthly_fee ?? s.fee ?? s.fees ?? s.tuition_fee ?? 0;
-       
-       // Decrypt sensitive fields if they are encrypted
-       const decrypt = (val: unknown): string => {
-         if (!val || typeof val !== 'string') return String(val || '');
-         // Check if it looks like base64 encrypted data
-         try {
-           if (val.length > 20 && /^[A-Za-z0-9+/]*={0,2}$/.test(val)) {
-             const decoded = atob(val);
-             // Try to decode as UTF-8
-             try {
-               return decodeURIComponent(escape(decoded));
-             } catch {
-               return decoded;
-             }
-           }
-         } catch {
-           // Not encrypted or decryption failed, return as-is
-         }
-         return String(val);
-       };
-       
-       return {
-         id: s.id,
-         name: s.name || '',
-         full_name: s.name || '',    // alias for frontend compatibility
-         email: decrypt(s.email),
-         phone: decrypt(s.phone),
-         parent_phone: decrypt(s.parent_phone),
-         parent_name: s.parent_name || '',
-         age: s.age || null,
-         grade: s.grade || null,
-         level: s.grade || 'Beginner',           // alias
-         enrollment_date: s.enrollment_date || '',
-         join_date: s.enrollment_date || '',      // alias
-         address: decrypt(s.address),
-         status: status,
-         payment_status: s.payment_status || (status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due')),
-         coach_id: s.coach_id || null,
-         rating: s.rating || 800,
-         current_rating: s.rating || 800,         // alias
-         notes: s.notes || '',
-         session_mode: s.session_mode || null,
-         session_time: s.session_time || null,
-         batch_type: s.session_mode || null,
-         batch_time: s.session_time || null,
-         monthly_fee: parseInt(String(fee)) || 0,
-         due_date: s.due_date || null,
-         account_status: s.account_status || 'active',
-         created_at: s.created_at,
-         updated_at: s.updated_at
-       }
-     }
+  // Transform DB row to API response
+  function transformStudent(s: Record<string, unknown>) {
+    const status = s.status || 'pending';
+    const fee = s.monthly_fee ?? s.fee ?? s.fees ?? s.tuition_fee ?? 0;
+    
+    return {
+      id: s.id,
+      name: s.name || '',
+      full_name: s.name || '',
+      email: s.email || '',
+      phone: s.phone || '',
+      parent_phone: s.parent_phone || '',
+      parent_name: s.parent_name || '',
+      age: s.age || null,
+      grade: s.grade || null,
+      level: s.grade || 'Beginner',
+      enrollment_date: s.enrollment_date || '',
+      join_date: s.enrollment_date || '',
+      address: s.address || '',
+      status: status,
+      payment_status: s.payment_status || (status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due')),
+      coach_id: s.coach_id || null,
+      rating: s.rating || 800,
+      current_rating: s.rating || 800,
+      notes: s.notes || '',
+      session_mode: s.session_mode || null,
+      session_time: s.session_time || null,
+      batch_type: s.session_mode || null,
+      batch_time: s.session_time || null,
+      monthly_fee: parseInt(String(fee)) || 0,
+      due_date: s.due_date || null,
+      account_status: s.account_status || 'active',
+      created_at: s.created_at,
+      updated_at: s.updated_at
+    }
+  }
 
   try {
     const url = new URL(req.url)
@@ -121,9 +117,16 @@ Deno.serve(async (req) => {
       
       let query = supabase
         .from('students')
-        .select('*', { count: 'exact' })
+        .select(`
+          *,
+          phone:decrypt_pii(phone),
+          parent_phone:decrypt_pii(parent_phone),
+          email:decrypt_pii(email),
+          address:decrypt_pii(address)
+        `, { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
+
       
       if (search) {
         query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,parent_phone.ilike.%${search}%`)

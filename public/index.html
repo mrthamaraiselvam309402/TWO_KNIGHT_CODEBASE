@@ -163,7 +163,7 @@
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Net Profit</div><div class="stat-value" style="color:var(--success)" id="s-profit">—</div></div>
       </div>
       <div class="dash-grid" style="margin-bottom:32px">
-            <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Last Month Due</div><div class="stat-value text-danger" id="s-last-due">₹0</div></div>
+            <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Historical Arrears</div><div class="stat-value text-danger" id="s-last-due">₹0</div></div>
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Month Pending</div><div class="stat-value" style="color:var(--gold)" id="s-curr-pending">₹0</div></div>
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Total Outstanding</div><div class="stat-value text-danger" id="s-total-outstanding">₹0</div></div>
       </div>
@@ -212,6 +212,12 @@
         <button class="btn btn-outline-amber btn-sm" onclick="bulkMarkPaid()">💳 Bulk Pay</button>
         <button class="btn btn-outline-amber btn-sm" onclick="informAllDueStudents()">📢 Notify Due</button>
         <button class="btn btn-outline-danger btn-sm" onclick="bulkDeleteStudents()">🗑️ Bulk Delete</button>
+        <div style="display:flex; align-items:center; gap:8px">
+          <label style="font-size:12px; color:var(--ivory-dim)">Billing Month:</label>
+          <input type="month" id="f-bill-month-stud" onchange="syncStudMonth(this.value)" 
+                 style="width:160px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+          <button class="btn btn-outline-grey btn-sm" onclick="resetStudMonth()">This Month</button>
+        </div>
         <button class="btn btn-outline-grey btn-sm" onclick="clearFilters()">Clear</button>
       </div>
       <div class="table-wrap">
@@ -228,6 +234,7 @@
               <th>Schedule</th>
               <th>Fee</th>
               <th>Status</th>
+              <th>Paid This Month</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -557,7 +564,7 @@
       </div>
       <div class="form-group">
         <label>Parent Phone</label>
-        <input type="tel" id="m-phone" placeholder="10 digits" maxlength="10">
+        <input type="tel" id="m-phone" placeholder="10 digits" maxlength="10" inputmode="numeric" pattern="[0-9]{10}">
       </div>
     </div>
 
@@ -629,7 +636,7 @@
       </div>
       <div class="form-group">
         <label>Parent Phone</label>
-        <input type="tel" id="e-phone" maxlength="10">
+        <input type="tel" id="e-phone" maxlength="10" inputmode="numeric" pattern="[0-9]{10}">
       </div>
     </div>
 
@@ -679,6 +686,15 @@
         <label>Next Due Date</label>
         <input type="date" id="e-due-date">
       </div>
+    </div>
+
+    <div class="form-group">
+      <label>Enrollment Status</label>
+      <select id="e-enroll-status">
+        <option value="active">Active</option>
+        <option value="pending">Pending</option>
+        <option value="archived">Archived</option>
+      </select>
     </div>
 
     <div class="form-group">
@@ -775,7 +791,7 @@
       <input type="number" id="cm-exp" placeholder="Experience (Years)">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <input type="tel" id="cm-phone" placeholder="Phone (10 digits)" maxlength="10">
+      <input type="tel" id="cm-phone" placeholder="Phone (10 digits)" maxlength="10" inputmode="numeric" pattern="[0-9]{10}">
       <input type="email" id="cm-email" placeholder="Email Address">
     </div>
     <textarea id="cm-address" rows="2" placeholder="Address"></textarea>

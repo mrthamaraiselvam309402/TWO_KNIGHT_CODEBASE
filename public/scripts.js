@@ -60,6 +60,7 @@
 
   window.reportMonth = new Date().getUTCMonth(); // 0-11 (UTC)
   window.reportYear = new Date().getUTCFullYear();
+  window.isEditing = false;
 
   let currentStudent = null;
   let role = null;
@@ -177,7 +178,7 @@
     const ctx = document.getElementById('chartChildElo');
     if (ctx && typeof Chart !== 'undefined') {
       if (chartInstances.childElo) chartInstances.childElo.destroy();
-      const history = allRatingHistory.filter(h => String(h.student_id) === String(s.id)).sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
+      const history = allRatingHistory.filter(h => String(h.student_id) === String(s.id)).sort((a, b) => new Date(h.recorded_at) - new Date(b.recorded_at));
       const labels = history.length ? history.map(h => new Date(h.recorded_at).toLocaleDateString()) : ['Initial'];
       const data = history.length ? history.map(h => h.rating) : [getStudentRating(s)];
       chartInstances.childElo = new Chart(ctx, {
@@ -540,157 +541,19 @@
       return;
     }
 
-    if (!confirm(`Found ${pendingCoaches.length} coaches with pending/due fees. Start WhatsApp notification sequence?`)) return;
+    if (!confirm(`Found ${pendingCoaches.length} coaches with arrears. Open all WhatsApp tabs at once? (Note: Your browser may block popups)`)) return;
 
-    let count = 0;
-    const processNext = () => {
-      if (count >= pendingCoaches.length) {
-        toast('All coach notifications initiated!', 'success');
-        return;
-      }
-
-      const coach = pendingCoaches[count];
-      const myStudents = allStudents.filter(s => String(s.coach_id) === String(coach.id));
-      const unpaid = myStudents.filter(s => {
-        const status = getStudentPaymentStatus(s);
-        return status === 'Due' || status === 'Pending';
-      });
-
-      if (unpaid.length > 0) {
-        let list = `*Student Fee Status Update*\n\nHello ${getCoachName(coach)},\nHere is the list of your students with pending or due fees:\n\n`;
-
-        unpaid.forEach(s => {
-          const status = getStudentPaymentStatus(s);
-          const enrollDateStr = getStudentDate(s);
-          const systemStart = new Date(2026, 2, 1); // March 1st Baseline
-          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : systemStart;
-           const effectiveStart = enrollDate < systemStart ? systemStart : enrollDate;
-           const targetDate = new Date(Date.UTC(window.reportYear, window.reportMonth, 1));
-
-          let dueMonths = [];
-           const temp = new Date(Date.UTC(effectiveStart.getUTCFullYear(), effectiveStart.getUTCMonth(), 1));
-          while (temp <= targetDate) {
-            dueMonths.push(temp.toLocaleDateString('en-IN', { month: 'long' }));
-             temp.setUTCMonth(temp.getUTCMonth() + 1);
-          }
-
-          const credits = window.totalPaymentsMap ? (window.totalPaymentsMap[String(s.id)] || 0) : 0;
-          const actualDueMonths = dueMonths.slice(credits);
-          list += `${getStudentName(s)}: ${status} (${actualDueMonths.join(', ') || 'Current Month'})\n`;
-        });
-
-        list += `\nPlease check in with them. Thank you!\n– Chesskidoo Academy`;
-        const phone = coach.phone ? coach.phone.replace(/\D/g, '') : '';
-        if (phone) window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(list)}`, '_blank');
-      }
-
-      count++;
-      if (count < pendingCoaches.length) {
-        setTimeout(() => {
-          if (confirm(`Notification for ${getCoachName(coach)} sent. Proceed to next coach (${getCoachName(pendingCoaches[count])})?`)) {
-            processNext();
-          }
-        }, 300);
-      } else {
-        toast('All notifications processed!', 'success');
-      }
-    };
-    processNext();
+    pendingCoaches.forEach((coach, idx) => {
+       const url = informCoachFees(coach.id, true); 
+       if (url) {
+         setTimeout(() => {
+           window.open(url, '_blank');
+         }, idx * 1000);
+       }
+    });
+    
+    toast(`Initiated ${pendingCoaches.length} notifications.`, 'success');
   };
-
-  window.informAllDueStudents = function () {
-    const dueStudents = (allStudents || []).filter(s => getStudentPaymentStatus(s) === 'Due');
-
-    if (dueStudents.length === 0) {
-      toast('No students have fees due!', 'info');
-      return;
-    }
-
-    if (!confirm(`Found ${dueStudents.length} students with due fees. Start WhatsApp notification sequence?`)) return;
-
-    let count = 0;
-    const processNext = () => {
-      if (count >= dueStudents.length) {
-        toast('All due notifications processed!', 'success');
-        return;
-      }
-      const s = dueStudents[count];
-      sendPaymentReminder(s.id);
-      count++;
-      if (count < dueStudents.length) {
-        setTimeout(() => {
-          if (confirm(`Notification for ${getStudentName(s)} initiated. Proceed to next student (${getStudentName(dueStudents[count])})?`)) {
-            processNext();
-          }
-        }, 500);
-      } else {
-        toast('All due notifications initiated!', 'success');
-      }
-    };
-    processNext();
-  };
-
-  async function apiCall(url, options = {}) {
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'apikey': SUPABASE_ANON_KEY,
-      ...options.headers
-    };
-    const response = await fetch(url, { ...options, headers });
-    return response;
-  }
-  window.apiCall = apiCall;
-
-
-  function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  const isValidPhone = p => /^\d{10}$/.test(p);
-  const capitalizeFirst = str => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
-
-  function formatTimeAgo(dateInput) {
-    if (!dateInput) return '—';
-    const date = new Date(dateInput);
-    if (isNaN(date)) return '—';
-    const seconds = Math.floor((new Date() - date) / 1000);
-    let interval = Math.floor(seconds / 31536000);
-    if (interval >= 1) return interval + "y ago";
-    interval = Math.floor(seconds / 2592000);
-    if (interval >= 1) return interval + "mo ago";
-    interval = Math.floor(seconds / 86400);
-    if (interval >= 1) return interval + "d ago";
-    interval = Math.floor(seconds / 3600);
-    if (interval >= 1) return interval + "h ago";
-    interval = Math.floor(seconds / 60);
-    if (interval >= 1) return interval + "m ago";
-    return "Just now";
-  }
-  const formatTime = time24 => {
-    if (!time24) return '—';
-    // Handle cases like "12", "12:", "12:00"
-    const parts = String(time24).split(':');
-    let h = parseInt(parts[0], 10);
-    let m = parts[1] || '00';
-    if (isNaN(h)) return '—';
-    if (m.length === 1) m = '0' + m;
-    const hh = h % 12 || 12;
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    return `${hh}:${m} ${ampm}`;
-  };
-
-  function toast(msg, type = 'info') {
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${msg}`;
-    const container = $('toast-container');
-    if (container) container.appendChild(el);
-    setTimeout(() => el.remove(), 3800);
-  }
 
 
   function setLoading(key, loading) {
@@ -793,22 +656,8 @@
     const DEFAULT_MONTHLY_FEE = 1500; // Configurable default for display
 
   function getStudentMonthlyFee(s) {
-    // Read from all possible column names Supabase might use
-    const candidates = [s.monthly_fee, s.fee, s.fees, s.tuition_fee, s.course_fee];
-    for (const val of candidates) {
-      if (val !== undefined && val !== null && parseInt(val) > 0) {
-        return parseInt(val);
-      }
-    }
-
-    // Fallback to notes parsing if database fee is 0 or missing
-    if (s.notes) {
-      const match = s.notes.match(/fee[:\s]*(\d+)/i);
-      if (match) return parseInt(match[1]);
-    }
-
-    // Final fallback: if absolutely no fee data found, return default for display
-    return DEFAULT_MONTHLY_FEE;
+    if (!s) return DEFAULT_MONTHLY_FEE;
+    return parseInt(s.monthly_fee || s.fee || s.fees || 0) || DEFAULT_MONTHLY_FEE;
   }
   
   function getStudentPaymentStatus(s, monthOverride = null, yearOverride = null) {
@@ -1075,7 +924,16 @@
         eventsData = events || [];
         allMessages = messages || [];
         allAttendance = attendance || [];
-        allPayments = (payments || []).map(p => ({
+        // Deduplicate payments by transaction_id (or id if no transaction_id)
+        const seenPayKeys = new Set();
+        const dedupedPayments = (payments || []).filter(p => {
+          const key = (p.transaction_id || p.id || '').toString().trim();
+          if (!key || seenPayKeys.has(key)) return false;
+          seenPayKeys.add(key);
+          return true;
+        });
+
+        allPayments = dedupedPayments.map(p => ({
           ...p,
           amount: parseFloat(p.amount) || 0
         }));
@@ -1103,14 +961,22 @@
         syncCoachDropdowns();
 
         if (role === 'admin' || role === 'master') {
-          renderDash();
+          const active = document.querySelector('.page.active')?.id;
+          if (active === 'page-dash') renderDash();
+          else if (active === 'page-stud') renderStudents();
+          else if (active === 'page-coach-mgmt') renderCoachMgmt();
+          else if (active === 'page-bills') renderBills();
+          else if (active === 'page-msgs') renderMsgs();
+          else if (active === 'page-fame') renderFame();
+          else if (active === 'page-events') renderEvents();
+          /* renderDash(); */
           updateMsgBadge();
-          renderEvents();
-          renderFame();
-          renderBills();
-          renderMsgs();
-          renderCoachMgmt();
-          renderStudents();
+
+
+
+
+
+
           checkMonthlyRollover();
         }
         else if (role === 'parent') { renderChild(); renderEvents(); }
@@ -1175,6 +1041,7 @@
   let lastSessionCount = 0;
   let supabaseClient = null;
 
+  let rtDebounceTimer = null;
   function initRealtimeNotifications() {
     if (role !== 'admin' && role !== 'master') return;
     if (typeof supabase === 'undefined') {
@@ -1188,21 +1055,29 @@
       supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       console.log('[Realtime] "Instant Synchronicity" Active.');
 
+      const debouncedRefresh = () => {
+        if (window.isEditing) return;
+        clearTimeout(rtDebounceTimer);
+        rtDebounceTimer = setTimeout(() => {
+          loadAllData(true);
+        }, 2000);
+      };
+
       supabaseClient
         .channel('academy-sync')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => {
           console.log('[Realtime] Payment detected. Syncing...');
-          loadAllData(true); 
+          debouncedRefresh(); 
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => {
           console.log('[Realtime] Student update detected. Syncing...');
-          loadAllData(true);
+          debouncedRefresh();
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
           const msg = payload.new;
           if (msg.receiver_type === 'admin' && shouldShowNotification('msg_' + msg.id)) {
              toast(`📬 New Message from ${msg.sender_name || 'User'}!`, 'info');
-             loadAllData(true);
+             debouncedRefresh();
           }
         })
         .subscribe();
@@ -1496,6 +1371,13 @@
     }
 
     // Switch page immediately
+    // Default dashboard and report period to PREVIOUS month on login
+    const dl = new Date();
+    dl.setMonth(dl.getMonth() - 1);
+    window.reportMonth = dl.getUTCMonth();
+    window.reportYear = dl.getUTCFullYear();
+    if ($('report-month-select')) $('report-month-select').value = `${window.reportYear}-${String(window.reportMonth + 1).padStart(2, '0')}`;
+
     if (userRole === 'parent') setPage('child');
     else setPage('dash');
 
@@ -1825,6 +1707,84 @@
       });
     }
 
+      const startMonth = (endMonth - 5 + 12) % 12;
+
+      const labels = [];
+      const data = [];
+      for (let i = 0; i < 6; i++) {
+        const mIdx = (startMonth + i) % 12;
+        labels.push(months[mIdx]);
+        data.push(counts[mIdx]);
+      }
+
+      chartInstances.revenue = new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'New Students',
+            data,
+            borderColor: '#e8a830',
+            backgroundColor: 'rgba(232, 168, 48, 0.15)',
+            tension: 0.4,
+            pointBackgroundColor: '#e8a830',
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
+          }
+        }
+      });
+    }
+
+    const paymentCtx = $('chartPayment');
+    if (paymentCtx) {
+      const targetMonth = window.reportMonth;
+      const targetYear = window.reportYear;
+      const paid = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid').length;
+      const pending = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Pending').length;
+      const due = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Due').length;
+      chartInstances.payment = new Chart(paymentCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Paid', 'Pending', 'Due'],
+          datasets: [{
+            data: [paid, pending, due],
+            backgroundColor: ['#52c41a', '#e8a830', '#ff4d4f'],
+            borderWidth: 0
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+
+    // Session Distribution Chart
+    const sessionCtx = $('chartSession');
+    if (sessionCtx) {
+      let groupCount = 0, singleCount = 0;
+      studs.forEach(s => {
+        const type = getStudentBatchType(s);
+        if (type === 'Group') groupCount++;
+        else singleCount++;
+      });
+      chartInstances.session = new Chart(sessionCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Group', 'Single'],
+          datasets: [{
+            data: [groupCount, singleCount],
+            backgroundColor: ['#c9960c', '#5a9fff'],
+            borderWidth: 0
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+
     // Coach Load Chart
     const coachCtx = $('chartCoach');
     if (coachCtx && allCoaches.length) {
@@ -1851,26 +1811,6 @@
         }
       });
     }
-  }
-
-  function calculateSlotRevenue(year, month, paymentsMap) {
-    // 1. Calculate Revenue from ACTUAL Transactions (Perfect Balance)
-    const directRevenue = (allPayments || []).reduce((sum, p) => {
-        const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate.getUTCMonth() === month && pDate.getUTCFullYear() === year) {
-            // Respect Manual Overrides: If you manually set a student to Pending/Due, we subtract their money
-            const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
-            if (s) {
-                const status = getStudentPaymentStatus(s, month, year);
-                // Only count money for students who are officially "Paid" this month
-                if (status !== 'Paid') return sum;
-            }
-            return sum + (parseFloat(p.amount) || 0);
-        }
-        return sum;
-    }, 0);
-
-    return directRevenue;
   }
 
   function renderDash() {
@@ -1904,16 +1844,7 @@
     // --- Time-Machine Financial Calculation ---
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
-    const isCurrentMonth = targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear();
-    const targetMonthDate = new Date(targetYear, targetMonth, 1);
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
-
-     // Helper for robust date matching (UTC)
-     const getYM = (d) => {
-       const dt = new Date(d);
-       return isNaN(dt.getTime()) ? null : `${dt.getUTCFullYear()}-${dt.getUTCMonth()}`;
-     };
-    const targetYM = `${targetYear}-${targetMonth}`;
 
      // 1. Target Dataset Preparation
      const s_id_map = {};
@@ -1950,7 +1881,6 @@
     }, 0);
 
     let totalArrears = 0;
-    let lastMonthDue = 0;
     let currMonthPending = 0;
     let totalPotential = 0;
 
@@ -1962,9 +1892,8 @@
       const status = getStudentPaymentStatus(s, targetMonth, targetYear);
       
       if (status === 'Due') {
-        // Calculate exactly how many months behind
         const enrollDateStr = getStudentDate(s);
-        const baseline = new Date(2026, 3, 1); // April 1st Baseline
+        const baseline = new Date(2026, 3, 1);
         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
         const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
         const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
@@ -1972,9 +1901,9 @@
         
         const monthsBehind = Math.max(0, monthsRequired - totalCredits);
         if (monthsBehind > 1) {
-          totalArrears += (fee * (monthsBehind - 1)); // Arrears (Previous months)
+          totalArrears += (fee * (monthsBehind - 1));
         }
-        currMonthPending += fee; // Pending (Current month)
+        currMonthPending += fee;
       } else if (status === 'Pending') {
         currMonthPending += fee;
       }
@@ -1983,8 +1912,21 @@
     const totalOutstanding = totalArrears + currMonthPending;
 
     // --- Growth Calculation (MoM Slot-Based) ---
-     const prevMonthDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1));
-     const prevRevenue = calculateSlotRevenue(prevMonthDate.getUTCFullYear(), prevMonthDate.getUTCMonth(), s_id_map);
+    const prevMonthDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1));
+    const prevRevenue = calculateSlotRevenue(prevMonthDate.getUTCFullYear(), prevMonthDate.getUTCMonth(), s_id_map);
+
+    const rawRate = totalPotential > 0 ? (paidRevenue / totalPotential) * 100 : 0;
+    const collectionRate = Math.min(rawRate, 100).toFixed(1);
+    if ($('s-rate')) {
+      $('s-rate').textContent = collectionRate + '%';
+      if (rawRate > 100) {
+        $('s-rate').style.color = 'var(--gold)';
+        $('s-rate').title = `Actual collected: ₹${paidRevenue.toLocaleString()} (includes arrears)`;
+      } else {
+        $('s-rate').style.color = 'var(--blue)';
+        $('s-rate').title = '';
+      }
+    }
 
     const revenueGrowth = paidRevenue - prevRevenue;
     const growthPercent = prevRevenue > 0
@@ -1997,16 +1939,18 @@
 
     const growthEl = $('s-due');
     if (growthEl) {
-      growthEl.innerHTML = `₹${revenueGrowth.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)</span>`;
-      growthEl.style.color = revenueGrowth > 0 ? 'var(--emerald)' : (revenueGrowth < 0 ? 'var(--ruby)' : 'var(--ivory-dim)');
+      if (prevRevenue > 0) {
+        growthEl.innerHTML = `₹${revenueGrowth.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)</span>`;
+        growthEl.style.color = revenueGrowth > 0 ? 'var(--emerald)' : (revenueGrowth < 0 ? 'var(--ruby)' : 'var(--ivory-dim)');
+      } else {
+        growthEl.innerHTML = `₹${paidRevenue.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(vs prev: ₹0)</span>`;
+        growthEl.style.color = 'var(--ivory-dim)';
+      }
     }
 
     if ($('s-last-due')) $('s-last-due').textContent = '₹' + totalArrears.toLocaleString();
     if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currMonthPending.toLocaleString();
     if ($('s-total-outstanding')) $('s-total-outstanding').textContent = '₹' + totalOutstanding.toLocaleString();
-
-    const collectionRate = totalPotential > 0 ? ((paidRevenue / totalPotential) * 100).toFixed(1) : '0';
-    if ($('s-rate')) $('s-rate').textContent = collectionRate + '%';
 
     // Coach expenses & Net Profit
     const totalCoachCost = allCoaches.filter(c => c.status !== 'archived').reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
@@ -2139,16 +2083,132 @@
   // STUDENTS, COACHES, EVENTS, ACHIEVEMENTS
   // ═══════════════════════════════════════════════════════════════
   function clearFilters() {
-    ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+    ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search', 'f-bill-month-stud'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+    resetStudMonth();
+    /* renderStudents(); */
     renderStudents();
   }
+
+  window.syncStudMonth = function(val) {
+    if (!val) return;
+    const [y, m] = val.split('-');
+    window.reportMonth = parseInt(m) - 1;
+    window.reportYear = parseInt(y);
+    renderStudents();
+    toast(`Viewing billing status for ${val}`, 'info');
+  };
+
+  window.resetStudMonth = function() {
+    const now = new Date();
+    window.reportMonth = now.getUTCMonth();
+    window.reportYear = now.getUTCFullYear();
+    if ($('f-bill-month-stud')) $('f-bill-month-stud').value = '';
+    renderStudents();
+    toast('Switched to current month view', 'info');
+  };
 
   function renderStudents() {
     const tbody = $('stud-body');
     if (!tbody) return;
 
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+
+    // Pre-calculate payments for this month for the new column
+    const paymentsOfMonth = {};
+    (allPayments || []).forEach(p => {
+      const pDate = new Date(p.payment_date || p.created_at);
+      if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
+        const sid = String(p.student_id).toLowerCase();
+        if (!paymentsOfMonth[sid]) paymentsOfMonth[sid] = { total: 0, count: 0 };
+        paymentsOfMonth[sid].total += (parseFloat(p.amount) || 0);
+        paymentsOfMonth[sid].count++;
+      }
+    });
+
     let studs = (role === 'admin' || role === 'master') ? allStudents : (currentStudent ? [currentStudent] : []);
 
+    // Apply Base Filters (Enrollment Date & Archive Status)
+    studs = studs.filter(s => {
+      if ((s.status || 'active').toLowerCase() === 'archived') return false;
+      const enrollDateStr = getStudentDate(s);
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 3, 1);
+      return enrollDate <= targetMonthEnd;
+    });
+
+    // Apply UI Filters
+    if (role === 'admin' || role === 'master') {
+      const fSearch = ($('f-search')?.value || '').toLowerCase().trim();
+      const fCoach = $('f-coach')?.value;
+      const fSession = $('f-session')?.value;
+      const fStatus = $('f-status')?.value;
+      const fMin = parseInt($('f-min-fee')?.value) || 0;
+      const fMax = parseInt($('f-max-fee')?.value) || 999999;
+
+      studs = studs.filter(s => {
+        const nameMatch = !fSearch || getStudentName(s).toLowerCase().includes(fSearch);
+        const coachMatch = !fCoach || String(s.coach_id) === String(fCoach);
+        const sessionMatch = !fSession || getStudentBatchType(s) === fSession;
+        const statusMatch = !fStatus || getStudentPaymentStatus(s, targetMonth, targetYear) === fStatus;
+        const fee = getStudentMonthlyFee(s);
+        const feeMatch = fee >= fMin && fee <= fMax;
+        return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch;
+      });
+
+      studs.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
+    }
+
+    if (!studs || studs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="12" class="text-center">No students found matching filters for this period</td></tr>';
+      return;
+    }
+    
+    // Skip old mapping logic
+    tbody.innerHTML = studs.map((s, i) => {
+      const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+      const session = getStudentBatchType(s);
+      const time = s.session_time || s.class_time || s.batch_time || '';
+      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+      const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
+      const uniqueId = 'more-' + s.id.replace(/[^a-zA-Z0-9]/g, '');
+      
+      const pInfo = paymentsOfMonth[String(s.id).toLowerCase()];
+      const paidThisMonthHtml = pInfo 
+        ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>` 
+        : '<span class="text-muted">₹0</span>';
+
+      return `<tr>
+        <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
+        <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
+        <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
+        <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
+        <td>${coachName}</td>
+        <td>${getStudentDate(s) || '-'}</td>
+        <td>${session}</td>
+        <td>${time}</td>
+        <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+        <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
+        <td>${paidThisMonthHtml}</td>
+         <td>
+          <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
+            <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')" title="View">View</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')" title="Edit">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${getStudentName(s)}')" title="Delete">Delete</button>
+            <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')" title="More Options">⋮ More</button>
+            <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
+              <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${getStudentName(s)}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+              <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+              <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="openPromote('${s.id}')">📈 Promote</button>
+              <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+    /*
     // Apply Filters
     if (role === 'admin' || role === 'master') {
       const fSearch = ($('f-search')?.value || '').toLowerCase().trim();
@@ -2211,7 +2271,7 @@
         </td>
       </tr>`;
     }).join('');
-  }
+  }*/
 
   window.toggleMoreMenu = function (id) {
     const menu = document.getElementById(id);
@@ -2429,14 +2489,21 @@
       level: $('m-level').value,
       rating: parseInt($('m-elo').value) || 0,
       coach_id: $('m-coach').value,
-      enrollment_date: $('m-join').value,
+      enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
       due_date: $('m-due-date')?.value || null,
       batch_type: $('m-batch-type').value,
       batch_time: $('m-batch-time').value,
       monthly_fee: parseInt($('m-fee').value) || 0,
       payment_status: 'Due',
+      status: 'active',
       notes: ''
     };
+
+    if (!data.due_date) {
+      const nextMonth = new Date();
+      nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1, 5);
+      data.due_date = nextMonth.toISOString().split('T')[0];
+    }
 
     if (!data.full_name) { toast('Student name is required', 'error'); return; }
     if (!data.phone) { toast('Parent phone is required', 'error'); return; }
