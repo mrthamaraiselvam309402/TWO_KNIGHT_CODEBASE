@@ -2021,7 +2021,7 @@ Thank you for your cooperation.
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-      // 1. Target Dataset Preparation — ONLY count payments in the target month
+      // 1. Target Dataset Preparation — cumulative paid months from effective enrollment through target month
       const s_id_map = {};
       (allPayments || []).forEach(p => {
         if (p.status === 'paid') {
@@ -2030,9 +2030,13 @@ Thank you for your cooperation.
           const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
           if (!s) return;
 
+          const enrollDateStr = getStudentDate(s);
+          const baseline = new Date(Date.UTC(2026, 3, 1));
+          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+          const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+
           const pDate = new Date(p.payment_date || p.created_at);
-          // CRITICAL: Only count payments made in the target month/year
-          if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
+          if (pDate >= effectiveEnroll && pDate <= targetMonthEnd) {
             if (!s_id_map[sid]) s_id_map[sid] = 0;
             s_id_map[sid]++;
           }
