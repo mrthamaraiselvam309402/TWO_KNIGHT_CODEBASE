@@ -61,6 +61,56 @@
    // ═══════════════════════════════════════════════════════════════
    let allCoaches = [];
    let allStudents = [];
+  window.viewPaymentHistory = function(id) {
+    const s = allStudents.find(x => String(x.id).toLowerCase() === String(id).toLowerCase());
+    if (!s) return;
+    
+    const payments = (allPayments || []).filter(p => String(p.student_id).toLowerCase() === String(id).toLowerCase());
+    const tbody = document.createElement('tbody');
+    
+    if (payments.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center">No payment records found</td></tr>';
+    } else {
+      payments.sort((a,b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at));
+      tbody.innerHTML = payments.map(p => `
+        <tr>
+          <td>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
+          <td>₹${(parseFloat(p.amount) || 0).toLocaleString()}</td>
+          <td>${p.payment_method || 'N/A'}</td>
+          <td>${p.description || '-'}</td>
+        </tr>
+      `).join('');
+    }
+
+    const modalHtml = `
+      <div class="modal-header">
+        <h3 class="modal-title">Payment History: ${getStudentName(s)}</h3>
+        <button class="close-btn" onclick="closeModals()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th></tr>
+            </thead>
+            <tbody id="history-table-body">${tbody.innerHTML}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
+    // We reuse a generic modal container if it exists, or create one
+    let m = $('history-modal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'history-modal';
+      m.className = 'modal';
+      document.body.appendChild(m);
+    }
+    m.innerHTML = `<div class="modal-content">${modalHtml}</div>`;
+    openModal('history-modal');
+  };
+
   // Period Sync Singleton
   function ensureReportPeriod() {
     if (typeof window.reportMonth !== 'number' || isNaN(window.reportMonth)) {
