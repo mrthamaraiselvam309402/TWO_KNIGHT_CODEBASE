@@ -2575,8 +2575,10 @@ Thank you for your cooperation.
                 payment_date: new Date().toISOString()
               })
             });
-          } catch (pe) { console.warn('Payment logging failed during profile update:', pe); }
-         }
+          } catch (pe) { 
+        console.warn('Payment logging failed during profile update:', pe); 
+        toast('Warning: Payment record not created. Student status updated though.', 'warning');
+      }   }
 
          // Log rating history if changed
          if (newElo !== oldElo) {
