@@ -2298,6 +2298,8 @@ Thank you.
 
    function renderStudents() {
       try {
+      const tbody = $('student-registry-body');
+      if (!tbody) return;
       ensureReportPeriod();
       const targetMonth = window.reportMonth;
       const targetYear = window.reportYear;
