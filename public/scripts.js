@@ -45,16 +45,13 @@
   // Security validation
   if (!SUPABASE_ANON_KEY) {
     console.error('❌ CRITICAL: Supabase Anon Key is missing!');
-    console.warn('[Config] Some features may fail. Check Vercel Environment Variables.');
-  }
     if (window.location.hostname !== 'localhost') {
       document.body.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px">
-          <h1 style="color:var(--danger);margin-bottom:20px">Configuration Error</h1>
-          <p style="color:var(--ivory-dim);max-width:500px;margin-bottom:30px">
-            The application is not configured properly. Please contact the administrator.
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px;background:#1a1a1a;color:#fff">
+          <h1 style="color:#ff4d4d;margin-bottom:20px">Configuration Error</h1>
+          <p style="color:#ccc;max-width:500px;margin-bottom:30px">
+            The application is not configured properly (Missing Supabase Key). Please contact the administrator.
           </p>
-          <p style="font-size:12px;color:var(--ivory3)">Error: Missing Supabase configuration</p>
         </div>
       `;
     }
