@@ -2607,7 +2607,7 @@ Thank you for your cooperation.
                 payment_method: 'Manual Override',
                 description: 'Status updated to Paid via Profile',
                 transaction_id: 'PRF-' + Math.floor(Math.random() * 1000000),
-                payment_date: new Date().toISOString()
+                payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
               })
             });
           } catch (pe) { 
@@ -3347,7 +3347,7 @@ Thank you for your cooperation.
           payment_method: method,
           description: desc,
           transaction_id: 'MAN-' + Math.floor(Math.random() * 1000000),
-          payment_date: new Date().toISOString()
+          payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
         })
       });
 
@@ -3562,7 +3562,7 @@ Thank you for your continued support and cooperation.
            payment_method: 'Manual Toggle',
            description: 'Status toggled to Paid via Dashboard',
            transaction_id: 'TGL-' + Math.floor(Math.random() * 1000000),
-           payment_date: new Date().toISOString()
+           payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
          };
 
          const res = await apiCall(`${API_BASE}/payments`, {
@@ -3934,7 +3934,7 @@ Thank you for your continued support and cooperation.
             payment_method: 'Bulk Admin',
             description: 'Bulk mark as paid by administrator',
             transaction_id: 'BLK-' + Math.floor(Math.random() * 1000000),
-            payment_date: new Date().toISOString()
+            payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
           })
         });
       } catch (e) {
