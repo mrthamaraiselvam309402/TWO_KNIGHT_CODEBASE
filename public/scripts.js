@@ -891,6 +891,124 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
           event_id: eventId,
           student_id: currentStudent.id,
           student_name: getStudentName(currentStudent)
+
+    const isCurrentMonth = targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear();
+    const isAuditPaid = (totalCredits >= monthsRequired) || hasDirect;
+
+    // Determination Logic: 
+    // 1. For PAST months: Audit is the ONLY absolute truth.
+    // 2. For CURRENT month: Manual override > Audit (allows instant marking).
+    if (isCurrentMonth) {
+        if (manualStatus === 'paid') return 'Paid';
+        if (manualStatus === 'pending') return 'Pending';
+        if (manualStatus === 'due') return 'Due';
+    }
+    
+    return isAuditPaid ? 'Paid' : (totalCredits === monthsRequired - 1 ? 'Pending' : 'Due');
+  }
+
+  function getStudentBatchType(s) {
+    if (!s) return 'Group';
+    const mode = (s.session_mode || s.batch_type || s.session_type || '').toLowerCase();
+    if (mode.includes('group')) return 'Group';
+    if (mode.includes('single') || mode.includes('one_to_one')) return 'Single';
+
+    // Fallback to notes parsing for legacy data
+    const notes = (s.notes || '').toLowerCase();
+    if (notes.includes('session:group')) return 'Group';
+    if (notes.includes('session:single')) return 'Single';
+
+    return 'Group'; // Default
+  }
+  function getStudentSessionTime(s) {
+    if (s.session_time) return s.session_time;
+    const match = (s.notes || '').match(/time[:\s]*([^,]+)/i);
+    return match ? match[1].trim() : 'WEEKEND';
+  }
+  function isStudentScheduledToday(s) {
+    const time = getStudentSessionTime(s).toUpperCase();
+    const day = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const isWeekend = (day === 0 || day === 6);
+
+    if (time.includes('MORNING & EVENING')) return true; // Daily
+    if (time.includes('ANYTIME')) return true;
+    if (isWeekend && time.includes('WEEKEND')) return true;
+    if (!isWeekend && time.includes('WEEKDAY')) return true;
+    if (day === 5 || day === 6) if (time.includes('FRI & SAT')) return true;
+    if (day === 0 || day === 1) if (time.includes('SUN & MON')) return true;
+
+    return false;
+  }
+  function getStudentBatchTime(s) { return s.batch_time || '17:00'; }
+  function getStudentStatus(s) { return s.status || 'pending'; }
+  function getStudentCoachNotes(s) { return s.notes || ''; }
+  function getStudentSkills(s) {
+    return {
+      tactics: s.tactics_score || 50,
+      endgame: s.endgame_score || 50,
+      openings: s.openings_score || 50,
+      positional: s.positional_score || 50
+    };
+  }
+
+  function getCoachName(c) { return c.name || ''; }
+  function getCoachSpecialty(c) { return c.specialization || ''; }
+  function getCoachSalary(c) { return c.salary || c.hourly_rate || 0; }
+  function getCoachAvailability(c) { return c.availability || ''; }
+  function getCoachStatus(c) { return c.status || c.account_status || 'active'; }
+  function getCoachEmail(c) { return c.email || ''; }
+  function getCoachExperience(c) { return c.experience || 0; }
+  function getCoachRating(c) { return c.rating || 0; }
+
+  function getEventDate(e) { return e.date || e.event_date || ''; }
+  function getEventType(e) { return e.type || e.event_type || 'Tournament'; }
+  function getEventLocation(e) { return e.location || ''; }
+  function getEventTime(e) {
+    const t = e.time || e.event_time || '10:00';
+    return formatTime(t);
+  }
+  async function registerForEvent(eventId) {
+    const e = eventsData.find(x => String(x.id) === String(eventId));
+    if (!e) { toast('Event not found', 'error'); return; }
+
+    if (!currentStudent) { toast('Please login as a parent first', 'error'); return; }
+    if (!confirm('Register ' + getStudentName(currentStudent) + ' for "' + e.title + '" on ' + (e.date ? new Date(e.date).toLocaleDateString() : 'TBD') + '?')) return;
+
+    // Optimistic update - add student to registered list locally first
+    const registeredStudents = e.registered_students || [];
+    if (registeredStudents.includes(currentStudent.id)) {
+      toast('Already registered!', 'info');
+      return;
+    }
+
+    // Add student locally (optimistic)
+    registeredStudents.push(currentStudent.id);
+    e.registered_students = registeredStudents;
+    e.registrations_count = (e.registrations_count || 0) + 1;
+
+    // Also update in eventsData
+    const idx = eventsData.findIndex(ev => String(ev.id) === String(eventId));
+    if (idx >= 0) {
+      eventsData[idx].registered_students = registeredStudents;
+      eventsData[idx].registrations_count = (eventsData[idx].registrations_count || 0) + 1;
+    }
+
+    // Re-render to show registered
+    renderEvents();
+
+    // Try to save to backend (fire and forget)
+    try {
+      fetch(`${SUPABASE_URL}/functions/v1/events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          action: 'register',
+          event_id: eventId,
+          student_id: currentStudent.id,
+          student_name: getStudentName(currentStudent)
         })
       }).catch(() => { });
     } catch (err) {
@@ -911,10 +1029,14 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
   // ═══════════════════════════════════════════════════════════════
   // DATA LOADING
   // ═══════════════════════════════════════════════════════════════
+  let isLoadingData = false;
   async function loadAllData(forceRefresh = false) {
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
+    if (isLoadingData) return;
 
     const executeLoad = async () => {
+      if (isLoadingData) return;
+      isLoadingData = true;
       const now = Date.now();
       const hasValidCache = dataCache.timestamp > 0 && dataCache.coaches && dataCache.students;
       if (!forceRefresh && hasValidCache && (now - dataCache.timestamp) < CACHE_DURATION) {
@@ -941,6 +1063,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
           renderStudents();
         }
         else if (role === 'parent') { renderChild(); renderEvents(); }
+        isLoadingData = false;
         return;
       }
       try {
@@ -949,22 +1072,19 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
          const loadWithRetry = async (url, maxRetries = 1) => {
           for (let i = 0; i <= maxRetries; i++) {
             try {
-              const urlWithBust = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`
+              const urlWithBust = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?${Date.now()}`
               const response = await apiCall(urlWithBust, { cache: 'no-store' })
               if (response.ok) {
                 const result = await response.json()
                 if (result && result.error) throw new Error(result.error);
-                // Handle paginated responses
-                if (result && result.data !== undefined) {
-                  return result.data
-                }
-                return result
+                if (result && result.data !== undefined) return result.data;
+                return result;
               }
-              if (response.status === 404) return null
-              throw new Error(`HTTP ${response.status}`)
+              if (response.status === 404) return null;
+              throw new Error(`HTTP ${response.status}`);
             } catch (error) {
-              if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return null }
-              await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)))
+              if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return null; }
+              await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
             }
           }
         }
@@ -981,11 +1101,11 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
           loadWithRetry('/api/resources').then(r => r || [])
         ]);
 
-        allCoaches = coaches || [];
-        allResources = resources || [];
+        allCoaches = Array.isArray(coaches) ? coaches : [];
+        allResources = Array.isArray(resources) ? resources : [];
 
         // --- Golden State Deduplication ---
-        const rawStudents = students || [];
+        const rawStudents = Array.isArray(students) ? students : [];
         const seenId = new Set();
         allStudents = rawStudents.filter(s => {
           if (!s || !s.id) return false;
@@ -994,13 +1114,13 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
           return true;
         });
 
-        achievementsData = achievements || [];
-        eventsData = events || [];
-        allMessages = messages || [];
-        allAttendance = attendance || [];
+        achievementsData = Array.isArray(achievements) ? achievements : [];
+        eventsData = Array.isArray(events) ? events : [];
+        allMessages = Array.isArray(messages) ? messages : [];
+        allAttendance = Array.isArray(attendance) ? attendance : [];
         // Deduplicate payments by transaction_id (or id if no transaction_id)
         const seenPayKeys = new Set();
-        const dedupedPayments = (payments || []).filter(p => {
+        const dedupedPayments = (Array.isArray(payments) ? payments : []).filter(p => {
           const key = (p.transaction_id || p.id || '').toString().trim();
           if (!key || seenPayKeys.has(key)) return false;
           seenPayKeys.add(key);
@@ -1011,7 +1131,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
           ...p,
           amount: parseFloat(p.amount) || 0
         }));
-        allRatingHistory = ratingHistory || [];
+        allRatingHistory = Array.isArray(ratingHistory) ? ratingHistory : [];
 
         // Build totalPaymentsMap atomically during load (count only 'paid' payments)
         const pMap = {};
@@ -1056,10 +1176,12 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
         else if (role === 'parent') { renderChild(); renderEvents(); }
 
         setLoading('data', false);
+        isLoadingData = false;
       } catch (err) {
         console.error('CRITICAL DATA LOAD ERROR:', err);
         toast(`Failed to load data: ${err.message || 'Unknown error'}. Please refresh.`, 'error');
         setLoading('data', false);
+        isLoadingData = false;
       }
     };
 
@@ -1125,8 +1247,12 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
     }
 
     try {
-      if (supabaseClient) return; // Already active
+      if (supabaseClient || window.supabaseClient) {
+        supabaseClient = supabaseClient || window.supabaseClient;
+        return;
+      }
       supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      window.supabaseClient = supabaseClient;
       console.log('[Realtime] "Instant Synchronicity" Active.');
 
       const debouncedRefresh = () => {
@@ -1134,7 +1260,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
         clearTimeout(rtDebounceTimer);
         rtDebounceTimer = setTimeout(() => {
           loadAllData(true);
-        }, 2000);
+        }, 5000); // Optimized 5s sync freq
       };
 
       supabaseClient
