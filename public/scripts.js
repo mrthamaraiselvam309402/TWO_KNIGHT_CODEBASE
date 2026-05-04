@@ -647,77 +647,96 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
   };
 
   window.informAllCoaches = function () {
-     const pendingCoaches = (allCoaches || []).filter(coach => {
-       const myStudents = (allStudents || []).filter(s => String(s.coach_id) === String(coach.id));
-       return myStudents.some(s => {
-         const st = getStudentPaymentStatus(s);
-         return st === 'Due' || st === 'Pending';
-       });
-     });
+    const pendingCoaches = (allCoaches || []).filter(coach => {
+      const myStudents = (allStudents || []).filter(s => String(s.coach_id) === String(coach.id));
+      return myStudents.some(s => {
+        const st = getStudentPaymentStatus(s);
+        return st === 'Due' || st === 'Pending';
+      });
+    });
 
-     if (pendingCoaches.length === 0) {
-       toast('All coaches are up to date!', 'success');
-       return;
-     }
+    if (pendingCoaches.length === 0) {
+      toast('All coaches are up to date!', 'success');
+      return;
+    }
 
-     if (!confirm(`Found ${pendingCoaches.length} coaches with arrears. Open all WhatsApp tabs at once? (Note: Your browser may block popups)`)) return;
+    if (!confirm(`Found ${pendingCoaches.length} coaches with arrears. Open all WhatsApp tabs at once? (Note: Your browser may block popups)`)) return;
 
-     pendingCoaches.forEach((coach, idx) => {
-        const url = informCoachFees(coach.id, true);
-        if (url) {
-          setTimeout(() => {
-            window.open(url, '_blank');
-          }, idx * 1000);
+    pendingCoaches.forEach((coach, idx) => {
+      const url = informCoachFees(coach.id, true);
+      if (url) {
+        setTimeout(() => {
+          window.open(url, '_blank');
+        }, idx * 1000);
+      }
+    });
+
+    toast(`Initiated ${pendingCoaches.length} notifications.`, 'success');
+  };
+
+  window.informAllDueStudents = function () {
+    const dueStudents = (allStudents || []).filter(s => {
+      const st = getStudentPaymentStatus(s);
+      return st === 'Due';
+    });
+
+    if (dueStudents.length === 0) {
+      toast('No students with due payments!', 'success');
+      return;
+    }
+
+    if (!confirm(`Notify parents of ${dueStudents.length} students with due payments? This will open multiple WhatsApp tabs.`)) return;
+
+    const nowUTC = new Date();
+    let sent = 0;
+
+    dueStudents.forEach((s, idx) => {
+      const phone = (s.parent_phone || '').replace(/\D/g, '');
+      if (!phone || phone.length < 10) return;
+
+      const name = getStudentName(s);
+      const fee = getStudentMonthlyFee(s);
+      
+      // Audit-based debt calculation
+      const enrollDateStr = getStudentDate(s);
+      const baseline = new Date(Date.UTC(2026, 3, 1));
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+      const monthsReq = ((nowUTC.getUTCFullYear() - effectiveEnroll.getUTCFullYear()) * 12) + (nowUTC.getUTCMonth() - effectiveEnroll.getUTCMonth()) + 1;
+      
+      const sid = String(s.id).toLowerCase();
+      let paidCount = 0;
+      (allPayments || []).forEach(p => {
+        if (String(p.student_id).toLowerCase() === sid && p.status === 'paid') {
+           const pDate = new Date(p.payment_date || p.created_at);
+           if (pDate <= nowUTC) paidCount++;
         }
-     });
+      });
+      
+      const monthsBehind = Math.max(1, monthsReq - paidCount);
+      const totalDebt = fee * monthsBehind;
+      const arrearsNote = monthsBehind > 1 ? ` (including ${monthsBehind - 1} months arrears)` : '';
 
-     toast(`Initiated ${pendingCoaches.length} notifications.`, 'success');
-   };
+      const dueDateStr = s.due_date
+        ? new Date(s.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+        : `5th ${nowUTC.toLocaleString('en-IN', { month: 'long' })} ${nowUTC.getFullYear()}`;
 
-   window.informAllDueStudents = function () {
-     const dueStudents = (allStudents || []).filter(s => {
-       const st = getStudentPaymentStatus(s);
-       return st === 'Due';
-     });
+      const msg = `Hello Sir/Madam,
 
-     if (dueStudents.length === 0) {
-       toast('No students with due payments!', 'success');
-       return;
-     }
+This is a gentle reminder regarding the pending chess class fee of *INR ${totalDebt.toLocaleString()}*${arrearsNote} for your child *${name}*. The current month due date is ${dueDateStr}.
 
-     if (!confirm(`Notify parents of ${dueStudents.length} students with due payments? This will open multiple WhatsApp tabs.`)) return;
-
-     const now = new Date();
-     const monthName = now.toLocaleString('en-IN', { month: 'long' });
-     const year = now.getFullYear();
-     let sent = 0;
-
-     dueStudents.forEach((s, idx) => {
-       const phone = (s.parent_phone || '').replace(/\D/g, '');
-       if (!phone || phone.length < 10) return;
-
-       const name = getStudentName(s);
-       const fee = getStudentMonthlyFee(s);
-       const dueDateStr = s.due_date
-         ? new Date(s.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-         : `5th ${monthName} ${year}`;
-
-       const msg = `Hello Sir/Madam,
-
-This is a gentle reminder regarding the pending chess class fee of INR ${fee.toLocaleString()} for your child ${name}. The due date is ${dueDateStr}.
-
-Please settle the payment at your earliest convenience.
+Please settle the payment at your earliest convenience to ensure continued classes.
 
 Thank you for your cooperation.
 - Chesskidoo Academy`;
 
-       setTimeout(() => {
-         window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-         sent++;
-         if (sent === dueStudents.length) toast(`Sent ${sent} payment reminders`, 'success');
-       }, idx * 800);
-     });
-   };
+      setTimeout(() => {
+        window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        sent++;
+        if (sent === dueStudents.length) toast(`Sent ${sent} payment reminders`, 'success');
+      }, idx * 800);
+    });
+  };
 
 
   function setLoading(key, loading) {
