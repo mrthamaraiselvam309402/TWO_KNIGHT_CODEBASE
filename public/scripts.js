@@ -61,6 +61,15 @@
    // ═══════════════════════════════════════════════════════════════
    let allCoaches = [];
    let allStudents = [];
+  // Period Sync Singleton
+  function ensureReportPeriod() {
+    if (typeof window.reportMonth !== 'number' || isNaN(window.reportMonth)) {
+      const now = new Date();
+      window.reportMonth = now.getUTCMonth();
+      window.reportYear = now.getUTCFullYear();
+    }
+  }
+
    let allPayments = [];
    let allAttendance = [];
 
@@ -899,7 +908,9 @@ Thank you.
     // 3. Status Determination (Strict Audit-Only for 100% Data Integrity)
     // Audit-based Standing
     if (totalPaidAmount >= totalRequiredAmount) return 'Paid';
-    if (totalPaidAmount >= (totalRequiredAmount - fee)) return 'Pending';
+    if (totalPaidAmount >= (totalRequiredAmount - fee)) {
+      return isCurrentMonth ? 'Pending' : 'Due';
+    }
     return 'Due';
   }
 
@@ -2286,19 +2297,7 @@ Thank you.
   };
 
    function renderStudents() {
-     const tbody = $('stud-body');
-     if (!tbody) return;
-
-     try {
-       // Ensure reportMonth/Year are valid numbers
-       if (typeof window.reportMonth !== 'number' || isNaN(window.reportMonth) ||
-           typeof window.reportYear !== 'number' || isNaN(window.reportYear)) {
-         const now = new Date();
-         window.reportMonth = now.getUTCMonth();
-         window.reportYear = now.getUTCFullYear();
-         console.warn('[renderStudents] Fixed invalid reportMonth/year');
-      }
-
+      ensureReportPeriod();
       const targetMonth = window.reportMonth;
       const targetYear = window.reportYear;
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
