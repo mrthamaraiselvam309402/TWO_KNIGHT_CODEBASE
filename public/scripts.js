@@ -559,7 +559,7 @@
 
     const s_id_key = String(s.id || '').trim().toLowerCase();
     const totalCredits = freshPaymentsMap[s_id_key] || 0;
-     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
 
     const pendingMonths = Math.max(1, monthsRequired - totalCredits);
     const totalPending = pendingMonths * monthlyFee;
@@ -703,7 +703,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       const baseline = new Date(Date.UTC(2026, 3, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-      const monthsReq = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+      const monthsReq = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
       
       const sid = String(s.id).toLowerCase();
       let totalPaidAmount = 0;
@@ -714,8 +714,6 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       });
       
       const totalDebt = Math.max(0, (fee * monthsReq) - totalPaidAmount);
-      const monthsBehind = Math.ceil(totalDebt / fee);
-      const arrearsNote = monthsBehind > 1 ? ` (including ${monthsBehind - 1} months arrears)` : '';
 
       const dueDateStr = s.due_date
         ? new Date(s.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -723,11 +721,11 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
 
       const msg = `Hello Sir/Madam,
 
-This is a gentle reminder regarding the pending chess class fee of *INR ${totalDebt.toLocaleString()}*${arrearsNote} for your child *${name}*. The current month due date is ${dueDateStr}.
+This is a gentle reminder regarding the pending chess class fee of *INR ${totalDebt.toLocaleString()}* for your child *${name}*. The due date is ${dueDateStr}.
 
-Please settle the payment at your earliest convenience to ensure continued classes.
+Please settle the payment at your earliest convenience.
 
-Thank you for your cooperation.
+Thank you.
 - Chesskidoo Academy`;
 
       setTimeout(() => {
@@ -904,7 +902,7 @@ Thank you for your cooperation.
       }
     });
 
-    const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+    const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
 
     // 3. Status Determination Logic:
 
@@ -2104,7 +2102,7 @@ Thank you for your cooperation.
         const baseline = new Date(2026, 3, 1);
         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
         const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-        const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+        const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
         const totalCredits = s_id_map[String(s.id).toLowerCase()] || 0;
         
         const monthsBehind = Math.max(0, monthsRequired - totalCredits);
