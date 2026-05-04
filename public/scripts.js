@@ -905,17 +905,17 @@ Thank you for your cooperation.
      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
      // 3. Status Determination Logic:
-     
-     // A. PAID: Audit confirms enough payments and one exists for target month.
-     if (totalPaidInvoices >= monthsRequired && hasPaymentThisMonth) return 'Paid';
 
-     // B. MANUAL OVERRIDE: If we edited it in the DB and it's the current month, respect it.
+     // A. MANUAL OVERRIDE: If we edited it in the DB and it's the current month, respect it.
      // This fixes the "Edit doesn't stick" and "Keeps showing Paid" bugs.
      if (isCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled') {
         if (s.payment_status === 'Pending') return 'Pending';
         if (s.payment_status === 'Due') return 'Due';
-        if (s.payment_status === 'Paid' && totalPaidInvoices >= monthsRequired) return 'Paid';
+        if (s.payment_status === 'Paid' && totalPaidInvoices >= monthsRequired && hasPaymentThisMonth) return 'Paid';
      }
+     
+     // B. AUDIT: Confirm enough payments and one exists for target month.
+     if (totalPaidInvoices >= monthsRequired && hasPaymentThisMonth) return 'Paid';
 
      // C. SPECIAL NAMES: SUDARSAN and SURESHBABU are "Due" if any missing payments.
      const studentName = (s.full_name || s.name || '').toUpperCase();
@@ -2572,6 +2572,22 @@ Thank you for your cooperation.
       if (res.ok) {
         // AUTOMATION: Create transaction record if status was manually changed to 'Paid'
         const newStatus = $('e-payment-status')?.value || s.payment_status || 'Pending';
+        
+        // NEW: If status changed FROM 'Paid' TO something else, delete manual payment record
+        if ((s.payment_status === 'Paid' || getStudentPaymentStatus(s) === 'Paid') && newStatus !== 'Paid') {
+            const manualPay = (allPayments || []).find(p => 
+                String(p.student_id) === String(id) && 
+                p.description === 'Status updated to Paid via Profile'
+            );
+            if (manualPay) {
+                try {
+                    await apiCall(`/api/payments?id=${manualPay.id}`, { method: 'DELETE' });
+                    // Optimistically remove from local array to ensure UI refresh is instant
+                    allPayments = allPayments.filter(p => p.id !== manualPay.id);
+                } catch (de) { console.warn('Failed to delete manual payment record:', de); }
+            }
+        }
+
         if (s.payment_status !== 'Paid' && newStatus === 'Paid') {
           try {
             await apiCall('/api/payments', {
