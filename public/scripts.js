@@ -2573,18 +2573,25 @@ Thank you for your cooperation.
         // AUTOMATION: Create transaction record if status was manually changed to 'Paid'
         const newStatus = $('e-payment-status')?.value || s.payment_status || 'Pending';
         
-        // NEW: If status changed FROM 'Paid' TO something else, delete manual payment record
-        if ((s.payment_status === 'Paid' || getStudentPaymentStatus(s) === 'Paid') && newStatus !== 'Paid') {
-            const manualPay = (allPayments || []).find(p => 
-                String(p.student_id) === String(id) && 
-                p.description === 'Status updated to Paid via Profile'
-            );
-            if (manualPay) {
+        // NEW: If status changed FROM 'Paid' TO 'Pending' or 'Due', delete the payment record for this month.
+        // This follows the concept: "If I mark it as Pending/Due, it means no payment is recorded for that month."
+        if ((s.payment_status === 'Paid' || getStudentPaymentStatus(s) === 'Paid') && (newStatus === 'Pending' || newStatus === 'Due')) {
+            const now = new Date();
+            const targetMonth = now.getUTCMonth();
+            const targetYear = now.getUTCFullYear();
+            
+            const monthPay = (allPayments || []).find(p => {
+                if (String(p.student_id) !== String(id)) return false;
+                const pDate = new Date(p.payment_date || p.created_at);
+                return pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear;
+            });
+
+            if (monthPay) {
                 try {
-                    await apiCall(`/api/payments?id=${manualPay.id}`, { method: 'DELETE' });
+                    await apiCall(`/api/payments?id=${monthPay.id}`, { method: 'DELETE' });
                     // Optimistically remove from local array to ensure UI refresh is instant
-                    allPayments = allPayments.filter(p => p.id !== manualPay.id);
-                } catch (de) { console.warn('Failed to delete manual payment record:', de); }
+                    allPayments = allPayments.filter(p => p.id !== monthPay.id);
+                } catch (de) { console.warn('Failed to auto-delete payment record on revert:', de); }
             }
         }
 
