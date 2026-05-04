@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
       const statusFilter = sanitizeString(url.searchParams.get('status') || '', 50)
       
       let query = supabase
-        .from('students_decrypted')
+        .from('students')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
