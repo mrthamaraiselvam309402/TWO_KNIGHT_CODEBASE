@@ -469,7 +469,8 @@
       const newElo = getStudentRating(s) + eloBonus;
       const updateRes = await apiCall(`/api/students?id=${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ level: newLevel, rating: newElo, notes: s.notes + '\n[Promoted: ' + notes + ']' })
+        body: JSON.stringify({ level: newLevel, rating: newElo, notes: s.notes + '
+[Promoted: ' + notes + ']' })
       });
 
       // 2. Log to Rating History
@@ -536,7 +537,14 @@
       dueDateStr = `5th ${monthName} ${targetYear}`;
     }
 
-    const msg = `Hello Sir/Madam,\n\nThis is a gentle reminder regarding the pending chess class fee of INR ${totalPending.toLocaleString()} for your child ${cleanText(name)}. We kindly request you to please settle this on or before ${cleanText(dueDateStr)}.\n\nYou may make the payment to: 9025846663 (Ranjith).\n\nThank you for your cooperation.\n- Chesskidoo Academy`;
+    const msg = `Hello Sir/Madam,
+
+This is a gentle reminder regarding the pending chess class fee of INR ${totalPending.toLocaleString()} for your child ${cleanText(name)}. We kindly request you to please settle this on or before ${cleanText(dueDateStr)}.
+
+You may make the payment to: 9025846663 (Ranjith).
+
+Thank you for your cooperation.
+- Chesskidoo Academy`;
 
     window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
@@ -558,19 +566,30 @@
 
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
-    let msg = `✅ *CHESSKIDOO ACADEMY - FEE AUDIT REPORT*\n\n`;
-    msg += `Hello Coach ${cleanText(getCoachName(c))},\n\n`;
-    msg += `📢 The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:\n\n`;
+    let msg = `✅ *CHESSKIDOO ACADEMY - FEE AUDIT REPORT*
+
+`;
+    msg += `Hello Coach ${cleanText(getCoachName(c))},
+
+`;
+    msg += `📢 The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:
+
+`;
 
     pending.forEach((s) => {
       const status = getStudentPaymentStatus(s);
       const label = status === 'Due' ? 'ARREARS' : 'PENDING';
       const sName = cleanText(getStudentName(s).toUpperCase());
-      msg += `*${sName}* (${label})\n`;
+      msg += `*${sName}* (${label})
+`;
     });
 
-    msg += `\nPlease coordinate with the guardians to ensure these balances are settled. 'ARREARS' indicates unpaid fees from previous months, while 'PENDING' is for the current cycle.\n\n`;
-    msg += `Regards,\n`;
+    msg += `
+Please coordinate with the guardians to ensure these balances are settled. 'ARREARS' indicates unpaid fees from previous months, while 'PENDING' is for the current cycle.
+
+`;
+    msg += `Regards,
+`;
     msg += `*Administrative Team* | Chesskidoo Academy`;
 
 
@@ -934,6 +953,7 @@
               const response = await apiCall(urlWithBust, { cache: 'no-store' })
               if (response.ok) {
                 const result = await response.json()
+                if (result && result.error) throw new Error(result.error);
                 // Handle paginated responses
                 if (result && result.data !== undefined) {
                   return result.data
@@ -1823,7 +1843,7 @@
        }
      });
 
-    const targetStudents = allStudents.filter(s => {
+    const targetStudents = (allStudents || []).filter(s => {
       const sStatus = (s.status || 'active').toLowerCase();
       if (sStatus === 'archived') return false;
 
@@ -3115,7 +3135,15 @@
       const coachName = coach ? getCoachName(coach) : 'N/A';
       const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(getStudentName(s))}&amount=${amt}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
 
-      const message = `✅ Hello Sir/Madam,\n\nThis is to inform you about the chess class fee payment you have completed for ${cleanText(getStudentName(s))} (INR ${amt.toLocaleString()}).\n\nHere is your receipt link for download:\n${receiptUrl}\n\nThank you for your continued support and cooperation.\n- Chesskidoo Academy`;
+      const message = `✅ Hello Sir/Madam,
+
+This is to inform you about the chess class fee payment you have completed for ${cleanText(getStudentName(s))} (INR ${amt.toLocaleString()}).
+
+Here is your receipt link for download:
+${receiptUrl}
+
+Thank you for your continued support and cooperation.
+- Chesskidoo Academy`;
 
       const parentPhone = getStudentPhone(s).replace(/\D/g, '');
       if (parentPhone && parentPhone.length >= 10) {
@@ -4228,12 +4256,19 @@
       if (queryLower.includes('how many') || queryLower.includes('total') || queryLower.includes('count')) {
         const stats = results.find(r => r.totalStudents !== undefined);
         if (stats) {
-          response = `📊 **Academy Statistics** (${temporalContext.date})\n\n`;
-          response += `• **Total Students:** ${stats.totalStudents}\n`;
-          response += `• **Active Coaches:** ${stats.totalCoaches}\n`;
-          response += `• **Total Revenue:** ₹${stats.revenue?.toLocaleString() || 0}\n`;
-          response += `• **Collection Rate:** ${stats.collectionRate}%\n`;
-          response += `• **Paid Students:** ${stats.paid}\n`;
+          response = `📊 **Academy Statistics** (${temporalContext.date})
+
+`;
+          response += `• **Total Students:** ${stats.totalStudents}
+`;
+          response += `• **Active Coaches:** ${stats.totalCoaches}
+`;
+          response += `• **Total Revenue:** ₹${stats.revenue?.toLocaleString() || 0}
+`;
+          response += `• **Collection Rate:** ${stats.collectionRate}%
+`;
+          response += `• **Paid Students:** ${stats.paid}
+`;
           response += `• **Due Payments:** ${stats.due}`;
         }
       }
@@ -4241,10 +4276,13 @@
       if (queryLower.includes('market') || queryLower.includes('stock') || queryLower.includes('finance')) {
         const market = results.find(r => r.indices);
         if (market) {
-          response = `📈 **Market Overview** (${temporalContext.time})\n\n`;
+          response = `📈 **Market Overview** (${temporalContext.time})
+
+`;
           market.indices.forEach(idx => {
             const sign = idx.change >= 0 ? '↑' : '↓';
-            response += `• **${idx.name}:** ${idx.value.toLocaleString()} (${sign}${Math.abs(idx.change)}%)\n`;
+            response += `• **${idx.name}:** ${idx.value.toLocaleString()} (${sign}${Math.abs(idx.change)}%)
+`;
           });
         }
       }
@@ -4252,9 +4290,13 @@
       if (queryLower.includes('weather') || queryLower.includes('temperature')) {
         const weather = results.find(r => r.temperature !== undefined);
         if (weather) {
-          response = `🌤️ **Current Weather** (${temporalContext.date})\n\n`;
-          response += `• **Temperature:** ${weather.temperature}°C\n`;
-          response += `• **Condition:** ${weather.condition}\n`;
+          response = `🌤️ **Current Weather** (${temporalContext.date})
+
+`;
+          response += `• **Temperature:** ${weather.temperature}°C
+`;
+          response += `• **Condition:** ${weather.condition}
+`;
           response += `• **Humidity:** ${weather.humidity}%`;
         }
       }
@@ -4262,9 +4304,12 @@
       if (queryLower.includes('sensor') || queryLower.includes('iot') || queryLower.includes('monitor')) {
         const sensors = results.find(r => r.sensors);
         if (sensors) {
-          response = `🔌 **IoT Sensors** (${temporalContext.time})\n\n`;
+          response = `🔌 **IoT Sensors** (${temporalContext.time})
+
+`;
           sensors.sensors.forEach(s => {
-            response += `• **${s.location} - ${s.type}:** ${s.value} ${s.unit}\n`;
+            response += `• **${s.location} - ${s.type}:** ${s.value} ${s.unit}
+`;
           });
         }
       }
@@ -4272,35 +4317,48 @@
       if (queryLower.includes('event') || queryLower.includes('tournament')) {
         const events = results.find(r => r.upcoming !== undefined);
         if (events) {
-          response = `📅 **Events Summary** (${temporalContext.date})\n\n`;
-          response += `• **Upcoming Events:** ${events.upcoming}\n`;
-          response += `• **Past Events:** ${events.past}\n`;
+          response = `📅 **Events Summary** (${temporalContext.date})
+
+`;
+          response += `• **Upcoming Events:** ${events.upcoming}
+`;
+          response += `• **Past Events:** ${events.past}
+`;
           response += `• **Total Events:** ${events.total}`;
         }
       }
 
       if (!response) {
         // Default comprehensive response
-        response = `🏫 **Chesskidoo Academy Report**\n`;
-        response += `${TEMPORAL_ENGINE.getTimeBasedGreeting()}! Here's your academy overview:\n\n`;
+        response = `🏫 **Chesskidoo Academy Report**
+`;
+        response += `${TEMPORAL_ENGINE.getTimeBasedGreeting()}! Here's your academy overview:
+
+`;
 
         const stats = results.find(r => r.totalStudents !== undefined);
         if (stats) {
-          response += `📊 **Statistics:** ${stats.totalStudents} students, ${stats.totalCoaches} coaches\n`;
-          response += `💰 **Revenue:** ₹${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)\n`;
+          response += `📊 **Statistics:** ${stats.totalStudents} students, ${stats.totalCoaches} coaches
+`;
+          response += `💰 **Revenue:** ₹${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)
+`;
         }
 
         const events = results.find(r => r.upcoming !== undefined);
         if (events) {
-          response += `📅 **Events:** ${events.upcoming} upcoming\n`;
+          response += `📅 **Events:** ${events.upcoming} upcoming
+`;
         }
 
-        response += `\n⏰ Last updated: ${temporalContext.time}`;
+        response += `
+⏰ Last updated: ${temporalContext.time}`;
       }
 
       // Add source attribution
       if (sources.length > 0) {
-        response += `\n\n📡 *Data sources: ${sources.join(', ')}*`;
+        response += `
+
+📡 *Data sources: ${sources.join(', ')}*`;
       }
 
       return response;
@@ -4313,7 +4371,8 @@
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`(.*?)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 4px;border-radius:4px;font-family:var(--font-mono);font-size:0.9em">$1</code>')
-      .replace(/\n/g, '<br>');
+      .replace(/
+/g, '<br>');
 
     let i = 0;
     let isTag = false;
@@ -4520,7 +4579,8 @@
         ].map(val => `"${String(val).replace(/"/g, '""')}"`);
       });
 
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('
+');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
