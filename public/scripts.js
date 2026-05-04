@@ -686,8 +686,8 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
 
     if (!confirm(`Notify parents of ${dueStudents.length} students with due payments? This will open multiple WhatsApp tabs.`)) return;
 
-    const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
+    const targetMonth = new Date().getUTCMonth();
+    const targetYear = new Date().getUTCFullYear();
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
     let sent = 0;
 
@@ -2033,8 +2033,8 @@ Thank you.
     }
 
     // --- Time-Machine Financial Calculation ---
-    const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
+    const targetMonth = new Date().getUTCMonth();
+    const targetYear = new Date().getUTCFullYear();
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
       // 1. Target Dataset Preparation — cumulative paid months from effective enrollment through target month
@@ -2097,20 +2097,20 @@ Thank you.
 
       const status = getStudentPaymentStatus(s, targetMonth, targetYear);
       
-      if (status === 'Due') {
-        const enrollDateStr = getStudentDate(s);
-        const baseline = new Date(2026, 3, 1);
-        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-        const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-        const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
-        const totalCredits = s_id_map[String(s.id).toLowerCase()] || 0;
-        
-        const monthsBehind = Math.max(0, monthsRequired - totalCredits);
-        if (monthsBehind > 1) {
-          totalArrears += (fee * (monthsBehind - 1));
-        }
-        currMonthPending += fee;
-      } else if (status === 'Pending') {
+      const sid = String(s.id).toLowerCase();
+      const totalPaidAmount = s_id_map[sid] || 0;
+      
+      const enrollDateStr = getStudentDate(s);
+      const baseline = new Date(Date.UTC(2026, 3, 1));
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
+      
+      const totalRequiredToDate = monthsRequired * fee;
+      const totalDebtToDate = Math.max(0, totalRequiredToDate - totalPaidAmount);
+      
+      if (status === 'Due' || status === 'Pending') {
+        totalArrears += totalDebtToDate;
         currMonthPending += fee;
       }
     });
@@ -2191,8 +2191,8 @@ Thank you.
     const tbody = $('coach-finance-body');
     if (!tbody) return;
 
-    const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
+    const targetMonth = new Date().getUTCMonth();
+    const targetYear = new Date().getUTCFullYear();
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
      // Map total payments per student for ALL TIME (only 'paid' status)
@@ -2326,9 +2326,9 @@ Thank you.
          console.warn('[renderStudents] Fixed invalid reportMonth/year');
        }
 
-       const targetMonth = window.reportMonth;
-       const targetYear = window.reportYear;
-       const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+       const targetMonth = new Date().getUTCMonth();
+    const targetYear = new Date().getUTCFullYear();
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
        // Pre-calculate payments for this month for the new column
        const paymentsOfMonth = {};
@@ -3406,14 +3406,14 @@ Thank you for your continued support and cooperation.
      const s = allStudents.find(x => String(x.id) === String(id));
      if (!s) return;
 
-     const targetMonth = window.reportMonth;
-     const targetYear = window.reportYear;
+     const targetMonth = new Date().getUTCMonth();
+     const targetYear = new Date().getUTCFullYear();
      const enrollDateStr = getStudentDate(s);
      const baseline = new Date(Date.UTC(2026, 3, 1));
      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
      const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
-     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
 
      let totalPaidAmount = 0;
      (window.allPayments || []).forEach(p => {
@@ -3454,14 +3454,14 @@ Thank you for your continued support and cooperation.
      const parentEmail = s.email || ''; 
 
      // Calculate exact pending amount
-     const targetMonth = window.reportMonth;
-     const targetYear = window.reportYear;
-     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+     const targetMonth = new Date().getUTCMonth();
+    const targetYear = new Date().getUTCFullYear();
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
      const enrollDateStr = getStudentDate(s);
      const baseline = new Date(2026, 3, 1);
      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
 
      let totalPaidAmount = 0;
      (window.allPayments || []).forEach(p => {
@@ -5004,8 +5004,8 @@ Thank you for your continued support and cooperation.
       'Fee Due Date', 'Monthly Fee', 'Payment Status', 'Session Mode', 'Session Time',
       'Assigned Coach', 'Coach Phone', 'Coach Specialty'
     ];
-    const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
+    const targetMonth = new Date().getUTCMonth();
+    const targetYear = new Date().getUTCFullYear();
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
     const rows = allStudents
@@ -5065,9 +5065,9 @@ Thank you for your continued support and cooperation.
       const wb = XLSX.utils.book_new();
 
       // 1. Dashboard Sheet (KPIs)
-      const targetMonth = window.reportMonth;
-      const targetYear = window.reportYear;
-      const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+      const targetMonth = new Date().getUTCMonth();
+    const targetYear = new Date().getUTCFullYear();
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
       const targetStudents = allStudents.filter(s => {
           const enrollStr = getStudentDate(s);
