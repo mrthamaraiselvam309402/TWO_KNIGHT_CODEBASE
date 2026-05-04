@@ -4,6 +4,15 @@
  */
 
 (function () {
+
+  // ═══════════════════════════════════════════════════════════════
+  // GLOBAL STATE
+  // ═══════════════════════════════════════════════════════════════
+  let allCoaches = [];
+  let allStudents = [];
+  let allPayments = [];
+  let allAttendance = [];
+
   'use strict';
 
   // Core Utility - Hoisted for early access
@@ -59,8 +68,8 @@
 // ═══════════════════════════════════════════════════════════════
    // STATE
    // ═══════════════════════════════════════════════════════════════
-   let allCoaches = [];
-   let allStudents = [];
+   
+   
   window.viewPaymentHistory = function(id) {
     const s = allStudents.find(x => String(x.id).toLowerCase() === String(id).toLowerCase());
     if (!s) return;
@@ -120,8 +129,8 @@
     }
   }
 
-   let allPayments = [];
-   let allAttendance = [];
+   
+   
 
    // Expose to window for external modules (like reporting.js)
    window.allCoaches = allCoaches;
@@ -937,7 +946,6 @@ Thank you.
     const baselineDate = new Date(Date.UTC(2026, 3, 1));
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baselineDate;
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
-    
     if (enrollDate > targetMonthEnd) return 'Not Enrolled';
 
     // 2. Cumulative Paid Amount Audit
@@ -957,11 +965,21 @@ Thank you.
 
     // 3. Status Determination (Strict Audit-Only for 100% Data Integrity)
     // Audit-based Standing
-    if (totalPaidAmount >= totalRequiredAmount) return 'Paid';
-    if (totalPaidAmount >= (totalRequiredAmount - fee)) {
-      return isCurrentMonth ? 'Pending' : 'Due';
+    let status = 'Due';
+    if (totalPaidAmount >= totalRequiredAmount) status = 'Paid';
+    else if (totalPaidAmount >= (totalRequiredAmount - fee)) {
+       // If viewing a PAST month, and they haven't paid, it is "Due" (Arrear), not "Pending".
+       status = isCurrentMonth ? 'Pending' : 'Due';
     }
-    return 'Due';
+
+    // Manual Override Protection (STRICTLY for the Current Real-World Month only)
+    const realNow = new Date();
+    const isActuallyCurrentMonth = (targetMonth === realNow.getUTCMonth() && targetYear === realNow.getUTCFullYear());
+    
+    if (isActuallyCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled' && s.payment_status !== 'archived') {
+       status = s.payment_status;
+    }
+    return status;
   }
 
   function getStudentBatchType(s) {
