@@ -2297,6 +2297,7 @@ Thank you.
   };
 
    function renderStudents() {
+      try {
       ensureReportPeriod();
       const targetMonth = window.reportMonth;
       const targetYear = window.reportYear;
