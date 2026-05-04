@@ -865,36 +865,32 @@ Thank you.
   }
   
   function getStudentPaymentStatus(s, monthOverride = null, yearOverride = null) {
-    if (!s) return 'Due';
-
-    // Time-Machine Context (Use override if provided, otherwise default to global)
-    const targetMonth = monthOverride !== null ? monthOverride : window.reportMonth;
-    const targetYear = yearOverride !== null ? yearOverride : window.reportYear;
+    if (!s) return 'Unknown';
+    const targetMonth = monthOverride !== null ? monthOverride : (window.reportMonth !== undefined ? window.reportMonth : new Date().getUTCMonth());
+    const targetYear = yearOverride !== null ? yearOverride : (window.reportYear !== undefined ? window.reportYear : new Date().getUTCFullYear());
     const isCurrentMonth = (targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear());
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
-    const baselineDate = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st, 2026 baseline (UTC)
+    const fee = getStudentMonthlyFee(s);
+    const s_id_key = String(s.id || '').trim().toLowerCase();
 
     // 1. Enrollment Check
     const enrollDateStr = getStudentDate(s);
-    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
-    if (!enrollDate || enrollDate > targetMonthEnd) return 'Not Enrolled';
-
+    const baselineDate = new Date(Date.UTC(2026, 3, 1));
+    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baselineDate;
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
-
-    // 2. Cumulative Audit (All-Time Payment Count)
-    const s_id_key = String(s.id || '').trim().toLowerCase();
     
-    let totalPaidInvoices = 0;
-    let hasPaymentThisMonth = false;
+    if (enrollDate > targetMonthEnd) return 'Not Enrolled';
 
+    // 2. Cumulative Paid Amount Audit (CRITICAL: Using currency, not count)
+    let totalPaidAmount = 0;
+    let hasPaymentThisMonth = false;
     (allPayments || []).forEach(p => {
       const psid = String(p.student_id || '').trim().toLowerCase();
       if (psid === s_id_key && p.status === 'paid') {
         const pDate = new Date(p.payment_date || p.created_at);
-        // Only count payments that occurred in or after the enrollment month
         const auditStart = new Date(Date.UTC(effectiveEnroll.getUTCFullYear(), effectiveEnroll.getUTCMonth(), 1));
         if (pDate >= auditStart && pDate <= targetMonthEnd) {
-          totalPaidInvoices++;
+          totalPaidAmount += (parseFloat(p.amount) || 0);
         }
         if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
           hasPaymentThisMonth = true;
@@ -902,39 +898,33 @@ Thank you.
       }
     });
 
-    const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
+    const monthsRequired = Math.max(0, ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()));
+    const totalRequiredAmount = monthsRequired * fee;
 
-    // 3. Status Determination Logic:
-
-    // A. PAID AUDIT: Primary source of truth. If audit confirms payment, they are Paid.
-    if (totalPaidInvoices >= monthsRequired && hasPaymentThisMonth) return 'Paid';
-
-    // B. SPECIAL NAMES: SUDARSAN and SURESHBABU are "Due" if any missing payments at all.
+    // 3. Status Determination
+    
+    // A. Special Cases (SUDARSAN/SURESHBABU) - Strict Audit
     const studentName = (s.full_name || s.name || '').toUpperCase();
     const isSpecial = ['SUDARSAN', 'SURESHBABU'].some(n => studentName.includes(n));
-    if (isSpecial && totalPaidInvoices < monthsRequired) return 'Due';
+    if (isSpecial) {
+       if (totalPaidAmount >= (totalRequiredAmount + fee) && hasPaymentThisMonth) return 'Paid';
+       if (totalPaidAmount >= totalRequiredAmount && !hasPaymentThisMonth) return 'Pending';
+       return 'Due';
+    }
 
-    // C. MANUAL OVERRIDE: Respect DB status for current month.
+    // B. General Audit
+    if (totalPaidAmount >= (totalRequiredAmount + fee) && hasPaymentThisMonth) return 'Paid';
+    
+    // C. Manual Override for Current Month
     if (isCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled') {
        if (s.payment_status === 'Pending') return 'Pending';
        if (s.payment_status === 'Due') return 'Due';
-       
-       // If DB says "Paid", it only counts as "Paid" for the current month if a payment record exists.
-       // This effectively "rolls over" the status to Pending when a new month starts.
-       if (s.payment_status === 'Paid') {
-          return hasPaymentThisMonth ? 'Paid' : 'Pending';
-       }
+       if (s.payment_status === 'Paid' && hasPaymentThisMonth) return 'Paid';
     }
 
-    // D. PENDING/DEFAULT: Default to Pending for current month if not paid.
-    if (isCurrentMonth) return 'Pending';
-
-    // E. ARREARS: If missing payments and in the past.
-    if (totalPaidInvoices < monthsRequired) return 'Due';
-
-    return 'Due';
+    if (totalPaidAmount < totalRequiredAmount) return 'Due';
+    return 'Pending';
   }
-
 
   function getStudentBatchType(s) {
     if (!s) return 'Group';
@@ -2033,31 +2023,31 @@ Thank you.
     }
 
     // --- Time-Machine Financial Calculation ---
-    const targetMonth = new Date().getUTCMonth();
-    const targetYear = new Date().getUTCFullYear();
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-      // 1. Target Dataset Preparation — cumulative paid months from effective enrollment through target month
-      const s_id_map = {};
-      (allPayments || []).forEach(p => {
-        if (p.status === 'paid') {
-          const sid = String(p.student_id || '').trim().toLowerCase();
-          if (!sid) return;
-          const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
-          if (!s) return;
+    // 1. Target Dataset Preparation — cumulative paid amount from effective enrollment through target month
+    const s_id_map = {};
+    (allPayments || []).forEach(p => {
+      if (p.status === 'paid') {
+        const sid = String(p.student_id || '').trim().toLowerCase();
+        if (!sid) return;
+        const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+        if (!s) return;
 
-          const enrollDateStr = getStudentDate(s);
-          const baseline = new Date(Date.UTC(2026, 3, 1));
-          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-          const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+        const enrollDateStr = getStudentDate(s);
+        const baseline = new Date(Date.UTC(2026, 3, 1));
+        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+        const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
 
-          const pDate = new Date(p.payment_date || p.created_at);
-          if (pDate >= effectiveEnroll && pDate <= targetMonthEnd) {
-            if (!s_id_map[sid]) s_id_map[sid] = 0;
-            s_id_map[sid]++;
-          }
+        const pDate = new Date(p.payment_date || p.created_at);
+        if (pDate <= targetMonthEnd) {
+          if (!s_id_map[sid]) s_id_map[sid] = 0;
+          s_id_map[sid] += (parseFloat(p.amount) || 0);
         }
-      });
+      }
+    });
 
     const targetStudents = (allStudents || []).filter(s => {
       const sStatus = (s.status || 'active').toLowerCase();
