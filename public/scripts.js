@@ -71,7 +71,9 @@
   const CACHE_DURATION = 5000;
   // ── CORE UTILITIES ──
   async function apiCall(endpoint, options = {}) {
-    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+    const url = (endpoint.startsWith('http') || endpoint.startsWith(API_BASE)) 
+      ? endpoint 
+      : `${API_BASE}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
       'apikey': SUPABASE_ANON_KEY,
@@ -112,6 +114,14 @@
     document.body.appendChild(div);
     return div;
   }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
 
 
   // Sync local currentStudent with window.currentStudent for external modules
