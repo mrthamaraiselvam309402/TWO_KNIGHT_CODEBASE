@@ -33,6 +33,11 @@
   try {
     SUPABASE_URL = (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.SUPABASE_URL : '') || window.SUPABASE_URL || '';
     SUPABASE_ANON_KEY = (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.SUPABASE_ANON_KEY : '') || window.SUPABASE_ANON_KEY || '';
+    
+    // Expose for external modules
+    window.SUPABASE_URL = SUPABASE_URL;
+    window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
+    window.API_BASE = API_BASE;
   } catch (e) {
     console.warn('[Config] Failed to initialize from APP_CONFIG:', e);
   }
@@ -90,7 +95,7 @@
    // Optimized cache for faster dashboard loading
    const CACHE_DURATION = 30000; // 30 seconds cache for better performance
   // ── CORE UTILITIES ──
-  async function apiCall(endpoint, options = {}) {
+  window.apiCall = async function(endpoint, options = {}) {
     const url = (endpoint.startsWith('http') || endpoint.startsWith(API_BASE)) 
       ? endpoint 
       : `${API_BASE}${endpoint}`;
