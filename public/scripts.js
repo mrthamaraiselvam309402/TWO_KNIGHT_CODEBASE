@@ -914,11 +914,16 @@ Thank you for your cooperation.
     const isSpecial = ['SUDARSAN', 'SURESHBABU'].some(n => studentName.includes(n));
     if (isSpecial && totalPaidInvoices < monthsRequired) return 'Due';
 
-    // C. MANUAL OVERRIDE: Respect DB status if no current month payment detected.
+    // C. MANUAL OVERRIDE: Respect DB status for current month.
     if (isCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled') {
        if (s.payment_status === 'Pending') return 'Pending';
        if (s.payment_status === 'Due') return 'Due';
-       if (s.payment_status === 'Paid') return 'Paid'; 
+       
+       // If DB says "Paid", it only counts as "Paid" for the current month if a payment record exists.
+       // This effectively "rolls over" the status to Pending when a new month starts.
+       if (s.payment_status === 'Paid') {
+          return hasPaymentThisMonth ? 'Paid' : 'Pending';
+       }
     }
 
     // D. PENDING/DEFAULT: Default to Pending for current month if not paid.
