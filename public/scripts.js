@@ -2104,14 +2104,18 @@ Thank you.
       const baseline = new Date(Date.UTC(2026, 3, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
+      const monthsRequiredToDate = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
       
-      const totalRequiredToDate = monthsRequired * fee;
-      const totalDebtToDate = Math.max(0, totalRequiredToDate - totalPaidAmount);
+      const prevMonthsRequired = Math.max(0, monthsRequiredToDate); // Months BEFORE current
+      const arrearsAmount = Math.max(0, (prevMonthsRequired * fee) - totalPaidAmount);
+      
+      const totalRequiredIncludingCurrent = (monthsRequiredToDate + 1) * fee;
+      const totalDebtIncludingCurrent = Math.max(0, totalRequiredIncludingCurrent - totalPaidAmount);
+      const currentMonthDebt = Math.max(0, totalDebtIncludingCurrent - arrearsAmount);
       
       if (status === 'Due' || status === 'Pending') {
-        totalArrears += totalDebtToDate;
-        currMonthPending += fee;
+        totalArrears += arrearsAmount;
+        currMonthPending += currentMonthDebt;
       }
     });
 
