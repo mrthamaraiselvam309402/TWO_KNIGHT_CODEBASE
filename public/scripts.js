@@ -3450,13 +3450,11 @@ Thank you for your continued support and cooperation.
 
      // Build notification content
      let message = customMsg ? `${customMsg}\n\n` : '';
-     message += `Dear ${parentName},\n\n`;
-     message += `This is a reminder regarding the outstanding chess class fee for ${studentName}.\n\n`;
-     message += `Amount Due: ₹${totalDue.toLocaleString()}\n`;
-     message += `Period: ${new Date(targetYear, targetMonth).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}\n\n`;
-     message += `Please make the payment at your earliest convenience.\n\n`;
-     message += `Account: 9025846663 (Ranjith)\n`;
-     message += `Academy: Chesskidoo`;
+      message += `Hello Sir/Madam,\n\n`;
+      message += `This is a gentle reminder regarding the chess class fee for your child ${studentName}.\n\n`;
+      message += `The amount of ₹${totalDue.toLocaleString()} is currently pending. We kindly request you to complete the payment at the earliest to continue uninterrupted access to classes.\n\n`;
+      message += `Thank you for your cooperation.\n`;
+      message += `– Chesskidoo Academy`;
 
      try {
        let sent = false;
