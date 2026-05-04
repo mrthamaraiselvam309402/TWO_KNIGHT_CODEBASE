@@ -881,49 +881,32 @@ Thank you.
     
     if (enrollDate > targetMonthEnd) return 'Not Enrolled';
 
-    // 2. Cumulative Paid Amount Audit (CRITICAL: Using currency, not count)
+    // 2. Cumulative Paid Amount Audit
     let totalPaidAmount = 0;
-    let hasPaymentThisMonth = false;
     (allPayments || []).forEach(p => {
       const psid = String(p.student_id || '').trim().toLowerCase();
       if (psid === s_id_key && p.status === 'paid') {
         const pDate = new Date(p.payment_date || p.created_at);
-        const auditStart = new Date(Date.UTC(effectiveEnroll.getUTCFullYear(), effectiveEnroll.getUTCMonth(), 1));
-        if (pDate >= auditStart && pDate <= targetMonthEnd) {
+        if (pDate <= targetMonthEnd) {
           totalPaidAmount += (parseFloat(p.amount) || 0);
-        }
-        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
-          hasPaymentThisMonth = true;
         }
       }
     });
 
-    const monthsRequired = Math.max(0, ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()));
+    const monthsRequired = Math.max(0, ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth())) + 1;
     const totalRequiredAmount = monthsRequired * fee;
 
-    // 3. Status Determination
-    
-    // A. Special Cases (SUDARSAN/SURESHBABU) - Strict Audit
-    const studentName = (s.full_name || s.name || '').toUpperCase();
-    const isSpecial = ['SUDARSAN', 'SURESHBABU'].some(n => studentName.includes(n));
-    if (isSpecial) {
-       if (totalPaidAmount >= (totalRequiredAmount + fee) && hasPaymentThisMonth) return 'Paid';
-       if (totalPaidAmount >= totalRequiredAmount && !hasPaymentThisMonth) return 'Pending';
-       return 'Due';
-    }
-
-    // B. General Audit
-    if (totalPaidAmount >= (totalRequiredAmount + fee) && hasPaymentThisMonth) return 'Paid';
-    
-    // C. Manual Override for Current Month
+    // 3. Status Determination (Registry-First vs Audit)
     if (isCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled') {
+       if (s.payment_status === 'Paid') return 'Paid';
        if (s.payment_status === 'Pending') return 'Pending';
        if (s.payment_status === 'Due') return 'Due';
-       if (s.payment_status === 'Paid' && hasPaymentThisMonth) return 'Paid';
     }
 
-    if (totalPaidAmount < totalRequiredAmount) return 'Due';
-    return 'Pending';
+    // Audit-based Standing
+    if (totalPaidAmount >= totalRequiredAmount) return 'Paid';
+    if (totalPaidAmount >= (totalRequiredAmount - fee)) return 'Pending';
+    return 'Due';
   }
 
   function getStudentBatchType(s) {
@@ -2103,8 +2086,10 @@ Thank you.
       const totalDebtIncludingCurrent = Math.max(0, totalRequiredIncludingCurrent - totalPaidAmount);
       const currentMonthDebt = Math.max(0, totalDebtIncludingCurrent - arrearsAmount);
       
-      if (status === 'Due' || status === 'Pending') {
+      if (status === 'Due') {
         totalArrears += arrearsAmount;
+      }
+      if (status === 'Due' || status === 'Pending') {
         currMonthPending += currentMonthDebt;
       }
     });
@@ -3920,55 +3905,42 @@ Thank you for your continued support and cooperation.
       toast('Please select students first', 'warning');
       return;
     }
-
     if (!confirm(`Mark ${checked.length} students as Paid?`)) return;
-
-    toast(`Processing ${checked.length} students...`, 'info');
-    for (const cb of checked) {
-      const studentId = cb.dataset.id;
-      const s = allStudents.find(x => String(x.id) === String(studentId));
-      const amt = s ? getStudentMonthlyFee(s) : 5000;
-
-      // Update student status and advance due date - Fix #26
-      const updates = { payment_status: 'Paid' };
-      if (s) {
-        const baseDate = s.due_date ? new Date(s.due_date) : new Date();
-        const nextDate = new Date(baseDate);
-        nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
-        updates.due_date = nextDate.toISOString().split('T')[0];
-      }
-
-      try {
-        await apiCall(`${API_BASE}/students?id=${studentId}`, {
-          method: 'PUT',
-          body: JSON.stringify(updates)
-        });
-
-        // Log history
-        await apiCall(`${API_BASE}/payments`, {
-          method: 'POST',
-          body: JSON.stringify({
-            student_id: studentId,
-            amount: amt,
-            status: 'paid',
-            payment_method: 'Bulk Admin',
-            description: 'Bulk mark as paid by administrator',
-            transaction_id: 'BLK-' + Math.floor(Math.random() * 1000000),
-            payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
-          })
-        });
-      } catch (e) {
-        console.error('Bulk mark paid error for student', studentId, e);
-        toast(`Failed to process student ${getStudentName(s)}: ${e.message}`, 'error');
-      }
-     }
-     toast('Bulk payments processed and due dates advanced!', 'success');
-     
-     // FIX #4: Invalidate payment cache before reload
-     window.totalPaymentsMap = null;
-     
-     loadAllData(true);
-   }
+    toast(`Processing ${checked.length} students in batches... shadow fix applied.`, 'info');
+    
+    let successCount = 0; let failCount = 0; let skipCount = 0;
+    const batchSize = 5; const studentList = Array.from(checked);
+    for (let i = 0; i < studentList.length; i += batchSize) {
+      const batch = studentList.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (cb) => {
+        const studentId = cb.dataset.id;
+        const s = allStudents.find(x => String(x.id) === String(studentId));
+        if (!s) return;
+        if (getStudentPaymentStatus(s, window.reportMonth, window.reportYear) === 'Paid') { skipCount++; return; }
+        const amt = getStudentMonthlyFee(s) || DEFAULT_MONTHLY_FEE;
+        const updates = { payment_status: 'Paid' };
+        if (s.due_date) {
+          const nextDate = new Date(s.due_date); nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
+          updates.due_date = nextDate.toISOString().split('T')[0];
+        }
+        try {
+          await apiCall(`${API_BASE}/students?id=${studentId}`, { method: 'PUT', body: JSON.stringify(updates) });
+          await apiCall(`${API_BASE}/payments`, {
+            method: 'POST', body: JSON.stringify({
+              student_id: studentId, amount: amt, status: 'paid', payment_method: 'Bulk Admin', description: 'Bulk mark as paid',
+              transaction_id: 'BLK-' + Math.floor(Math.random() * 1000000),
+              payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
+            })
+          });
+          successCount++;
+        } catch (e) { failCount++; }
+      }));
+      if (i + batchSize < studentList.length) await new Promise(r => setTimeout(r, 500));
+    }
+    toast(`Processed ${successCount} successfully.${skipCount ? ` Skipped ${skipCount} already paid.` : ''}${failCount ? ` Failed ${failCount}.` : ''}`, failCount > 0 ? 'warning' : 'success');
+    window.totalPaymentsMap = null;
+    loadAllData(true);
+  }
 
   window.bulkDeleteStudents = async function () {
     const checked = document.querySelectorAll('.stud-check:checked');
