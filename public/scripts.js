@@ -704,16 +704,16 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       const monthsReq = ((nowUTC.getUTCFullYear() - effectiveEnroll.getUTCFullYear()) * 12) + (nowUTC.getUTCMonth() - effectiveEnroll.getUTCMonth()) + 1;
       
       const sid = String(s.id).toLowerCase();
-      let paidCount = 0;
+      let totalPaidAmount = 0;
       (allPayments || []).forEach(p => {
         if (String(p.student_id).toLowerCase() === sid && p.status === 'paid') {
-           const pDate = new Date(p.payment_date || p.created_at);
-           if (pDate <= nowUTC) paidCount++;
+           totalPaidAmount += (parseFloat(p.amount) || 0);
         }
       });
       
-      const monthsBehind = Math.max(1, monthsReq - paidCount);
-      const totalDebt = fee * monthsBehind;
+      const totalDebt = Math.max(0, (fee * monthsReq) - totalPaidAmount);
+      const monthsBehind = Math.ceil(totalDebt / fee);
+      const arrearsNote = monthsBehind > 1 ? ` (including ${monthsBehind - 1} months arrears)` : '';
       const arrearsNote = monthsBehind > 1 ? ` (including ${monthsBehind - 1} months arrears)` : '';
 
       const dueDateStr = s.due_date
@@ -3407,9 +3407,25 @@ Thank you for your continued support and cooperation.
      const s = allStudents.find(x => String(x.id) === String(id));
      if (!s) return;
 
+     const targetMonth = window.reportMonth;
+     const targetYear = window.reportYear;
+     const enrollDateStr = getStudentDate(s);
+     const baseline = new Date(Date.UTC(2026, 3, 1));
+     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+     const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+
+     let totalPaidAmount = 0;
+     (window.allPayments || []).forEach(p => {
+       if (p.status === 'paid' && String(p.student_id).toLowerCase() === String(s.id).toLowerCase()) {
+         totalPaidAmount += (parseFloat(p.amount) || 0);
+       }
+     });
+     const totalDue = Math.max(0, (monthsRequired * fee) - totalPaidAmount);
+
      // Populate modal
      $('inform-student-name').textContent = name;
-     $('inform-amount').textContent = `₹${getStudentMonthlyFee(s).toLocaleString()}`;
+     $('inform-amount').textContent = `₹${totalDue.toLocaleString()}`;
      $('inform-custom-msg').value = '';
 
      // Store student ID in modal data attribute
@@ -3443,16 +3459,13 @@ Thank you for your continued support and cooperation.
      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
-     const freshMap = {};
-     (window.allPayments || []).forEach(p => {
-       if (p.status === 'paid') {
-         const sid = String(p.student_id || '').toLowerCase();
-         if (sid) freshMap[sid] = (freshMap[sid] || 0) + 1;
-       }
-     });
-     const credits = freshMap[String(s.id).toLowerCase()] || 0;
-     const pendingMonths = Math.max(1, monthsRequired - credits);
-     const totalDue = pendingMonths * fee;
+     let totalPaidAmount = 0;
+      (window.allPayments || []).forEach(p => {
+        if (p.status === 'paid' && String(p.student_id).toLowerCase() === String(s.id).toLowerCase()) {
+           totalPaidAmount += (parseFloat(p.amount) || 0);
+        }
+      });
+      const totalDue = Math.max(0, (monthsRequired * fee) - totalPaidAmount);
 
      // Build notification content
      let message = customMsg ? `${customMsg}\n\n` : '';
