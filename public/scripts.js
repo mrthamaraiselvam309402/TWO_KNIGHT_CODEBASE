@@ -25,22 +25,23 @@
   window.formatTime = formatTime;
 
 
-  // ═══════════════════════════════════════════════════════════════
-  // CONFIG & CONSTANTS
-  // ═══════════════════════════════════════════════════════════════
-  // SECURITY: Use environment variables via global config
-  // For Vercel/Netlify: Set these in project settings → Environment Variables
-  // For local development: Use .env file (add to .gitignore!)
-  const SUPABASE_URL = APP_CONFIG.SUPABASE_URL || window.SUPABASE_URL || '';
-  const SUPABASE_ANON_KEY = APP_CONFIG.SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY || '';
+  let SUPABASE_URL = '';
+  let SUPABASE_ANON_KEY = '';
   const API_BASE = '/api';
   const $ = id => document.getElementById(id);
+
+  try {
+    SUPABASE_URL = (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.SUPABASE_URL : '') || window.SUPABASE_URL || '';
+    SUPABASE_ANON_KEY = (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.SUPABASE_ANON_KEY : '') || window.SUPABASE_ANON_KEY || '';
+  } catch (e) {
+    console.warn('[Config] Failed to initialize from APP_CONFIG:', e);
+  }
 
   // Security validation
   if (!SUPABASE_ANON_KEY) {
     console.error('❌ CRITICAL: Supabase Anon Key is missing!');
-    console.error('Please set VITE_SUPABASE_ANON_KEY in your environment variables.');
-    // Show user-friendly error in production
+    console.warn('[Config] Some features may fail. Check Vercel Environment Variables.');
+  }
     if (window.location.hostname !== 'localhost') {
       document.body.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px">
