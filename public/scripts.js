@@ -871,6 +871,7 @@ Thank you for your cooperation.
     // Time-Machine Context (Use override if provided, otherwise default to global)
     const targetMonth = monthOverride !== null ? monthOverride : window.reportMonth;
     const targetYear = yearOverride !== null ? yearOverride : window.reportYear;
+    const isCurrentMonth = (targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear());
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
     const baselineDate = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st, 2026 baseline (UTC)
 
