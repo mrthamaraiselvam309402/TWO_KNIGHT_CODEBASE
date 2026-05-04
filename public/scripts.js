@@ -807,16 +807,25 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
     return match ? match[1].trim() : 'WEEKEND';
   }
   function isStudentScheduledToday(s) {
-    const time = getStudentSessionTime(s).toUpperCase();
-    const day = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-    const isWeekend = (day === 0 || day === 6);
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const now = new Date();
+    const today = days[now.getDay()];
+    const isWeekend = (now.getDay() === 0 || now.getDay() === 6);
 
+    // 1. Check explicit Day columns (Highest Priority)
+    const scheduledDay = (s.batch_day || s.session_day || '').toLowerCase();
+    if (scheduledDay && scheduledDay.includes(today.toLowerCase())) return true;
+
+    // 2. Fallback to session time pattern matching
+    const time = getStudentSessionTime(s).toUpperCase();
     if (time.includes('MORNING & EVENING')) return true; // Daily
     if (time.includes('ANYTIME')) return true;
     if (isWeekend && time.includes('WEEKEND')) return true;
-    if (!isWeekend && time.includes('WEEKDAY')) return true;
-    if (day === 5 || day === 6) if (time.includes('FRI & SAT')) return true;
-    if (day === 0 || day === 1) if (time.includes('SUN & MON')) return true;
+    if (!isWeekend && (time.includes('WEEKDAY') || time.includes('DAILY'))) return true;
+    
+    // Pattern matches for specific combinations
+    if ((now.getDay() === 5 || now.getDay() === 6) && time.includes('FRI & SAT')) return true;
+    if ((now.getDay() === 0 || now.getDay() === 1) && time.includes('SUN & MON')) return true;
 
     return false;
   }
@@ -1824,15 +1833,22 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
   }
 
   function renderDash() {
-    // Skip if data hasn't loaded yet - this prevents the first call with empty data from setting UI to 0
-    if (allStudents.length === 0 && allCoaches.length === 0) return;
-    // Basic stats
-    if ($('s-total')) $('s-total').textContent = allStudents.length;
-    if ($('s-elo')) $('s-elo').textContent = allStudents.length ? Math.round(allStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / allStudents.length) : 0;
-    if ($('s-coaches')) $('s-coaches').textContent = allCoaches.length;
+    // 1. Recalculate Payment Map for freshness
+    const pMap = {};
+    (allPayments || []).forEach(p => {
+      if (p.status === 'paid') {
+        const sid = String(p.student_id || '').trim().toLowerCase();
+        if (sid) pMap[sid] = (pMap[sid] || 0) + 1;
+      }
+    });
+    window.totalPaymentsMap = pMap;
 
-    // --- Today's Attendance Insights ---
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Basic stats
+    if ($('s-coaches')) $('s-coaches').textContent = allCoaches.filter(c => c.status !== 'archived').length;
+
+    // --- Today's Attendance Insights (Local Date Aware) ---
+    const nowLocal = new Date();
+    const todayStr = nowLocal.getFullYear() + '-' + String(nowLocal.getMonth() + 1).padStart(2, '0') + '-' + String(nowLocal.getDate()).padStart(2, '0');
     const todayLogs = allAttendance.filter(a => a.date === todayStr);
     const presentCount = todayLogs.filter(a => a.status === 'present').length;
     const absentCount = todayLogs.filter(a => a.status === 'absent').length;
@@ -1876,6 +1892,10 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       return enrollDate <= targetMonthEnd;
     });
+
+    // Update target-based summary stats
+    if ($('s-total')) $('s-total').textContent = targetStudents.length;
+    if ($('s-elo')) $('s-elo').textContent = targetStudents.length ? Math.round(targetStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / targetStudents.length) : 0;
 
     // 1. Precise Cash-Based Revenue (Only 'paid' transactions IN the target month)
     const paidRevenue = (allPayments || []).reduce((sum, p) => {
@@ -1974,9 +1994,8 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
 
     // Session counts
     let groupCount = 0, singleCount = 0, activeEnroll = 0;
-    allStudents.forEach(s => {
-      const sStatus = (s.status || 'active').toLowerCase();
-      if (sStatus === 'active') activeEnroll++;
+    targetStudents.forEach(s => {
+      activeEnroll++;
       const type = getStudentBatchType(s);
       if (type === 'Single') singleCount++;
       else groupCount++;
@@ -1986,7 +2005,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
     if ($('s-active-enroll')) $('s-active-enroll').textContent = activeEnroll;
 
     // Build charts
-    if (typeof Chart !== 'undefined') buildCharts(allStudents);
+    if (typeof Chart !== 'undefined') buildCharts(targetStudents);
 
     // Render coach financial table
     renderCoachFinance();
