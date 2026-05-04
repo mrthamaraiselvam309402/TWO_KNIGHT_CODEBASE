@@ -264,11 +264,12 @@ Deno.serve(async (req) => {
         const pstatus = String(rawBody.payment_status);
         updateData.payment_status = pstatus;
         
-        // Convenience: sync status for backwards compatibility if needed
-        const lowStatus = pstatus.toLowerCase();
-        if (lowStatus === 'paid') updateData.status = 'active';
-        else if (lowStatus === 'pending') updateData.status = 'pending';
-        updateData.account_status = updateData.status || 'active';
+     // Convenience: sync status for backwards compatibility if needed
+      const lowStatus = pstatus.toLowerCase();
+      if (lowStatus === 'paid') updateData.status = 'active';
+      else if (lowStatus === 'pending' && !updateData.status) updateData.status = 'pending';
+      if (!updateData.status) updateData.account_status = 'active';
+      else updateData.account_status = updateData.status;
       }
       if (rawBody.coach_id !== undefined) updateData.coach_id = rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null;
       if (rawBody.rating !== undefined || rawBody.current_rating !== undefined) {
