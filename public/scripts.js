@@ -1809,6 +1809,20 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
     }
   }
 
+  function calculateSlotRevenue(year, month, studentIdMap) {
+    if (!allPayments) return 0;
+    return allPayments.reduce((sum, p) => {
+      const pDate = new Date(p.payment_date || p.created_at);
+      if (pDate.getUTCMonth() === month && pDate.getUTCFullYear() === year && p.status === 'paid') {
+        const s = allStudents.find(x => String(x.id) === String(p.student_id));
+        if (s && (s.status || 'active').toLowerCase() !== 'archived' && getStudentPaymentStatus(s, month, year) === 'Paid') {
+          return sum + (parseFloat(p.amount) || 0);
+        }
+      }
+      return sum;
+    }, 0);
+  }
+
   function renderDash() {
     // Skip if data hasn't loaded yet - this prevents the first call with empty data from setting UI to 0
     if (allStudents.length === 0 && allCoaches.length === 0) return;
