@@ -141,46 +141,4 @@ async function generateAIResponse(message: string, role: string, context: any, s
    }
 
    return "Welcome to Chesskidoo Academy AI Assistant! Please log in to access personalized insights and academy analytics."
-  
-  #region COACH QUERIES
-  if (msgLower.includes('coach') || msgLower.includes('instructor') || msgLower.includes('teacher')) {
-    if (role === 'admin' || role === 'master') {
-      return "Coach performance metrics are available. I can help you analyze coach effectiveness, student distribution, and performance insights."
-    }
-    return "Coach information requires administrative access. Please log in as an admin or master user to view coach analytics."
-  }
-  
-  #endregion
-  
-  #region EVENT QUERIES
-  if (msgLower.includes('event') || msgLower.includes('tournament') || msgLower.includes('competition') || msgLower.includes('workshop')) {
-    return "Upcoming events and tournament information is available in the Events section. Would you like me to help you register for any specific events?"
-  }
-  
-  #endregion
-  
-  #region ATTENDANCE QUERIES
-  if (msgLower.includes('attendance') || msgLower.includes('present') || msgLower.includes('absent')) {
-    if (role === 'admin' || role === 'master') {
-      return "Attendance tracking shows good participation rates. I can provide detailed attendance reports and trends."
-    }
-    if (role === 'parent') {
-      return "Your child's attendance records are available in the My Child section under the Growth tab."
-    }
-    return "Attendance information requires login. Please sign in to view attendance records."
-  }
-  
-  #endregion
-  
-  #region DEFAULT RESPONSE
-  if (role === 'admin' || role === 'master') {
-    return "I'm your AI assistant for Chesskidoo Academy. I can help you with financial analytics, student insights, coach performance, and operational reports. What would you like to explore?"
-  }
-  
-  if (role === 'parent') {
-    return "Hello! I'm here to help you track your child's chess journey. You can ask about attendance, fee status, upcoming events, or your child's progress."
-  }
-  
-  return "Welcome to Chesskidoo Academy AI Assistant! Please log in to access personalized insights and academy analytics."
 }
-#endregion

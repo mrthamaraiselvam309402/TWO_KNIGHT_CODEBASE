@@ -46,6 +46,16 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     })
   }
+
+  // --- Authentication ---
+  const { validateAuth } = await import('./rate_limit.js')
+  const auth = await validateAuth(req, supabase)
+  if (!auth.allowed) {
+    return new Response(JSON.stringify({ error: auth.error }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
   
   function transformPayment(p: Record<string, unknown>) {
     return {

@@ -6,15 +6,22 @@
 (function () {
   'use strict';
 
+  // Core Utility - Hoisted for early access
+  const capitalizeFirst = (str) => {
+    if (!str || typeof str !== 'string') return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+  window.capitalizeFirst = capitalizeFirst;
+
+
   // ═══════════════════════════════════════════════════════════════
   // CONFIG & CONSTANTS
   // ═══════════════════════════════════════════════════════════════
   // SECURITY: Use environment variables via global config
   // For Vercel/Netlify: Set these in project settings → Environment Variables
   // For local development: Use .env file (add to .gitignore!)
-  const APP_CONFIG = window.APP_CONFIG || {};
-  const SUPABASE_URL = APP_CONFIG.SUPABASE_URL || '';
-  const SUPABASE_ANON_KEY = APP_CONFIG.SUPABASE_ANON_KEY || '';
+  const SUPABASE_URL = APP_CONFIG.SUPABASE_URL || window.SUPABASE_URL || '';
+  const SUPABASE_ANON_KEY = APP_CONFIG.SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY || '';
   const API_BASE = '/api';
   const $ = id => document.getElementById(id);
 
@@ -84,9 +91,12 @@
 
     try {
       const res = await fetch(url, { ...options, headers });
+      if (res.status === 401) {
+        console.warn(`[Auth] 401 Unauthorized for ${endpoint}. Possible token expiry.`);
+      }
       return res;
     } catch (e) {
-      console.error(`API Error (${endpoint}):`, e);
+      console.error(`[API] Connection Error (${endpoint}):`, e);
       throw e;
     }
   }
@@ -698,6 +708,20 @@ Thank you for your cooperation.
 
   function setLoading(key, loading) {
     loadingStates[key] = loading;
+    const loader = $('global-loader');
+    const bar = loader ? loader.querySelector('.loader-bar') : null;
+    
+    const anyLoading = Object.values(loadingStates).some(v => v);
+    if (anyLoading) {
+      if (loader) loader.classList.add('active');
+      if (bar) bar.style.width = '40%';
+    } else {
+      if (bar) bar.style.width = '100%';
+      setTimeout(() => {
+        if (loader) loader.classList.remove('active');
+        if (bar) bar.style.width = '0%';
+      }, 4000);
+    }
   }
 
   function openModal(id) { const el = $(id); if (el) el.style.display = 'flex'; }
@@ -1054,23 +1078,38 @@ const hasDirect = (window.allPayments || []).some(p => {
           }
         }
 
+        console.log('[Sync] Starting parallel data fetch...');
+        const fetchWithLog = async (url, key) => {
+          console.time(`Fetch:${key}`);
+          const res = await loadWithRetry(url);
+          console.timeEnd(`Fetch:${key}`);
+          return res;
+        };
+
         const [coaches, students, achievements, events, messages, attendance, payments, ratingHistory, resources] = await Promise.all([
-          loadWithRetry('/api/coaches'),
-          loadWithRetry('/api/students?limit=1000'),
-          loadWithRetry('/api/achievements'),
-          loadWithRetry('/api/events'),
-          loadWithRetry('/api/messages').then(r => r && r.data ? r.data : (r || [])),
-          loadWithRetry('/api/attendance').then(r => r || []),
-          loadWithRetry('/api/payments?order=payment_date.desc&limit=1000').then(r => r && r.data ? r.data : (r || [])),
-          loadWithRetry('/api/rating_history').then(r => r || []),
-          loadWithRetry('/api/resources').then(r => r || [])
+          fetchWithLog('/api/coaches', 'coaches'),
+          fetchWithLog('/api/students?limit=1000', 'students'),
+          fetchWithLog('/api/achievements', 'achievements'),
+          fetchWithLog('/api/events', 'events'),
+          fetchWithLog('/api/messages', 'messages'),
+          fetchWithLog('/api/attendance', 'attendance'),
+          fetchWithLog('/api/payments?order=payment_date.desc&limit=1000', 'payments'),
+          fetchWithLog('/api/rating_history', 'ratingHistory'),
+          fetchWithLog('/api/resources', 'resources')
         ]);
 
-        allCoaches = Array.isArray(coaches) ? coaches : [];
-        allResources = Array.isArray(resources) ? resources : [];
+        const extractData = (res) => {
+          if (!res) return [];
+          if (Array.isArray(res)) return res;
+          if (res.data && Array.isArray(res.data)) return res.data;
+          return [];
+        };
+
+        allCoaches = extractData(coaches);
+        allResources = extractData(resources);
 
         // --- Golden State Deduplication ---
-        const rawStudents = Array.isArray(students) ? students : [];
+        const rawStudents = extractData(students);
          const seenId = new Set();
          allStudents = rawStudents.filter(s => {
            if (!s || !s.id) return false;
@@ -1079,13 +1118,14 @@ const hasDirect = (window.allPayments || []).some(p => {
            return true;
          });
 
-         achievementsData = dedupeArray(achievements, 'id');
-         eventsData = dedupeArray(events, 'id');
-         allMessages = dedupeArray(messages, 'id');
-         allAttendance = Array.isArray(attendance) ? attendance : [];
+         achievementsData = dedupeArray(extractData(achievements), 'id');
+         eventsData = dedupeArray(extractData(events), 'id');
+         allMessages = dedupeArray(extractData(messages), 'id');
+                   allAttendance = extractData(attendance);
+
          // Deduplicate payments by transaction_id (or id if no transaction_id)
          const seenPayKeys = new Set();
-         const dedupedPayments = (Array.isArray(payments) ? payments : []).filter(p => {
+         const dedupedPayments = extractData(payments).filter(p => {
            const key = (p.transaction_id || p.id || '').toString().trim();
            if (!key || seenPayKeys.has(key)) return false;
            seenPayKeys.add(key);
@@ -1096,7 +1136,7 @@ const hasDirect = (window.allPayments || []).some(p => {
            ...p,
            amount: parseFloat(p.amount) || 0
          }));
-         allRatingHistory = dedupeArray(ratingHistory, 'id');
+         allRatingHistory = extractData(ratingHistory);
 
         // Build totalPaymentsMap atomically during load (count only 'paid' payments)
         const pMap = {};
@@ -1116,10 +1156,19 @@ const hasDirect = (window.allPayments || []).some(p => {
         window.allAttendance = allAttendance;
         window.allRatingHistory = allRatingHistory;
 
+        if ($('sync-text')) $('sync-text').textContent = 'Database Connected';
+        if ($('sync-status')) $('sync-status').classList.add('connected');
+        console.log(`[Sync] Loaded: ${allStudents.length} students, ${allCoaches.length} coaches, ${allPayments.length} payments`);
+
+        if (allStudents.length === 0 && role !== 'parent') {
+          console.warn('[Sync] Warning: No students found in database.');
+        }
+
         dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, timestamp: now };
         syncCoachDropdowns();
 
         if (role === 'admin' || role === 'master') {
+          console.log('[Sync] Rendering active page for role:', role);
           const active = document.querySelector('.page.active')?.id;
           if (active === 'page-dash') renderDash();
           else if (active === 'page-stud') renderStudents();
@@ -1128,14 +1177,9 @@ const hasDirect = (window.allPayments || []).some(p => {
           else if (active === 'page-msgs') renderMsgs();
           else if (active === 'page-fame') renderFame();
           else if (active === 'page-events') renderEvents();
-          /* renderDash(); */
+          else renderDash(); // Default fallback
+          
           updateMsgBadge();
-
-
-
-
-
-
           checkMonthlyRollover();
         }
         else if (role === 'parent') { renderChild(); renderEvents(); }
@@ -1143,10 +1187,10 @@ const hasDirect = (window.allPayments || []).some(p => {
         setLoading('data', false);
         isLoadingData = false;
       } catch (err) {
-        console.error('CRITICAL DATA LOAD ERROR:', err);
-        toast(`Failed to load data: ${err.message || 'Unknown error'}. Please refresh.`, 'error');
+        console.error('[Sync] Critical Error:', err);
         setLoading('data', false);
         isLoadingData = false;
+        toast('Database sync failed. Check connection.', 'error');
       }
     };
 
@@ -1212,8 +1256,8 @@ const hasDirect = (window.allPayments || []).some(p => {
     }
 
     try {
-      if (supabaseClient || window.supabaseClient) {
-        supabaseClient = supabaseClient || window.supabaseClient;
+      if (window.supabaseClient) {
+        supabaseClient = window.supabaseClient;
         return;
       }
       supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -2260,48 +2304,58 @@ const hasDirect = (window.allPayments || []).some(p => {
       return;
     }
     
-    // Skip old mapping logic
-    tbody.innerHTML = studs.map((s, i) => {
-      const status = getStudentPaymentStatus(s, targetMonth, targetYear);
-      const session = getStudentBatchType(s);
-      const time = s.session_time || s.class_time || s.batch_time || '';
-      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
-      const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
-      const uniqueId = 'more-' + s.id.replace(/[^a-zA-Z0-9]/g, '');
-      
-      const pInfo = paymentsOfMonth[String(s.id).toLowerCase()];
-      const paidThisMonthHtml = pInfo 
-        ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>` 
-        : '<span class="text-muted">₹0</span>';
+    console.log(`[UI] Rendering ${studs.length} students...`);
+    try {
+      tbody.innerHTML = studs.map((s, i) => {
+        try {
+          const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+          const session = getStudentBatchType(s);
+          const time = s.session_time || s.class_time || s.batch_time || '';
+          const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+          const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
+          const uniqueId = 'more-' + (s.id || 'err').replace(/[^a-zA-Z0-9]/g, '');
+          
+          const pInfo = paymentsOfMonth[String(s.id).toLowerCase()];
+          const paidThisMonthHtml = pInfo 
+            ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>` 
+            : '<span class="text-muted">₹0</span>';
 
-      return `<tr>
-        <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
-        <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
-        <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
-        <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
-        <td>${coachName}</td>
-        <td>${getStudentDate(s) || '-'}</td>
-        <td>${session}</td>
-        <td>${time}</td>
-        <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-         <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
-         <td>${paidThisMonthHtml}</td>
-          <td>
-           <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
-             <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')" title="View">View</button>
-             <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')" title="Edit">Edit</button>
-             <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')" title="Delete">Delete</button>
-             <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')" title="More Options">⋮ More</button>
-             <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
-               <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-               <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-               <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="openPromote('${s.id}')">📈 Promote</button>
-               <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
-             </div>
-           </div>
-         </td>
-       </tr>`;
-    }).join('');
+          return `<tr>
+            <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
+            <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
+            <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
+            <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
+            <td>${coachName}</td>
+            <td>${getStudentDate(s) || '-'}</td>
+            <td>${session}</td>
+            <td>${time}</td>
+            <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+            <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
+            <td>${paidThisMonthHtml}</td>
+            <td>
+              <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
+                <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')">View</button>
+                <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
+                <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
+                <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
+                  <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="openPromote('${s.id}')">📈 Promote</button>
+                  <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
+                </div>
+              </div>
+            </td>
+          </tr>`;
+        } catch (rowErr) {
+          console.error(`[UI] Error rendering student row ${i}:`, rowErr, s);
+          return `<tr><td colspan="12" style="color:var(--danger)">Error rendering student ${s.name || i}</td></tr>`;
+        }
+      }).join('');
+    } catch (tblErr) {
+      console.error('[UI] Critical Table Error:', tblErr);
+      tbody.innerHTML = `<tr><td colspan="12" class="text-center text-danger">Table Rendering Error. Check console.</td></tr>`;
+    }
   }
 
     /*

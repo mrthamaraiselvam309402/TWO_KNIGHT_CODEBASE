@@ -40,6 +40,16 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     })
   }
+
+  // --- Authentication ---
+  const { validateAuth } = await import('./rate_limit.js')
+  const auth = await validateAuth(req, supabase)
+  if (!auth.allowed) {
+    return new Response(JSON.stringify({ error: auth.error }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
   
   function transformAudit(a: Record<string, unknown>) {
     return {
@@ -73,6 +83,37 @@ Deno.serve(async (req) => {
       if (error) throw error
       
       return new Response(JSON.stringify((logs || []).map(transformAudit)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // POST - Log new audit entry
+    if (method === 'POST') {
+      let body: Record<string, unknown> = {}
+      try { body = await req.json() } catch (_e) {}
+
+      const newLog = {
+        id: crypto.randomUUID(),
+        table_name: String(body.table_name || ''),
+        record_id: String(body.record_id || ''),
+        action: String(body.action || ''),
+        old_value: body.old_value || null,
+        new_value: body.new_value || null,
+        user_name: String(body.user_name || 'system'),
+        user_role: String(body.user_role || 'system'),
+        timestamp: new Date().toISOString()
+      }
+
+      const { data, error } = await supabase
+        .from('audit')
+        .insert(newLog)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return new Response(JSON.stringify(transformAudit(data)), {
+        status: 201,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }

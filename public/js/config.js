@@ -5,14 +5,17 @@ window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 let supabaseClient = null;
 
 function initSupabase() {
-  if (!supabaseClient && window.supabase) {
-    supabaseClient = window.supabase.createClient(
+  if (window.supabaseClient) return window.supabaseClient;
+  
+  if (window.supabase) {
+    window.supabaseClient = window.supabase.createClient(
       window.SUPABASE_URL,
       window.SUPABASE_ANON_KEY
     );
     console.log('Supabase initialized');
+    return window.supabaseClient;
   }
-  return supabaseClient;
+  return null;
 }
 
 function SB() {

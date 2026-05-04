@@ -1,11 +1,30 @@
 
 [functions.auth]
-enabled = true
-verify_jwt = true
-import_map = "./functions/auth/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/auth/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/auth/*.html" ]
+verify_jwt = false
+
+[functions.students]
+verify_jwt = false
+
+[functions.coaches]
+verify_jwt = false
+
+[functions.payments]
+verify_jwt = false
+
+[functions.messages]
+verify_jwt = false
+
+[functions.audit]
+verify_jwt = false
+
+[functions.events]
+verify_jwt = false
+
+[functions.resources]
+verify_jwt = false
+
+[functions.attendance]
+verify_jwt = false
+
+[functions.rating_history]
+verify_jwt = false

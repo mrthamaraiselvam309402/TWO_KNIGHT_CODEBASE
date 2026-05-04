@@ -41,6 +41,18 @@ Deno.serve(async (req) => {
     })
   }
 
+  // --- Authentication ---
+  const { import_rate_limit } = await import('./rate_limit.js') // Just in case it needs explicit import, but it's already imported at top
+  const { validateAuth } = await import('./rate_limit.js')
+  
+  const auth = await validateAuth(req, supabase)
+  if (!auth.allowed) {
+    return new Response(JSON.stringify({ error: auth.error }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+
   // --- Input Validation Helpers ---
   function sanitizeString(str: unknown, maxLength = 255): string {
     if (typeof str !== 'string') return ''

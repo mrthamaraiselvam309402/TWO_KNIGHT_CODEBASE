@@ -75,7 +75,36 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Check Supabase Auth (Built-in users from Dashboard)
+    // 1. Check Hardcoded Admin/Master from .env (Stabilization Fallback)
+    const masterUser = Deno.env.get('MASTER_USERNAME');
+    const masterPass = Deno.env.get('MASTER_PASSWORD');
+    const adminUser = Deno.env.get('ADMIN_USERNAME');
+    const adminPass = Deno.env.get('ADMIN_PASSWORD');
+
+    // Debug log for server-side troubleshooting
+    console.log(`Login attempt for: ${username}`);
+
+    if (masterUser && masterPass && String(username) === String(masterUser) && String(password) === String(masterPass)) {
+      console.log("Master login successful");
+      return new Response(JSON.stringify({
+        success: true,
+        token: 'master-token-' + Date.now(),
+        role: 'master',
+        user: masterUser
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
+    if (adminUser && adminPass && String(username) === String(adminUser) && String(password) === String(adminPass)) {
+      console.log("Admin login successful");
+      return new Response(JSON.stringify({
+        success: true,
+        token: 'admin-token-' + Date.now(),
+        role: 'admin',
+        user: adminUser
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
+    // 2. Check Supabase Auth (Built-in users from Dashboard)
     // This is the secure way to handle Admin/Master access
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: username,

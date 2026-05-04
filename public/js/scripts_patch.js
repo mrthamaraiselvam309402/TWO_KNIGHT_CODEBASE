@@ -103,5 +103,16 @@
     img.style.transition = 'transform 0.4s cubic-bezier(0.19,1,0.22,1), box-shadow 0.4s ease';
   });
 
+  /* ── FIX 8: capitalizeFirst SCOPE ──────────────────────────────────
+   * getStudentLevel uses capitalizeFirst() but it might be undefined
+   * in cached versions of scripts.js.
+   */
+  if (typeof window.capitalizeFirst !== 'function') {
+    window.capitalizeFirst = function (str) {
+      if (!str || typeof str !== 'string') return '';
+      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    };
+  }
+
   console.log('[Chesskidoo Patch v2.1] Applied successfully.');
 })();
