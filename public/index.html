@@ -7,16 +7,34 @@
   <meta name="description" content="Chesskidoo Academy — Premium chess coaching management system for students, coaches, and parents."/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="styles.css?v=2026-04-23-v55"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
-    <!-- Security Hardening -->
-    <!-- CSP: allows cdnjs for jsPDF, ui-avatars/unsplash/imgbb for images, jsdelivr for sourcemaps -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co https://i.ibb.co https://*.ibb.co https://ui-avatars.com https://images.unsplash.com https://api.imgbb.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://api.imgbb.com;"/>
-    <meta name="referrer" content="strict-origin-when-cross-origin"/>
-    <!-- X-Frame-Options must be an HTTP header, not a meta tag — set in vercel.json -->
+  <!-- CDN Libraries with fallbacks -->
+  <script>
+    window.CDN = { loaded: {} };
+    function loadCDN(src, key, cb) {
+      if (window[key]) { window.CDN.loaded[key] = true; cb(); return; }
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => { window.CDN.loaded[key] = true; cb(); };
+      s.onerror = () => console.warn('[CDN] Load failed:', src);
+      s.async = true;
+      document.head.appendChild(s);
+    }
+  </script>
+  <script>
+    loadCDN('https://cdn.jsdelivr.net/npm/chart.js', 'Chart', function() {
+      loadCDN('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js', 'supabase', function() {
+        window.CDN.SUPABASE_READY = true;
+      });
+    });
+  </script>
 
-    <script src="js/config.js?t=20260504_1948"></script>
+  <!-- Security Hardening -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co https://i.ibb.co https://*.ibb.co https://ui-avatars.com https://images.unsplash.com https://api.imgbb.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://api.imgbb.com;"/>
+  <meta name="referrer" content="strict-origin-when-cross-origin"/>
+  <!-- X-Frame-Options must be an HTTP header, not a meta tag — set in vercel.json -->
+
+  <script src="js/config.js?t=20260504_1948"></script>
 
 </head>
 <body>
@@ -1096,13 +1114,9 @@
   </div>
 </div>
 
-   <!-- jsPDF on jsdelivr so it passes CSP (cdnjs was blocked) -->
-   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-     <!-- <script src="https://cdn.jsdelivr.net/npm/chess.js/lib/chess.js"></script> -->
-     <script src="scripts.js?v=3.5&t=20260504_2020"></script>
+   <!-- PDF libraries loaded dynamically in reporting.js -->
+
+      <script src="scripts.js?v=3.5&t=20260504_2020"></script>
      <script src="js/reporting.js?v=v7"></script>
      <script src="js/ai-assistant.js?v=v2"></script>
      <script src="js/auth.js?v=v2&t=20260504_2020"></script>
