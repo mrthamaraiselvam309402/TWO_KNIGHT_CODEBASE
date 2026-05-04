@@ -169,6 +169,32 @@ Deno.serve(async (req) => {
       })
     }
     
+    // DELETE - Remove payment
+    if (method === 'DELETE') {
+      if (!id) {
+        return new Response(JSON.stringify({ error: 'Payment ID is required for deletion' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      const { error: deleteError } = await supabase
+        .from('payments')
+        .delete()
+        .eq('id', id)
+      
+      if (deleteError) {
+        return new Response(JSON.stringify({ error: deleteError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
