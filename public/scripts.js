@@ -2378,43 +2378,63 @@ Thank you for your cooperation.
              ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>`
              : '<span class="text-muted">₹0</span>';
 
-           // Action buttons based on status
-           let actionButtons = '';
-           if (status === 'Paid') {
-             actionButtons = `
-               <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
-               <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-               <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
-             `;
-           } else if (status === 'Pending' || status === 'Due') {
-             actionButtons = `
-               <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-               <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-               <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
-               <button class="btn btn-outline-grey btn-sm" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
-             `;
-           } else {
-             actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
-           }
+            // Primary action buttons (always visible)
+            let primaryActions = '';
+            let moreActions = '';
 
-           return `<tr>
-             <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
-             <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
-             <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
-             <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
-             <td>${coachName}</td>
-             <td>${getStudentDate(s) || '-'}</td>
-             <td>${session}</td>
-             <td>${time}</td>
-             <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-             <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
-             <td>${paidThisMonthHtml}</td>
-             <td>
-               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                 ${actionButtons}
-               </div>
-             </td>
-           </tr>`;
+            if (status === 'Paid') {
+              primaryActions = `
+                <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')">View</button>
+                <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
+                <button class="btn btn-outline-info btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
+              `;
+              moreActions = `
+                <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+                <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+                <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
+              `;
+            } else if (status === 'Pending' || status === 'Due') {
+              primaryActions = `
+                <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')">View</button>
+                <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
+                <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
+              `;
+              moreActions = `
+                <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+                <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+                <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
+              `;
+            } else {
+              primaryActions = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
+              moreActions = '';
+            }
+
+            return `<tr>
+              <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
+              <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
+              <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
+              <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
+              <td>${coachName}</td>
+              <td>${getStudentDate(s) || '-'}</td>
+              <td>${session}</td>
+              <td>${time}</td>
+              <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+              <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
+              <td>${paidThisMonthHtml}</td>
+              <td>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                  ${primaryActions}
+                  ${moreActions ? `
+                    <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
+                    <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:160px;box-shadow:var(--shadow);margin-top:4px">
+                      ${moreActions}
+                    </div>
+                  ` : ''}
+                </div>
+              </td>
+            </tr>`;
          } catch (rowErr) {
            console.error(`[UI] Error rendering student row ${i}:`, rowErr, s);
            return `<tr><td colspan="12" style="color:var(--danger)">Error rendering student ${s.name || i}</td></tr>`;
