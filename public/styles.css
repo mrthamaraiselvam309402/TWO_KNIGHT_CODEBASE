@@ -26,10 +26,12 @@
   --ivory2: #c8c4b8;
   --ivory3: #7a7870;
 
-  --accent: #5a9fff;
-  --success: #52c41a;
-  --danger: #ff4d4f;
-  --emerald: #52c41a;
+   --accent: #5a9fff;
+   --info: #17a2b8;
+   --warning: #ffc107;
+   --success: #52c41a;
+   --danger: #ff4d4f;
+   --emerald: #52c41a;
 
   --glass: rgba(255,255,255,0.03);
   --border: rgba(232,168,48,0.15);
@@ -291,8 +293,12 @@ tbody tr:hover { background: var(--gold-mist); }
 .btn-outline-blue:hover { background: rgba(90,159,255,0.1); }
 .btn-outline-grey { background: transparent; border: 1px solid #555; color: var(--ivory); }
 .btn-outline-grey:hover { background: var(--glass); }
-.btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
-.btn-danger:hover { background: rgba(255,77,79,0.1); }
+ .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+ .btn-danger:hover { background: rgba(255,77,79,0.1); }
+ .btn-outline-info { background: transparent; border: 1px solid var(--info); color: var(--info); }
+ .btn-outline-info:hover { background: rgba(30,144,255,0.1); }
+ .btn-outline-warning { background: transparent; border: 1px solid var(--warning); color: var(--warning); }
+ .btn-outline-warning:hover { background: rgba(255,193,7,0.1); }
 
 /* ── BADGES ── */
 .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }

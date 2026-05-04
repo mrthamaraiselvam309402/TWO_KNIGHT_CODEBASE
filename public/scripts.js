@@ -2364,38 +2364,29 @@ Thank you for your cooperation.
           const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
           const uniqueId = 'more-' + (s.id || 'err').replace(/[^a-zA-Z0-9]/g, '');
           
-          const pInfo = paymentsOfMonth[String(s.id).toLowerCase()];
-          const paidThisMonthHtml = pInfo 
-            ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>` 
-            : '<span class="text-muted">₹0</span>';
+           const pInfo = paymentsOfMonth[String(s.id).toLowerCase()];
+           const paidThisMonthHtml = pInfo
+             ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>`
+             : '<span class="text-muted">₹0</span>';
 
-          return `<tr>
-            <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
-            <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
-            <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
-            <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
-            <td>${coachName}</td>
-            <td>${getStudentDate(s) || '-'}</td>
-            <td>${session}</td>
-            <td>${time}</td>
-            <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-            <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
-            <td>${paidThisMonthHtml}</td>
-            <td>
-              <div class="action-menu-container" style="position:relative;display:inline-flex;align-items:center;gap:4px">
-                <button class="btn btn-outline-grey btn-sm" onclick="viewStudent('${s.id}')">View</button>
-                <button class="btn btn-outline-grey btn-sm" onclick="openEdit('${s.id}')">Edit</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
-                <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
-                <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:140px;box-shadow:var(--shadow);margin-top:4px">
-                  <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="openPromote('${s.id}')">📈 Promote</button>
-                  <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
-                </div>
-              </div>
-            </td>
-          </tr>`;
+           // Action buttons based on status
+           let actionButtons = '';
+           if (status === 'Paid') {
+             actionButtons = `
+               <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+               <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+               <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
+             `;
+           } else if (status === 'Pending' || status === 'Due') {
+             actionButtons = `
+               <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+               <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+               <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
+               <button class="btn btn-outline-grey btn-sm" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
+             `;
+           } else {
+             actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
+           }
         } catch (rowErr) {
           console.error(`[UI] Error rendering student row ${i}:`, rowErr, s);
           return `<tr><td colspan="12" style="color:var(--danger)">Error rendering student ${s.name || i}</td></tr>`;
@@ -3368,18 +3359,202 @@ Thank you for your continued support and cooperation.
     } catch (e) { toast('Failed to process payment', 'error'); }
   };
 
-  window.markUnpaid = async function (id) {
-    if (!confirm('Revert status to Due? This will NOT delete the transaction record. You must delete the payment from History to reduce credits.')) return;
-    try {
-      await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Due' }) });
-      toast('Status reverted to Due', 'info');
-      await loadAllData(true);
-      renderDash();
-      renderBills();
-    } catch (e) { toast('Error reverting status', 'error'); }
-  };
+   window.markUnpaid = async function (id) {
+     if (!confirm('Revert status to Due? This will NOT delete the transaction record. You must delete the payment from History to reduce credits.')) return;
+     try {
+       await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Due' }) });
+       toast('Status reverted to Due', 'info');
+       await loadAllData(true);
+       renderDash();
+       renderBills();
+     } catch (e) { toast('Error reverting status', 'error'); }
+   };
 
-  window.viewPaymentHistory = async function (studentId) {
+   // ============================================
+   // FEATURE 1: INFORM PARENT (Pending/Due)
+   // ============================================
+   window.informParent = function(id, name, fee) {
+     const s = allStudents.find(x => String(x.id) === String(id));
+     if (!s) return;
+
+     // Populate modal
+     $('inform-student-name').textContent = name;
+     $('inform-amount').textContent = `₹${getStudentMonthlyFee(s).toLocaleString()}`;
+     $('inform-custom-msg').value = '';
+
+     // Store student ID in modal data attribute
+     const modal = $('inform-modal');
+     if (modal) modal.dataset.studentId = id;
+
+     openModal('inform-modal');
+   };
+
+   window.sendInform = async function() {
+     const modal = $('inform-modal');
+     const studentId = modal.dataset.studentId;
+     const s = allStudents.find(x => String(x.id) === String(studentId));
+     if (!s) { toast('Student not found', 'error'); closeModals(); return; }
+
+     const channel = (document.querySelector('input[name="notify-channel"]:checked') || {}).value || 'whatsapp';
+     const customMsg = $('#inform-custom-msg')?.value || '';
+
+     const studentName = getStudentName(s);
+     const fee = getStudentMonthlyFee(s);
+     const phone = getStudentPhone(s).replace(/\D/g, '');
+     const parentName = s.parent_name || 'Parent';
+
+     // Calculate exact pending amount
+     const targetMonth = window.reportMonth;
+     const targetYear = window.reportYear;
+     const enrollDateStr = getStudentDate(s);
+     const baseline = new Date(2026, 3, 1);
+     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+     const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+
+     const freshMap = {};
+     (window.allPayments || []).forEach(p => {
+       if (p.status === 'paid') {
+         const sid = String(p.student_id || '').toLowerCase();
+         if (sid) freshMap[sid] = (freshMap[sid] || 0) + 1;
+       }
+     });
+     const credits = freshMap[String(s.id).toLowerCase()] || 0;
+     const pendingMonths = Math.max(1, monthsRequired - credits);
+     const totalDue = pendingMonths * fee;
+
+     // Build notification content
+     let message = customMsg ? `${customMsg}\n\n` : '';
+     message += `Dear ${parentName},\n\n`;
+     message += `This is a reminder regarding the outstanding chess class fee for ${studentName}.\n\n`;
+     message += `Amount Due: ₹${totalDue.toLocaleString()}\n`;
+     message += `Period: ${new Date(targetYear, targetMonth).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}\n\n`;
+     message += `Please make the payment at your earliest convenience.\n\n`;
+     message += `Account: 9025846663 (Ranjith)\n`;
+     message += `Academy: Chesskidoo`;
+
+     // Send via selected channel
+     try {
+       if (channel === 'whatsapp') {
+         window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(message)}`, '_blank');
+       } else if (channel === 'sms') {
+         // Use tel: link for native SMS
+         window.location.href = `sms:${phone}?body=${encodeURIComponent(message)}`;
+       } else if (channel === 'push') {
+         // Create in-app notification message
+         await apiCall(`${API_BASE}/messages`, {
+           method: 'POST',
+           body: JSON.stringify({
+             sender_type: 'system',
+             receiver_type: 'parent',
+             subject: 'Fee Reminder - Chesskidoo',
+             message: message,
+             priority: 'high'
+           })
+         });
+         toast('Push notification sent to parent app', 'success');
+       }
+
+       // Log audit
+       await apiCall(`${API_BASE}/audit`, {
+         method: 'POST',
+         body: JSON.stringify({
+           table_name: 'students',
+           record_id: studentId,
+           action: 'INFORM_PARENT',
+           new_value: { channel, amount: totalDue, student: studentName }
+         })
+       });
+
+       toast(`Notification sent via ${channel}`, 'success');
+       closeModals();
+     } catch (e) {
+       console.error('Notify failed:', e);
+       toast('Failed to send notification', 'error');
+     }
+   };
+
+   // ============================================
+   // FEATURE 2: TOGGLE PAID/UNPAID STATUS
+   // ============================================
+   window.togglePaymentStatus = async function(id, name, fee) {
+     const s = allStudents.find(x => String(x.id) === String(id));
+     if (!s) return;
+
+     const currentStatus = getStudentPaymentStatus(s);
+     const isPaid = currentStatus === 'Paid';
+     const newStatus = isPaid ? 'Unpaid' : 'Paid';
+     const actionText = isPaid ? 'mark as UNPAID' : 'mark as PAID';
+
+     if (!confirm(`Are you sure you want to ${actionText} for ${name}?`)) return;
+
+     try {
+       if (isPaid) {
+         // UNPAID: Remove student's payment status and delete associated payment records for this month
+         const targetMonth = window.reportMonth;
+         const targetYear = window.reportYear;
+
+         // 1. Find the payment record(s) for this month
+         const monthPayments = (window.allPayments || []).filter(p =>
+           String(p.student_id) === String(id) &&
+           p.status === 'paid' &&
+           new Date(p.payment_date || p.created_at).getUTCMonth() === targetMonth &&
+           new Date(p.payment_date || p.created_at).getUTCFullYear() === targetYear
+         );
+
+         // 2. Delete those payment records
+         for (const p of monthPayments) {
+           await apiCall(`${API_BASE}/payments?id=${p.id}`, { method: 'DELETE' });
+         }
+
+         // 3. Update student status to Due
+         await apiCall(`${API_BASE}/students?id=${id}`, {
+           method: 'PUT',
+           body: JSON.stringify({ payment_status: 'Due' })
+         });
+
+         toast(`Status changed to Due. ${monthPayments.length} payment record(s) removed.`, 'info');
+
+       } else {
+         // PAID: Create a payment record and update status
+         const paymentData = {
+           id: 'pay_toggle_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+           student_id: id,
+           amount: parseFloat(fee),
+           status: 'paid',
+           payment_method: 'Manual Toggle',
+           description: 'Status toggled to Paid via Dashboard',
+           transaction_id: 'TGL-' + Math.floor(Math.random() * 1000000),
+           payment_date: new Date().toISOString()
+         };
+
+         const res = await apiCall(`${API_BASE}/payments`, {
+           method: 'POST',
+           body: JSON.stringify(paymentData)
+         });
+
+         if (res.ok) {
+           // Also update student status
+           await apiCall(`${API_BASE}/students?id=${id}`, {
+             method: 'PUT',
+             body: JSON.stringify({ payment_status: 'Paid' })
+           });
+           toast('Marked as Paid with transaction record', 'success');
+         }
+       }
+
+       // Invalidate cache and refresh
+       window.totalPaymentsMap = null;
+       await loadAllData(true);
+       renderDash();
+       renderBills();
+     } catch (e) {
+       console.error('Toggle status failed:', e);
+       toast('Error updating status', 'error');
+     }
+   };
+
+   window.viewPaymentHistory = async function (studentId) {
     const s = allStudents.find(x => String(x.id) === String(studentId));
     if (!s) return;
 
@@ -3641,21 +3816,23 @@ Thank you for your continued support and cooperation.
        const sessionType = getStudentBatchType(s) || 'Regular';
        const scheduleTime = getStudentSessionTime(s) || 'TBD';
 
-       let actionButtons = '';
-       if (status === 'Unpaid' || status === 'Due' || status === 'Pending') {
-         actionButtons = `
-           <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-           <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-           <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
-         `;
-       } else if (status === 'Paid') {
-         actionButtons = `
-           <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
-           <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-         `;
-       } else {
-        actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
-      }
+        let actionButtons = '';
+        if (status === 'Paid') {
+          actionButtons = `
+            <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+            <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
+          `;
+        } else if (status === 'Pending' || status === 'Due') {
+          actionButtons = `
+            <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+            <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
+            <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
+          `;
+        } else {
+         actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
+       }
 
       return `<tr>
         <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">${invoiceId}</span></td>

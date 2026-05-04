@@ -966,7 +966,7 @@
     <p style="color:var(--ivory-dim);font-size:14px;margin-bottom:6px">Academy Tuition</p>
     <div id="pay-amt" style="font-size:36px;font-weight:700;color:var(--gold);font-family:'DM Mono'">₹0</div>
     <p style="color:var(--ivory-dim);font-size:12px">Student: <span id="pay-name" style="color:var(--ivory)">—</span></p>
-    
+
     <div id="pay-preview" style="margin:20px 0;padding:20px;background:var(--bg3);border-radius:12px;display:none">
       <div style="margin-bottom:12px">
         <canvas id="pay-qr-canvas"></canvas>
@@ -974,19 +974,60 @@
       <div style="font-size:11px;color:var(--ivory-dim);font-family:'DM Mono'">Scan to Pay via UPI</div>
       <div id="pay-upi-id" style="font-size:12px;color:var(--gold);margin-top:8px;font-family:'DM Mono'"></div>
     </div>
-    
+
     <div id="pay-processing" style="display:none;padding:30px 0">
       <div class="spinner" style="width:40px;height:40px;border-width:3px;margin:0 auto 16px"></div>
       <div style="color:var(--gold);font-weight:600">Processing Payment...</div>
       <div id="pay-provider" style="font-size:13px;color:var(--ivory-dim);margin-top:8px"></div>
     </div>
-    
+
     <div class="upi-list" id="pay-options">
       <div class="upi-item" onclick="initiatePay('Google Pay')"><b>Google Pay</b></div>
       <div class="upi-item" onclick="initiatePay('PhonePe')"><b>PhonePe</b></div>
       <div class="upi-item" onclick="initiatePay('Paytm')"><b>Paytm</b></div>
     </div>
     <button class="btn btn-outline" style="width:100%;margin-top:12px" onclick="closeModals()">Cancel</button>
+  </div>
+</div>
+
+<!-- Inform Parent Modal -->
+<div class="modal" id="inform-modal">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-title" style="color:var(--info);display:flex;align-items:center;gap:10px">
+      <span style="font-size:24px">📢</span> Notify Parent
+    </div>
+    <div class="modal-sub">Student: <strong id="inform-student-name" style="color:var(--ivory)"></strong></div>
+    <div class="modal-sub">Amount Due: <strong id="inform-amount" style="color:var(--danger)"></strong></div>
+
+    <div style="margin:16px 0;padding:16px;background:var(--glass);border-radius:10px;border:1px solid var(--border);font-size:14px;line-height:1.7">
+      <label style="display:block;margin-bottom:8px;font-size:12px;color:var(--ivory-dim)">SELECT NOTIFICATION CHANNEL</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface);border-radius:8px;cursor:pointer">
+          <input type="radio" name="notify-channel" value="whatsapp" checked style="accent-color:var(--success)">
+          <span>💬 WhatsApp</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface);border-radius:8px;cursor:pointer">
+          <input type="radio" name="notify-channel" value="sms" style="accent-color:var(--blue)">
+          <span>📱 SMS</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface);border-radius:8px;cursor:pointer">
+          <input type="radio" name="notify-channel" value="email" style="accent-color:var(--gold)">
+          <span>📧 Email</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface);border-radius:8px;cursor:pointer">
+          <input type="radio" name="notify-channel" value="push" style="accent-color:var(--emerald)">
+          <span>🔔 App Push</span>
+        </label>
+      </div>
+
+      <label style="display:block;margin-bottom:4px;font-size:12px;color:var(--ivory-dim)">CUSTOM MESSAGE (Optional)</label>
+      <textarea id="inform-custom-msg" rows="3" placeholder="Add a personal note..." style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--ivory);padding:8px;border-radius:6px;resize:none"></textarea>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="sendInform()">📤 Send Notification</button>
+    </div>
   </div>
 </div>
 
