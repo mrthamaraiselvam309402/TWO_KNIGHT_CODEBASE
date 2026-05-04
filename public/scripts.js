@@ -469,8 +469,7 @@
       const newElo = getStudentRating(s) + eloBonus;
       const updateRes = await apiCall(`/api/students?id=${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ level: newLevel, rating: newElo, notes: s.notes + '
-[Promoted: ' + notes + ']' })
+        body: JSON.stringify({ level: newLevel, rating: newElo, notes: s.notes + '\n[Promoted: ' + notes + ']' })
       });
 
       // 2. Log to Rating History
@@ -891,124 +890,6 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
           event_id: eventId,
           student_id: currentStudent.id,
           student_name: getStudentName(currentStudent)
-
-    const isCurrentMonth = targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear();
-    const isAuditPaid = (totalCredits >= monthsRequired) || hasDirect;
-
-    // Determination Logic: 
-    // 1. For PAST months: Audit is the ONLY absolute truth.
-    // 2. For CURRENT month: Manual override > Audit (allows instant marking).
-    if (isCurrentMonth) {
-        if (manualStatus === 'paid') return 'Paid';
-        if (manualStatus === 'pending') return 'Pending';
-        if (manualStatus === 'due') return 'Due';
-    }
-    
-    return isAuditPaid ? 'Paid' : (totalCredits === monthsRequired - 1 ? 'Pending' : 'Due');
-  }
-
-  function getStudentBatchType(s) {
-    if (!s) return 'Group';
-    const mode = (s.session_mode || s.batch_type || s.session_type || '').toLowerCase();
-    if (mode.includes('group')) return 'Group';
-    if (mode.includes('single') || mode.includes('one_to_one')) return 'Single';
-
-    // Fallback to notes parsing for legacy data
-    const notes = (s.notes || '').toLowerCase();
-    if (notes.includes('session:group')) return 'Group';
-    if (notes.includes('session:single')) return 'Single';
-
-    return 'Group'; // Default
-  }
-  function getStudentSessionTime(s) {
-    if (s.session_time) return s.session_time;
-    const match = (s.notes || '').match(/time[:\s]*([^,]+)/i);
-    return match ? match[1].trim() : 'WEEKEND';
-  }
-  function isStudentScheduledToday(s) {
-    const time = getStudentSessionTime(s).toUpperCase();
-    const day = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-    const isWeekend = (day === 0 || day === 6);
-
-    if (time.includes('MORNING & EVENING')) return true; // Daily
-    if (time.includes('ANYTIME')) return true;
-    if (isWeekend && time.includes('WEEKEND')) return true;
-    if (!isWeekend && time.includes('WEEKDAY')) return true;
-    if (day === 5 || day === 6) if (time.includes('FRI & SAT')) return true;
-    if (day === 0 || day === 1) if (time.includes('SUN & MON')) return true;
-
-    return false;
-  }
-  function getStudentBatchTime(s) { return s.batch_time || '17:00'; }
-  function getStudentStatus(s) { return s.status || 'pending'; }
-  function getStudentCoachNotes(s) { return s.notes || ''; }
-  function getStudentSkills(s) {
-    return {
-      tactics: s.tactics_score || 50,
-      endgame: s.endgame_score || 50,
-      openings: s.openings_score || 50,
-      positional: s.positional_score || 50
-    };
-  }
-
-  function getCoachName(c) { return c.name || ''; }
-  function getCoachSpecialty(c) { return c.specialization || ''; }
-  function getCoachSalary(c) { return c.salary || c.hourly_rate || 0; }
-  function getCoachAvailability(c) { return c.availability || ''; }
-  function getCoachStatus(c) { return c.status || c.account_status || 'active'; }
-  function getCoachEmail(c) { return c.email || ''; }
-  function getCoachExperience(c) { return c.experience || 0; }
-  function getCoachRating(c) { return c.rating || 0; }
-
-  function getEventDate(e) { return e.date || e.event_date || ''; }
-  function getEventType(e) { return e.type || e.event_type || 'Tournament'; }
-  function getEventLocation(e) { return e.location || ''; }
-  function getEventTime(e) {
-    const t = e.time || e.event_time || '10:00';
-    return formatTime(t);
-  }
-  async function registerForEvent(eventId) {
-    const e = eventsData.find(x => String(x.id) === String(eventId));
-    if (!e) { toast('Event not found', 'error'); return; }
-
-    if (!currentStudent) { toast('Please login as a parent first', 'error'); return; }
-    if (!confirm('Register ' + getStudentName(currentStudent) + ' for "' + e.title + '" on ' + (e.date ? new Date(e.date).toLocaleDateString() : 'TBD') + '?')) return;
-
-    // Optimistic update - add student to registered list locally first
-    const registeredStudents = e.registered_students || [];
-    if (registeredStudents.includes(currentStudent.id)) {
-      toast('Already registered!', 'info');
-      return;
-    }
-
-    // Add student locally (optimistic)
-    registeredStudents.push(currentStudent.id);
-    e.registered_students = registeredStudents;
-    e.registrations_count = (e.registrations_count || 0) + 1;
-
-    // Also update in eventsData
-    const idx = eventsData.findIndex(ev => String(ev.id) === String(eventId));
-    if (idx >= 0) {
-      eventsData[idx].registered_students = registeredStudents;
-      eventsData[idx].registrations_count = (eventsData[idx].registrations_count || 0) + 1;
-    }
-
-    // Re-render to show registered
-    renderEvents();
-
-    // Try to save to backend (fire and forget)
-    try {
-      fetch(`${SUPABASE_URL}/functions/v1/events`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          action: 'register',
-          event_id: eventId,
-          student_id: currentStudent.id,
-          student_name: getStudentName(currentStudent)
         })
       }).catch(() => { });
     } catch (err) {
@@ -1072,19 +953,22 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
          const loadWithRetry = async (url, maxRetries = 1) => {
           for (let i = 0; i <= maxRetries; i++) {
             try {
-              const urlWithBust = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?${Date.now()}`
+              const urlWithBust = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`
               const response = await apiCall(urlWithBust, { cache: 'no-store' })
               if (response.ok) {
                 const result = await response.json()
                 if (result && result.error) throw new Error(result.error);
-                if (result && result.data !== undefined) return result.data;
-                return result;
+                // Handle paginated responses
+                if (result && result.data !== undefined) {
+                  return result.data
+                }
+                return result
               }
-              if (response.status === 404) return null;
-              throw new Error(`HTTP ${response.status}`);
+              if (response.status === 404) return null
+              throw new Error(`HTTP ${response.status}`)
             } catch (error) {
-              if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return null; }
-              await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
+              if (i === maxRetries) { console.warn(`Failed to load ${url}:`, error); return null }
+              await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)))
             }
           }
         }
@@ -1131,7 +1015,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
           ...p,
           amount: parseFloat(p.amount) || 0
         }));
-        allRatingHistory = Array.isArray(ratingHistory) ? ratingHistory : [];
+        allRatingHistory = ratingHistory || [];
 
         // Build totalPaymentsMap atomically during load (count only 'paid' payments)
         const pMap = {};
@@ -1260,7 +1144,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
         clearTimeout(rtDebounceTimer);
         rtDebounceTimer = setTimeout(() => {
           loadAllData(true);
-        }, 5000); // Optimized 5s sync freq
+        }, 5000); // Optimized 5s sync frequency
       };
 
       supabaseClient
@@ -4497,8 +4381,7 @@ Thank you for your continued support and cooperation.
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`(.*?)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 4px;border-radius:4px;font-family:var(--font-mono);font-size:0.9em">$1</code>')
-      .replace(/
-/g, '<br>');
+      .replace(/\n/g, '<br>');
 
     let i = 0;
     let isTag = false;
@@ -4705,8 +4588,7 @@ Thank you for your continued support and cooperation.
         ].map(val => `"${String(val).replace(/"/g, '""')}"`);
       });
 
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('
-');
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
