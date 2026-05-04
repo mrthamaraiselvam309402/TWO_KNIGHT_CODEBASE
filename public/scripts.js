@@ -3402,6 +3402,7 @@ Thank you for your continued support and cooperation.
      const fee = getStudentMonthlyFee(s);
      const phone = getStudentPhone(s).replace(/\D/g, '');
      const parentName = s.parent_name || 'Parent';
+     const parentEmail = s.email || ''; // Students table has email column (parent's email)
 
      // Calculate exact pending amount
      const targetMonth = window.reportMonth;
@@ -3433,41 +3434,53 @@ Thank you for your continued support and cooperation.
      message += `Account: 9025846663 (Ranjith)\n`;
      message += `Academy: Chesskidoo`;
 
-     // Send via selected channel
      try {
+       let sent = false;
+
        if (channel === 'whatsapp') {
          window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(message)}`, '_blank');
+         sent = true;
        } else if (channel === 'sms') {
-         // Use tel: link for native SMS
          window.location.href = `sms:${phone}?body=${encodeURIComponent(message)}`;
+         sent = true;
+       } else if (channel === 'email') {
+         if (!parentEmail) {
+           toast('No email address on file for this student', 'error');
+           return;
+         }
+         const period = new Date(targetYear, targetMonth).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+         const subject = `Fee Reminder - ${studentName} (${period})`;
+         window.location.href = `mailto:${parentEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+         sent = true;
        } else if (channel === 'push') {
-         // Create in-app notification message
          await apiCall(`${API_BASE}/messages`, {
            method: 'POST',
            body: JSON.stringify({
              sender_type: 'system',
              receiver_type: 'parent',
-             subject: 'Fee Reminder - Chesskidoo',
+             subject: `Fee Reminder - ${studentName}`,
              message: message,
              priority: 'high'
            })
          });
-         toast('Push notification sent to parent app', 'success');
+         sent = true;
        }
 
-       // Log audit
+       // Log audit regardless of channel
        await apiCall(`${API_BASE}/audit`, {
          method: 'POST',
          body: JSON.stringify({
            table_name: 'students',
            record_id: studentId,
            action: 'INFORM_PARENT',
-           new_value: { channel, amount: totalDue, student: studentName }
+           new_value: { channel, amount: totalDue, student: studentName, method: 'frontend' }
          })
        });
 
-       toast(`Notification sent via ${channel}`, 'success');
-       closeModals();
+       if (sent) {
+         toast(`Notification sent via ${channel}`, 'success');
+         closeModals();
+       }
      } catch (e) {
        console.error('Notify failed:', e);
        toast('Failed to send notification', 'error');
@@ -3482,19 +3495,21 @@ Thank you for your continued support and cooperation.
      if (!s) return;
 
      const currentStatus = getStudentPaymentStatus(s);
-     const isPaid = currentStatus === 'Paid';
-     const newStatus = isPaid ? 'Unpaid' : 'Paid';
-     const actionText = isPaid ? 'mark as UNPAID' : 'mark as PAID';
+     const isCurrentlyPaid = currentStatus === 'Paid';
+     const action = isCurrentlyPaid ? 'unpaid' : 'paid';
+     const confirmMsg = isCurrentlyPaid
+       ? `Mark ${name} as Unpaid? This will remove this month's payment record and revert status to Pending.`
+       : `Mark ${name} as Paid? This will create a payment record for this month.`;
 
-     if (!confirm(`Are you sure you want to ${actionText} for ${name}?`)) return;
+     if (!confirm(confirmMsg)) return;
 
      try {
-       if (isPaid) {
-         // UNPAID: Remove student's payment status and delete associated payment records for this month
-         const targetMonth = window.reportMonth;
-         const targetYear = window.reportYear;
+       const targetMonth = window.reportMonth;
+       const targetYear = window.reportYear;
 
-         // 1. Find the payment record(s) for this month
+       if (isCurrentlyPaid) {
+         // === MARK AS UNPAID ===
+         // Find current month payments
          const monthPayments = (window.allPayments || []).filter(p =>
            String(p.student_id) === String(id) &&
            p.status === 'paid' &&
@@ -3502,21 +3517,21 @@ Thank you for your continued support and cooperation.
            new Date(p.payment_date || p.created_at).getUTCFullYear() === targetYear
          );
 
-         // 2. Delete those payment records
+         // Delete each payment record
          for (const p of monthPayments) {
            await apiCall(`${API_BASE}/payments?id=${p.id}`, { method: 'DELETE' });
          }
 
-         // 3. Update student status to Due
+         // Update student to Pending (they paid previous months but not current)
          await apiCall(`${API_BASE}/students?id=${id}`, {
            method: 'PUT',
-           body: JSON.stringify({ payment_status: 'Due' })
+           body: JSON.stringify({ payment_status: 'Pending' })
          });
 
-         toast(`Status changed to Due. ${monthPayments.length} payment record(s) removed.`, 'info');
+         toast(`Marked Unpaid. ${monthPayments.length} payment record(s) removed.`, 'info');
 
        } else {
-         // PAID: Create a payment record and update status
+         // === MARK AS PAID ===
          const paymentData = {
            id: 'pay_toggle_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
            student_id: id,
@@ -3534,7 +3549,6 @@ Thank you for your continued support and cooperation.
          });
 
          if (res.ok) {
-           // Also update student status
            await apiCall(`${API_BASE}/students?id=${id}`, {
              method: 'PUT',
              body: JSON.stringify({ payment_status: 'Paid' })
