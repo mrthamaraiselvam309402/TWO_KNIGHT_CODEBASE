@@ -2001,10 +2001,13 @@ const hasDirect = (window.allPayments || []).some(p => {
      const s_id_map = {};
      (allPayments || []).forEach(p => {
        if (p.status === 'paid') {
-         const sid = String(p.student_id || '').trim().toLowerCase();
-         if (!sid) return;
-         if (!s_id_map[sid]) s_id_map[sid] = 0;
-         s_id_map[sid]++;
+         const pDate = new Date(p.payment_date || p.created_at);
+         if (pDate <= targetMonthEnd) {
+           const sid = String(p.student_id || '').trim().toLowerCase();
+           if (!sid) return;
+           if (!s_id_map[sid]) s_id_map[sid] = 0;
+           s_id_map[sid]++;
+         }
        }
      });
 
