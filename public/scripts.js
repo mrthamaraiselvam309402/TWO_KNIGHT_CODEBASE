@@ -2317,7 +2317,7 @@ Thank you.
   };
 
    function renderStudents() {
-     const tbody = $('student-tbody');
+     const tbody = document.getElementById('student-tbody');
      if (!tbody) return;
      try {
       ensureReportPeriod();
@@ -2374,7 +2374,7 @@ Thank you.
          return;
        }
 
-       console.log(`[UI] Rendering ${studs.length} students...`); console.log('[UI] First student:', studs[0]);
+       console.log(`[UI] Rendering ${studs.length} students...`);
        tbody.innerHTML = studs.map((s, i) => {
          try {
            const status = getStudentPaymentStatus(s, targetMonth, targetYear);
