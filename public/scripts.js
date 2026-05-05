@@ -1,62 +1,173 @@
-/**
+﻿/**
  * CHESSKIDOO ACADEMY - Complete Admin Panel Scripts
  * Fixed version - Academy Expansion Logic Integrated
  */
 
 (function () {
-  "use strict";
 
-  // Core Variables
-  const API_BASE = "/api";
-  const $ = id => document.getElementById(id);
-
-  // Global State
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // GLOBAL STATE
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   let allCoaches = [];
   let allStudents = [];
+  window.deletePaymentRecord = async function(pid, sid) {
+    if (!confirm('Are you sure you want to delete this payment record? This cannot be undone.')) return;
+    try {
+      await apiCall(`${API_BASE}/payments?id=${pid}`, { method: 'DELETE' });
+      toast('Payment record deleted', 'success');
+      window.totalPaymentsMap = null;
+      await await loadAllData(true); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card"></i> Bulk Pay'; }
+      // Refresh the history modal if it was open
+      if (sid) viewPaymentHistory(sid);
+    } catch (e) {
+      toast('Failed to delete payment', 'error');
+    }
+  };
+
   let allPayments = [];
   let allAttendance = [];
-  let dataCache = { timestamp: 0 };
-  let isLoadingData = false;
-  async function apiCall(url, options = {}) {
-    const headers = { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY };
-    const config = { ...options, headers: { ...headers, ...options.headers } };
-    return fetch(url, config);
+
+  'use strict';
+
+  // Core Utility - Hoisted for early access
+  const capitalizeFirst = (str) => {
+    if (!str || typeof str !== 'string') return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+  window.capitalizeFirst = capitalizeFirst;
+
+  const formatTime = (timeStr) => {
+    if (!timeStr) return 'TBD';
+    if (!timeStr.includes(':')) return timeStr;
+    const [hrs, mins] = timeStr.split(':').map(Number);
+    if (isNaN(hrs)) return timeStr;
+    const ampm = hrs >= 12 ? 'PM' : 'AM';
+    const h = hrs % 12 || 12;
+    return `${h}:${mins.toString().padStart(2, '0')} ${ampm}`;
+  };
+  window.formatTime = formatTime;
+
+  let SUPABASE_URL = '';
+  let SUPABASE_ANON_KEY = '';
+  const API_BASE = '/api';
+  const $ = id => document.getElementById(id);
+
+  try {
+    SUPABASE_URL = (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.SUPABASE_URL : '') || window.SUPABASE_URL || '';
+    SUPABASE_ANON_KEY = (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.SUPABASE_ANON_KEY : '') || window.SUPABASE_ANON_KEY || '';
+    
+    // Expose for external modules
+    window.SUPABASE_URL = SUPABASE_URL;
+    window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
+    window.API_BASE = API_BASE;
+  } catch (e) {
+    console.warn('[Config] Failed to initialize from APP_CONFIG:', e);
   }
-  function toast(msg, type = 'info') {
-    const t = document.createElement('div');
-    t.className = 'toast toast-' + type;
-    t.innerHTML = (type === 'success' ? '✅ ' : type === 'error' ? '❌ ' : 'ℹ️ ') + msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.classList.add('show'), 100);
-    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 500); }, 3000);
+
+  // Security validation
+  if (!SUPABASE_ANON_KEY) {
+    console.error('Γ¥î CRITICAL: Supabase Anon Key is missing!');
+    if (window.location.hostname !== 'localhost') {
+      document.body.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px;background:#1a1a1a;color:#fff">
+          <h1 style="color:#ff4d4d;margin-bottom:20px">Configuration Error</h1>
+          <p style="color:#ccc;max-width:500px;margin-bottom:30px">
+            The application is not configured properly (Missing Supabase Key). Please contact the administrator.
+          </p>
+        </div>
+      `;
+    }
   }
-  window.apiCall = apiCall;
-  window.toast = toast;
 
-  let role = null;
-  let currentStudent = null;
-  let chartInstances = {};
-  let loadDebounceTimer = null;
-  const CACHE_DURATION = 5 * 60 * 1000;
-  let achievementsData = [];
-  let eventsData = [];
-  let allMessages = [];
-  let allRatingHistory = [];
-  let allResources = [];
+// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+   // STATE
+   // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+   
+   
+  
+  window.viewPaymentHistory = function(id) {
+    const s = allStudents.find(x => String(x.id).toLowerCase() === String(id).toLowerCase());
+    if (!s) return;
+    
+    const payments = (allPayments || []).filter(p => String(p.student_id).toLowerCase() === String(id).toLowerCase());
+    payments.sort((a,b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at));
+
+    const tableRows = payments.map(p => {
+      const pId = p.id;
+      const sId = p.student_id;
+      const pDate = new Date(p.payment_date || p.created_at).toLocaleDateString();
+      const pAmt = (parseFloat(p.amount) || 0).toLocaleString();
+      const pMethod = p.payment_method || 'N/A';
+      const pDesc = p.description || '-';
+      
+      return '<tr>' +
+        '<td>' + pDate + '</td>' +
+        '<td>Γé╣' + pAmt + '</td>' +
+        '<td>' + pMethod + '</td>' +
+        '<td style="display:flex; justify-content:space-between; align-items:center">' +
+          '<span>' + pDesc + '</span>' +
+          '<button class="btn btn-outline-ruby btn-xs" onclick="deletePaymentRecord(\'' + pId + '\', \'' + sId + '\')" title="Delete duplicate">' +
+            '<i class="fas fa-trash"></i>' +
+          '</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+
+    const modalContent = 
+      '<div class="modal-header">' +
+        '<h3 class="modal-title">Payment History: ' + getStudentName(s) + '</h3>' +
+        '<button class="close-btn" onclick="closeModals()">&times;</button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div class="table-responsive">' +
+          '<table class="table">' +
+            '<thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th></tr></thead>' +
+            '<tbody>' + (tableRows || '<tr><td colspan="4" class="text-center">No records found</td></tr>') + '</tbody>' +
+          '</table>' +
+        '</div>' +
+      '</div>';
+    
+    let m = $('history-modal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'history-modal';
+      m.className = 'modal';
+      document.body.appendChild(m);
+    }
+    m.innerHTML = '<div class="modal-content">' + modalContent + '</div>';
+    openModal('history-modal');
+  };
 
 
-  // Helper accessors
-  const getStudentName = s => (s.full_name || s.name || "").trim();
-  const getStudentPhone = s => s.parent_phone || s.phone || "";
-  const getStudentMonthlyFee = s => parseInt(s.monthly_fee || s.fee || s.fees || 0) || 1500;
-  const getStudentLevel = s => s.level || s.grade || "Beginner";
-  const getStudentDate = s => s.enrollment_date || s.join_date || s.created_at || "";
+  // Period Sync Singleton
+  function ensureReportPeriod() {
+    if (typeof window.reportMonth !== 'number' || isNaN(window.reportMonth)) {
+      const now = new Date();
+      window.reportMonth = now.getUTCMonth();
+      window.reportYear = now.getUTCFullYear();
+    }
+  }
 
+   
+   
+
+   // Expose to window for external modules (like reporting.js)
+   window.allCoaches = allCoaches;
+   window.allStudents = allStudents;
+   window.allPayments = allPayments;
+   window.allAttendance = allAttendance;
+
+   let achievementsData = [];
+   let eventsData = [];
+   let allMessages = [];
+   let allRatingHistory = [];
+   let allResources = [];
+
+   window.allRatingHistory = allRatingHistory;
   window.deletePaymentRecord = async function(pid, sid) {
-    if (!confirm('Are you sure you want to delete this payment record?')) return;
+    if (!confirm('Are you sure you want to delete this payment record? This cannot be undone.')) return;
     try {
-      const resp = await apiCall(API_BASE + '/payments?id=' + pid, { method: 'DELETE' });
-      if (!resp.ok) throw new Error('Delete failed');
+      await apiCall(API_BASE + '/payments?id=' + pid, { method: 'DELETE' });
       toast('Payment record deleted', 'success');
       window.totalPaymentsMap = null;
       await loadAllData(true);
@@ -65,44 +176,976 @@
       toast('Failed to delete payment', 'error');
     }
   };
+ // Also needed for ELO gainers in report
 
-  window.viewPaymentHistory = function(id) {
-    const s = allStudents.find(x => String(x.id).toLowerCase() === String(id).toLowerCase());
-    if (!s) return;
-    const payments = (allPayments || []).filter(p => String(p.student_id).toLowerCase() === String(id).toLowerCase());
-    payments.sort((a,b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at));
+   window.reportMonth = new Date().getUTCMonth(); // 0-11 (UTC)
+   window.reportYear = new Date().getUTCFullYear();
+   window.isEditing = false;
 
-    let rows = payments.map(p => {
-      const d = new Date(p.payment_date || p.created_at).toLocaleDateString();
-      const amt = (parseFloat(p.amount) || 0).toLocaleString();
-      return '<tr>' +
-        '<td>' + d + '</td>' +
-        '<td>₹' + amt + '</td>' +
-        '<td>' + (p.payment_method || "Cash") + '</td>' +
-        '<td style="display:flex; justify-content:space-between; align-items:center">' +
-          '<span>' + (p.description || "-") + '</span>' +
-          '<button class="btn btn-outline-ruby btn-xs" onclick="deletePaymentRecord(\'' + p.id + '\', \'' + s.id + '\')">' +
-            '<i class="fas fa-trash"></i>' +
-          '</button>' +
-        '</td>' +
-      '</tr>';
+   let currentStudent = null;
+   let role = null;
+   let chartInstances = {};
+   let dataCache = { timestamp: 0 };
+   let loadDebounceTimer = null;
+   let loadingStates = {};
+   // Optimized cache for faster dashboard loading
+   const CACHE_DURATION = 30000; // 30 seconds cache for better performance
+  // ΓöÇΓöÇ CORE UTILITIES ΓöÇΓöÇ
+  window.apiCall = async function(endpoint, options = {}) {
+    const url = (endpoint.startsWith('http') || endpoint.startsWith(API_BASE)) 
+      ? endpoint 
+      : `${API_BASE}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${localStorage.getItem('sb-access-token') || SUPABASE_ANON_KEY}`,
+      ...options.headers
+    };
+
+    try {
+      const res = await fetch(url, { ...options, headers });
+      if (res.status === 401) {
+        console.warn(`[Auth] 401 Unauthorized for ${endpoint}. Possible token expiry.`);
+      }
+      return res;
+    } catch (e) {
+      console.error(`[API] Connection Error (${endpoint}):`, e);
+      throw e;
+    }
+  }
+
+  function toast(msg, type = 'info') {
+    const container = $('toast-container') || createToastContainer();
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.innerHTML = `
+      <div class="toast-content">
+        <span class="toast-icon">${type === 'success' ? 'Γ£à' : (type === 'error' ? 'Γ¥î' : 'Γä╣∩╕Å')}</span>
+        <span class="toast-msg">${msg}</span>
+      </div>
+    `;
+    container.appendChild(el);
+    setTimeout(() => { el.classList.add('show'); }, 10);
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 300);
+    }, 4000);
+  }
+
+  function createToastContainer() {
+    const div = document.createElement('div');
+    div.id = 'toast-container';
+    document.body.appendChild(div);
+    return div;
+  }
+
+   function escapeHtml(text) {
+     if (!text) return '';
+     const div = document.createElement('div');
+     div.textContent = String(text);
+     return div.innerHTML;
+   }
+
+   // Escape string for safe embedding in JavaScript string literal inside HTML attribute
+   function jsAttrEncode(value) {
+     if (value == null) return '';
+     return String(value)
+       .replace(/\\/g, '\\\\')
+       .replace(/'/g, "\\'")
+       .replace(/"/g, '\\"')
+       .replace(/\n/g, '\\n')
+       .replace(/\r/g, '\\r');
+   }
+
+   function dedupeArray(arr, keyField = 'id') {
+     if (!Array.isArray(arr)) return [];
+     const seen = new Set();
+     return arr.filter(item => {
+       const key = item && item[keyField] ? String(item[keyField]) : '';
+       if (!key || seen.has(key)) return false;
+       seen.add(key);
+       return true;
+     });
+   }
+
+
+
+  // Sync local currentStudent with window.currentStudent for external modules
+  function setCurrentStudent(student) {
+    currentStudent = student;
+    window.currentStudent = student;
+  }
+
+  // ΓöÇΓöÇ Notification Management ΓöÇΓöÇ
+  let shownNotificationIds = JSON.parse(localStorage.getItem('shown_notifications') || '[]');
+  let dismissedNotifications = JSON.parse(localStorage.getItem('dismissed_notifications') || '{"messages":[], "payments":[]}');
+
+  function saveNotificationState() {
+    localStorage.setItem('shown_notifications', JSON.stringify(shownNotificationIds.slice(-100)));
+    localStorage.setItem('dismissed_notifications', JSON.stringify(dismissedNotifications));
+  }
+
+  function shouldShowNotification(id) {
+    if (shownNotificationIds.includes(id)) return false;
+    shownNotificationIds.push(id);
+    saveNotificationState();
+    return true;
+  }
+
+  function clearNotifications() {
+    const unreadMsgs = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin');
+    unreadMsgs.forEach(m => { if (!dismissedNotifications.messages.includes(m.id)) dismissedNotifications.messages.push(m.id); });
+    const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+    dueStudents.forEach(s => { if (!dismissedNotifications.payments.includes(s.id)) dismissedNotifications.payments.push(s.id); });
+    localStorage.removeItem('audit_logs');
+    saveNotificationState();
+    updateNotificationBadge();
+    const content = $('notification-content');
+    if (content) content.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ivory-dim)">Notifications cleared</div>';
+    toast('Notifications cleared', 'info');
+  }
+
+  function updateNotificationBadge() {
+    const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin' && !dismissedNotifications.messages.includes(m.id)).length;
+    const dueCount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due' && !dismissedNotifications.payments.includes(s.id)).length;
+    const total = unread + dueCount;
+    const badge = $('notification-badge');
+    if (badge) { badge.textContent = total; badge.style.display = total > 0 ? 'inline' : 'none'; }
+  }
+
+
+  // ΓöÇΓöÇ NEW ADVANCED LOGIC ΓöÇΓöÇ
+  function setChildTab(tabId, btn) {
+    document.querySelectorAll('.child-tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+    const target = document.getElementById('child-tab-' + tabId);
+    if (target) target.classList.add('active');
+    if (btn) btn.classList.add('active');
+    if (tabId === 'growth') renderChildGrowth();
+    if (tabId === 'learning') renderChildResources();
+    if (tabId === 'billing') renderChildBilling();
+    if (tabId === 'events') renderChildEvents();
+  }
+
+  function renderChildEvents() {
+    const grid = document.getElementById('child-events-grid');
+    if (!grid) return;
+
+    const now = new Date();
+    const upcoming = eventsData.filter(e => new Date(e.date) >= now).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const myRegistrations = eventsData.filter(e => e.registered_students?.includes(currentStudent?.id));
+
+    if (upcoming.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><span class="empty-icon">≡ƒôà</span><p>No upcoming events scheduled</p></div>';
+      return;
+    }
+
+     grid.innerHTML = upcoming.slice(0, 10).map(e => {
+       const isRegistered = myRegistrations.some(r => r.id === e.id);
+       const eventDate = e.date ? new Date(e.date).toLocaleDateString() : 'TBD';
+       const eventTime = e.event_time || e.time || 'TBD';
+       return `
+         <div class="ev-card">
+           ${e.img_url ? `<img src="${escapeHtml(e.img_url)}" class="ev-poster" alt="${escapeHtml(e.title)}">` : ''}
+           <div class="ev-header">
+             <span class="ev-type-badge">${escapeHtml(e.type || 'Event')}</span>
+             <span class="ev-date-badge">${escapeHtml(eventDate)}</span>
+           </div>
+           <div class="ev-body">
+             <div class="ev-title">${escapeHtml(e.title)}</div>
+             <div class="ev-meta">
+               <span class="ev-meta-item ev-time">ΓÅ░ ${escapeHtml(eventTime)}</span>
+               <span class="ev-meta-item ev-loc">${escapeHtml(e.location || 'TBD')}</span>
+               ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${escapeHtml(e.prize_pool)}</span>` : ''}
+             </div>
+
+             ${e.description ? `<div class="ev-desc">${escapeHtml(e.description)}</div>` : ''}
+           </div>
+           <div class="ev-footer">
+             ${isRegistered ?
+           `<span class="badge badge-success" style="padding:6px 12px">Γ£à Registered</span>` :
+           `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`
+         }
+           </div>
+         </div>
+       `;
+     }).join('');
+  }
+
+  function renderChildGrowth() {
+    if (!currentStudent) return;
+    const s = currentStudent;
+    const ctx = document.getElementById('chartChildElo');
+    if (ctx && typeof Chart !== 'undefined') {
+      if (chartInstances.childElo) chartInstances.childElo.destroy();
+      const history = allRatingHistory.filter(h => String(h.student_id) === String(s.id)).sort((a, b) => new Date(h.recorded_at) - new Date(b.recorded_at));
+      const labels = history.length ? history.map(h => new Date(h.recorded_at).toLocaleDateString()) : ['Initial'];
+      const data = history.length ? history.map(h => h.rating) : [getStudentRating(s)];
+      chartInstances.childElo = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'ELO', data, borderColor: '#dca33e', backgroundColor: 'rgba(220,161,62,0.1)', fill: true, tension: 0.4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+    }
+    const heatmap = document.getElementById('attendance-heatmap');
+    if (heatmap) {
+      const myAtt = allAttendance.filter(a => String(a.student_id) === String(s.id));
+      const last30 = [];
+      const now = new Date();
+      const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(); d.setDate(now.getDate() - i); const dStr = d.toISOString().split('T')[0];
+        const record = myAtt.find(a => a.date === dStr);
+        last30.push({ date: d.getDate(), day: days[d.getDay()], status: record ? record.status : 'none' });
+      }
+      heatmap.innerHTML = '<div class="heatmap-day-label" style="grid-column:1/-1;display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;color:var(--ivory3)">' +
+        '<span>30 days ago</span><span>Today</span></div>' +
+        last30.map(d => `<div class="heatmap-day ${d.status}" title="${d.status || 'No class'} - Day ${d.date}">${d.date}<span class="day-label">${d.day}</span></div>`).join('');
+    }
+  }
+
+  function renderChildResources() {
+    const grid = document.getElementById('resource-grid');
+    if (!grid || !currentStudent) return;
+    const levelRank = { 'Beginner': 0, 'Intermediate': 1, 'Advanced': 2, 'Elite': 3 };
+    const sRank = levelRank[getStudentLevel(currentStudent)] || 0;
+    const myRes = allResources.filter(r => (levelRank[r.level_requirement] || 0) <= sRank);
+    if (!myRes.length) { grid.innerHTML = `<div class="empty-state">No resources yet.</div>`; return; }
+     grid.innerHTML = myRes.map(r => `<div class="resource-card"><div class="res-type">${escapeHtml(r.type.toUpperCase())}</div><div class="res-title">${escapeHtml(r.title)}</div><div class="res-desc">${escapeHtml(r.description || '')}</div><div class="res-action"><a href="${escapeHtml(r.url)}" target="_blank" class="btn btn-gold btn-sm" style="width:100%">Open</a></div></div>`).join('');
+  }
+
+  function renderChildBilling() {
+    const tbody = document.getElementById('child-bill-body');
+    if (!tbody || !currentStudent) return;
+
+    const s = currentStudent;
+    const status = getStudentPaymentStatus(s);
+    const fee = getStudentMonthlyFee(s) || 0;
+    const dueDate = s.due_date ? new Date(s.due_date).toLocaleDateString() : 'Not set';
+    const myPayments = allPayments.filter(p => String(p.student_id) === String(s.id)).slice(0, 10);
+
+     // Current month row
+     let rows = `
+       <tr>
+         <td>${new Date().toLocaleDateString()}</td>
+         <td>Current Month</td>
+         <td>Γé╣${fee}</td>
+         <td class="${status === 'Paid' ? 'text-success' : 'text-danger'}" style="font-weight:600">${status}</td>
+         <td>
+           ${status === 'Due' || status === 'Pending' ?
+         `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}')">Pay Now</button>` :
+         `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', 'Online')">Receipt</button>`
+       }
+         </td>
+       </tr>
+     `;
+
+     // Due date info
+     rows += `
+       <tr style="background:var(--surface2)">
+         <td colspan="2"><strong>Due Date:</strong></td>
+         <td>${dueDate}</td>
+         <td colspan="2" style="font-size:12px;color:var(--ivory-dim)">Monthly tuition fee</td>
+       </tr>
+     `;
+
+     // Payment history
+     if (myPayments.length > 0) {
+       myPayments.forEach(p => {
+         const pDate = p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '-';
+         const pAmount = p.amount || fee;
+         const pStatus = p.status === 'completed' ? 'Paid' : (p.status || 'Pending');
+         rows += `
+           <tr>
+             <td>${pDate}</td>
+             <td>Payment</td>
+             <td>Γé╣${pAmount}</td>
+             <td class="${pStatus === 'Paid' ? 'text-success' : 'text-danger'}">${pStatus}</td>
+             <td>
+               ${pStatus === 'Paid' ?
+             `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${pAmount}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">Receipt</button>` :
+             `<span style="color:var(--ivory-dim);font-size:12px">Pending</span>`
+           }
+             </td>
+           </tr>
+         `;
+       });
+     }
+
+    tbody.innerHTML = rows;
+  }
+
+  // ΓöÇΓöÇ ADMIN EXPANSION LOGIC ΓöÇΓöÇ
+  function openAttendanceMarking() {
+    const dateEl = $('att-date');
+    if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+    const coachFilter = $('att-coach-filter');
+    const pageCoach = $('f-coach');
+    if (coachFilter && pageCoach) coachFilter.value = pageCoach.value;
+    renderAttendanceList();
+    openModal('attendance-modal');
+  }
+
+  window.renderAttendanceList = function() {
+    const tbody = $('att-marking-body');
+    if (!tbody) return;
+
+    const date = $('att-date')?.value || new Date().toISOString().split('T')[0];
+    const coachId = $('att-coach-filter')?.value;
+    
+    let filteredStudents = allStudents.filter(s => s.status === 'active');
+    if (coachId) {
+      filteredStudents = filteredStudents.filter(s => String(s.coach_id) === String(coachId));
+    }
+
+    const dayRecords = allAttendance.filter(a => a.date === date);
+
+    tbody.innerHTML = filteredStudents.map(s => {
+      const existing = dayRecords.find(a => String(a.student_id) === String(s.id));
+      const status = existing?.status || '';
+      const notes = existing?.notes || '';
+      return `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <img src="${makeAvSrc(s)}" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--gold)">
+              <div>
+                <div style="font-weight:600">${getStudentName(s)}</div>
+                <small style="color:var(--ivory3)">${getStudentLevel(s)} - ${getStudentRating(s)} ELO</small>
+              </div>
+            </div>
+          </td>
+          <td>
+            <select class="att-status" data-sid="${s.id}" onchange="updateAttStats()">
+              <option value="" ${!status ? 'selected' : ''}>-- Select --</option>
+              <option value="present" ${status === 'present' ? 'selected' : ''}>Γ£à Present</option>
+              <option value="absent" ${status === 'absent' ? 'selected' : ''}>Γ¥î Absent</option>
+              <option value="late" ${status === 'late' ? 'selected' : ''}>ΓÅ░ Late</option>
+              <option value="excused" ${status === 'excused' ? 'selected' : ''}>≡ƒôï Excused</option>
+            </select>
+          </td>
+          <td><input type="text" class="att-notes" data-sid="${s.id}" placeholder="Add note..." value="${notes}"></td>
+        </tr>
+      `;
     }).join('');
 
-    if (!rows) rows = '<tr><td colspan="4" class="text-center">No payment records found</td></tr>';
-
-    const html = '<div class="modal-content"><div class="modal-header">' +
-      '<h3 class="modal-title">Payment History: ' + getStudentName(s) + '</h3>' +
-      '<button class="close-btn" onclick="closeModals()">&times;</button>' +
-      '</div><div class="modal-body"><div class="table-responsive"><table class="table">' +
-      '<thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th></tr></thead>' +
-      '<tbody>' + rows + '</tbody></table></div></div></div>';
-
-    let m = $('history-modal');
-    if (!m) { m = document.createElement('div'); m.id = 'history-modal'; m.className = 'modal'; document.body.appendChild(m); }
-    m.innerHTML = html;
-    openModal('history-modal');
+    updateAttStats();
   };
 
+  window.updateAttStats = function () {
+    const rows = document.querySelectorAll('#att-marking-body tr');
+    let present = 0, absent = 0, late = 0, excused = 0, unmarked = 0;
+    rows.forEach(row => {
+      const status = row.querySelector('.att-status').value;
+      if (status === 'present') present++;
+      else if (status === 'absent') absent++;
+      else if (status === 'late') late++;
+      else if (status === 'excused') excused++;
+      else unmarked++;
+    });
+    const statsEl = document.getElementById('att-stats');
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <span style="color:var(--success)">Γ£à ${present}</span> |
+        <span style="color:var(--danger)">Γ¥î ${absent}</span> |
+        <span style="color:var(--gold)">ΓÅ░ ${late}</span> |
+        <span style="color:var(--ivory3)">≡ƒôï ${excused}</span> |
+        <span style="color:var(--ivory3)"> unmarked: ${unmarked}</span>
+      `;
+    }
+  };
+
+  window.markAllPresent = function () {
+    document.querySelectorAll('.att-status').forEach(s => s.value = 'present');
+    updateAttStats();
+  };
+
+  window.markAllAbsent = function () {
+    document.querySelectorAll('.att-status').forEach(s => s.value = 'absent');
+    updateAttStats();
+  };
+
+  async function saveBatchAttendance() {
+    const date = $('att-date').value;
+    if (!date) { toast('Please select a date', 'error'); return; }
+
+    const rows = document.querySelectorAll('#att-marking-body tr');
+    const records = Array.from(rows).map(row => {
+      const select = row.querySelector('.att-status');
+      const input = row.querySelector('.att-notes');
+      if (!select.value) return null; // Skip unmarked
+      return {
+        student_id: select.dataset.sid,
+        status: select.value,
+        date: date,
+        notes: input.value
+      };
+    }).filter(r => r !== null);
+
+    if (records.length === 0) { toast('No attendance marked', 'error'); return; }
+
+    try {
+      const res = await apiCall('/api/attendance', { method: 'POST', body: JSON.stringify(records) });
+      if (res.ok) {
+        toast(`Attendance recorded for ${records.length} students!`, 'success');
+        closeModals();
+        loadAllData(true);
+      }
+    } catch (e) { toast('Error saving attendance', 'error'); }
+  }
+
+  function openPromote(id) {
+    const s = allStudents.find(x => String(x.id) === String(id));
+    if (!s) return;
+    $('promote-id').value = s.id;
+    $('promote-name').textContent = getStudentName(s);
+    $('promote-curr-level').textContent = getStudentLevel(s);
+    openModal('promote-modal');
+  }
+
+  async function executePromotion() {
+    const id = $('promote-id').value;
+    const newLevel = $('promote-new-level').value;
+    const eloBonus = parseInt($('promote-elo-bonus').value) || 0;
+    const notes = $('promote-notes').value;
+    const s = allStudents.find(x => String(x.id) === String(id));
+
+    try {
+      // 1. Update Student Table
+      const newElo = getStudentRating(s) + eloBonus;
+      const updateRes = await apiCall(`/api/students?id=${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ level: newLevel, rating: newElo, notes: s.notes + '\n[Promoted: ' + notes + ']' })
+      });
+
+      // 2. Log to Rating History
+      await apiCall('/api/rating_history', {
+        method: 'POST',
+        body: JSON.stringify({ student_id: id, rating: newElo, change_type: 'promotion', notes: 'Level Up to ' + newLevel })
+      });
+
+      if (updateRes.ok) {
+        toast('Student Promoted!', 'success');
+        closeModals();
+        loadAllData(true);
+      }
+    } catch (e) { toast('Promotion failed', 'error'); }
+  }
+
+  function sendPaymentReminder(id) {
+    const s = allStudents.find(x => String(x.id) === String(id));
+    if (!s) return;
+
+    const name = getStudentName(s);
+    const monthlyFee = getStudentMonthlyFee(s);
+    const phone = getStudentPhone(s);
+
+    // Calculate pending amount based on reporting period
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
+    const enrollDateStr = getStudentDate(s);
+    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 2, 1); // Fallback to March 1, 2026
+    const baselineDate = new Date(2026, 3, 1); // Global System Baseline (April 1st, 2026)
+    const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
+
+    // FIX #5: Always rebuild ΓÇö never trust a cached map for financial calculations
+    const freshPaymentsMap = {};
+    (allPayments || []).forEach(p => {
+      if (p.status === 'paid') {
+        const sid = String(p.student_id || '').trim().toLowerCase();
+        if (sid) freshPaymentsMap[sid] = (freshPaymentsMap[sid] || 0) + 1;
+      }
+    });
+
+    const s_id_key = String(s.id || '').trim().toLowerCase();
+    const totalCredits = freshPaymentsMap[s_id_key] || 0;
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
+
+    const pendingMonths = Math.max(1, monthsRequired - totalCredits);
+    const totalPending = pendingMonths * monthlyFee;
+
+    // Format Due Date
+    let dueDateStr = "";
+    if (s.due_date) {
+      const d = new Date(s.due_date);
+      const day = d.getDate();
+      const month = d.toLocaleString('en-IN', { month: 'long' });
+      const year = d.getFullYear();
+      const getOrdinal = (n) => {
+        const s = ["th", "st", "nd", "rd"];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+      };
+      dueDateStr = `${getOrdinal(day)} ${month} ${year}`;
+    } else {
+      const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
+      dueDateStr = `5th ${monthName} ${targetYear}`;
+    }
+
+    const msg = `Hello Sir/Madam,
+
+This is a gentle reminder regarding the pending chess class fee of INR ${totalPending.toLocaleString()} for your child ${cleanText(name)}. We kindly request you to please settle this on or before ${cleanText(dueDateStr)}.
+
+You may make the payment to: 9025846663 (Ranjith).
+
+Thank you for your cooperation.
+- Chesskidoo Academy`;
+
+    window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  window.informCoachFees = function (id, silent = false) {
+    const c = allCoaches.find(x => String(x.id) === String(id));
+    if (!c) return;
+
+    const studs = allStudents.filter(s => String(s.coach_id) === String(id));
+    const pending = studs.filter(s => {
+      const status = getStudentPaymentStatus(s);
+      return status === 'Due' || status === 'Pending';
+    });
+
+    if (pending.length === 0) {
+      if (!silent) toast(`No pending fees for students under ${getCoachName(c)}`, 'info');
+      return;
+    }
+
+    const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+    let msg = `Γ£à *CHESSKIDOO ACADEMY - FEE AUDIT REPORT*
+
+`;
+    msg += `Hello Coach ${cleanText(getCoachName(c))},
+
+`;
+    msg += `≡ƒôó The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:
+
+`;
+
+    pending.forEach((s) => {
+      const status = getStudentPaymentStatus(s);
+      const label = status === 'Due' ? 'ARREARS' : 'PENDING';
+      const sName = cleanText(getStudentName(s).toUpperCase());
+      msg += `*${sName}* (${label})
+`;
+    });
+
+    msg += `
+Please coordinate with the guardians to ensure these balances are settled. 'ARREARS' indicates unpaid fees from previous months, while 'PENDING' is for the current cycle.
+
+`;
+    msg += `Regards,
+`;
+    msg += `*Administrative Team* | Chesskidoo Academy`;
+
+
+    const phone = c.phone || c.contact || '0000000000';
+    const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
+
+    if (!silent) window.open(waUrl, '_blank');
+    else return waUrl;
+  };
+
+  window.informAllCoaches = function () {
+    const pendingCoaches = (allCoaches || []).filter(coach => {
+      const myStudents = (allStudents || []).filter(s => String(s.coach_id) === String(coach.id));
+      return myStudents.some(s => {
+        const st = getStudentPaymentStatus(s);
+        return st === 'Due' || st === 'Pending';
+      });
+    });
+
+    if (pendingCoaches.length === 0) {
+      toast('All coaches are up to date!', 'success');
+      return;
+    }
+
+    if (!confirm(`Found ${pendingCoaches.length} coaches with arrears. Open all WhatsApp tabs at once? (Note: Your browser may block popups)`)) return;
+
+    pendingCoaches.forEach((coach, idx) => {
+      const url = informCoachFees(coach.id, true);
+      if (url) {
+        setTimeout(() => {
+          window.open(url, '_blank');
+        }, idx * 1000);
+      }
+    });
+
+    toast(`Initiated ${pendingCoaches.length} notifications.`, 'success');
+  };
+
+  window.informAllDueStudents = function () {
+    const dueStudents = (allStudents || []).filter(s => {
+      const st = getStudentPaymentStatus(s);
+      return st === 'Due';
+    });
+
+    if (dueStudents.length === 0) {
+      toast('No students with due payments!', 'success');
+      return;
+    }
+
+    if (!confirm(`Notify parents of ${dueStudents.length} students with due payments? This will open multiple WhatsApp tabs.`)) return;
+
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+    let sent = 0;
+
+    dueStudents.forEach((s, idx) => {
+      const phone = (s.parent_phone || '').replace(/\D/g, '');
+      if (!phone || phone.length < 10) return;
+
+      const name = getStudentName(s);
+      const fee = getStudentMonthlyFee(s);
+      
+      // Audit-based debt calculation (Respecting the viewed month)
+      const enrollDateStr = getStudentDate(s);
+      const baseline = new Date(Date.UTC(2026, 3, 1));
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+      const monthsReq = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
+      
+      const sid = String(s.id).toLowerCase();
+      let totalPaidAmount = 0;
+      (allPayments || []).forEach(p => {
+        if (String(p.student_id).toLowerCase() === sid && p.status === 'paid') {
+           totalPaidAmount += (parseFloat(p.amount) || 0);
+        }
+      });
+      
+      const totalDebt = Math.max(0, (fee * monthsReq) - totalPaidAmount);
+
+      const dueDateStr = s.due_date
+        ? new Date(s.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+        : `5th ${new Date(Date.UTC(targetYear, targetMonth, 5)).toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
+
+      const msg = `Hello Sir/Madam,
+
+This is a gentle reminder regarding the pending chess class fee of *INR ${totalDebt.toLocaleString()}* for your child *${name}*. The due date is ${dueDateStr}.
+
+Please settle the payment at your earliest convenience.
+
+Thank you.
+- Chesskidoo Academy`;
+
+      setTimeout(() => {
+        window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        sent++;
+        if (sent === dueStudents.length) toast(`Sent ${sent} payment reminders`, 'success');
+      }, idx * 800);
+    });
+  };
+
+
+  function setLoading(key, loading) {
+    loadingStates[key] = loading;
+    const loader = $('global-loader');
+    const bar = loader ? loader.querySelector('.loader-bar') : null;
+    
+    const anyLoading = Object.values(loadingStates).some(v => v);
+    if (anyLoading) {
+      if (loader) loader.classList.add('active');
+      if (bar) bar.style.width = '40%';
+    } else {
+      if (bar) bar.style.width = '100%';
+      setTimeout(() => {
+        if (loader) loader.classList.remove('active');
+        if (bar) bar.style.width = '0%';
+      }, 4000);
+    }
+  }
+
+  function openModal(id) { const el = $(id); if (el) el.style.display = 'flex'; }
+   function closeModals() {
+     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+     const hardDeleteCheckbox = $('hard-delete');
+     if (hardDeleteCheckbox) hardDeleteCheckbox.checked = false;
+   }
+
+   // Setup global UI event handlers once DOM is ready
+   function initUI() {
+     // Close modals when clicking outside modal content
+     document.querySelectorAll('.modal').forEach(m => {
+       m.addEventListener('click', e => {
+         if (e.target === m) closeModals();
+       });
+     });
+   }
+
+  window.executeDelete = async function () {
+    const id = $('delete-item-id').value;
+    const type = $('delete-type').value;
+    const isHardDelete = $('hard-delete').checked;
+
+    if (!isHardDelete && type === 'event') {
+      await archiveEvent(id);
+      closeModals();
+      return;
+    }
+
+    try {
+      let endpoint = '';
+      let auditTarget = '';
+      let successMsg = '';
+
+      if (type === 'event') {
+        endpoint = '/api/events?id=' + id;
+        auditTarget = 'events';
+        successMsg = 'Event permanently deleted!';
+      } else if (type === 'achievement') {
+        endpoint = '/api/achievements?id=' + id;
+        auditTarget = 'achievements';
+        successMsg = 'Achievement permanently deleted!';
+      } else if (type === 'coach') {
+        endpoint = '/api/coaches?id=' + id;
+        auditTarget = 'coaches';
+        successMsg = 'Coach removed from academy!';
+      } else if (type === 'student') {
+        endpoint = '/api/students?id=' + id;
+        auditTarget = 'students';
+        successMsg = 'Student enrollment deleted!';
+      }
+
+      if (endpoint) {
+        const res = await apiCall(endpoint, { method: 'DELETE' });
+        if (res.ok) {
+          logAudit(auditTarget, id, 'delete', { id }, null);
+          toast(successMsg, 'success');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          toast('Delete failed: ' + (err.error || 'Server error'), 'error');
+        }
+      }
+      closeModals();
+      loadAllData(true);
+    } catch (e) {
+      console.error('Delete failed:', e);
+      toast('Technical error: ' + e.message, 'error');
+    }
+  };
+
+
+  function previewFile(inp, previewId) {
+    const file = inp.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => { const img = $(previewId); if (img) { img.src = e.target.result; img.style.display = 'block'; } };
+    reader.readAsDataURL(file);
+  }
+
+  // Helper accessors
+  function cleanText(t) {
+    if (!t) return '';
+    // Strip HTML tags but preserve all Unicode characters (Tamil, Arabic, etc.)
+    return t.toString().replace(/<[^>]*>?/gm, '').trim();
+  }
+  function getStudentName(s) { 
+    const raw = s.full_name || s.name || '';
+    return cleanText(raw);
+  }
+  function getStudentLevel(s) { return capitalizeFirst(s.level || s.grade || 'Beginner'); }
+  function getStudentRating(s) { return s.rating || s.current_rating || 800; }
+  function getStudentDate(s) {
+    const d = s.enrollment_date || s.join_date || s.created_at;
+    if (!d) return '';
+    try {
+      // Return simple YYYY-MM-DD format which Excel handles best
+      return new Date(d).toISOString().split('T')[0];
+    } catch (e) {
+      return String(d).split('T')[0]; // Fallback to raw string before 'T'
+    }
+  }
+  function getStudentPhone(s) { return s.parent_phone || s.phone || ''; }
+  function getStudentEmail(s) { return s.email || ''; }
+  const DEFAULT_MONTHLY_FEE = 1500; // Configurable default for display
+
+  function getStudentMonthlyFee(s) {
+    if (!s) return DEFAULT_MONTHLY_FEE;
+    return parseInt(s.monthly_fee || s.fee || s.fees || 0) || DEFAULT_MONTHLY_FEE;
+  }
+  
+  function getStudentPaymentStatus(s, monthOverride = null, yearOverride = null) {
+    if (!s) return 'Unknown';
+    const targetMonth = monthOverride !== null ? monthOverride : (window.reportMonth !== undefined ? window.reportMonth : new Date().getUTCMonth());
+    const targetYear = yearOverride !== null ? yearOverride : (window.reportYear !== undefined ? window.reportYear : new Date().getUTCFullYear());
+    const isCurrentMonth = (targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear());
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+    const fee = getStudentMonthlyFee(s);
+    const s_id_key = String(s.id || '').trim().toLowerCase();
+
+    // 1. Enrollment Check
+    const enrollDateStr = getStudentDate(s);
+    const baselineDate = new Date(Date.UTC(2026, 3, 1));
+    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baselineDate;
+    const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
+    if (enrollDate > targetMonthEnd) return 'Not Enrolled';
+
+    // 2. Cumulative Paid Amount Audit
+    let totalPaidAmount = 0;
+    (allPayments || []).forEach(p => {
+      const psid = String(p.student_id || '').trim().toLowerCase();
+      if (psid === s_id_key && p.status === 'paid') {
+        const pDate = new Date(p.payment_date || p.created_at);
+        if (pDate <= targetMonthEnd) {
+          totalPaidAmount += (parseFloat(p.amount) || 0);
+        }
+      }
+    });
+
+    const monthsRequired = Math.max(0, ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth())) + 1;
+    const totalRequiredAmount = monthsRequired * fee;
+
+        // 3. Status Determination (Strict Audit-Only for 100% Data Integrity)
+    // Audit-based Standing
+    let status = 'Due';
+    if (totalPaidAmount >= totalRequiredAmount) status = 'Paid';
+    else if (totalPaidAmount >= (totalRequiredAmount - fee)) {
+       // If viewing a PAST month, and they haven't paid, it is "Due" (Arrear), not "Pending".
+       status = isCurrentMonth ? 'Pending' : 'Due';
+    }
+
+    // Manual Override Protection (STRICTLY for the Current Real-World Month only)
+    const realNow = new Date();
+    const isActuallyCurrentMonth = (targetMonth === realNow.getUTCMonth() && targetYear === realNow.getUTCFullYear());
+    
+    if (isActuallyCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled' && s.payment_status !== 'archived') {
+       status = s.payment_status;
+    }
+    return status;
+  }
+
+  function getStudentBatchType(s) {
+    if (!s) return 'Group';
+    const mode = (s.session_mode || s.batch_type || s.session_type || '').toLowerCase();
+    if (mode.includes('group')) return 'Group';
+    if (mode.includes('single') || mode.includes('one_to_one')) return 'Single';
+
+    // Fallback to notes parsing for legacy data
+    const notes = (s.notes || '').toLowerCase();
+    if (notes.includes('session:group')) return 'Group';
+    if (notes.includes('session:single')) return 'Single';
+
+    return 'Group'; // Default
+  }
+  function getStudentSessionTime(s) {
+    if (s.session_time) return s.session_time;
+    const match = (s.notes || '').match(/time[:\s]*([^,]+)/i);
+    return match ? match[1].trim() : 'WEEKEND';
+  }
+  function isStudentScheduledToday(s) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const now = new Date();
+    const today = days[now.getDay()];
+    const isWeekend = (now.getDay() === 0 || now.getDay() === 6);
+
+    // 1. Check explicit Day columns (Highest Priority)
+    const scheduledDay = (s.batch_day || s.session_day || '').toLowerCase();
+    if (scheduledDay && scheduledDay.includes(today.toLowerCase())) return true;
+
+    // 2. Fallback to session time pattern matching
+    const time = getStudentSessionTime(s).toUpperCase();
+    if (time.includes('MORNING & EVENING')) return true; // Daily
+    if (time.includes('ANYTIME')) return true;
+    if (isWeekend && time.includes('WEEKEND')) return true;
+    if (!isWeekend && (time.includes('WEEKDAY') || time.includes('DAILY'))) return true;
+    
+    // Pattern matches for specific combinations
+    if ((now.getDay() === 5 || now.getDay() === 6) && time.includes('FRI & SAT')) return true;
+    if ((now.getDay() === 0 || now.getDay() === 1) && time.includes('SUN & MON')) return true;
+
+    return false;
+  }
+  function getStudentBatchTime(s) { return s.batch_time || '17:00'; }
+  function getStudentStatus(s) { return s.status || 'pending'; }
+  function getStudentCoachNotes(s) { return s.notes || ''; }
+  function getStudentSkills(s) {
+    return {
+      tactics: s.tactics_score || 50,
+      endgame: s.endgame_score || 50,
+      openings: s.openings_score || 50,
+      positional: s.positional_score || 50
+    };
+  }
+
+  function getCoachName(c) { return c.name || ''; }
+  function getCoachSpecialty(c) { return c.specialization || ''; }
+  function getCoachSalary(c) { return c.salary || c.hourly_rate || 0; }
+  function getCoachAvailability(c) { return c.availability || ''; }
+  function getCoachStatus(c) { return c.status || c.account_status || 'active'; }
+  function getCoachEmail(c) { return c.email || ''; }
+  function getCoachExperience(c) { return c.experience || 0; }
+  function getCoachRating(c) { return c.rating || 0; }
+
+  function getEventDate(e) { return e.date || e.event_date || ''; }
+  function getEventType(e) { return e.type || e.event_type || 'Tournament'; }
+  function getEventLocation(e) { return e.location || ''; }
+  function getEventTime(e) {
+    const t = e.time || e.event_time || '10:00';
+    return formatTime(t);
+  }
+  async function registerForEvent(eventId) {
+    const e = eventsData.find(x => String(x.id) === String(eventId));
+    if (!e) { toast('Event not found', 'error'); return; }
+
+    if (!currentStudent) { toast('Please login as a parent first', 'error'); return; }
+    if (!confirm('Register ' + getStudentName(currentStudent) + ' for "' + e.title + '" on ' + (e.date ? new Date(e.date).toLocaleDateString() : 'TBD') + '?')) return;
+
+    // Optimistic update - add student to registered list locally first
+    const registeredStudents = e.registered_students || [];
+    if (registeredStudents.includes(currentStudent.id)) {
+      toast('Already registered!', 'info');
+      return;
+    }
+
+    // Add student locally (optimistic)
+    registeredStudents.push(currentStudent.id);
+    e.registered_students = registeredStudents;
+    e.registrations_count = (e.registrations_count || 0) + 1;
+
+    // Also update in eventsData
+    const idx = eventsData.findIndex(ev => String(ev.id) === String(eventId));
+    if (idx >= 0) {
+      eventsData[idx].registered_students = registeredStudents;
+      eventsData[idx].registrations_count = (eventsData[idx].registrations_count || 0) + 1;
+    }
+
+    // Re-render to show registered
+    renderEvents();
+
+    // Try to save to backend (fire and forget)
+    try {
+      fetch(`${SUPABASE_URL}/functions/v1/events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          action: 'register',
+          event_id: eventId,
+          student_id: currentStudent.id,
+          student_name: getStudentName(currentStudent)
+        })
+      }).catch(() => { });
+    } catch (err) {
+    }
+
+    toast(`Successfully registered for "${e.title}"!`, 'success');
+  }
+
+  function getMessagePriority(m) { return m.priority || 'normal'; }
+  function getMessageIsRead(m) { return m.is_read || false; }
+
+  function makeAvSrc(s) {
+    if (s.custom_avatar) return s.custom_avatar;
+    const name = getStudentName(s);
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Student')}&background=dca33e&color=000000&bold=true&size=80`;
+  }
+
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // DATA LOADING
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+   let isLoadingData = false;
    async function loadAllData(forceRefresh = false) {
      if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
      if (isLoadingData) return;
@@ -211,13 +1254,24 @@
          allMessages = dedupeArray(extractData(messages), 'id');
          allAttendance = extractData(attendance);
 
-         const seenPayKeys = new Set();
-         const dedupedPayments = extractData(payments).filter(p => {
-           const key = (p.transaction_id || p.id || '').toString().trim();
-           if (!key || seenPayKeys.has(key)) return false;
-           seenPayKeys.add(key);
-           return true;
-         });
+                   const seenPayKeys = new Set();
+          const fuzzyKeys = new Set();
+          const dedupedPayments = extractData(payments).filter(p => {
+            const idKey = (p.transaction_id || p.id || '').toString().trim();
+            if (!idKey || seenPayKeys.has(idKey)) return false;
+            seenPayKeys.add(idKey);
+            
+            // Fuzzy dedupe for identical payments on the same day (prevents duplicate clicks)
+            const amt = (parseFloat(p.amount) || 0);
+            const pDate = new Date(p.payment_date || p.created_at);
+            const fuzzyKey = `${p.student_id}_${amt}_${pDate.getUTCFullYear()}_${pDate.getUTCMonth()}_${pDate.getUTCDate()}`;
+            if (fuzzyKeys.has(fuzzyKey)) {
+               console.warn('[Sync] Skipping potential duplicate payment:', fuzzyKey);
+               return false;
+            }
+            fuzzyKeys.add(fuzzyKey);
+            return true;
+          });
 
          allPayments = dedupedPayments.map(p => ({
            ...p,
@@ -302,11 +1356,11 @@
       modal.style.zIndex = '9999';
       modal.innerHTML = `
         <div class="modal-box" style="max-width:400px; text-align:center; border:2px solid var(--gold); background:var(--bg2)">
-          <h2 style="color:var(--gold); margin-bottom:15px; font-family:var(--font-head)">🆕 New Billing Month!</h2>
+          <h2 style="color:var(--gold); margin-bottom:15px; font-family:var(--font-head)">≡ƒåò New Billing Month!</h2>
           <p style="color:var(--ivory-dim); margin-bottom:25px; font-size:14px">It's a new month. The system has automatically updated student statuses. Would you like to inform all coaches about their student due lists now?</p>
           <div style="display:flex; gap:10px">
             <button class="btn btn-outline" style="flex:1" onclick="localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">Later</button>
-            <button class="btn btn-gold" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">📢 Inform Coaches</button>
+            <button class="btn btn-gold" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">≡ƒôó Inform Coaches</button>
           </div>
         </div>
       `;
@@ -374,7 +1428,7 @@
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
           const msg = payload.new;
           if (msg.receiver_type === 'admin' && shouldShowNotification('msg_' + msg.id)) {
-             toast(`📬 New Message from ${msg.sender_name || 'User'}!`, 'info');
+             toast(`≡ƒô¼ New Message from ${msg.sender_name || 'User'}!`, 'info');
              debouncedRefresh();
           }
         })
@@ -406,7 +1460,7 @@
           const newCount = newMsgs.length - lastMsgCount;
           const latest = newMsgs[0];
           if (latest && shouldShowNotification('msg_' + latest.id)) {
-            toast(`📬 ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
+            toast(`≡ƒô¼ ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
           }
           lastMsgCount = newMsgs.length;
           allMessages = newMsgs;
@@ -429,7 +1483,7 @@
 
         if (dedupedStuds.length > lastStudCount) {
           if (shouldShowNotification('new_student_' + dedupedStuds.length)) {
-            toast('🎓 New student enrolled!', 'success');
+            toast('≡ƒÄô New student enrolled!', 'success');
           }
           logAudit('students', 'new', null, { count: dedupedStuds.length });
           lastStudCount = dedupedStuds.length;
@@ -445,7 +1499,7 @@
             const latest = failedLogins[0];
             if (latest && shouldShowNotification('fail_' + (latest.id || latest.timestamp || latest.created_at))) {
               const time = new Date(latest.created_at || latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`🚫 Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
+              toast(`≡ƒÜ½ Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
             }
           }
         } catch (e) {
@@ -456,7 +1510,7 @@
             const latest = localFailed[localFailed.length - 1];
             if (latest && shouldShowNotification('fail_local_' + latest.timestamp)) {
               const time = new Date(latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`🚫 Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
+              toast(`≡ƒÜ½ Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
             }
           }
         }
@@ -470,7 +1524,7 @@
 
         if (due.length > lastDueCount && lastDueCount > 0) {
           const newDue = due.length - lastDueCount;
-          toast(`💰 ${newDue} new payment${newDue > 1 ? 's' : ''} now Due!`, 'warning');
+          toast(`≡ƒÆ░ ${newDue} new payment${newDue > 1 ? 's' : ''} now Due!`, 'warning');
         }
         lastDueCount = due.length;
 
@@ -492,9 +1546,9 @@
     updateNotificationBadge();
   }
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // NAVIGATION
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   function toggleSidebar() {
     const sidebar = $('sidebar');
     const overlay = $('sidebar-overlay');
@@ -550,12 +1604,12 @@
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             <input type="month" id="report-period" class="selector-minimal" onchange="updateReportContext()" value="${periodValue}">
           </div>
-          <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">📄 Financial Report</button>
-          <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
+          <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">≡ƒôä Financial Report</button>
+          <button class="btn btn-gold" onclick="exportAcademyData()">≡ƒôÑ Export Academy Data</button>
         `;
         }
         if (p === 'stud') btnArea.innerHTML = `
-          <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">🗓️ Batch Attendance</button>
+          <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">≡ƒùô∩╕Å Batch Attendance</button>
           <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
         `;
         if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEventModal()">+ Create Event</button>`;
@@ -608,9 +1662,9 @@
     window.setReportPeriod(parts[0], parseInt(parts[1]) - 1);
   };
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // AUTHENTICATION
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   function toggleEye() {
     const p = $('li-pass');
     const btn = $('eye-btn');
@@ -637,7 +1691,7 @@
       initRealtimeNotifications();
     }
     if (userRole === 'parent') {
-      toast(`👤 ${displayName} logged in`, 'info');
+      toast(`≡ƒæñ ${displayName} logged in`, 'info');
     }
     const loginScreen = $('login-screen');
     if (loginScreen) loginScreen.style.display = 'none';
@@ -799,13 +1853,13 @@
         let html = '';
         if (currentUserActive) {
           html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
-            <span><span style="color:var(--emerald)">●</span> ${currentUser} <span style="color:var(--gold)">(You)</span></span>
+            <span><span style="color:var(--emerald)">ΓùÅ</span> ${currentUser} <span style="color:var(--gold)">(You)</span></span>
             <span style="color:var(--ivory-dim);font-size:11px">${formatTimeAgo(currentUserActive.loginAt)}</span>
           </div>`;
         }
         others.forEach(s => {
           html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
-            <span><span style="color:var(--emerald)">●</span> ${s.user} <span class="badge badge-level" style="font-size:9px;margin-left:4px">${s.role}</span></span>
+            <span><span style="color:var(--emerald)">ΓùÅ</span> ${s.user} <span class="badge badge-level" style="font-size:9px;margin-left:4px">${s.role}</span></span>
             <span style="color:var(--ivory-dim);font-size:11px">${formatTimeAgo(s.loginAt)}</span>
           </div>`;
         });
@@ -830,7 +1884,7 @@
         uniqueSessions.forEach(s => {
           const loginTime = new Date(s.loginAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
           const status = s.active
-            ? '<span style="color:var(--emerald)">● Active</span>'
+            ? '<span style="color:var(--emerald)">ΓùÅ Active</span>'
             : s.logoutAt
               ? '<span style="color:var(--ivory-dim)">Logged out</span>'
               : '<span style="color:var(--danger)">Session ended</span>';
@@ -878,9 +1932,9 @@
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // CHARTS & DASHBOARD
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   function formatTimeAgo(dateStr) {
     const now = new Date();
     const date = new Date(dateStr);
@@ -1072,7 +2126,7 @@
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-    // 1. Target Dataset Preparation — cumulative paid amount from effective enrollment through target month
+    // 1. Target Dataset Preparation ΓÇö cumulative paid amount from effective enrollment through target month
     const s_id_map = {};
     (allPayments || []).forEach(p => {
       if (p.status === 'paid') {
@@ -1168,7 +2222,7 @@
       $('s-rate').textContent = collectionRate + '%';
       if (rawRate > 100) {
         $('s-rate').style.color = 'var(--gold)';
-        $('s-rate').title = `Actual collected: ₹${paidRevenue.toLocaleString()} (includes arrears)`;
+        $('s-rate').title = `Actual collected: Γé╣${paidRevenue.toLocaleString()} (includes arrears)`;
       } else {
         $('s-rate').style.color = 'var(--blue)';
         $('s-rate').title = '';
@@ -1181,31 +2235,31 @@
       : (paidRevenue > 0 ? '100' : '0');
 
     // Update UI
-    if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
-    if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
+    if ($('s-rev')) $('s-rev').textContent = 'Γé╣' + paidRevenue.toLocaleString();
+    if ($('s-total-revenue')) $('s-total-revenue').textContent = 'Γé╣' + totalPotential.toLocaleString();
 
     const growthEl = $('s-due');
     if (growthEl) {
       if (prevRevenue > 0) {
-        growthEl.innerHTML = `₹${revenueGrowth.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)</span>`;
+        growthEl.innerHTML = `Γé╣${revenueGrowth.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)</span>`;
         growthEl.style.color = revenueGrowth > 0 ? 'var(--emerald)' : (revenueGrowth < 0 ? 'var(--ruby)' : 'var(--ivory-dim)');
       } else {
-        growthEl.innerHTML = `₹${paidRevenue.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(vs prev: ₹0)</span>`;
+        growthEl.innerHTML = `Γé╣${paidRevenue.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(vs prev: Γé╣0)</span>`;
         growthEl.style.color = 'var(--ivory-dim)';
       }
     }
 
-    if ($('s-last-due')) $('s-last-due').textContent = '₹' + totalArrears.toLocaleString();
-    if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currMonthPending.toLocaleString();
-    if ($('s-total-outstanding')) $('s-total-outstanding').textContent = '₹' + totalOutstanding.toLocaleString();
+    if ($('s-last-due')) $('s-last-due').textContent = 'Γé╣' + totalArrears.toLocaleString();
+    if ($('s-curr-pending')) $('s-curr-pending').textContent = 'Γé╣' + currMonthPending.toLocaleString();
+    if ($('s-total-outstanding')) $('s-total-outstanding').textContent = 'Γé╣' + totalOutstanding.toLocaleString();
 
     // Coach expenses & Net Profit
     const totalCoachCost = allCoaches.filter(c => c.status !== 'archived').reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
-    if ($('s-total-cost')) $('s-total-cost').textContent = '₹' + totalCoachCost.toLocaleString();
+    if ($('s-total-cost')) $('s-total-cost').textContent = 'Γé╣' + totalCoachCost.toLocaleString();
     
     const netProfit = paidRevenue - totalCoachCost;
     if ($('s-profit')) {
-      $('s-profit').textContent = '₹' + netProfit.toLocaleString();
+      $('s-profit').textContent = 'Γé╣' + netProfit.toLocaleString();
       $('s-profit').style.color = netProfit >= 0 ? 'var(--emerald)' : 'var(--ruby)';
     }
 
@@ -1314,20 +2368,20 @@
       return `<tr>
         <td><b>${d.name}</b></td>
         <td>${d.students}</td>
-        <td>₹${d.revenue.toLocaleString()}</td>
-        <td>₹${d.pending.toLocaleString()}</td>
-        <td>₹${d.cost.toLocaleString()}</td>
-        <td class="${profitClass}">₹${netProfit.toLocaleString()}</td>
-        <td class="${potentialProfitClass}">₹${potentialNetProfit.toLocaleString()}</td>
+        <td>Γé╣${d.revenue.toLocaleString()}</td>
+        <td>Γé╣${d.pending.toLocaleString()}</td>
+        <td>Γé╣${d.cost.toLocaleString()}</td>
+        <td class="${profitClass}">Γé╣${netProfit.toLocaleString()}</td>
+        <td class="${potentialProfitClass}">Γé╣${potentialNetProfit.toLocaleString()}</td>
         <td>${roi}% / <span class="text-gold">${potentialRoi}%</span></td>
-        <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">📢 Inform</button></td>
+        <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">≡ƒôó Inform</button></td>
       </tr>`;
     }).join('');
   }
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // STUDENTS, COACHES, EVENTS, ACHIEVEMENTS
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   function clearFilters() {
     ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search', 'f-bill-month-stud'].forEach(id => { const el = $(id); if (el) el.value = ''; });
     resetStudMonth();
@@ -1423,8 +2477,8 @@
 
            const pInfo = paymentsOfMonth[String(s.id).toLowerCase()];
            const paidThisMonthHtml = pInfo
-             ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>`
-             : '<span class="text-muted">₹0</span>';
+             ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">Γé╣${pInfo.total.toLocaleString()} (${pInfo.count})</span>`
+             : '<span class="text-muted">Γé╣0</span>';
 
             // Primary action buttons (always visible)
             let primaryActions = '';
@@ -1436,13 +2490,13 @@
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                   <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
-                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
+                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒöü Mark Unpaid</button>
                   </div>
                 `;
                moreActions = `
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">ΓÅ│ History</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">≡ƒôä Receipt</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">≡ƒÆ¼ WhatsApp</button>
                `;
              } else if (status === 'Pending' || status === 'Due') {
                 primaryActions = `
@@ -1450,16 +2504,16 @@
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                   <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
-                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
+                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒôó Inform</button>
                   </div>
                 `;
                moreActions = `
-                 <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
+                 <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒÆ│ Pay Now</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">ΓÅ│ History</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">≡ƒÆ¼ WhatsApp</button>
                `;
              } else {
-              primaryActions = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
+              primaryActions = `<span style="color:var(--ivory-dim);font-size:11px">ΓÇö</span>`;
               moreActions = '';
             }
 
@@ -1472,14 +2526,14 @@
               <td>${getStudentDate(s) || '-'}</td>
               <td>${session}</td>
               <td>${time}</td>
-              <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+              <td>Γé╣${getStudentMonthlyFee(s).toLocaleString()}</td>
               <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
               <td>${paidThisMonthHtml}</td>
                <td style="overflow-x:auto;white-space:nowrap">
                   <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;min-width:0">
                    ${primaryActions}
                    ${moreActions ? `
-                     <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
+                     <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">Γï« More</button>
                      <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:160px;box-shadow:var(--shadow);margin-top:4px">
                        ${moreActions}
                      </div>
@@ -1532,7 +2586,7 @@
       $('sv-batch').textContent = time ? `${mode} (${time})` : mode;
     }
 
-    if ($('sv-fee')) $('sv-fee').textContent = '₹' + getStudentMonthlyFee(s).toLocaleString();
+    if ($('sv-fee')) $('sv-fee').textContent = 'Γé╣' + getStudentMonthlyFee(s).toLocaleString();
 
     const statusEl = $('sv-status');
     if (statusEl) {
@@ -1788,7 +2842,7 @@
     if (!grid) return;
 
     if (!allCoaches || allCoaches.length === 0) {
-      grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="empty-icon">👨‍🏫</span><p>No coaches found in the academy</p></div>';
+      grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="empty-icon">≡ƒæ¿ΓÇì≡ƒÅ½</span><p>No coaches found in the academy</p></div>';
       return;
     }
 
@@ -1818,7 +2872,7 @@
              </div>
              <div class="coach-stat">
                <span class="coach-stat-label">Salary</span>
-               <span class="coach-stat-val">₹${(getCoachSalary(c) || 0).toLocaleString()}</span>
+               <span class="coach-stat-val">Γé╣${(getCoachSalary(c) || 0).toLocaleString()}</span>
              </div>
              <div class="coach-stat">
                <span class="coach-stat-label">Status</span>
@@ -1826,12 +2880,12 @@
              </div>
            </div>
            <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr; gap: 8px;">
-             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
-             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️ Edit</button>
-             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">≡ƒæü∩╕Å View</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">Γ£Å∩╕Å Edit</button>
+             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">≡ƒôó Inform</button>
              <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${escapeHtml(getCoachName(c)).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
            </div>
-           <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
+           <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">≡ƒôà View Schedule</button>
          </div>
        `;
     }).join('');
@@ -1872,7 +2926,7 @@
     if (!container) { openModal('coach-schedule-modal'); return; }
 
     if (assignedStudents.length === 0) {
-      container.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No students assigned to this coach</p></div>';
+      container.innerHTML = '<div class="empty-state"><span class="empty-icon">≡ƒôà</span><p>No students assigned to this coach</p></div>';
     } else {
       // Group by Day
       const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -2040,7 +3094,7 @@
 
     if (!visibleEvents || visibleEvents.length === 0) {
       gridEl.style.display = 'grid';
-      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">📅</span><p>No events scheduled</p></div>';
+      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">≡ƒôà</span><p>No events scheduled</p></div>';
       return;
     }
 
@@ -2066,7 +3120,7 @@
              <span class="ev-meta-item ev-loc">${escapeHtml(e.location || 'TBD')}</span>
              ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${escapeHtml(e.prize_pool)}</span>` : ''}
            </div>
-           ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">📍 View on Map</a>` : ''}
+           ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">≡ƒôì View on Map</a>` : ''}
            ${e.description ? `<div class="ev-desc">${escapeHtml(e.description)}</div>` : ''}
          </div>
          <div class="ev-progress-wrap">
@@ -2080,7 +3134,7 @@
          </div>
          <div class="ev-footer">
            <div class="ev-spots"><strong>${spotsLeft}</strong> spots left</div>
-           ${role === 'parent' ? (e.registered_students?.includes(currentStudent?.id) ? '<span class="badge badge-success">✓ Registered</span>' : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`) : ''}
+           ${role === 'parent' ? (e.registered_students?.includes(currentStudent?.id) ? '<span class="badge badge-success">Γ£ô Registered</span>' : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`) : ''}
            ${isAdmin ? `
              <div style="display:flex;gap:8px;margin-left:auto">
                <button class="btn btn-outline-grey btn-sm" onclick="editEvent('${e.id}')">Edit</button>
@@ -2226,7 +3280,7 @@
     gridEl.style.display = 'grid';
 
     if (!achievementsData || achievementsData.length === 0) {
-      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">🏆</span><p>No achievements recorded yet</p></div>';
+      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">≡ƒÅå</span><p>No achievements recorded yet</p></div>';
       return;
     }
 
@@ -2236,7 +3290,7 @@
        const studentName = student ? getStudentName(student) : 'Unknown Student';
        return `
          <div class="ach-card">
-           ${a.img_url ? `<img src="${a.img_url}" class="ach-img" alt="Achievement">` : '<div class="ach-img-placeholder">🏆</div>'}
+           ${a.img_url ? `<img src="${a.img_url}" class="ach-img" alt="Achievement">` : '<div class="ach-img-placeholder">≡ƒÅå</div>'}
            <div class="ach-body">
              <div class="ach-title">${escapeHtml(a.title)}</div>
              <div class="ach-student">${escapeHtml(studentName)}</div>
@@ -2403,7 +3457,7 @@
       const coachName = coach ? getCoachName(coach) : 'N/A';
       const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(getStudentName(s))}&amount=${amt}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
 
-      const message = `✅ Hello Sir/Madam,
+      const message = `Γ£à Hello Sir/Madam,
 
 This is to inform you about the chess class fee payment you have completed for ${cleanText(getStudentName(s))} (INR ${amt.toLocaleString()}).
 
@@ -2459,7 +3513,7 @@ Thank you for your continued support and cooperation.
 
      // Populate modal
      $('inform-student-name').textContent = name;
-     $('inform-amount').textContent = `₹${totalDue.toLocaleString()}`;
+     $('inform-amount').textContent = `Γé╣${totalDue.toLocaleString()}`;
      $('inform-custom-msg').value = '';
 
      // Store student ID in modal data attribute
@@ -2509,9 +3563,9 @@ Thank you for your continued support and cooperation.
      let message = customMsg ? `${customMsg}\n\n` : '';
       message += `Hello Sir/Madam,\n\n`;
       message += `This is a gentle reminder regarding the chess class fee for your child ${studentName}.\n\n`;
-      message += `The amount of ₹${totalDue.toLocaleString()} is currently pending. We kindly request you to complete the payment at the earliest to continue uninterrupted access to classes.\n\n`;
+      message += `The amount of Γé╣${totalDue.toLocaleString()} is currently pending. We kindly request you to complete the payment at the earliest to continue uninterrupted access to classes.\n\n`;
       message += `Thank you for your cooperation.\n`;
-      message += `– Chesskidoo Academy`;
+      message += `ΓÇô Chesskidoo Academy`;
 
      try {
        let sent = false;
@@ -2654,7 +3708,7 @@ Thank you for your continued support and cooperation.
     const nameEl = $('p-history-name');
     if (nameEl) nameEl.textContent = getStudentName(s);
     const metaEl = $('p-history-meta');
-    if (metaEl) metaEl.textContent = `ID: ${String(s.id).slice(0, 8)} • Monthly Fee: ₹${getStudentMonthlyFee(s).toLocaleString()}`;
+    if (metaEl) metaEl.textContent = `ID: ${String(s.id).slice(0, 8)} ΓÇó Monthly Fee: Γé╣${getStudentMonthlyFee(s).toLocaleString()}`;
 
     openModal('payment-history-modal');
 
@@ -2673,13 +3727,13 @@ Thank you for your continued support and cooperation.
      body.innerHTML = myPayments.map(p => `
        <tr>
          <td>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
-         <td style="color:var(--success);font-weight:600">₹${(p.amount || 0).toLocaleString()}</td>
+         <td style="color:var(--success);font-weight:600">Γé╣${(p.amount || 0).toLocaleString()}</td>
          <td>${escapeHtml(p.payment_method || 'Cash')}</td>
          <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || 'N/A'}</td>
          <td>
            <div style="display:flex;gap:5px">
-             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">📄</button>
-             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
+             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">≡ƒôä</button>
+             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">≡ƒùæ∩╕Å</button>
            </div>
          </td>
        </tr>
@@ -2793,13 +3847,13 @@ Thank you for your continued support and cooperation.
           <div style="font-weight:600;color:var(--ivory)">${escapeHtml(getCoachName(c))}</div>
         </td>
         <td><div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(getCoachSpecialty(c))}</div></td>
-        <td style="font-weight:600;color:var(--gold)">₹${salary.toLocaleString()}</td>
+        <td style="font-weight:600;color:var(--gold)">Γé╣${salary.toLocaleString()}</td>
         <td><span class="badge ${status === 'Paid' ? 'badge-success' : 'badge-warning'}" style="font-size:10px;padding:4px 8px">${status}</span></td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             ${status === 'Pending' ?
-          `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">✅ Mark Paid</button>` :
-          `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">❌ Mark Unpaid</button>`}
+          `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">Γ£à Mark Paid</button>` :
+          `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">Γ¥î Mark Unpaid</button>`}
           </div>
         </td>
       </tr>`;
@@ -2811,7 +3865,7 @@ Thank you for your continued support and cooperation.
      // FIX #15: Only trigger renderBills if the bills page DOM is present
      const billBody = document.getElementById('bill-body');
      if (!billBody) {
-       // Page not active — just update the global context
+       // Page not active ΓÇö just update the global context
        const parts = val.split('-');
        if (parts.length >= 2) {
          window.reportYear = parseInt(parts[0]);
@@ -2887,9 +3941,9 @@ Thank you for your continued support and cooperation.
           <td>-</td>
           <td>-</td>
           <td>-</td>
-          <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+          <td style="font-weight:600;color:var(--gold)">Γé╣${getStudentMonthlyFee(s).toLocaleString()}</td>
           <td><span class="badge badge-outline-grey" style="font-size:10px;padding:4px 8px">Not Enrolled</span></td>
-          <td><span style="color:var(--ivory-dim);font-size:11px">—</span></td>
+          <td><span style="color:var(--ivory-dim);font-size:11px">ΓÇö</span></td>
         </tr>`;
       }
 
@@ -2912,19 +3966,19 @@ Thank you for your continued support and cooperation.
         let actionButtons = '';
         if (status === 'Paid') {
           actionButtons = `
-            <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-            <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">≡ƒôä Receipt</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">ΓÅ│ History</button>
+            <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒöü Mark Unpaid</button>
           `;
         } else if (status === 'Pending' || status === 'Due') {
           actionButtons = `
-            <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
-            <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
-            <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
+            <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒÆ│ Pay Now</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">ΓÅ│ History</button>
+            <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒôó Inform</button>
+            <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">Γ£à Mark Paid</button>
           `;
         } else {
-         actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
+         actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">ΓÇö</span>`;
        }
 
       return `<tr>
@@ -2936,7 +3990,7 @@ Thank you for your continued support and cooperation.
         <td><div style="font-size:12px;color:var(--ivory)">${escapeHtml(coachName)}</div></td>
         <td><div style="font-size:12px;color:var(--ivory-dim)">${escapeHtml(sessionType)}</div></td>
         <td><div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(scheduleTime)}</div></td>
-        <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+        <td style="font-weight:600;color:var(--gold)">Γé╣${getStudentMonthlyFee(s).toLocaleString()}</td>
         <td><span class="badge ${statusClass}" style="font-size:10px;padding:4px 8px">${status}</span></td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
@@ -3066,7 +4120,7 @@ Thank you for your continued support and cooperation.
     currentPayAmt = finalFee;
 
     if (nameEl) nameEl.textContent = name;
-    if (feeEl) feeEl.textContent = `₹${finalFee.toLocaleString()}`;
+    if (feeEl) feeEl.textContent = `Γé╣${finalFee.toLocaleString()}`;
 
     // Reset payment modal view
     if ($('pay-options')) $('pay-options').style.display = 'block';
@@ -3133,9 +4187,9 @@ Thank you for your continued support and cooperation.
   function showReceiptPreview() { openModal('receipt-preview-modal'); }
   function printReceipt() { window.print(); }
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // MESSAGES
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   async function renderMsgs() {
     const listEl = $('msgs-list');
     const loadingEl = $('msgs-loading');
@@ -3145,7 +4199,7 @@ Thank you for your continued support and cooperation.
 
     if (!allMessages || allMessages.length === 0) {
       listEl.style.display = 'grid';
-      listEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">💬</span><p>No messages yet</p></div>';
+      listEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">≡ƒÆ¼</span><p>No messages yet</p></div>';
       return;
     }
 
@@ -3162,8 +4216,8 @@ Thank you for your continued support and cooperation.
          <div class="msg-card-subject">${escapeHtml(m.subject || 'No Subject')}</div>
          <div class="msg-card-body">${escapeHtml(m.message || '')}</div>
          <div class="msg-card-actions">
-           ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')">✓ Mark Read</button>` : ''}
-           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${m.id}')">🗑️ Delete</button>
+           ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')">Γ£ô Mark Read</button>` : ''}
+           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${m.id}')">≡ƒùæ∩╕Å Delete</button>
          </div>
        </div>
      `).join('');
@@ -3177,9 +4231,9 @@ Thank you for your continued support and cooperation.
     loadAllData(true);
   }
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // PARENT VIEW
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   function renderChild() {
     const loadingEl = $('child-loading');
     const contentEl = $('child-content');
@@ -3253,13 +4307,13 @@ Thank you for your continued support and cooperation.
     const myAchs = achievementsData.filter(a => String(a.student_id) === String(currentStudent.id));
 
     if (myAchs.length === 0) {
-      achGrid.innerHTML = '<div class="empty-state"><span class="empty-icon">🏆</span><p>No achievements yet. Keep practicing!</p></div>';
+      achGrid.innerHTML = '<div class="empty-state"><span class="empty-icon">≡ƒÅå</span><p>No achievements yet. Keep practicing!</p></div>';
       return;
     }
 
      achGrid.innerHTML = myAchs.slice(0, 6).map(a => `
        <div class="ach-card">
-         ${a.img_url ? `<img src="${escapeHtml(a.img_url)}" alt="${escapeHtml(a.title)}">` : '<div class="ach-icon">🏆</div>'}
+         ${a.img_url ? `<img src="${escapeHtml(a.img_url)}" alt="${escapeHtml(a.title)}">` : '<div class="ach-icon">≡ƒÅå</div>'}
          <div class="ach-info">
            <div class="ach-title">${escapeHtml(a.title)}</div>
            <div class="ach-date">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
@@ -3324,12 +4378,12 @@ Thank you for your continued support and cooperation.
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // AI & CHAT
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   let currentAIModule = 'global';
 
-  // ── PRIVACY GUARDRAILS FOR PARENT AI ──
+  // ΓöÇΓöÇ PRIVACY GUARDRAILS FOR PARENT AI ΓöÇΓöÇ
   const BLOCKED_PATTERNS = [
     /total revenue/i, /academy revenue/i, /monthly revenue/i, /salary/i, /total profit/i, /academy income/i,
     /other student/i, /other parent/i, /coach.*salary/i,
@@ -3447,10 +4501,10 @@ Thank you for your continued support and cooperation.
     buttons.forEach(btn => btn.classList.remove('active'));
 
     const moduleConfig = {
-      global: { title: 'Global Insights', icon: '⚡', btnIndex: 0, roles: ['admin', 'master'] },
-      finance: { title: 'Financial Analysis', icon: '💰', btnIndex: 1, roles: ['admin', 'master'] },
-      coach: { title: 'Coach Performance', icon: '🧑‍🏫', btnIndex: 2, roles: ['admin', 'master'] },
-      parent: { title: 'My Child Progress', icon: '👶', btnIndex: 3, roles: ['parent'] }
+      global: { title: 'Global Insights', icon: 'ΓÜí', btnIndex: 0, roles: ['admin', 'master'] },
+      finance: { title: 'Financial Analysis', icon: '≡ƒÆ░', btnIndex: 1, roles: ['admin', 'master'] },
+      coach: { title: 'Coach Performance', icon: '≡ƒºæΓÇì≡ƒÅ½', btnIndex: 2, roles: ['admin', 'master'] },
+      parent: { title: 'My Child Progress', icon: '≡ƒæ╢', btnIndex: 3, roles: ['parent'] }
     };
 
     const config = moduleConfig[m];
@@ -3483,7 +4537,7 @@ Thank you for your continued support and cooperation.
       const welcomeMsg = document.createElement('div');
       welcomeMsg.className = 'ai-ws-msg bot';
       welcomeMsg.innerHTML = `
-        <div class="ai-ws-avatar">🤖</div>
+        <div class="ai-ws-avatar">≡ƒñû</div>
         <div class="ai-ws-bubble">
           ${m === 'global' ? 'Switched to Global Insights. I can now provide academy-wide analytics, enrollment trends, and comprehensive metrics.' :
           m === 'finance' ? 'Switched to Financial Analysis. Let\'s examine revenue patterns, payment collections, and financial performance.' :
@@ -3504,11 +4558,11 @@ Thank you for your continued support and cooperation.
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // REAL-TIME INTELLIGENCE ENGINE (RAG + AGENTIC AI)
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
 
-  // ── API ORCHESTRATION LAYER ──
+  // ΓöÇΓöÇ API ORCHESTRATION LAYER ΓöÇΓöÇ
   const API_ORCHESTRATION = {
     endpoints: {
       news: 'https://newsapi.org/v2/top-headlines',
@@ -3565,7 +4619,7 @@ Thank you for your continued support and cooperation.
     async fetchIoTSensors() {
       return {
         sensors: [
-          { id: 'temp-01', type: 'temperature', value: 26.5, unit: '°C', location: 'Classroom 1' },
+          { id: 'temp-01', type: 'temperature', value: 26.5, unit: '┬░C', location: 'Classroom 1' },
           { id: 'hum-01', type: 'humidity', value: 62, unit: '%', location: 'Classroom 1' },
           { id: 'occupancy-01', type: 'motion', value: 12, unit: 'persons', location: 'Main Hall' }
         ],
@@ -3574,7 +4628,7 @@ Thank you for your continued support and cooperation.
     }
   };
 
-  // ── VECTOR DATABASE SIMULATION (RAG) ──
+  // ΓöÇΓöÇ VECTOR DATABASE SIMULATION (RAG) ΓöÇΓöÇ
   const VECTOR_RAG = {
     chunks: [],
 
@@ -3610,7 +4664,7 @@ Thank you for your continued support and cooperation.
     }
   };
 
-  // ── TOOL CALLING ENGINE ──
+  // ΓöÇΓöÇ TOOL CALLING ENGINE ΓöÇΓöÇ
   const TOOL_CALLER = {
     tools: {
       get_academy_stats: {
@@ -3715,7 +4769,7 @@ Thank you for your continued support and cooperation.
     }
   };
 
-  // ── TEMPORAL REASONING ENGINE ──
+  // ΓöÇΓöÇ TEMPORAL REASONING ENGINE ΓöÇΓöÇ
   const TEMPORAL_ENGINE = {
     getCurrentContext() {
       const now = new Date();
@@ -3749,7 +4803,7 @@ Thank you for your continued support and cooperation.
     }
   };
 
-  // ── RESPONSE SYNTHESIZER ──
+  // ΓöÇΓöÇ RESPONSE SYNTHESIZER ΓöÇΓöÇ
   const RESPONSE_SYNTHESIZER = {
     synthesize(query, toolResults, temporalContext) {
       let response = '';
@@ -3762,32 +4816,32 @@ Thank you for your continued support and cooperation.
       if (queryLower.includes('how many') || queryLower.includes('total') || queryLower.includes('count')) {
         const stats = results.find(r => r.totalStudents !== undefined);
         if (stats) {
-          response = `📊 **Academy Statistics** (${temporalContext.date})
+          response = `≡ƒôè **Academy Statistics** (${temporalContext.date})
 
 `;
-          response += `• **Total Students:** ${stats.totalStudents}
+          response += `ΓÇó **Total Students:** ${stats.totalStudents}
 `;
-          response += `• **Active Coaches:** ${stats.totalCoaches}
+          response += `ΓÇó **Active Coaches:** ${stats.totalCoaches}
 `;
-          response += `• **Total Revenue:** ₹${stats.revenue?.toLocaleString() || 0}
+          response += `ΓÇó **Total Revenue:** Γé╣${stats.revenue?.toLocaleString() || 0}
 `;
-          response += `• **Collection Rate:** ${stats.collectionRate}%
+          response += `ΓÇó **Collection Rate:** ${stats.collectionRate}%
 `;
-          response += `• **Paid Students:** ${stats.paid}
+          response += `ΓÇó **Paid Students:** ${stats.paid}
 `;
-          response += `• **Due Payments:** ${stats.due}`;
+          response += `ΓÇó **Due Payments:** ${stats.due}`;
         }
       }
 
       if (queryLower.includes('market') || queryLower.includes('stock') || queryLower.includes('finance')) {
         const market = results.find(r => r.indices);
         if (market) {
-          response = `📈 **Market Overview** (${temporalContext.time})
+          response = `≡ƒôê **Market Overview** (${temporalContext.time})
 
 `;
           market.indices.forEach(idx => {
-            const sign = idx.change >= 0 ? '↑' : '↓';
-            response += `• **${idx.name}:** ${idx.value.toLocaleString()} (${sign}${Math.abs(idx.change)}%)
+            const sign = idx.change >= 0 ? 'Γåæ' : 'Γåô';
+            response += `ΓÇó **${idx.name}:** ${idx.value.toLocaleString()} (${sign}${Math.abs(idx.change)}%)
 `;
           });
         }
@@ -3796,25 +4850,25 @@ Thank you for your continued support and cooperation.
       if (queryLower.includes('weather') || queryLower.includes('temperature')) {
         const weather = results.find(r => r.temperature !== undefined);
         if (weather) {
-          response = `🌤️ **Current Weather** (${temporalContext.date})
+          response = `≡ƒîñ∩╕Å **Current Weather** (${temporalContext.date})
 
 `;
-          response += `• **Temperature:** ${weather.temperature}°C
+          response += `ΓÇó **Temperature:** ${weather.temperature}┬░C
 `;
-          response += `• **Condition:** ${weather.condition}
+          response += `ΓÇó **Condition:** ${weather.condition}
 `;
-          response += `• **Humidity:** ${weather.humidity}%`;
+          response += `ΓÇó **Humidity:** ${weather.humidity}%`;
         }
       }
 
       if (queryLower.includes('sensor') || queryLower.includes('iot') || queryLower.includes('monitor')) {
         const sensors = results.find(r => r.sensors);
         if (sensors) {
-          response = `🔌 **IoT Sensors** (${temporalContext.time})
+          response = `≡ƒöî **IoT Sensors** (${temporalContext.time})
 
 `;
           sensors.sensors.forEach(s => {
-            response += `• **${s.location} - ${s.type}:** ${s.value} ${s.unit}
+            response += `ΓÇó **${s.location} - ${s.type}:** ${s.value} ${s.unit}
 `;
           });
         }
@@ -3823,20 +4877,20 @@ Thank you for your continued support and cooperation.
       if (queryLower.includes('event') || queryLower.includes('tournament')) {
         const events = results.find(r => r.upcoming !== undefined);
         if (events) {
-          response = `📅 **Events Summary** (${temporalContext.date})
+          response = `≡ƒôà **Events Summary** (${temporalContext.date})
 
 `;
-          response += `• **Upcoming Events:** ${events.upcoming}
+          response += `ΓÇó **Upcoming Events:** ${events.upcoming}
 `;
-          response += `• **Past Events:** ${events.past}
+          response += `ΓÇó **Past Events:** ${events.past}
 `;
-          response += `• **Total Events:** ${events.total}`;
+          response += `ΓÇó **Total Events:** ${events.total}`;
         }
       }
 
       if (!response) {
         // Default comprehensive response
-        response = `🏫 **Chesskidoo Academy Report**
+        response = `≡ƒÅ½ **Chesskidoo Academy Report**
 `;
         response += `${TEMPORAL_ENGINE.getTimeBasedGreeting()}! Here's your academy overview:
 
@@ -3844,34 +4898,34 @@ Thank you for your continued support and cooperation.
 
         const stats = results.find(r => r.totalStudents !== undefined);
         if (stats) {
-          response += `📊 **Statistics:** ${stats.totalStudents} students, ${stats.totalCoaches} coaches
+          response += `≡ƒôè **Statistics:** ${stats.totalStudents} students, ${stats.totalCoaches} coaches
 `;
-          response += `💰 **Revenue:** ₹${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)
+          response += `≡ƒÆ░ **Revenue:** Γé╣${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)
 `;
         }
 
         const events = results.find(r => r.upcoming !== undefined);
         if (events) {
-          response += `📅 **Events:** ${events.upcoming} upcoming
+          response += `≡ƒôà **Events:** ${events.upcoming} upcoming
 `;
         }
 
         response += `
-⏰ Last updated: ${temporalContext.time}`;
+ΓÅ░ Last updated: ${temporalContext.time}`;
       }
 
       // Add source attribution
       if (sources.length > 0) {
         response += `
 
-📡 *Data sources: ${sources.join(', ')}*`;
+≡ƒôí *Data sources: ${sources.join(', ')}*`;
       }
 
       return response;
     }
   };
 
-  // ── ENHANCED AI QUERY HANDLER ──
+  // ΓöÇΓöÇ ENHANCED AI QUERY HANDLER ΓöÇΓöÇ
   function animateAIResponse(element, markdownText) {
     let html = (markdownText || '')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -3916,18 +4970,18 @@ Thank you for your continued support and cooperation.
     const query = input.value;
     const chatContainer = document.getElementById('ai-workspace-msgs');
 
-    // ── PRIVACY GUARDRAIL: Validate parent queries ──
+    // ΓöÇΓöÇ PRIVACY GUARDRAIL: Validate parent queries ΓöÇΓöÇ
     if (role === 'parent') {
       const validation = validateParentAIQuery(query);
       if (!validation.allowed) {
         const userMsg = document.createElement('div');
         userMsg.className = 'ai-ws-msg user';
-        userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
+        userMsg.innerHTML = `<div class="ai-ws-avatar">≡ƒæñ</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
         chatContainer.appendChild(userMsg);
 
         const botMsg = document.createElement('div');
         botMsg.className = 'ai-ws-msg bot';
-        botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble"></div>`;
+        botMsg.innerHTML = `<div class="ai-ws-avatar">≡ƒñû</div><div class="ai-ws-bubble"></div>`;
         chatContainer.appendChild(botMsg);
         animateAIResponse(botMsg.querySelector('.ai-ws-bubble'), PARENT_DENIED_MESSAGE);
         chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -3938,7 +4992,7 @@ Thank you for your continued support and cooperation.
     // Add user message
     const userMsg = document.createElement('div');
     userMsg.className = 'ai-ws-msg user';
-    userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
+    userMsg.innerHTML = `<div class="ai-ws-avatar">≡ƒæñ</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
     chatContainer.appendChild(userMsg);
 
     input.value = '';
@@ -3948,16 +5002,16 @@ Thank you for your continued support and cooperation.
     const thinkingMsg = document.createElement('div');
     thinkingMsg.className = 'ai-ws-msg bot';
     thinkingMsg.innerHTML = `
-      <div class="ai-ws-avatar">🤖</div>
+      <div class="ai-ws-avatar">≡ƒñû</div>
       <div class="ai-ws-bubble msg-thinking">
-        🔄 Analyzing query...
+        ≡ƒöä Analyzing query...
       </div>
     `;
     chatContainer.appendChild(thinkingMsg);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 
     try {
-      // ── BUILD ROLE-SPECIFIC CONTEXT ──
+      // ΓöÇΓöÇ BUILD ROLE-SPECIFIC CONTEXT ΓöÇΓöÇ
       let context = {};
 
       if (role === 'parent') {
@@ -3998,7 +5052,7 @@ Thank you for your continued support and cooperation.
       const aiData = await aiResponse.json();
       let botResponse = aiData.message || 'I apologize, I couldn\'t process that request. Please try again.';
 
-      // ── PRIVACY GUARDRAIL: Validate AI response for parents ──
+      // ΓöÇΓöÇ PRIVACY GUARDRAIL: Validate AI response for parents ΓöÇΓöÇ
       if (role === 'parent') {
         botResponse = validateParentAIResponse(botResponse);
       }
@@ -4007,7 +5061,7 @@ Thank you for your continued support and cooperation.
 
       const botMsg = document.createElement('div');
       botMsg.className = 'ai-ws-msg bot';
-      botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble"></div>`;
+      botMsg.innerHTML = `<div class="ai-ws-avatar">≡ƒñû</div><div class="ai-ws-bubble"></div>`;
       chatContainer.appendChild(botMsg);
       animateAIResponse(botMsg.querySelector('.ai-ws-bubble'), botResponse);
       chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -4017,7 +5071,7 @@ Thank you for your continued support and cooperation.
       console.error('AI Query Error:', e);
        const errorMsg = document.createElement('div');
        errorMsg.className = 'ai-ws-msg bot';
-       errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️ Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
+       errorMsg.innerHTML = `<div class="ai-ws-avatar">≡ƒñû</div><div class="ai-ws-bubble">ΓÜá∩╕Å Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
        chatContainer.appendChild(errorMsg);
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -4026,9 +5080,9 @@ Thank you for your continued support and cooperation.
   // Initialize RAG on load
   VECTOR_RAG.indexData();
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // THEME & PDF
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   function toggleTheme() {
     const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
     document.body.dataset.theme = newTheme;
@@ -4136,11 +5190,11 @@ Thank you for your continued support and cooperation.
         [],
         ['Metric', 'Value', 'Context'],
         ['Total Cadets', allStudents.length, 'Active Roster'],
-        ['Revenue Potential', `₹${totalPotential}`, 'Gross Capacity'],
-        ['Revenue Realized', `₹${collected}`, 'Liquidity'],
-        ['Revenue Pending', `₹${pending}`, 'Risk Exposure'],
+        ['Revenue Potential', `Γé╣${totalPotential}`, 'Gross Capacity'],
+        ['Revenue Realized', `Γé╣${collected}`, 'Liquidity'],
+        ['Revenue Pending', `Γé╣${pending}`, 'Risk Exposure'],
         ['Collection Rate', `${((collected / totalPotential) * 100).toFixed(1)}%`, 'Operational Efficiency'],
-        ['ARPU', `₹${(collected / allStudents.filter(s => s.status === 'active').length || 1).toFixed(0)}`, 'Yield Per Cadet']
+        ['ARPU', `Γé╣${(collected / allStudents.filter(s => s.status === 'active').length || 1).toFixed(0)}`, 'Yield Per Cadet']
       ];
       const wsDash = XLSX.utils.aoa_to_sheet(dashboardData);
       XLSX.utils.book_append_sheet(wb, wsDash, "Executive Summary");
@@ -4249,9 +5303,9 @@ Thank you for your continued support and cooperation.
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // INIT & EXPOSE
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // Role-based session timeouts (in milliseconds)
   const SESSION_TIMEOUTS = {
     'admin': 15 * 60 * 1000,   // 15 minutes for admin
@@ -4301,9 +5355,9 @@ Thank you for your continued support and cooperation.
      }
    });
 
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   // EXPOSE GLOBALS TO WINDOW
-  // ═══════════════════════════════════════════════════════════════
+  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   window.$ = $;
   window.toast = toast;
   window.apiCall = apiCall;
@@ -4324,6 +5378,20 @@ Thank you for your continued support and cooperation.
   // Helper Functions
   window.getStudentName = getStudentName;
   window.getStudentMonthlyFee = getStudentMonthlyFee;
+  window.deletePaymentRecord = async function(pid, sid) {
+    if (!confirm('Are you sure you want to delete this payment record?')) return;
+    try {
+      const resp = await apiCall(API_BASE + '/payments?id=' + pid, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Delete failed');
+      toast('Payment record deleted', 'success');
+      window.totalPaymentsMap = null;
+      await loadAllData(true);
+      if (sid) viewPaymentHistory(sid);
+    } catch (e) {
+      toast('Failed to delete payment', 'error');
+    }
+  };
+
   window.getStudentPaymentStatus = getStudentPaymentStatus;
   window.getStudentLevel = getStudentLevel;
   window.getStudentRating = getStudentRating;
@@ -4434,11 +5502,11 @@ Thank you for your continued support and cooperation.
 
      if (unread.length > 0) {
        html += `<div style="padding:12px;background:var(--gold-glow);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--gold)">📬 Unread Messages (${unread.length})</div>
+         <div style="font-weight:600;color:var(--gold)">≡ƒô¼ Unread Messages (${unread.length})</div>
          ${unread.slice(0, 5).map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
            <div>
              <div style="font-size:13px;font-weight:500">${escapeHtml(m.subject || 'No Subject')}</div>
-             <div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(m.sender_name || 'User')} • ${new Date(m.created_at).toLocaleDateString()}</div>
+             <div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(m.sender_name || 'User')} ΓÇó ${new Date(m.created_at).toLocaleDateString()}</div>
            </div>
            <button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')" style="padding:2px 8px;font-size:10px">Mark Read</button>
          </div>`).join('')}
@@ -4447,7 +5515,7 @@ Thank you for your continued support and cooperation.
 
      if (due.length > 0) {
        html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--danger)">💰 Due Payments (${due.length})</div>
+         <div style="font-weight:600;color:var(--danger)">≡ƒÆ░ Due Payments (${due.length})</div>
          <div style="font-size:12px;color:var(--ivory-dim)">Students with pending fees</div>
          ${due.slice(0, 5).map(s => `<div style="padding:6px 0;font-size:12px;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div>`).join('')}
        </div>`;
@@ -4455,7 +5523,7 @@ Thank you for your continued support and cooperation.
 
      if (failedLogins.length > 0) {
        html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--danger)">🚫 Failed Logins (${failedLogins.length})</div>
+         <div style="font-weight:600;color:var(--danger)">≡ƒÜ½ Failed Logins (${failedLogins.length})</div>
          ${failedLogins.slice(0, 5).map(l => `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
            <span>${escapeHtml(l.user || 'Unknown')}</span>
            <span style="color:var(--ivory-dim);float:right">${new Date(l.timestamp).toLocaleString('en-IN')}</span>
@@ -4470,7 +5538,7 @@ Thank you for your continued support and cooperation.
     content.innerHTML = `
       <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
         <h3 style="margin:0">System Notifications</h3>
-        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">🗑️ Clear All</button>
+        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">≡ƒùæ∩╕Å Clear All</button>
       </div>
       ${html}
     `;
