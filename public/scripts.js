@@ -1,32 +1,9 @@
-﻿/**
+/**
  * CHESSKIDOO ACADEMY - Complete Admin Panel Scripts
  * Fixed version - Academy Expansion Logic Integrated
  */
 
 (function () {
-
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-  // GLOBAL STATE
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-  let allCoaches = [];
-  let allStudents = [];
-  window.deletePaymentRecord = async function(pid, sid) {
-    if (!confirm('Are you sure you want to delete this payment record? This cannot be undone.')) return;
-    try {
-      await apiCall(`${API_BASE}/payments?id=${pid}`, { method: 'DELETE' });
-      toast('Payment record deleted', 'success');
-      window.totalPaymentsMap = null;
-      await await loadAllData(true); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card"></i> Bulk Pay'; }
-      // Refresh the history modal if it was open
-      if (sid) viewPaymentHistory(sid);
-    } catch (e) {
-      toast('Failed to delete payment', 'error');
-    }
-  };
-
-  let allPayments = [];
-  let allAttendance = [];
-
   'use strict';
 
   // Core Utility - Hoisted for early access
@@ -66,7 +43,7 @@
 
   // Security validation
   if (!SUPABASE_ANON_KEY) {
-    console.error('Γ¥î CRITICAL: Supabase Anon Key is missing!');
+    console.error('❌ CRITICAL: Supabase Anon Key is missing!');
     if (window.location.hostname !== 'localhost') {
       document.body.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px;background:#1a1a1a;color:#fff">
@@ -79,66 +56,11 @@
     }
   }
 
-// ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+// ═══════════════════════════════════════════════════════════════
    // STATE
-   // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
-   
-   
-  
-  window.viewPaymentHistory = function(id) {
-    const s = allStudents.find(x => String(x.id).toLowerCase() === String(id).toLowerCase());
-    if (!s) return;
-    
-    const payments = (allPayments || []).filter(p => String(p.student_id).toLowerCase() === String(id).toLowerCase());
-    payments.sort((a,b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at));
-
-    const tableRows = payments.map(p => {
-      const pId = p.id;
-      const sId = p.student_id;
-      const pDate = new Date(p.payment_date || p.created_at).toLocaleDateString();
-      const pAmt = (parseFloat(p.amount) || 0).toLocaleString();
-      const pMethod = p.payment_method || 'N/A';
-      const pDesc = p.description || '-';
-      
-      return '<tr>' +
-        '<td>' + pDate + '</td>' +
-        '<td>Γé╣' + pAmt + '</td>' +
-        '<td>' + pMethod + '</td>' +
-        '<td style="display:flex; justify-content:space-between; align-items:center">' +
-          '<span>' + pDesc + '</span>' +
-          '<button class="btn btn-outline-ruby btn-xs" onclick="deletePaymentRecord(\'' + pId + '\', \'' + sId + '\')" title="Delete duplicate">' +
-            '<i class="fas fa-trash"></i>' +
-          '</button>' +
-        '</td>' +
-      '</tr>';
-    }).join('');
-
-    const modalContent = 
-      '<div class="modal-header">' +
-        '<h3 class="modal-title">Payment History: ' + getStudentName(s) + '</h3>' +
-        '<button class="close-btn" onclick="closeModals()">&times;</button>' +
-      '</div>' +
-      '<div class="modal-body">' +
-        '<div class="table-responsive">' +
-          '<table class="table">' +
-            '<thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th></tr></thead>' +
-            '<tbody>' + (tableRows || '<tr><td colspan="4" class="text-center">No records found</td></tr>') + '</tbody>' +
-          '</table>' +
-        '</div>' +
-      '</div>';
-    
-    let m = $('history-modal');
-    if (!m) {
-      m = document.createElement('div');
-      m.id = 'history-modal';
-      m.className = 'modal';
-      document.body.appendChild(m);
-    }
-    m.innerHTML = '<div class="modal-content">' + modalContent + '</div>';
-    openModal('history-modal');
-  };
-
-
+   // ═══════════════════════════════════════════════════════════════
+   let allCoaches = [];
+   let allStudents = [];
   // Period Sync Singleton
   function ensureReportPeriod() {
     if (typeof window.reportMonth !== 'number' || isNaN(window.reportMonth)) {
@@ -148,8 +70,8 @@
     }
   }
 
-   
-   
+   let allPayments = [];
+   let allAttendance = [];
 
    // Expose to window for external modules (like reporting.js)
    window.allCoaches = allCoaches;
@@ -163,20 +85,7 @@
    let allRatingHistory = [];
    let allResources = [];
 
-   window.allRatingHistory = allRatingHistory;
-  window.deletePaymentRecord = async function(pid, sid) {
-    if (!confirm('Are you sure you want to delete this payment record? This cannot be undone.')) return;
-    try {
-      await apiCall(API_BASE + '/payments?id=' + pid, { method: 'DELETE' });
-      toast('Payment record deleted', 'success');
-      window.totalPaymentsMap = null;
-      await loadAllData(true);
-      if (sid) viewPaymentHistory(sid);
-    } catch (e) {
-      toast('Failed to delete payment', 'error');
-    }
-  };
- // Also needed for ELO gainers in report
+   window.allRatingHistory = allRatingHistory; // Also needed for ELO gainers in report
 
    window.reportMonth = new Date().getUTCMonth(); // 0-11 (UTC)
    window.reportYear = new Date().getUTCFullYear();
@@ -190,7 +99,7 @@
    let loadingStates = {};
    // Optimized cache for faster dashboard loading
    const CACHE_DURATION = 30000; // 30 seconds cache for better performance
-  // ΓöÇΓöÇ CORE UTILITIES ΓöÇΓöÇ
+  // ── CORE UTILITIES ──
   window.apiCall = async function(endpoint, options = {}) {
     const url = (endpoint.startsWith('http') || endpoint.startsWith(API_BASE)) 
       ? endpoint 
@@ -220,7 +129,7 @@
     el.className = `toast toast-${type}`;
     el.innerHTML = `
       <div class="toast-content">
-        <span class="toast-icon">${type === 'success' ? 'Γ£à' : (type === 'error' ? 'Γ¥î' : 'Γä╣∩╕Å')}</span>
+        <span class="toast-icon">${type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️')}</span>
         <span class="toast-msg">${msg}</span>
       </div>
     `;
@@ -276,7 +185,7 @@
     window.currentStudent = student;
   }
 
-  // ΓöÇΓöÇ Notification Management ΓöÇΓöÇ
+  // ── Notification Management ──
   let shownNotificationIds = JSON.parse(localStorage.getItem('shown_notifications') || '[]');
   let dismissedNotifications = JSON.parse(localStorage.getItem('dismissed_notifications') || '{"messages":[], "payments":[]}');
 
@@ -314,7 +223,7 @@
   }
 
 
-  // ΓöÇΓöÇ NEW ADVANCED LOGIC ΓöÇΓöÇ
+  // ── NEW ADVANCED LOGIC ──
   function setChildTab(tabId, btn) {
     document.querySelectorAll('.child-tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
@@ -336,7 +245,7 @@
     const myRegistrations = eventsData.filter(e => e.registered_students?.includes(currentStudent?.id));
 
     if (upcoming.length === 0) {
-      grid.innerHTML = '<div class="empty-state"><span class="empty-icon">≡ƒôà</span><p>No upcoming events scheduled</p></div>';
+      grid.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No upcoming events scheduled</p></div>';
       return;
     }
 
@@ -354,7 +263,7 @@
            <div class="ev-body">
              <div class="ev-title">${escapeHtml(e.title)}</div>
              <div class="ev-meta">
-               <span class="ev-meta-item ev-time">ΓÅ░ ${escapeHtml(eventTime)}</span>
+               <span class="ev-meta-item ev-time">⏰ ${escapeHtml(eventTime)}</span>
                <span class="ev-meta-item ev-loc">${escapeHtml(e.location || 'TBD')}</span>
                ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${escapeHtml(e.prize_pool)}</span>` : ''}
              </div>
@@ -363,7 +272,7 @@
            </div>
            <div class="ev-footer">
              ${isRegistered ?
-           `<span class="badge badge-success" style="padding:6px 12px">Γ£à Registered</span>` :
+           `<span class="badge badge-success" style="padding:6px 12px">✅ Registered</span>` :
            `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`
          }
            </div>
@@ -429,7 +338,7 @@
        <tr>
          <td>${new Date().toLocaleDateString()}</td>
          <td>Current Month</td>
-         <td>Γé╣${fee}</td>
+         <td>₹${fee}</td>
          <td class="${status === 'Paid' ? 'text-success' : 'text-danger'}" style="font-weight:600">${status}</td>
          <td>
            ${status === 'Due' || status === 'Pending' ?
@@ -459,7 +368,7 @@
            <tr>
              <td>${pDate}</td>
              <td>Payment</td>
-             <td>Γé╣${pAmount}</td>
+             <td>₹${pAmount}</td>
              <td class="${pStatus === 'Paid' ? 'text-success' : 'text-danger'}">${pStatus}</td>
              <td>
                ${pStatus === 'Paid' ?
@@ -475,7 +384,7 @@
     tbody.innerHTML = rows;
   }
 
-  // ΓöÇΓöÇ ADMIN EXPANSION LOGIC ΓöÇΓöÇ
+  // ── ADMIN EXPANSION LOGIC ──
   function openAttendanceMarking() {
     const dateEl = $('att-date');
     if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
@@ -518,10 +427,10 @@
           <td>
             <select class="att-status" data-sid="${s.id}" onchange="updateAttStats()">
               <option value="" ${!status ? 'selected' : ''}>-- Select --</option>
-              <option value="present" ${status === 'present' ? 'selected' : ''}>Γ£à Present</option>
-              <option value="absent" ${status === 'absent' ? 'selected' : ''}>Γ¥î Absent</option>
-              <option value="late" ${status === 'late' ? 'selected' : ''}>ΓÅ░ Late</option>
-              <option value="excused" ${status === 'excused' ? 'selected' : ''}>≡ƒôï Excused</option>
+              <option value="present" ${status === 'present' ? 'selected' : ''}>✅ Present</option>
+              <option value="absent" ${status === 'absent' ? 'selected' : ''}>❌ Absent</option>
+              <option value="late" ${status === 'late' ? 'selected' : ''}>⏰ Late</option>
+              <option value="excused" ${status === 'excused' ? 'selected' : ''}>📋 Excused</option>
             </select>
           </td>
           <td><input type="text" class="att-notes" data-sid="${s.id}" placeholder="Add note..." value="${notes}"></td>
@@ -546,10 +455,10 @@
     const statsEl = document.getElementById('att-stats');
     if (statsEl) {
       statsEl.innerHTML = `
-        <span style="color:var(--success)">Γ£à ${present}</span> |
-        <span style="color:var(--danger)">Γ¥î ${absent}</span> |
-        <span style="color:var(--gold)">ΓÅ░ ${late}</span> |
-        <span style="color:var(--ivory3)">≡ƒôï ${excused}</span> |
+        <span style="color:var(--success)">✅ ${present}</span> |
+        <span style="color:var(--danger)">❌ ${absent}</span> |
+        <span style="color:var(--gold)">⏰ ${late}</span> |
+        <span style="color:var(--ivory3)">📋 ${excused}</span> |
         <span style="color:var(--ivory3)"> unmarked: ${unmarked}</span>
       `;
     }
@@ -648,7 +557,7 @@
     const baselineDate = new Date(2026, 3, 1); // Global System Baseline (April 1st, 2026)
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
 
-    // FIX #5: Always rebuild ΓÇö never trust a cached map for financial calculations
+    // FIX #5: Always rebuild — never trust a cached map for financial calculations
     const freshPaymentsMap = {};
     (allPayments || []).forEach(p => {
       if (p.status === 'paid') {
@@ -711,13 +620,13 @@ Thank you for your cooperation.
 
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
-    let msg = `Γ£à *CHESSKIDOO ACADEMY - FEE AUDIT REPORT*
+    let msg = `✅ *CHESSKIDOO ACADEMY - FEE AUDIT REPORT*
 
 `;
     msg += `Hello Coach ${cleanText(getCoachName(c))},
 
 `;
-    msg += `≡ƒôó The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:
+    msg += `📢 The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:
 
 `;
 
@@ -978,6 +887,7 @@ Thank you.
     const baselineDate = new Date(Date.UTC(2026, 3, 1));
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baselineDate;
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
+    
     if (enrollDate > targetMonthEnd) return 'Not Enrolled';
 
     // 2. Cumulative Paid Amount Audit
@@ -995,7 +905,9 @@ Thank you.
     const monthsRequired = Math.max(0, ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth())) + 1;
     const totalRequiredAmount = monthsRequired * fee;
 
-        // 3. Status Determination (Strict Audit-Only for 100% Data Integrity)
+    // 3. Status Determination (Strict Audit-Only for 100% Data Integrity)
+    // Audit-based Standing
+    // 3. Status Determination (Strict Audit-Only for 100% Data Integrity)
     // Audit-based Standing
     let status = 'Due';
     if (totalPaidAmount >= totalRequiredAmount) status = 'Paid';
@@ -1142,9 +1054,9 @@ Thank you.
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Student')}&background=dca33e&color=000000&bold=true&size=80`;
   }
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // DATA LOADING
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
    let isLoadingData = false;
    async function loadAllData(forceRefresh = false) {
      if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
@@ -1254,24 +1166,21 @@ Thank you.
          allMessages = dedupeArray(extractData(messages), 'id');
          allAttendance = extractData(attendance);
 
-                   const seenPayKeys = new Set();
-          const fuzzyKeys = new Set();
-          const dedupedPayments = extractData(payments).filter(p => {
-            const idKey = (p.transaction_id || p.id || '').toString().trim();
-            if (!idKey || seenPayKeys.has(idKey)) return false;
-            seenPayKeys.add(idKey);
-            
-            // Fuzzy dedupe for identical payments on the same day (prevents duplicate clicks)
-            const amt = (parseFloat(p.amount) || 0);
-            const pDate = new Date(p.payment_date || p.created_at);
-            const fuzzyKey = `${p.student_id}_${amt}_${pDate.getUTCFullYear()}_${pDate.getUTCMonth()}_${pDate.getUTCDate()}`;
-            if (fuzzyKeys.has(fuzzyKey)) {
-               console.warn('[Sync] Skipping potential duplicate payment:', fuzzyKey);
-               return false;
-            }
-            fuzzyKeys.add(fuzzyKey);
-            return true;
-          });
+         const seenPayKeys = new Set();
+         const fuzzyKeys = new Set();
+         const dedupedPayments = (extractData(payments) || []).filter(p => {
+           const idKey = (p.transaction_id || p.id || '').toString().trim();
+           if (!idKey || seenPayKeys.has(idKey)) return false;
+           seenPayKeys.add(idKey);
+           
+           // Fuzzy dedupe for identical payments on the same day (prevents duplicate clicks)
+           const amt = (parseFloat(p.amount) || 0);
+           const pDate = new Date(p.payment_date || p.created_at);
+           const fKey = p.student_id + "_" + amt + "_" + pDate.getUTCFullYear() + "_" + pDate.getUTCMonth() + "_" + pDate.getUTCDate();
+           if (fuzzyKeys.has(fKey)) return false;
+           fuzzyKeys.add(fKey);
+           return true;
+         });
 
          allPayments = dedupedPayments.map(p => ({
            ...p,
@@ -1356,11 +1265,11 @@ Thank you.
       modal.style.zIndex = '9999';
       modal.innerHTML = `
         <div class="modal-box" style="max-width:400px; text-align:center; border:2px solid var(--gold); background:var(--bg2)">
-          <h2 style="color:var(--gold); margin-bottom:15px; font-family:var(--font-head)">≡ƒåò New Billing Month!</h2>
+          <h2 style="color:var(--gold); margin-bottom:15px; font-family:var(--font-head)">🆕 New Billing Month!</h2>
           <p style="color:var(--ivory-dim); margin-bottom:25px; font-size:14px">It's a new month. The system has automatically updated student statuses. Would you like to inform all coaches about their student due lists now?</p>
           <div style="display:flex; gap:10px">
             <button class="btn btn-outline" style="flex:1" onclick="localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">Later</button>
-            <button class="btn btn-gold" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">≡ƒôó Inform Coaches</button>
+            <button class="btn btn-gold" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">📢 Inform Coaches</button>
           </div>
         </div>
       `;
@@ -1428,7 +1337,7 @@ Thank you.
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
           const msg = payload.new;
           if (msg.receiver_type === 'admin' && shouldShowNotification('msg_' + msg.id)) {
-             toast(`≡ƒô¼ New Message from ${msg.sender_name || 'User'}!`, 'info');
+             toast(`📬 New Message from ${msg.sender_name || 'User'}!`, 'info');
              debouncedRefresh();
           }
         })
@@ -1460,7 +1369,7 @@ Thank you.
           const newCount = newMsgs.length - lastMsgCount;
           const latest = newMsgs[0];
           if (latest && shouldShowNotification('msg_' + latest.id)) {
-            toast(`≡ƒô¼ ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
+            toast(`📬 ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
           }
           lastMsgCount = newMsgs.length;
           allMessages = newMsgs;
@@ -1483,7 +1392,7 @@ Thank you.
 
         if (dedupedStuds.length > lastStudCount) {
           if (shouldShowNotification('new_student_' + dedupedStuds.length)) {
-            toast('≡ƒÄô New student enrolled!', 'success');
+            toast('🎓 New student enrolled!', 'success');
           }
           logAudit('students', 'new', null, { count: dedupedStuds.length });
           lastStudCount = dedupedStuds.length;
@@ -1499,7 +1408,7 @@ Thank you.
             const latest = failedLogins[0];
             if (latest && shouldShowNotification('fail_' + (latest.id || latest.timestamp || latest.created_at))) {
               const time = new Date(latest.created_at || latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`≡ƒÜ½ Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
+              toast(`🚫 Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
             }
           }
         } catch (e) {
@@ -1510,7 +1419,7 @@ Thank you.
             const latest = localFailed[localFailed.length - 1];
             if (latest && shouldShowNotification('fail_local_' + latest.timestamp)) {
               const time = new Date(latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`≡ƒÜ½ Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
+              toast(`🚫 Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
             }
           }
         }
@@ -1524,7 +1433,7 @@ Thank you.
 
         if (due.length > lastDueCount && lastDueCount > 0) {
           const newDue = due.length - lastDueCount;
-          toast(`≡ƒÆ░ ${newDue} new payment${newDue > 1 ? 's' : ''} now Due!`, 'warning');
+          toast(`💰 ${newDue} new payment${newDue > 1 ? 's' : ''} now Due!`, 'warning');
         }
         lastDueCount = due.length;
 
@@ -1546,9 +1455,9 @@ Thank you.
     updateNotificationBadge();
   }
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // NAVIGATION
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   function toggleSidebar() {
     const sidebar = $('sidebar');
     const overlay = $('sidebar-overlay');
@@ -1604,12 +1513,12 @@ Thank you.
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             <input type="month" id="report-period" class="selector-minimal" onchange="updateReportContext()" value="${periodValue}">
           </div>
-          <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">≡ƒôä Financial Report</button>
-          <button class="btn btn-gold" onclick="exportAcademyData()">≡ƒôÑ Export Academy Data</button>
+          <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">📄 Financial Report</button>
+          <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
         `;
         }
         if (p === 'stud') btnArea.innerHTML = `
-          <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">≡ƒùô∩╕Å Batch Attendance</button>
+          <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">🗓️ Batch Attendance</button>
           <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
         `;
         if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEventModal()">+ Create Event</button>`;
@@ -1662,9 +1571,9 @@ Thank you.
     window.setReportPeriod(parts[0], parseInt(parts[1]) - 1);
   };
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // AUTHENTICATION
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   function toggleEye() {
     const p = $('li-pass');
     const btn = $('eye-btn');
@@ -1691,7 +1600,7 @@ Thank you.
       initRealtimeNotifications();
     }
     if (userRole === 'parent') {
-      toast(`≡ƒæñ ${displayName} logged in`, 'info');
+      toast(`👤 ${displayName} logged in`, 'info');
     }
     const loginScreen = $('login-screen');
     if (loginScreen) loginScreen.style.display = 'none';
@@ -1853,13 +1762,13 @@ Thank you.
         let html = '';
         if (currentUserActive) {
           html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
-            <span><span style="color:var(--emerald)">ΓùÅ</span> ${currentUser} <span style="color:var(--gold)">(You)</span></span>
+            <span><span style="color:var(--emerald)">●</span> ${currentUser} <span style="color:var(--gold)">(You)</span></span>
             <span style="color:var(--ivory-dim);font-size:11px">${formatTimeAgo(currentUserActive.loginAt)}</span>
           </div>`;
         }
         others.forEach(s => {
           html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
-            <span><span style="color:var(--emerald)">ΓùÅ</span> ${s.user} <span class="badge badge-level" style="font-size:9px;margin-left:4px">${s.role}</span></span>
+            <span><span style="color:var(--emerald)">●</span> ${s.user} <span class="badge badge-level" style="font-size:9px;margin-left:4px">${s.role}</span></span>
             <span style="color:var(--ivory-dim);font-size:11px">${formatTimeAgo(s.loginAt)}</span>
           </div>`;
         });
@@ -1884,7 +1793,7 @@ Thank you.
         uniqueSessions.forEach(s => {
           const loginTime = new Date(s.loginAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
           const status = s.active
-            ? '<span style="color:var(--emerald)">ΓùÅ Active</span>'
+            ? '<span style="color:var(--emerald)">● Active</span>'
             : s.logoutAt
               ? '<span style="color:var(--ivory-dim)">Logged out</span>'
               : '<span style="color:var(--danger)">Session ended</span>';
@@ -1932,9 +1841,9 @@ Thank you.
     }
   }
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // CHARTS & DASHBOARD
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   function formatTimeAgo(dateStr) {
     const now = new Date();
     const date = new Date(dateStr);
@@ -2126,7 +2035,7 @@ Thank you.
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-    // 1. Target Dataset Preparation ΓÇö cumulative paid amount from effective enrollment through target month
+    // 1. Target Dataset Preparation — cumulative paid amount from effective enrollment through target month
     const s_id_map = {};
     (allPayments || []).forEach(p => {
       if (p.status === 'paid') {
@@ -2222,7 +2131,7 @@ Thank you.
       $('s-rate').textContent = collectionRate + '%';
       if (rawRate > 100) {
         $('s-rate').style.color = 'var(--gold)';
-        $('s-rate').title = `Actual collected: Γé╣${paidRevenue.toLocaleString()} (includes arrears)`;
+        $('s-rate').title = `Actual collected: ₹${paidRevenue.toLocaleString()} (includes arrears)`;
       } else {
         $('s-rate').style.color = 'var(--blue)';
         $('s-rate').title = '';
@@ -2235,31 +2144,31 @@ Thank you.
       : (paidRevenue > 0 ? '100' : '0');
 
     // Update UI
-    if ($('s-rev')) $('s-rev').textContent = 'Γé╣' + paidRevenue.toLocaleString();
-    if ($('s-total-revenue')) $('s-total-revenue').textContent = 'Γé╣' + totalPotential.toLocaleString();
+    if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
+    if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
 
     const growthEl = $('s-due');
     if (growthEl) {
       if (prevRevenue > 0) {
-        growthEl.innerHTML = `Γé╣${revenueGrowth.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)</span>`;
+        growthEl.innerHTML = `₹${revenueGrowth.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)</span>`;
         growthEl.style.color = revenueGrowth > 0 ? 'var(--emerald)' : (revenueGrowth < 0 ? 'var(--ruby)' : 'var(--ivory-dim)');
       } else {
-        growthEl.innerHTML = `Γé╣${paidRevenue.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(vs prev: Γé╣0)</span>`;
+        growthEl.innerHTML = `₹${paidRevenue.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(vs prev: ₹0)</span>`;
         growthEl.style.color = 'var(--ivory-dim)';
       }
     }
 
-    if ($('s-last-due')) $('s-last-due').textContent = 'Γé╣' + totalArrears.toLocaleString();
-    if ($('s-curr-pending')) $('s-curr-pending').textContent = 'Γé╣' + currMonthPending.toLocaleString();
-    if ($('s-total-outstanding')) $('s-total-outstanding').textContent = 'Γé╣' + totalOutstanding.toLocaleString();
+    if ($('s-last-due')) $('s-last-due').textContent = '₹' + totalArrears.toLocaleString();
+    if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currMonthPending.toLocaleString();
+    if ($('s-total-outstanding')) $('s-total-outstanding').textContent = '₹' + totalOutstanding.toLocaleString();
 
     // Coach expenses & Net Profit
     const totalCoachCost = allCoaches.filter(c => c.status !== 'archived').reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
-    if ($('s-total-cost')) $('s-total-cost').textContent = 'Γé╣' + totalCoachCost.toLocaleString();
+    if ($('s-total-cost')) $('s-total-cost').textContent = '₹' + totalCoachCost.toLocaleString();
     
     const netProfit = paidRevenue - totalCoachCost;
     if ($('s-profit')) {
-      $('s-profit').textContent = 'Γé╣' + netProfit.toLocaleString();
+      $('s-profit').textContent = '₹' + netProfit.toLocaleString();
       $('s-profit').style.color = netProfit >= 0 ? 'var(--emerald)' : 'var(--ruby)';
     }
 
@@ -2368,20 +2277,20 @@ Thank you.
       return `<tr>
         <td><b>${d.name}</b></td>
         <td>${d.students}</td>
-        <td>Γé╣${d.revenue.toLocaleString()}</td>
-        <td>Γé╣${d.pending.toLocaleString()}</td>
-        <td>Γé╣${d.cost.toLocaleString()}</td>
-        <td class="${profitClass}">Γé╣${netProfit.toLocaleString()}</td>
-        <td class="${potentialProfitClass}">Γé╣${potentialNetProfit.toLocaleString()}</td>
+        <td>₹${d.revenue.toLocaleString()}</td>
+        <td>₹${d.pending.toLocaleString()}</td>
+        <td>₹${d.cost.toLocaleString()}</td>
+        <td class="${profitClass}">₹${netProfit.toLocaleString()}</td>
+        <td class="${potentialProfitClass}">₹${potentialNetProfit.toLocaleString()}</td>
         <td>${roi}% / <span class="text-gold">${potentialRoi}%</span></td>
-        <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">≡ƒôó Inform</button></td>
+        <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">📢 Inform</button></td>
       </tr>`;
     }).join('');
   }
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // STUDENTS, COACHES, EVENTS, ACHIEVEMENTS
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   function clearFilters() {
     ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search', 'f-bill-month-stud'].forEach(id => { const el = $(id); if (el) el.value = ''; });
     resetStudMonth();
@@ -2408,9 +2317,9 @@ Thank you.
   };
 
    function renderStudents() {
-      try {
-      const tbody = $('student-registry-body');
-      if (!tbody) return;
+     const tbody = $('student-tbody');
+     if (!tbody) return;
+     try {
       ensureReportPeriod();
       const targetMonth = window.reportMonth;
       const targetYear = window.reportYear;
@@ -2477,8 +2386,8 @@ Thank you.
 
            const pInfo = paymentsOfMonth[String(s.id).toLowerCase()];
            const paidThisMonthHtml = pInfo
-             ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">Γé╣${pInfo.total.toLocaleString()} (${pInfo.count})</span>`
-             : '<span class="text-muted">Γé╣0</span>';
+             ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>`
+             : '<span class="text-muted">₹0</span>';
 
             // Primary action buttons (always visible)
             let primaryActions = '';
@@ -2490,13 +2399,13 @@ Thank you.
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                   <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
-                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒöü Mark Unpaid</button>
+                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
                   </div>
                 `;
                moreActions = `
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">ΓÅ│ History</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">≡ƒôä Receipt</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">≡ƒÆ¼ WhatsApp</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
              } else if (status === 'Pending' || status === 'Due') {
                 primaryActions = `
@@ -2504,16 +2413,16 @@ Thank you.
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                   <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
-                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒôó Inform</button>
+                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
                   </div>
                 `;
                moreActions = `
-                 <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒÆ│ Pay Now</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">ΓÅ│ History</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">≡ƒÆ¼ WhatsApp</button>
+                 <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
              } else {
-              primaryActions = `<span style="color:var(--ivory-dim);font-size:11px">ΓÇö</span>`;
+              primaryActions = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
               moreActions = '';
             }
 
@@ -2526,14 +2435,14 @@ Thank you.
               <td>${getStudentDate(s) || '-'}</td>
               <td>${session}</td>
               <td>${time}</td>
-              <td>Γé╣${getStudentMonthlyFee(s).toLocaleString()}</td>
+              <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
               <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
               <td>${paidThisMonthHtml}</td>
                <td style="overflow-x:auto;white-space:nowrap">
                   <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;min-width:0">
                    ${primaryActions}
                    ${moreActions ? `
-                     <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">Γï« More</button>
+                     <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
                      <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:160px;box-shadow:var(--shadow);margin-top:4px">
                        ${moreActions}
                      </div>
@@ -2586,7 +2495,7 @@ Thank you.
       $('sv-batch').textContent = time ? `${mode} (${time})` : mode;
     }
 
-    if ($('sv-fee')) $('sv-fee').textContent = 'Γé╣' + getStudentMonthlyFee(s).toLocaleString();
+    if ($('sv-fee')) $('sv-fee').textContent = '₹' + getStudentMonthlyFee(s).toLocaleString();
 
     const statusEl = $('sv-status');
     if (statusEl) {
@@ -2842,7 +2751,7 @@ Thank you.
     if (!grid) return;
 
     if (!allCoaches || allCoaches.length === 0) {
-      grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="empty-icon">≡ƒæ¿ΓÇì≡ƒÅ½</span><p>No coaches found in the academy</p></div>';
+      grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="empty-icon">👨‍🏫</span><p>No coaches found in the academy</p></div>';
       return;
     }
 
@@ -2872,7 +2781,7 @@ Thank you.
              </div>
              <div class="coach-stat">
                <span class="coach-stat-label">Salary</span>
-               <span class="coach-stat-val">Γé╣${(getCoachSalary(c) || 0).toLocaleString()}</span>
+               <span class="coach-stat-val">₹${(getCoachSalary(c) || 0).toLocaleString()}</span>
              </div>
              <div class="coach-stat">
                <span class="coach-stat-label">Status</span>
@@ -2880,12 +2789,12 @@ Thank you.
              </div>
            </div>
            <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr; gap: 8px;">
-             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">≡ƒæü∩╕Å View</button>
-             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">Γ£Å∩╕Å Edit</button>
-             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">≡ƒôó Inform</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️ Edit</button>
+             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
              <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${escapeHtml(getCoachName(c)).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
            </div>
-           <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">≡ƒôà View Schedule</button>
+           <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
          </div>
        `;
     }).join('');
@@ -2926,7 +2835,7 @@ Thank you.
     if (!container) { openModal('coach-schedule-modal'); return; }
 
     if (assignedStudents.length === 0) {
-      container.innerHTML = '<div class="empty-state"><span class="empty-icon">≡ƒôà</span><p>No students assigned to this coach</p></div>';
+      container.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No students assigned to this coach</p></div>';
     } else {
       // Group by Day
       const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -3094,7 +3003,7 @@ Thank you.
 
     if (!visibleEvents || visibleEvents.length === 0) {
       gridEl.style.display = 'grid';
-      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">≡ƒôà</span><p>No events scheduled</p></div>';
+      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">📅</span><p>No events scheduled</p></div>';
       return;
     }
 
@@ -3120,7 +3029,7 @@ Thank you.
              <span class="ev-meta-item ev-loc">${escapeHtml(e.location || 'TBD')}</span>
              ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${escapeHtml(e.prize_pool)}</span>` : ''}
            </div>
-           ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">≡ƒôì View on Map</a>` : ''}
+           ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">📍 View on Map</a>` : ''}
            ${e.description ? `<div class="ev-desc">${escapeHtml(e.description)}</div>` : ''}
          </div>
          <div class="ev-progress-wrap">
@@ -3134,7 +3043,7 @@ Thank you.
          </div>
          <div class="ev-footer">
            <div class="ev-spots"><strong>${spotsLeft}</strong> spots left</div>
-           ${role === 'parent' ? (e.registered_students?.includes(currentStudent?.id) ? '<span class="badge badge-success">Γ£ô Registered</span>' : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`) : ''}
+           ${role === 'parent' ? (e.registered_students?.includes(currentStudent?.id) ? '<span class="badge badge-success">✓ Registered</span>' : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`) : ''}
            ${isAdmin ? `
              <div style="display:flex;gap:8px;margin-left:auto">
                <button class="btn btn-outline-grey btn-sm" onclick="editEvent('${e.id}')">Edit</button>
@@ -3280,7 +3189,7 @@ Thank you.
     gridEl.style.display = 'grid';
 
     if (!achievementsData || achievementsData.length === 0) {
-      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">≡ƒÅå</span><p>No achievements recorded yet</p></div>';
+      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">🏆</span><p>No achievements recorded yet</p></div>';
       return;
     }
 
@@ -3290,7 +3199,7 @@ Thank you.
        const studentName = student ? getStudentName(student) : 'Unknown Student';
        return `
          <div class="ach-card">
-           ${a.img_url ? `<img src="${a.img_url}" class="ach-img" alt="Achievement">` : '<div class="ach-img-placeholder">≡ƒÅå</div>'}
+           ${a.img_url ? `<img src="${a.img_url}" class="ach-img" alt="Achievement">` : '<div class="ach-img-placeholder">🏆</div>'}
            <div class="ach-body">
              <div class="ach-title">${escapeHtml(a.title)}</div>
              <div class="ach-student">${escapeHtml(studentName)}</div>
@@ -3457,7 +3366,7 @@ Thank you.
       const coachName = coach ? getCoachName(coach) : 'N/A';
       const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(getStudentName(s))}&amount=${amt}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
 
-      const message = `Γ£à Hello Sir/Madam,
+      const message = `✅ Hello Sir/Madam,
 
 This is to inform you about the chess class fee payment you have completed for ${cleanText(getStudentName(s))} (INR ${amt.toLocaleString()}).
 
@@ -3513,7 +3422,7 @@ Thank you for your continued support and cooperation.
 
      // Populate modal
      $('inform-student-name').textContent = name;
-     $('inform-amount').textContent = `Γé╣${totalDue.toLocaleString()}`;
+     $('inform-amount').textContent = `₹${totalDue.toLocaleString()}`;
      $('inform-custom-msg').value = '';
 
      // Store student ID in modal data attribute
@@ -3563,9 +3472,9 @@ Thank you for your continued support and cooperation.
      let message = customMsg ? `${customMsg}\n\n` : '';
       message += `Hello Sir/Madam,\n\n`;
       message += `This is a gentle reminder regarding the chess class fee for your child ${studentName}.\n\n`;
-      message += `The amount of Γé╣${totalDue.toLocaleString()} is currently pending. We kindly request you to complete the payment at the earliest to continue uninterrupted access to classes.\n\n`;
+      message += `The amount of ₹${totalDue.toLocaleString()} is currently pending. We kindly request you to complete the payment at the earliest to continue uninterrupted access to classes.\n\n`;
       message += `Thank you for your cooperation.\n`;
-      message += `ΓÇô Chesskidoo Academy`;
+      message += `– Chesskidoo Academy`;
 
      try {
        let sent = false;
@@ -3708,7 +3617,7 @@ Thank you for your continued support and cooperation.
     const nameEl = $('p-history-name');
     if (nameEl) nameEl.textContent = getStudentName(s);
     const metaEl = $('p-history-meta');
-    if (metaEl) metaEl.textContent = `ID: ${String(s.id).slice(0, 8)} ΓÇó Monthly Fee: Γé╣${getStudentMonthlyFee(s).toLocaleString()}`;
+    if (metaEl) metaEl.textContent = `ID: ${String(s.id).slice(0, 8)} • Monthly Fee: ₹${getStudentMonthlyFee(s).toLocaleString()}`;
 
     openModal('payment-history-modal');
 
@@ -3727,13 +3636,13 @@ Thank you for your continued support and cooperation.
      body.innerHTML = myPayments.map(p => `
        <tr>
          <td>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
-         <td style="color:var(--success);font-weight:600">Γé╣${(p.amount || 0).toLocaleString()}</td>
+         <td style="color:var(--success);font-weight:600">₹${(p.amount || 0).toLocaleString()}</td>
          <td>${escapeHtml(p.payment_method || 'Cash')}</td>
          <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || 'N/A'}</td>
          <td>
            <div style="display:flex;gap:5px">
-             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">≡ƒôä</button>
-             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">≡ƒùæ∩╕Å</button>
+             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">📄</button>
+             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
            </div>
          </td>
        </tr>
@@ -3847,13 +3756,13 @@ Thank you for your continued support and cooperation.
           <div style="font-weight:600;color:var(--ivory)">${escapeHtml(getCoachName(c))}</div>
         </td>
         <td><div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(getCoachSpecialty(c))}</div></td>
-        <td style="font-weight:600;color:var(--gold)">Γé╣${salary.toLocaleString()}</td>
+        <td style="font-weight:600;color:var(--gold)">₹${salary.toLocaleString()}</td>
         <td><span class="badge ${status === 'Paid' ? 'badge-success' : 'badge-warning'}" style="font-size:10px;padding:4px 8px">${status}</span></td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             ${status === 'Pending' ?
-          `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">Γ£à Mark Paid</button>` :
-          `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">Γ¥î Mark Unpaid</button>`}
+          `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">✅ Mark Paid</button>` :
+          `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">❌ Mark Unpaid</button>`}
           </div>
         </td>
       </tr>`;
@@ -3865,7 +3774,7 @@ Thank you for your continued support and cooperation.
      // FIX #15: Only trigger renderBills if the bills page DOM is present
      const billBody = document.getElementById('bill-body');
      if (!billBody) {
-       // Page not active ΓÇö just update the global context
+       // Page not active — just update the global context
        const parts = val.split('-');
        if (parts.length >= 2) {
          window.reportYear = parseInt(parts[0]);
@@ -3941,9 +3850,9 @@ Thank you for your continued support and cooperation.
           <td>-</td>
           <td>-</td>
           <td>-</td>
-          <td style="font-weight:600;color:var(--gold)">Γé╣${getStudentMonthlyFee(s).toLocaleString()}</td>
+          <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
           <td><span class="badge badge-outline-grey" style="font-size:10px;padding:4px 8px">Not Enrolled</span></td>
-          <td><span style="color:var(--ivory-dim);font-size:11px">ΓÇö</span></td>
+          <td><span style="color:var(--ivory-dim);font-size:11px">—</span></td>
         </tr>`;
       }
 
@@ -3966,19 +3875,19 @@ Thank you for your continued support and cooperation.
         let actionButtons = '';
         if (status === 'Paid') {
           actionButtons = `
-            <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">≡ƒôä Receipt</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">ΓÅ│ History</button>
-            <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒöü Mark Unpaid</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+            <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
           `;
         } else if (status === 'Pending' || status === 'Due') {
           actionButtons = `
-            <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒÆ│ Pay Now</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">ΓÅ│ History</button>
-            <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">≡ƒôó Inform</button>
-            <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">Γ£à Mark Paid</button>
+            <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+            <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
+            <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
           `;
         } else {
-         actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">ΓÇö</span>`;
+         actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
        }
 
       return `<tr>
@@ -3990,7 +3899,7 @@ Thank you for your continued support and cooperation.
         <td><div style="font-size:12px;color:var(--ivory)">${escapeHtml(coachName)}</div></td>
         <td><div style="font-size:12px;color:var(--ivory-dim)">${escapeHtml(sessionType)}</div></td>
         <td><div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(scheduleTime)}</div></td>
-        <td style="font-weight:600;color:var(--gold)">Γé╣${getStudentMonthlyFee(s).toLocaleString()}</td>
+        <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
         <td><span class="badge ${statusClass}" style="font-size:10px;padding:4px 8px">${status}</span></td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
@@ -4006,16 +3915,21 @@ Thank you for your continued support and cooperation.
   };
 
   async function bulkMarkPaid() {
-    const btn = document.querySelector('button[onclick="bulkMarkPaid()"]');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; }
     const checked = document.querySelectorAll('.stud-check:checked');
     if (checked.length === 0) {
       toast('Please select students first', 'warning');
       return;
     }
     if (!confirm(`Mark ${checked.length} students as Paid?`)) return;
-    
-    toast(`Processing ${checked.length} students sequentially to ensure reliability...`, 'info');
+
+    const btn = document.querySelector('button[onclick="bulkMarkPaid()"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    }
+
+    try {
+      toast(`Processing ${checked.length} students sequentially...`, 'info');
     
     let successCount = 0; let failCount = 0; let skipCount = 0;
     const studentList = Array.from(checked);
@@ -4078,7 +3992,16 @@ Thank you for your continued support and cooperation.
     
     toast(msg, failCount > 0 ? 'warning' : 'success');
     window.totalPaymentsMap = null;
-    loadAllData(true);
+    await loadAllData(true);
+    } catch (err) {
+      console.error('Critical bulk pay failure:', err);
+      toast('Operation failed. Please try again.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-credit-card"></i> Bulk Pay';
+      }
+    }
   }
 
   window.bulkDeleteStudents = async function () {
@@ -4120,7 +4043,7 @@ Thank you for your continued support and cooperation.
     currentPayAmt = finalFee;
 
     if (nameEl) nameEl.textContent = name;
-    if (feeEl) feeEl.textContent = `Γé╣${finalFee.toLocaleString()}`;
+    if (feeEl) feeEl.textContent = `₹${finalFee.toLocaleString()}`;
 
     // Reset payment modal view
     if ($('pay-options')) $('pay-options').style.display = 'block';
@@ -4187,9 +4110,9 @@ Thank you for your continued support and cooperation.
   function showReceiptPreview() { openModal('receipt-preview-modal'); }
   function printReceipt() { window.print(); }
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // MESSAGES
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   async function renderMsgs() {
     const listEl = $('msgs-list');
     const loadingEl = $('msgs-loading');
@@ -4199,7 +4122,7 @@ Thank you for your continued support and cooperation.
 
     if (!allMessages || allMessages.length === 0) {
       listEl.style.display = 'grid';
-      listEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">≡ƒÆ¼</span><p>No messages yet</p></div>';
+      listEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">💬</span><p>No messages yet</p></div>';
       return;
     }
 
@@ -4216,8 +4139,8 @@ Thank you for your continued support and cooperation.
          <div class="msg-card-subject">${escapeHtml(m.subject || 'No Subject')}</div>
          <div class="msg-card-body">${escapeHtml(m.message || '')}</div>
          <div class="msg-card-actions">
-           ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')">Γ£ô Mark Read</button>` : ''}
-           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${m.id}')">≡ƒùæ∩╕Å Delete</button>
+           ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')">✓ Mark Read</button>` : ''}
+           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${m.id}')">🗑️ Delete</button>
          </div>
        </div>
      `).join('');
@@ -4231,9 +4154,9 @@ Thank you for your continued support and cooperation.
     loadAllData(true);
   }
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // PARENT VIEW
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   function renderChild() {
     const loadingEl = $('child-loading');
     const contentEl = $('child-content');
@@ -4307,13 +4230,13 @@ Thank you for your continued support and cooperation.
     const myAchs = achievementsData.filter(a => String(a.student_id) === String(currentStudent.id));
 
     if (myAchs.length === 0) {
-      achGrid.innerHTML = '<div class="empty-state"><span class="empty-icon">≡ƒÅå</span><p>No achievements yet. Keep practicing!</p></div>';
+      achGrid.innerHTML = '<div class="empty-state"><span class="empty-icon">🏆</span><p>No achievements yet. Keep practicing!</p></div>';
       return;
     }
 
      achGrid.innerHTML = myAchs.slice(0, 6).map(a => `
        <div class="ach-card">
-         ${a.img_url ? `<img src="${escapeHtml(a.img_url)}" alt="${escapeHtml(a.title)}">` : '<div class="ach-icon">≡ƒÅå</div>'}
+         ${a.img_url ? `<img src="${escapeHtml(a.img_url)}" alt="${escapeHtml(a.title)}">` : '<div class="ach-icon">🏆</div>'}
          <div class="ach-info">
            <div class="ach-title">${escapeHtml(a.title)}</div>
            <div class="ach-date">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
@@ -4378,12 +4301,12 @@ Thank you for your continued support and cooperation.
     }
   }
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // AI & CHAT
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   let currentAIModule = 'global';
 
-  // ΓöÇΓöÇ PRIVACY GUARDRAILS FOR PARENT AI ΓöÇΓöÇ
+  // ── PRIVACY GUARDRAILS FOR PARENT AI ──
   const BLOCKED_PATTERNS = [
     /total revenue/i, /academy revenue/i, /monthly revenue/i, /salary/i, /total profit/i, /academy income/i,
     /other student/i, /other parent/i, /coach.*salary/i,
@@ -4501,10 +4424,10 @@ Thank you for your continued support and cooperation.
     buttons.forEach(btn => btn.classList.remove('active'));
 
     const moduleConfig = {
-      global: { title: 'Global Insights', icon: 'ΓÜí', btnIndex: 0, roles: ['admin', 'master'] },
-      finance: { title: 'Financial Analysis', icon: '≡ƒÆ░', btnIndex: 1, roles: ['admin', 'master'] },
-      coach: { title: 'Coach Performance', icon: '≡ƒºæΓÇì≡ƒÅ½', btnIndex: 2, roles: ['admin', 'master'] },
-      parent: { title: 'My Child Progress', icon: '≡ƒæ╢', btnIndex: 3, roles: ['parent'] }
+      global: { title: 'Global Insights', icon: '⚡', btnIndex: 0, roles: ['admin', 'master'] },
+      finance: { title: 'Financial Analysis', icon: '💰', btnIndex: 1, roles: ['admin', 'master'] },
+      coach: { title: 'Coach Performance', icon: '🧑‍🏫', btnIndex: 2, roles: ['admin', 'master'] },
+      parent: { title: 'My Child Progress', icon: '👶', btnIndex: 3, roles: ['parent'] }
     };
 
     const config = moduleConfig[m];
@@ -4537,7 +4460,7 @@ Thank you for your continued support and cooperation.
       const welcomeMsg = document.createElement('div');
       welcomeMsg.className = 'ai-ws-msg bot';
       welcomeMsg.innerHTML = `
-        <div class="ai-ws-avatar">≡ƒñû</div>
+        <div class="ai-ws-avatar">🤖</div>
         <div class="ai-ws-bubble">
           ${m === 'global' ? 'Switched to Global Insights. I can now provide academy-wide analytics, enrollment trends, and comprehensive metrics.' :
           m === 'finance' ? 'Switched to Financial Analysis. Let\'s examine revenue patterns, payment collections, and financial performance.' :
@@ -4558,11 +4481,11 @@ Thank you for your continued support and cooperation.
     }
   }
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // REAL-TIME INTELLIGENCE ENGINE (RAG + AGENTIC AI)
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
 
-  // ΓöÇΓöÇ API ORCHESTRATION LAYER ΓöÇΓöÇ
+  // ── API ORCHESTRATION LAYER ──
   const API_ORCHESTRATION = {
     endpoints: {
       news: 'https://newsapi.org/v2/top-headlines',
@@ -4619,7 +4542,7 @@ Thank you for your continued support and cooperation.
     async fetchIoTSensors() {
       return {
         sensors: [
-          { id: 'temp-01', type: 'temperature', value: 26.5, unit: '┬░C', location: 'Classroom 1' },
+          { id: 'temp-01', type: 'temperature', value: 26.5, unit: '°C', location: 'Classroom 1' },
           { id: 'hum-01', type: 'humidity', value: 62, unit: '%', location: 'Classroom 1' },
           { id: 'occupancy-01', type: 'motion', value: 12, unit: 'persons', location: 'Main Hall' }
         ],
@@ -4628,7 +4551,7 @@ Thank you for your continued support and cooperation.
     }
   };
 
-  // ΓöÇΓöÇ VECTOR DATABASE SIMULATION (RAG) ΓöÇΓöÇ
+  // ── VECTOR DATABASE SIMULATION (RAG) ──
   const VECTOR_RAG = {
     chunks: [],
 
@@ -4664,7 +4587,7 @@ Thank you for your continued support and cooperation.
     }
   };
 
-  // ΓöÇΓöÇ TOOL CALLING ENGINE ΓöÇΓöÇ
+  // ── TOOL CALLING ENGINE ──
   const TOOL_CALLER = {
     tools: {
       get_academy_stats: {
@@ -4769,7 +4692,7 @@ Thank you for your continued support and cooperation.
     }
   };
 
-  // ΓöÇΓöÇ TEMPORAL REASONING ENGINE ΓöÇΓöÇ
+  // ── TEMPORAL REASONING ENGINE ──
   const TEMPORAL_ENGINE = {
     getCurrentContext() {
       const now = new Date();
@@ -4803,7 +4726,7 @@ Thank you for your continued support and cooperation.
     }
   };
 
-  // ΓöÇΓöÇ RESPONSE SYNTHESIZER ΓöÇΓöÇ
+  // ── RESPONSE SYNTHESIZER ──
   const RESPONSE_SYNTHESIZER = {
     synthesize(query, toolResults, temporalContext) {
       let response = '';
@@ -4816,32 +4739,32 @@ Thank you for your continued support and cooperation.
       if (queryLower.includes('how many') || queryLower.includes('total') || queryLower.includes('count')) {
         const stats = results.find(r => r.totalStudents !== undefined);
         if (stats) {
-          response = `≡ƒôè **Academy Statistics** (${temporalContext.date})
+          response = `📊 **Academy Statistics** (${temporalContext.date})
 
 `;
-          response += `ΓÇó **Total Students:** ${stats.totalStudents}
+          response += `• **Total Students:** ${stats.totalStudents}
 `;
-          response += `ΓÇó **Active Coaches:** ${stats.totalCoaches}
+          response += `• **Active Coaches:** ${stats.totalCoaches}
 `;
-          response += `ΓÇó **Total Revenue:** Γé╣${stats.revenue?.toLocaleString() || 0}
+          response += `• **Total Revenue:** ₹${stats.revenue?.toLocaleString() || 0}
 `;
-          response += `ΓÇó **Collection Rate:** ${stats.collectionRate}%
+          response += `• **Collection Rate:** ${stats.collectionRate}%
 `;
-          response += `ΓÇó **Paid Students:** ${stats.paid}
+          response += `• **Paid Students:** ${stats.paid}
 `;
-          response += `ΓÇó **Due Payments:** ${stats.due}`;
+          response += `• **Due Payments:** ${stats.due}`;
         }
       }
 
       if (queryLower.includes('market') || queryLower.includes('stock') || queryLower.includes('finance')) {
         const market = results.find(r => r.indices);
         if (market) {
-          response = `≡ƒôê **Market Overview** (${temporalContext.time})
+          response = `📈 **Market Overview** (${temporalContext.time})
 
 `;
           market.indices.forEach(idx => {
-            const sign = idx.change >= 0 ? 'Γåæ' : 'Γåô';
-            response += `ΓÇó **${idx.name}:** ${idx.value.toLocaleString()} (${sign}${Math.abs(idx.change)}%)
+            const sign = idx.change >= 0 ? '↑' : '↓';
+            response += `• **${idx.name}:** ${idx.value.toLocaleString()} (${sign}${Math.abs(idx.change)}%)
 `;
           });
         }
@@ -4850,25 +4773,25 @@ Thank you for your continued support and cooperation.
       if (queryLower.includes('weather') || queryLower.includes('temperature')) {
         const weather = results.find(r => r.temperature !== undefined);
         if (weather) {
-          response = `≡ƒîñ∩╕Å **Current Weather** (${temporalContext.date})
+          response = `🌤️ **Current Weather** (${temporalContext.date})
 
 `;
-          response += `ΓÇó **Temperature:** ${weather.temperature}┬░C
+          response += `• **Temperature:** ${weather.temperature}°C
 `;
-          response += `ΓÇó **Condition:** ${weather.condition}
+          response += `• **Condition:** ${weather.condition}
 `;
-          response += `ΓÇó **Humidity:** ${weather.humidity}%`;
+          response += `• **Humidity:** ${weather.humidity}%`;
         }
       }
 
       if (queryLower.includes('sensor') || queryLower.includes('iot') || queryLower.includes('monitor')) {
         const sensors = results.find(r => r.sensors);
         if (sensors) {
-          response = `≡ƒöî **IoT Sensors** (${temporalContext.time})
+          response = `🔌 **IoT Sensors** (${temporalContext.time})
 
 `;
           sensors.sensors.forEach(s => {
-            response += `ΓÇó **${s.location} - ${s.type}:** ${s.value} ${s.unit}
+            response += `• **${s.location} - ${s.type}:** ${s.value} ${s.unit}
 `;
           });
         }
@@ -4877,20 +4800,20 @@ Thank you for your continued support and cooperation.
       if (queryLower.includes('event') || queryLower.includes('tournament')) {
         const events = results.find(r => r.upcoming !== undefined);
         if (events) {
-          response = `≡ƒôà **Events Summary** (${temporalContext.date})
+          response = `📅 **Events Summary** (${temporalContext.date})
 
 `;
-          response += `ΓÇó **Upcoming Events:** ${events.upcoming}
+          response += `• **Upcoming Events:** ${events.upcoming}
 `;
-          response += `ΓÇó **Past Events:** ${events.past}
+          response += `• **Past Events:** ${events.past}
 `;
-          response += `ΓÇó **Total Events:** ${events.total}`;
+          response += `• **Total Events:** ${events.total}`;
         }
       }
 
       if (!response) {
         // Default comprehensive response
-        response = `≡ƒÅ½ **Chesskidoo Academy Report**
+        response = `🏫 **Chesskidoo Academy Report**
 `;
         response += `${TEMPORAL_ENGINE.getTimeBasedGreeting()}! Here's your academy overview:
 
@@ -4898,34 +4821,34 @@ Thank you for your continued support and cooperation.
 
         const stats = results.find(r => r.totalStudents !== undefined);
         if (stats) {
-          response += `≡ƒôè **Statistics:** ${stats.totalStudents} students, ${stats.totalCoaches} coaches
+          response += `📊 **Statistics:** ${stats.totalStudents} students, ${stats.totalCoaches} coaches
 `;
-          response += `≡ƒÆ░ **Revenue:** Γé╣${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)
+          response += `💰 **Revenue:** ₹${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)
 `;
         }
 
         const events = results.find(r => r.upcoming !== undefined);
         if (events) {
-          response += `≡ƒôà **Events:** ${events.upcoming} upcoming
+          response += `📅 **Events:** ${events.upcoming} upcoming
 `;
         }
 
         response += `
-ΓÅ░ Last updated: ${temporalContext.time}`;
+⏰ Last updated: ${temporalContext.time}`;
       }
 
       // Add source attribution
       if (sources.length > 0) {
         response += `
 
-≡ƒôí *Data sources: ${sources.join(', ')}*`;
+📡 *Data sources: ${sources.join(', ')}*`;
       }
 
       return response;
     }
   };
 
-  // ΓöÇΓöÇ ENHANCED AI QUERY HANDLER ΓöÇΓöÇ
+  // ── ENHANCED AI QUERY HANDLER ──
   function animateAIResponse(element, markdownText) {
     let html = (markdownText || '')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -4970,18 +4893,18 @@ Thank you for your continued support and cooperation.
     const query = input.value;
     const chatContainer = document.getElementById('ai-workspace-msgs');
 
-    // ΓöÇΓöÇ PRIVACY GUARDRAIL: Validate parent queries ΓöÇΓöÇ
+    // ── PRIVACY GUARDRAIL: Validate parent queries ──
     if (role === 'parent') {
       const validation = validateParentAIQuery(query);
       if (!validation.allowed) {
         const userMsg = document.createElement('div');
         userMsg.className = 'ai-ws-msg user';
-        userMsg.innerHTML = `<div class="ai-ws-avatar">≡ƒæñ</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
+        userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
         chatContainer.appendChild(userMsg);
 
         const botMsg = document.createElement('div');
         botMsg.className = 'ai-ws-msg bot';
-        botMsg.innerHTML = `<div class="ai-ws-avatar">≡ƒñû</div><div class="ai-ws-bubble"></div>`;
+        botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble"></div>`;
         chatContainer.appendChild(botMsg);
         animateAIResponse(botMsg.querySelector('.ai-ws-bubble'), PARENT_DENIED_MESSAGE);
         chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -4992,7 +4915,7 @@ Thank you for your continued support and cooperation.
     // Add user message
     const userMsg = document.createElement('div');
     userMsg.className = 'ai-ws-msg user';
-    userMsg.innerHTML = `<div class="ai-ws-avatar">≡ƒæñ</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
+    userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
     chatContainer.appendChild(userMsg);
 
     input.value = '';
@@ -5002,16 +4925,16 @@ Thank you for your continued support and cooperation.
     const thinkingMsg = document.createElement('div');
     thinkingMsg.className = 'ai-ws-msg bot';
     thinkingMsg.innerHTML = `
-      <div class="ai-ws-avatar">≡ƒñû</div>
+      <div class="ai-ws-avatar">🤖</div>
       <div class="ai-ws-bubble msg-thinking">
-        ≡ƒöä Analyzing query...
+        🔄 Analyzing query...
       </div>
     `;
     chatContainer.appendChild(thinkingMsg);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 
     try {
-      // ΓöÇΓöÇ BUILD ROLE-SPECIFIC CONTEXT ΓöÇΓöÇ
+      // ── BUILD ROLE-SPECIFIC CONTEXT ──
       let context = {};
 
       if (role === 'parent') {
@@ -5052,7 +4975,7 @@ Thank you for your continued support and cooperation.
       const aiData = await aiResponse.json();
       let botResponse = aiData.message || 'I apologize, I couldn\'t process that request. Please try again.';
 
-      // ΓöÇΓöÇ PRIVACY GUARDRAIL: Validate AI response for parents ΓöÇΓöÇ
+      // ── PRIVACY GUARDRAIL: Validate AI response for parents ──
       if (role === 'parent') {
         botResponse = validateParentAIResponse(botResponse);
       }
@@ -5061,7 +4984,7 @@ Thank you for your continued support and cooperation.
 
       const botMsg = document.createElement('div');
       botMsg.className = 'ai-ws-msg bot';
-      botMsg.innerHTML = `<div class="ai-ws-avatar">≡ƒñû</div><div class="ai-ws-bubble"></div>`;
+      botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble"></div>`;
       chatContainer.appendChild(botMsg);
       animateAIResponse(botMsg.querySelector('.ai-ws-bubble'), botResponse);
       chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -5071,7 +4994,7 @@ Thank you for your continued support and cooperation.
       console.error('AI Query Error:', e);
        const errorMsg = document.createElement('div');
        errorMsg.className = 'ai-ws-msg bot';
-       errorMsg.innerHTML = `<div class="ai-ws-avatar">≡ƒñû</div><div class="ai-ws-bubble">ΓÜá∩╕Å Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
+       errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️ Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
        chatContainer.appendChild(errorMsg);
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -5080,9 +5003,9 @@ Thank you for your continued support and cooperation.
   // Initialize RAG on load
   VECTOR_RAG.indexData();
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // THEME & PDF
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   function toggleTheme() {
     const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
     document.body.dataset.theme = newTheme;
@@ -5190,11 +5113,11 @@ Thank you for your continued support and cooperation.
         [],
         ['Metric', 'Value', 'Context'],
         ['Total Cadets', allStudents.length, 'Active Roster'],
-        ['Revenue Potential', `Γé╣${totalPotential}`, 'Gross Capacity'],
-        ['Revenue Realized', `Γé╣${collected}`, 'Liquidity'],
-        ['Revenue Pending', `Γé╣${pending}`, 'Risk Exposure'],
+        ['Revenue Potential', `₹${totalPotential}`, 'Gross Capacity'],
+        ['Revenue Realized', `₹${collected}`, 'Liquidity'],
+        ['Revenue Pending', `₹${pending}`, 'Risk Exposure'],
         ['Collection Rate', `${((collected / totalPotential) * 100).toFixed(1)}%`, 'Operational Efficiency'],
-        ['ARPU', `Γé╣${(collected / allStudents.filter(s => s.status === 'active').length || 1).toFixed(0)}`, 'Yield Per Cadet']
+        ['ARPU', `₹${(collected / allStudents.filter(s => s.status === 'active').length || 1).toFixed(0)}`, 'Yield Per Cadet']
       ];
       const wsDash = XLSX.utils.aoa_to_sheet(dashboardData);
       XLSX.utils.book_append_sheet(wb, wsDash, "Executive Summary");
@@ -5303,9 +5226,9 @@ Thank you for your continued support and cooperation.
     }
   }
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // INIT & EXPOSE
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // Role-based session timeouts (in milliseconds)
   const SESSION_TIMEOUTS = {
     'admin': 15 * 60 * 1000,   // 15 minutes for admin
@@ -5355,9 +5278,9 @@ Thank you for your continued support and cooperation.
      }
    });
 
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   // EXPOSE GLOBALS TO WINDOW
-  // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  // ═══════════════════════════════════════════════════════════════
   window.$ = $;
   window.toast = toast;
   window.apiCall = apiCall;
@@ -5378,20 +5301,6 @@ Thank you for your continued support and cooperation.
   // Helper Functions
   window.getStudentName = getStudentName;
   window.getStudentMonthlyFee = getStudentMonthlyFee;
-  window.deletePaymentRecord = async function(pid, sid) {
-    if (!confirm('Are you sure you want to delete this payment record?')) return;
-    try {
-      const resp = await apiCall(API_BASE + '/payments?id=' + pid, { method: 'DELETE' });
-      if (!resp.ok) throw new Error('Delete failed');
-      toast('Payment record deleted', 'success');
-      window.totalPaymentsMap = null;
-      await loadAllData(true);
-      if (sid) viewPaymentHistory(sid);
-    } catch (e) {
-      toast('Failed to delete payment', 'error');
-    }
-  };
-
   window.getStudentPaymentStatus = getStudentPaymentStatus;
   window.getStudentLevel = getStudentLevel;
   window.getStudentRating = getStudentRating;
@@ -5502,11 +5411,11 @@ Thank you for your continued support and cooperation.
 
      if (unread.length > 0) {
        html += `<div style="padding:12px;background:var(--gold-glow);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--gold)">≡ƒô¼ Unread Messages (${unread.length})</div>
+         <div style="font-weight:600;color:var(--gold)">📬 Unread Messages (${unread.length})</div>
          ${unread.slice(0, 5).map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
            <div>
              <div style="font-size:13px;font-weight:500">${escapeHtml(m.subject || 'No Subject')}</div>
-             <div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(m.sender_name || 'User')} ΓÇó ${new Date(m.created_at).toLocaleDateString()}</div>
+             <div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(m.sender_name || 'User')} • ${new Date(m.created_at).toLocaleDateString()}</div>
            </div>
            <button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')" style="padding:2px 8px;font-size:10px">Mark Read</button>
          </div>`).join('')}
@@ -5515,7 +5424,7 @@ Thank you for your continued support and cooperation.
 
      if (due.length > 0) {
        html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--danger)">≡ƒÆ░ Due Payments (${due.length})</div>
+         <div style="font-weight:600;color:var(--danger)">💰 Due Payments (${due.length})</div>
          <div style="font-size:12px;color:var(--ivory-dim)">Students with pending fees</div>
          ${due.slice(0, 5).map(s => `<div style="padding:6px 0;font-size:12px;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div>`).join('')}
        </div>`;
@@ -5523,7 +5432,7 @@ Thank you for your continued support and cooperation.
 
      if (failedLogins.length > 0) {
        html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--danger)">≡ƒÜ½ Failed Logins (${failedLogins.length})</div>
+         <div style="font-weight:600;color:var(--danger)">🚫 Failed Logins (${failedLogins.length})</div>
          ${failedLogins.slice(0, 5).map(l => `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
            <span>${escapeHtml(l.user || 'Unknown')}</span>
            <span style="color:var(--ivory-dim);float:right">${new Date(l.timestamp).toLocaleString('en-IN')}</span>
@@ -5538,7 +5447,7 @@ Thank you for your continued support and cooperation.
     content.innerHTML = `
       <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
         <h3 style="margin:0">System Notifications</h3>
-        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">≡ƒùæ∩╕Å Clear All</button>
+        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">🗑️ Clear All</button>
       </div>
       ${html}
     `;
@@ -5557,5 +5466,48 @@ Thank you for your continued support and cooperation.
   window.markCoachPaid = markCoachPaid;
   window.markCoachUnpaid = markCoachUnpaid;
   window.getStudentPaymentStatus = getStudentPaymentStatus;
+  window.deletePaymentRecord = async function(pid, sid) {
+    if (!confirm('Are you sure you want to delete this payment record?')) return;
+    try {
+      const resp = await apiCall(API_BASE + '/payments?id=' + pid, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Delete failed');
+      toast('Payment record deleted', 'success');
+      window.totalPaymentsMap = null;
+      await loadAllData(true);
+      if (sid) viewPaymentHistory(sid);
+    } catch (e) {
+      toast('Failed to delete payment', 'error');
+    }
+  };
+
+  window.viewPaymentHistory = function(id) {
+    const s = allStudents.find(x => String(x.id).toLowerCase() === String(id).toLowerCase());
+    if (!s) return;
+    const payments = (allPayments || []).filter(p => String(p.student_id).toLowerCase() === String(id).toLowerCase());
+    payments.sort((a,b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at));
+
+    const rows = payments.map(p => {
+      const d = new Date(p.payment_date || p.created_at).toLocaleDateString();
+      const amt = (parseFloat(p.amount) || 0).toLocaleString();
+      return '<tr><td>'+d+'</td><td>₹'+amt+'</td><td>'+(p.payment_method||'Cash')+'</td>' +
+        '<td style="display:flex; justify-content:space-between; align-items:center"><span>'+(p.description||'-')+'</span>' +
+        '<button class="btn btn-outline-ruby btn-xs" onclick="deletePaymentRecord(\'' + p.id + '\', \'' + s.id + '\')" title="Delete duplicate">' +
+          '<i class="fas fa-trash"></i>' +
+        '</button></td></tr>';
+    }).join('');
+
+    const html = '<div class="modal-content"><div class="modal-header">' +
+      '<h3 class="modal-title">Payment History: ' + (s.full_name || s.name) + '</h3>' +
+      '<button class="close-btn" onclick="closeModals()">&times;</button>' +
+      '</div><div class="modal-body"><div class="table-responsive"><table class="table">' +
+      '<thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th></tr></thead>' +
+      '<tbody>' + (rows || '<tr><td colspan="4" class="text-center">No records found</td></tr>') + '</tbody></table></div></div></div>';
+
+    let m = $('history-modal');
+    if (!m) { m = document.createElement('div'); m.id = 'history-modal'; m.className = 'modal'; document.body.appendChild(m); }
+    m.innerHTML = html;
+    openModal('history-modal');
+  };
+
   window.getStudentMonthlyFee = getStudentMonthlyFee;
 })();
