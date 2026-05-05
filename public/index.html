@@ -593,7 +593,7 @@
         <label>Parent Phone</label>
         <div style="display:flex;gap:8px">
           <div class="country-selector" style="position:relative">
-            <div id="country-selected" onclick="openCountryDropdown()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
+            <div id="country-selected" onclick="event.stopPropagation();openCountryDropdown()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
               <span>IN</span><span style="margin-left:6px">+91</span>
             </div>
             <div id="country-dropdown" class="country-dropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;z-index:1000;display:none;margin-top:4px;box-shadow:var(--shadow)">
@@ -829,9 +829,9 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div style="display:flex;gap:8px">
         <div class="country-selector" style="position:relative">
-          <div id="country-selected-coach" onclick="openCountryDropdownCoach()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
-            <span>IN</span><span style="margin-left:6px">+91</span>
-          </div>
+<div id="country-selected-coach" onclick="event.stopPropagation();openCountryDropdownCoach()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
+              <span>IN</span><span style="margin-left:6px">+91</span>
+            </div>
           <div id="country-dropdown-coach" class="country-dropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;z-index:1000;display:none;margin-top:4px;box-shadow:var(--shadow)">
           </div>
         </div>

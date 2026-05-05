@@ -777,12 +777,14 @@ function initUI() {
           if (e.target === m) closeModals();
         });
       });
-      // Close dropdowns when clicking outside
+      // Close dropdowns when clicking outside (with slight delay to allow internal clicks)
       document.addEventListener('click', e => {
-        if (!e.target.closest('.country-selector')) {
-          const dropdowns = document.querySelectorAll('.country-dropdown');
-          dropdowns.forEach(d => d.style.display = 'none');
-        }
+        setTimeout(() => {
+          if (!e.target.closest('.country-selector')) {
+            const dropdowns = document.querySelectorAll('.country-dropdown');
+            dropdowns.forEach(d => d.style.display = 'none');
+          }
+        }, 10);
       });
     }
 
@@ -1076,66 +1078,12 @@ window.openCountryDropdownCoach = function() {
    };
 
 window.openCountryDropdown = function() {
-     const dropdown = $('country-dropdown');
-     if (dropdown) {
-       const isOpen = dropdown.style.display === 'block';
-       dropdown.style.display = isOpen ? 'none' : 'block';
-     }
-   };
-
-
-  function getStudentBatchType(s) {
-    if (!s) return 'Group';
-    const mode = (s.session_mode || s.batch_type || s.session_type || '').toLowerCase();
-    if (mode.includes('group')) return 'Group';
-    if (mode.includes('single') || mode.includes('one_to_one')) return 'Single';
-
-    // Fallback to notes parsing for legacy data
-    const notes = (s.notes || '').toLowerCase();
-    if (notes.includes('session:group')) return 'Group';
-    if (notes.includes('session:single')) return 'Single';
-
-    return 'Group'; // Default
-  }
-  function getStudentSessionTime(s) {
-    if (s.session_time) return s.session_time;
-    const match = (s.notes || '').match(/time[:\s]*([^,]+)/i);
-    return match ? match[1].trim() : 'WEEKEND';
-  }
-  function isStudentScheduledToday(s) {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const now = new Date();
-    const today = days[now.getDay()];
-    const isWeekend = (now.getDay() === 0 || now.getDay() === 6);
-
-    // 1. Check explicit Day columns (Highest Priority)
-    const scheduledDay = (s.batch_day || s.session_day || '').toLowerCase();
-    if (scheduledDay && scheduledDay.includes(today.toLowerCase())) return true;
-
-    // 2. Fallback to session time pattern matching
-    const time = getStudentSessionTime(s).toUpperCase();
-    if (time.includes('MORNING & EVENING')) return true; // Daily
-    if (time.includes('ANYTIME')) return true;
-    if (isWeekend && time.includes('WEEKEND')) return true;
-    if (!isWeekend && (time.includes('WEEKDAY') || time.includes('DAILY'))) return true;
-    
-    // Pattern matches for specific combinations
-    if ((now.getDay() === 5 || now.getDay() === 6) && time.includes('FRI & SAT')) return true;
-    if ((now.getDay() === 0 || now.getDay() === 1) && time.includes('SUN & MON')) return true;
-
-    return false;
-  }
-  function getStudentBatchTime(s) { return s.batch_time || '17:00'; }
-  function getStudentStatus(s) { return s.status || 'pending'; }
-  function getStudentCoachNotes(s) { return s.notes || ''; }
-  function getStudentSkills(s) {
-    return {
-      tactics: s.tactics_score || 50,
-      endgame: s.endgame_score || 50,
-      openings: s.openings_score || 50,
-      positional: s.positional_score || 50
+      const dropdown = $('country-dropdown');
+      if (dropdown) {
+        const currentDisplay = dropdown.style.display;
+        dropdown.style.display = currentDisplay === 'block' ? 'none' : 'block';
+      }
     };
-  }
 
   function getCoachName(c) { return c.name || ''; }
   function getCoachSpecialty(c) { return c.specialization || ''; }
