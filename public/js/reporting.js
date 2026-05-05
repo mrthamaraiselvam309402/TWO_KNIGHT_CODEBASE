@@ -40,24 +40,34 @@ window.generateReportPDF = async function() {
     const totalStudents = allStudents.length;
     const activeStudents = targetStudents.length;
 
-    // Map total payments per student for ALL TIME (only 'paid' status)
+    // Map total payments per student for ALL TIME (Deduplicated by month)
     const totalPaymentsMap = {};
+    const seenMonthsGlobal = new Set();
     allPayments.forEach(p => {
       if (p.status === 'paid') {
         const sid = String(p.student_id);
+        const pDate = new Date(p.payment_date || p.created_at);
+        const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+        if (seenMonthsGlobal.has(mKey)) return;
+        seenMonthsGlobal.add(mKey);
+        
         if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
         totalPaymentsMap[sid]++;
       }
     });
 
-    // Precise Status Categorization (Transaction-First Accuracy)
+    // Precise Status Categorization (Deduplicated Transaction Accuracy)
+    const paidStudentIds = new Set();
     let collected = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
         if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
-            // Validate student exists and their slot status is 'Paid' for this month
-            const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
+            const sid = String(p.student_id).toLowerCase();
+            if (paidStudentIds.has(sid)) return sum; // Count 1x per month
+            
+            const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
             if (s && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
-                return sum + (parseFloat(p.amount) || 0);
+                paidStudentIds.add(sid);
+                return sum + (getStudentMonthlyFee(s) || 0);
             }
         }
         return sum;
@@ -121,13 +131,20 @@ window.generateReportPDF = async function() {
     const coachMetrics = allCoaches.map(c => {
       let coachRev = 0;
       const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
+      const coachPaidStuds = new Set();
       coachStuds.forEach(s => {
           const enrollDateStr = getStudentDate(s);
           if (enrollDateStr) {
               const enrollDate = new Date(enrollDateStr);
               if (enrollDate <= monthEndLimit) {
+                  const sid = String(s.id).toLowerCase();
+                  if (coachPaidStuds.has(sid)) return;
+
                   const status = getStudentPaymentStatus(s, targetMonth, targetYear);
-                  if (status === 'Paid') coachRev += (getStudentMonthlyFee(s) || 0);
+                  if (status === 'Paid') {
+                      coachPaidStuds.add(sid);
+                      coachRev += (getStudentMonthlyFee(s) || 0);
+                  }
               }
           }
       });
@@ -167,16 +184,22 @@ window.generateReportPDF = async function() {
         let mCollected = 0;
         let mPotential = 0;
         
+        const mPaidStuds = new Set();
         allStudents.forEach(s => {
             if ((s.status || 'active').toLowerCase() === 'archived') return;
             const enrollDateStr = getStudentDate(s);
             const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
             if (enrollDate <= mEnd) {
-                const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+                const sid = String(s.id).toLowerCase();
+                if (mPaidStuds.has(sid)) return;
+
                 const fee = getStudentMonthlyFee(s) || 0;
                 const status = getStudentPaymentStatus(s, m, y);
                 mPotential += fee;
-                if (status === 'Paid') mCollected += fee;
+                if (status === 'Paid') {
+                    mPaidStuds.add(sid);
+                    mCollected += fee;
+                }
             }
         });
         
@@ -651,7 +674,19 @@ window.generateReportPDF = async function() {
 window.getAcademySnapshot = function() {
     if (!window.allStudents) return null;
     
-    const totalRev = allPayments.reduce((a, p) => a + (p.status === 'paid' ? (parseFloat(p.amount) || 0) : 0), 0);
+    const paidMonths = new Set();
+    const totalRev = allPayments.reduce((a, p) => {
+        if (p.status === 'paid') {
+            const pDate = new Date(p.payment_date || p.created_at);
+            const mKey = `${p.student_id}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+            if (paidMonths.has(mKey)) return a;
+            paidMonths.add(mKey);
+            
+            const s = allStudents.find(x => String(x.id) === String(p.student_id));
+            return a + (s ? getStudentMonthlyFee(s) : (parseFloat(p.amount) || 0));
+        }
+        return a;
+    }, 0);
     const activeCount = allStudents.filter(s => (s.status || 'active') === 'active').length;
     const coachData = allCoaches.map(c => ({
         name: getCoachName(c),

@@ -550,10 +550,16 @@
 
     // FIX #5: Always rebuild — never trust a cached map for financial calculations
     const freshPaymentsMap = {};
+    const seenStudentMonths = new Set();
     (allPayments || []).forEach(p => {
       if (p.status === 'paid') {
         const sid = String(p.student_id || '').trim().toLowerCase();
-        if (sid) freshPaymentsMap[sid] = (freshPaymentsMap[sid] || 0) + 1;
+        if (!sid) return;
+        const pDate = new Date(p.payment_date || p.created_at);
+        const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+        if (seenStudentMonths.has(mKey)) return;
+        seenStudentMonths.add(mKey);
+        freshPaymentsMap[sid] = (freshPaymentsMap[sid] || 0) + 1;
       }
     });
 
@@ -704,14 +710,16 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       const monthsReq = ((nowUTC.getUTCFullYear() - effectiveEnroll.getUTCFullYear()) * 12) + (nowUTC.getUTCMonth() - effectiveEnroll.getUTCMonth()) + 1;
       
       const sid = String(s.id).toLowerCase();
-      let totalPaidAmount = 0;
+      const paidMonthsSet = new Set();
       (allPayments || []).forEach(p => {
         if (String(p.student_id).toLowerCase() === sid && p.status === 'paid') {
-           totalPaidAmount += (parseFloat(p.amount) || 0);
+          const pDate = new Date(p.payment_date || p.created_at);
+          const mKey = `${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+          paidMonthsSet.add(mKey);
         }
       });
       
-      const totalDebt = Math.max(0, (fee * monthsReq) - totalPaidAmount);
+      const totalDebt = Math.max(0, (fee * monthsReq) - (fee * paidMonthsSet.size));
       const monthsBehind = Math.ceil(totalDebt / fee);
       const arrearsNote = monthsBehind > 1 ? ` (including ${monthsBehind - 1} months arrears)` : '';
 
@@ -884,7 +892,7 @@ Thank you for your cooperation.
     // 2. Cumulative Audit (All-Time Payment Count)
     const s_id_key = String(s.id || '').trim().toLowerCase();
     
-    let totalPaidInvoices = 0;
+    let paidMonths = new Set();
     let hasPaymentThisMonth = false;
 
     (allPayments || []).forEach(p => {
@@ -894,13 +902,16 @@ Thank you for your cooperation.
         // Only count payments that occurred in or after the enrollment month
         const auditStart = new Date(Date.UTC(effectiveEnroll.getUTCFullYear(), effectiveEnroll.getUTCMonth(), 1));
         if (pDate >= auditStart && pDate <= targetMonthEnd) {
-          totalPaidInvoices++;
+          const monthKey = `${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+          paidMonths.add(monthKey);
         }
         if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
           hasPaymentThisMonth = true;
         }
       }
     });
+
+    const totalPaidInvoices = paidMonths.size;
 
     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
@@ -1181,6 +1192,7 @@ Thank you for your cooperation.
            const key = (p.transaction_id || p.id || '').toString().trim();
            if (!key || seenPayKeys.has(key)) return false;
            seenPayKeys.add(key);
+
            return true;
          });
 
@@ -1191,12 +1203,18 @@ Thank you for your cooperation.
          allRatingHistory = extractData(ratingHistory);
 
          const pMap = {};
-         allPayments.forEach(p => {
-           if (p.status === 'paid') {
-             const sid = String(p.student_id || '').trim().toLowerCase();
-             if (sid) pMap[sid] = (pMap[sid] || 0) + 1;
-           }
-         });
+          const seenMonths = new Set();
+          allPayments.forEach(p => {
+            if (p.status === 'paid') {
+              const sid = String(p.student_id || '').trim().toLowerCase();
+              if (!sid) return;
+              const pDate = new Date(p.payment_date || p.created_at);
+              const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+              if (seenMonths.has(mKey)) return;
+              seenMonths.add(mKey);
+              pMap[sid] = (pMap[sid] || 0) + 1;
+            }
+          });
          window.totalPaymentsMap = pMap;
 
          window.allStudents = allStudents;
@@ -1985,12 +2003,17 @@ Thank you for your cooperation.
 
   function calculateSlotRevenue(year, month, studentIdMap) {
     if (!allPayments) return 0;
+    const seenStuds = new Set();
     return allPayments.reduce((sum, p) => {
       const pDate = new Date(p.payment_date || p.created_at);
       if (pDate.getUTCMonth() === month && pDate.getUTCFullYear() === year && p.status === 'paid') {
-        const s = allStudents.find(x => String(x.id) === String(p.student_id));
+        const sid = String(p.student_id).toLowerCase();
+        if (seenStuds.has(sid)) return sum;
+        
+        const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
         if (s && (s.status || 'active').toLowerCase() !== 'archived' && getStudentPaymentStatus(s, month, year) === 'Paid') {
-          return sum + (parseFloat(p.amount) || 0);
+          seenStuds.add(sid);
+          return sum + getStudentMonthlyFee(s);
         }
       }
       return sum;
@@ -1998,12 +2021,18 @@ Thank you for your cooperation.
   }
 
   function renderDash() {
-    // 1. Recalculate Payment Map for freshness
+    // 1. Recalculate Payment Map for freshness (Deduplicated by month)
     const pMap = {};
+    const seenMonthsGlobal = new Set();
     (allPayments || []).forEach(p => {
       if (p.status === 'paid') {
         const sid = String(p.student_id || '').trim().toLowerCase();
-        if (sid) pMap[sid] = (pMap[sid] || 0) + 1;
+        if (!sid) return;
+        const pDate = new Date(p.payment_date || p.created_at);
+        const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+        if (seenMonthsGlobal.has(mKey)) return;
+        seenMonthsGlobal.add(mKey);
+        pMap[sid] = (pMap[sid] || 0) + 1;
       }
     });
     window.totalPaymentsMap = pMap;
@@ -2037,8 +2066,9 @@ Thank you for your cooperation.
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-      // 1. Target Dataset Preparation — cumulative paid months from effective enrollment through target month
+      // 1. Target Dataset Preparation — cumulative paid months (deduplicated)
       const s_id_map = {};
+      const seenMonthsAudit = new Set();
       (allPayments || []).forEach(p => {
         if (p.status === 'paid') {
           const sid = String(p.student_id || '').trim().toLowerCase();
@@ -2053,6 +2083,10 @@ Thank you for your cooperation.
 
           const pDate = new Date(p.payment_date || p.created_at);
           if (pDate >= effectiveEnroll && pDate <= targetMonthEnd) {
+            const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+            if (seenMonthsAudit.has(mKey)) return;
+            seenMonthsAudit.add(mKey);
+            
             if (!s_id_map[sid]) s_id_map[sid] = 0;
             s_id_map[sid]++;
           }
@@ -2073,21 +2107,17 @@ Thank you for your cooperation.
     if ($('s-total')) $('s-total').textContent = targetStudents.length;
     if ($('s-elo')) $('s-elo').textContent = targetStudents.length ? Math.round(targetStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / targetStudents.length) : 0;
 
-    // 1. Precise Cash-Based Revenue (Only 'paid' transactions IN the target month)
-    const seenFuzzyDash = new Set();
+    const paidStudentIds = new Set();
     const paidRevenue = (allPayments || []).reduce((sum, p) => {
-      if (p.status !== 'paid') return sum;
       const pDate = new Date(p.payment_date || p.created_at);
-      if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
+      if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
         const sid = String(p.student_id).toLowerCase();
-        const amt = parseFloat(p.amount) || 0;
-        const fuzzyKey = `${sid}_${targetMonth}_${targetYear}_${amt}`;
-        if (seenFuzzyDash.has(fuzzyKey)) return sum;
+        if (paidStudentIds.has(sid)) return sum; // Fuzzy deduplication: 1 payment per student per month
 
         const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
         if (s && (s.status || 'active').toLowerCase() !== 'archived' && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
-           seenFuzzyDash.add(fuzzyKey);
-           return sum + amt;
+           paidStudentIds.add(sid);
+           return sum + getStudentMonthlyFee(s); // Enforce 1x monthly fee logic
         }
       }
       return sum;
@@ -2249,15 +2279,20 @@ Thank you for your cooperation.
       }
     });
 
-     // 2. Add ACTUAL Revenue from 'paid' Transactions (only for students with 'Paid' slot status)
+     // 2. Add Deduplicated Revenue from 'paid' Transactions
+     const coachPaidStuds = new Set();
      (allPayments || []).forEach(p => {
        const pDate = new Date(p.payment_date || p.created_at);
        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
-         const s = allStudents.find(x => String(x.id).toLowerCase() === String(p.student_id).toLowerCase());
+         const sid = String(p.student_id).toLowerCase();
+         if (coachPaidStuds.has(sid)) return;
+
+         const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
          if (s && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
-           const coachId = s?.coach_id;
+           coachPaidStuds.add(sid);
+           const coachId = s.coach_id;
            const targetData = coachData[coachId] || unassignedData;
-           targetData.revenue += (parseFloat(p.amount) || 0);
+           targetData.revenue += getStudentMonthlyFee(s);
          }
        }
      });
@@ -2338,20 +2373,16 @@ Thank you for your cooperation.
        const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
        // Pre-calculate payments for this month for the new column
+       // Pre-calculate payments for this month (Normalized for Single Fee Rule)
        const paymentsOfMonth = {};
-       const seenFuzzy = new Set();
        (allPayments || []).forEach(p => {
          const pDate = new Date(p.payment_date || p.created_at);
          if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
            const sid = String(p.student_id).toLowerCase();
-           const amt = parseFloat(p.amount) || 0;
-           const fuzzyKey = `${sid}_${targetMonth}_${targetYear}_${amt}`;
-           if (seenFuzzy.has(fuzzyKey)) return;
-           seenFuzzy.add(fuzzyKey);
-
-           if (!paymentsOfMonth[sid]) paymentsOfMonth[sid] = { total: 0, count: 0 };
-           paymentsOfMonth[sid].total += (parseFloat(p.amount) || 0);
-           paymentsOfMonth[sid].count++;
+           const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+           const fee = s ? getStudentMonthlyFee(s) : (parseFloat(p.amount) || 0);
+           // Force Exactly one payment cycle per month display
+           paymentsOfMonth[sid] = { total: fee, count: 1 };
          }
        });
 
@@ -3427,13 +3458,16 @@ Thank you for your continued support and cooperation.
      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
-     let totalPaidAmount = 0;
+     const sid = String(s.id).toLowerCase();
+     const paidMonthsSet = new Set();
      (window.allPayments || []).forEach(p => {
-       if (p.status === 'paid' && String(p.student_id).toLowerCase() === String(s.id).toLowerCase()) {
-         totalPaidAmount += (parseFloat(p.amount) || 0);
+       if (p.status === 'paid' && String(p.student_id).toLowerCase() === sid) {
+         const pDate = new Date(p.payment_date || p.created_at);
+         const mKey = `${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+         paidMonthsSet.add(mKey);
        }
      });
-     const totalDue = Math.max(0, (monthsRequired * fee) - totalPaidAmount);
+     const totalDue = Math.max(0, (monthsRequired * fee) - (fee * paidMonthsSet.size));
 
      // Populate modal
      $('inform-student-name').textContent = name;
@@ -3471,13 +3505,16 @@ Thank you for your continued support and cooperation.
      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
-     let totalPaidAmount = 0;
+      const sid = String(s.id).toLowerCase();
+      const paidMonthsSet = new Set();
       (window.allPayments || []).forEach(p => {
-        if (p.status === 'paid' && String(p.student_id).toLowerCase() === String(s.id).toLowerCase()) {
-           totalPaidAmount += (parseFloat(p.amount) || 0);
+        if (p.status === "paid" && String(p.student_id).toLowerCase() === sid) {
+          const pDate = new Date(p.payment_date || p.created_at);
+          const mKey = `${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+          paidMonthsSet.add(mKey);
         }
       });
-      const totalDue = Math.max(0, (monthsRequired * fee) - totalPaidAmount);
+      const totalDue = Math.max(0, (monthsRequired * fee) - (fee * paidMonthsSet.size));
 
      // Build notification content
      let message = customMsg ? `${customMsg}\n\n` : '';
@@ -3824,11 +3861,18 @@ Thank you for your continued support and cooperation.
       return;
     }
 
-    // 1. Map total payments per student (Case-Insensitive)
+    // 1. Map total payments per student (Normalized: 1 payment per month)
     const totalPaymentsMap = {};
+    const seenStudentMonths = new Set();
     (allPayments || []).forEach(p => {
+      if (p.status !== 'paid') return;
       const sid = String(p.student_id || '').trim().toLowerCase();
       if (!sid) return;
+      const pDate = new Date(p.payment_date || p.created_at);
+      const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+      if (seenStudentMonths.has(mKey)) return;
+      seenStudentMonths.add(mKey);
+      
       if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
       totalPaymentsMap[sid]++;
     });
