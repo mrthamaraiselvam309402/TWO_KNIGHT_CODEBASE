@@ -2339,10 +2339,16 @@ Thank you for your cooperation.
 
        // Pre-calculate payments for this month for the new column
        const paymentsOfMonth = {};
+       const seenFuzzy = new Set();
        (allPayments || []).forEach(p => {
          const pDate = new Date(p.payment_date || p.created_at);
          if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
            const sid = String(p.student_id).toLowerCase();
+           const amt = parseFloat(p.amount) || 0;
+           const fuzzyKey = `${sid}_${targetMonth}_${targetYear}_${amt}`;
+           if (seenFuzzy.has(fuzzyKey)) return;
+           seenFuzzy.add(fuzzyKey);
+
            if (!paymentsOfMonth[sid]) paymentsOfMonth[sid] = { total: 0, count: 0 };
            paymentsOfMonth[sid].total += (parseFloat(p.amount) || 0);
            paymentsOfMonth[sid].count++;
