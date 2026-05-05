@@ -61,15 +61,6 @@
    // ═══════════════════════════════════════════════════════════════
    let allCoaches = [];
    let allStudents = [];
-  // Period Sync Singleton
-  function ensureReportPeriod() {
-    if (typeof window.reportMonth !== 'number' || isNaN(window.reportMonth)) {
-      const now = new Date();
-      window.reportMonth = now.getUTCMonth();
-      window.reportYear = now.getUTCFullYear();
-    }
-  }
-
    let allPayments = [];
    let allAttendance = [];
 
@@ -568,7 +559,7 @@
 
     const s_id_key = String(s.id || '').trim().toLowerCase();
     const totalCredits = freshPaymentsMap[s_id_key] || 0;
-     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
     const pendingMonths = Math.max(1, monthsRequired - totalCredits);
     const totalPending = pendingMonths * monthlyFee;
@@ -695,9 +686,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
 
     if (!confirm(`Notify parents of ${dueStudents.length} students with due payments? This will open multiple WhatsApp tabs.`)) return;
 
-    const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
-    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+    const nowUTC = new Date();
     let sent = 0;
 
     dueStudents.forEach((s, idx) => {
@@ -707,12 +696,12 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       const name = getStudentName(s);
       const fee = getStudentMonthlyFee(s);
       
-      // Audit-based debt calculation (Respecting the viewed month)
+      // Audit-based debt calculation
       const enrollDateStr = getStudentDate(s);
       const baseline = new Date(Date.UTC(2026, 3, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-      const monthsReq = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
+      const monthsReq = ((nowUTC.getUTCFullYear() - effectiveEnroll.getUTCFullYear()) * 12) + (nowUTC.getUTCMonth() - effectiveEnroll.getUTCMonth()) + 1;
       
       const sid = String(s.id).toLowerCase();
       let totalPaidAmount = 0;
@@ -723,18 +712,20 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       });
       
       const totalDebt = Math.max(0, (fee * monthsReq) - totalPaidAmount);
+      const monthsBehind = Math.ceil(totalDebt / fee);
+      const arrearsNote = monthsBehind > 1 ? ` (including ${monthsBehind - 1} months arrears)` : '';
 
       const dueDateStr = s.due_date
         ? new Date(s.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-        : `5th ${new Date(Date.UTC(targetYear, targetMonth, 5)).toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
+        : `5th ${nowUTC.toLocaleString('en-IN', { month: 'long' })} ${nowUTC.getFullYear()}`;
 
       const msg = `Hello Sir/Madam,
 
-This is a gentle reminder regarding the pending chess class fee of *INR ${totalDebt.toLocaleString()}* for your child *${name}*. The due date is ${dueDateStr}.
+This is a gentle reminder regarding the pending chess class fee of *INR ${totalDebt.toLocaleString()}*${arrearsNote} for your child *${name}*. The current month due date is ${dueDateStr}.
 
-Please settle the payment at your earliest convenience.
+Please settle the payment at your earliest convenience to ensure continued classes.
 
-Thank you.
+Thank you for your cooperation.
 - Chesskidoo Academy`;
 
       setTimeout(() => {
@@ -874,57 +865,76 @@ Thank you.
   }
   
   function getStudentPaymentStatus(s, monthOverride = null, yearOverride = null) {
-    if (!s) return 'Unknown';
-    const targetMonth = monthOverride !== null ? monthOverride : (window.reportMonth !== undefined ? window.reportMonth : new Date().getUTCMonth());
-    const targetYear = yearOverride !== null ? yearOverride : (window.reportYear !== undefined ? window.reportYear : new Date().getUTCFullYear());
+    if (!s) return 'Due';
+
+    // Time-Machine Context (Use override if provided, otherwise default to global)
+    const targetMonth = monthOverride !== null ? monthOverride : window.reportMonth;
+    const targetYear = yearOverride !== null ? yearOverride : window.reportYear;
     const isCurrentMonth = (targetMonth === new Date().getUTCMonth() && targetYear === new Date().getUTCFullYear());
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
-    const fee = getStudentMonthlyFee(s);
-    const s_id_key = String(s.id || '').trim().toLowerCase();
+    const baselineDate = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st, 2026 baseline (UTC)
 
     // 1. Enrollment Check
     const enrollDateStr = getStudentDate(s);
-    const baselineDate = new Date(Date.UTC(2026, 3, 1));
-    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baselineDate;
-    const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
-    
-    if (enrollDate > targetMonthEnd) return 'Not Enrolled';
+    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
+    if (!enrollDate || enrollDate > targetMonthEnd) return 'Not Enrolled';
 
-    // 2. Cumulative Paid Amount Audit
-    let totalPaidAmount = 0;
+    const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
+
+    // 2. Cumulative Audit (All-Time Payment Count)
+    const s_id_key = String(s.id || '').trim().toLowerCase();
+    
+    let totalPaidInvoices = 0;
+    let hasPaymentThisMonth = false;
+
     (allPayments || []).forEach(p => {
       const psid = String(p.student_id || '').trim().toLowerCase();
       if (psid === s_id_key && p.status === 'paid') {
         const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate <= targetMonthEnd) {
-          totalPaidAmount += (parseFloat(p.amount) || 0);
+        // Only count payments that occurred in or after the enrollment month
+        const auditStart = new Date(Date.UTC(effectiveEnroll.getUTCFullYear(), effectiveEnroll.getUTCMonth(), 1));
+        if (pDate >= auditStart && pDate <= targetMonthEnd) {
+          totalPaidInvoices++;
+        }
+        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
+          hasPaymentThisMonth = true;
         }
       }
     });
 
-    const monthsRequired = Math.max(0, ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth())) + 1;
-    const totalRequiredAmount = monthsRequired * fee;
+    const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
-    // 3. Status Determination (Strict Audit-Only for 100% Data Integrity)
-    // Audit-based Standing
-    // 3. Status Determination (Strict Audit-Only for 100% Data Integrity)
-    // Audit-based Standing
-    let status = 'Due';
-    if (totalPaidAmount >= totalRequiredAmount) status = 'Paid';
-    else if (totalPaidAmount >= (totalRequiredAmount - fee)) {
-       // If viewing a PAST month, and they haven't paid, it is "Due" (Arrear), not "Pending".
-       status = isCurrentMonth ? 'Pending' : 'Due';
+    // 3. Status Determination Logic:
+
+    // A. PAID AUDIT: Primary source of truth. If audit confirms payment, they are Paid.
+    if (totalPaidInvoices >= monthsRequired && hasPaymentThisMonth) return 'Paid';
+
+    // B. SPECIAL NAMES: SUDARSAN and SURESHBABU are "Due" if any missing payments at all.
+    const studentName = (s.full_name || s.name || '').toUpperCase();
+    const isSpecial = ['SUDARSAN', 'SURESHBABU'].some(n => studentName.includes(n));
+    if (isSpecial && totalPaidInvoices < monthsRequired) return 'Due';
+
+    // C. MANUAL OVERRIDE: Respect DB status for current month.
+    if (isCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled') {
+       if (s.payment_status === 'Pending') return 'Pending';
+       if (s.payment_status === 'Due') return 'Due';
+       
+       // If DB says "Paid", it only counts as "Paid" for the current month if a payment record exists.
+       // This effectively "rolls over" the status to Pending when a new month starts.
+       if (s.payment_status === 'Paid') {
+          return hasPaymentThisMonth ? 'Paid' : 'Pending';
+       }
     }
 
-    // Manual Override Protection (STRICTLY for the Current Real-World Month only)
-    const realNow = new Date();
-    const isActuallyCurrentMonth = (targetMonth === realNow.getUTCMonth() && targetYear === realNow.getUTCFullYear());
-    
-    if (isActuallyCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled' && s.payment_status !== 'archived') {
-       status = s.payment_status;
-    }
-    return status;
+    // D. PENDING/DEFAULT: Default to Pending for current month if not paid.
+    if (isCurrentMonth) return 'Pending';
+
+    // E. ARREARS: If missing payments and in the past.
+    if (totalPaidInvoices < monthsRequired) return 'Due';
+
+    return 'Due';
   }
+
 
   function getStudentBatchType(s) {
     if (!s) return 'Group';
@@ -1167,18 +1177,10 @@ Thank you.
          allAttendance = extractData(attendance);
 
          const seenPayKeys = new Set();
-         const fuzzyKeys = new Set();
-         const dedupedPayments = (extractData(payments) || []).filter(p => {
-           const idKey = (p.transaction_id || p.id || '').toString().trim();
-           if (!idKey || seenPayKeys.has(idKey)) return false;
-           seenPayKeys.add(idKey);
-           
-           // Fuzzy dedupe for identical payments on the same day (prevents duplicate clicks)
-           const amt = (parseFloat(p.amount) || 0);
-           const pDate = new Date(p.payment_date || p.created_at);
-           const fKey = p.student_id + "_" + amt + "_" + pDate.getUTCFullYear() + "_" + pDate.getUTCMonth() + "_" + pDate.getUTCDate();
-           if (fuzzyKeys.has(fKey)) return false;
-           fuzzyKeys.add(fKey);
+         const dedupedPayments = extractData(payments).filter(p => {
+           const key = (p.transaction_id || p.id || '').toString().trim();
+           if (!key || seenPayKeys.has(key)) return false;
+           seenPayKeys.add(key);
            return true;
          });
 
@@ -2035,27 +2037,27 @@ Thank you.
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-    // 1. Target Dataset Preparation — cumulative paid amount from effective enrollment through target month
-    const s_id_map = {};
-    (allPayments || []).forEach(p => {
-      if (p.status === 'paid') {
-        const sid = String(p.student_id || '').trim().toLowerCase();
-        if (!sid) return;
-        const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
-        if (!s) return;
+      // 1. Target Dataset Preparation — cumulative paid months from effective enrollment through target month
+      const s_id_map = {};
+      (allPayments || []).forEach(p => {
+        if (p.status === 'paid') {
+          const sid = String(p.student_id || '').trim().toLowerCase();
+          if (!sid) return;
+          const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+          if (!s) return;
 
-        const enrollDateStr = getStudentDate(s);
-        const baseline = new Date(Date.UTC(2026, 3, 1));
-        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-        const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+          const enrollDateStr = getStudentDate(s);
+          const baseline = new Date(Date.UTC(2026, 3, 1));
+          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+          const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
 
-        const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate <= targetMonthEnd) {
-          if (!s_id_map[sid]) s_id_map[sid] = 0;
-          s_id_map[sid] += (parseFloat(p.amount) || 0);
+          const pDate = new Date(p.payment_date || p.created_at);
+          if (pDate >= effectiveEnroll && pDate <= targetMonthEnd) {
+            if (!s_id_map[sid]) s_id_map[sid] = 0;
+            s_id_map[sid]++;
+          }
         }
-      }
-    });
+      });
 
     const targetStudents = (allStudents || []).filter(s => {
       const sStatus = (s.status || 'active').toLowerCase();
@@ -2095,27 +2097,21 @@ Thank you.
 
       const status = getStudentPaymentStatus(s, targetMonth, targetYear);
       
-      const sid = String(s.id).toLowerCase();
-      const totalPaidAmount = s_id_map[sid] || 0;
-      
-      const enrollDateStr = getStudentDate(s);
-      const baseline = new Date(Date.UTC(2026, 3, 1));
-      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-      const monthsRequiredToDate = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
-      
-      const prevMonthsRequired = Math.max(0, monthsRequiredToDate); // Months BEFORE current
-      const arrearsAmount = Math.max(0, (prevMonthsRequired * fee) - totalPaidAmount);
-      
-      const totalRequiredIncludingCurrent = (monthsRequiredToDate + 1) * fee;
-      const totalDebtIncludingCurrent = Math.max(0, totalRequiredIncludingCurrent - totalPaidAmount);
-      const currentMonthDebt = Math.max(0, totalDebtIncludingCurrent - arrearsAmount);
-      
       if (status === 'Due') {
-        totalArrears += arrearsAmount;
-      }
-      if (status === 'Due' || status === 'Pending') {
-        currMonthPending += currentMonthDebt;
+        const enrollDateStr = getStudentDate(s);
+        const baseline = new Date(2026, 3, 1);
+        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+        const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+        const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+        const totalCredits = s_id_map[String(s.id).toLowerCase()] || 0;
+        
+        const monthsBehind = Math.max(0, monthsRequired - totalCredits);
+        if (monthsBehind > 1) {
+          totalArrears += (fee * (monthsBehind - 1));
+        }
+        currMonthPending += fee;
+      } else if (status === 'Pending') {
+        currMonthPending += fee;
       }
     });
 
@@ -2317,13 +2313,22 @@ Thank you.
   };
 
    function renderStudents() {
-     const tbody = document.getElementById('student-tbody');
+     const tbody = $('stud-body');
      if (!tbody) return;
+
      try {
-      ensureReportPeriod();
-      const targetMonth = window.reportMonth;
-      const targetYear = window.reportYear;
-    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+       // Ensure reportMonth/Year are valid numbers
+       if (typeof window.reportMonth !== 'number' || isNaN(window.reportMonth) ||
+           typeof window.reportYear !== 'number' || isNaN(window.reportYear)) {
+         const now = new Date();
+         window.reportMonth = now.getUTCMonth();
+         window.reportYear = now.getUTCFullYear();
+         console.warn('[renderStudents] Fixed invalid reportMonth/year');
+       }
+
+       const targetMonth = window.reportMonth;
+       const targetYear = window.reportYear;
+       const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
        // Pre-calculate payments for this month for the new column
        const paymentsOfMonth = {};
@@ -3398,24 +3403,21 @@ Thank you for your continued support and cooperation.
    // FEATURE 1: INFORM PARENT (Pending/Due)
    // ============================================
    window.informParent = function(id, name, fee) {
-      const s = allStudents.find(x => String(x.id) === String(id));
-      if (!s) return;
-      const targetMonth = window.reportMonth;
-      const targetYear = window.reportYear;
+     const s = allStudents.find(x => String(x.id) === String(id));
+     if (!s) return;
+
+     const targetMonth = window.reportMonth;
+     const targetYear = window.reportYear;
      const enrollDateStr = getStudentDate(s);
      const baseline = new Date(Date.UTC(2026, 3, 1));
      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
-     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
      let totalPaidAmount = 0;
      (window.allPayments || []).forEach(p => {
        if (p.status === 'paid' && String(p.student_id).toLowerCase() === String(s.id).toLowerCase()) {
-         const pDate = new Date(p.payment_date || p.created_at);
-         if (pDate <= targetMonthEnd) {
-            totalPaidAmount += (parseFloat(p.amount) || 0);
-         }
+         totalPaidAmount += (parseFloat(p.amount) || 0);
        }
      });
      const totalDue = Math.max(0, (monthsRequired * fee) - totalPaidAmount);
@@ -3445,28 +3447,24 @@ Thank you for your continued support and cooperation.
      const fee = getStudentMonthlyFee(s);
      const phone = getStudentPhone(s).replace(/\D/g, '');
      const parentName = s.parent_name || 'Parent';
-     const parentEmail = s.email || ''; 
+     const parentEmail = s.email || ''; // Students table has email column (parent's email)
 
      // Calculate exact pending amount
      const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
-    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+     const targetYear = window.reportYear;
      const enrollDateStr = getStudentDate(s);
      const baseline = new Date(2026, 3, 1);
      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth());
+     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
      let totalPaidAmount = 0;
-     (window.allPayments || []).forEach(p => {
-       if (p.status === 'paid' && String(p.student_id).toLowerCase() === String(s.id).toLowerCase()) {
-          const pDate = new Date(p.payment_date || p.created_at);
-          if (pDate <= targetMonthEnd) {
-             totalPaidAmount += (parseFloat(p.amount) || 0);
-          }
-       }
-     });
-     const totalDue = Math.max(0, (monthsRequired * fee) - totalPaidAmount);
+      (window.allPayments || []).forEach(p => {
+        if (p.status === 'paid' && String(p.student_id).toLowerCase() === String(s.id).toLowerCase()) {
+           totalPaidAmount += (parseFloat(p.amount) || 0);
+        }
+      });
+      const totalDue = Math.max(0, (monthsRequired * fee) - totalPaidAmount);
 
      // Build notification content
      let message = customMsg ? `${customMsg}\n\n` : '';
@@ -3920,73 +3918,55 @@ Thank you for your continued support and cooperation.
       toast('Please select students first', 'warning');
       return;
     }
+
     if (!confirm(`Mark ${checked.length} students as Paid?`)) return;
-    
-    toast(`Processing ${checked.length} students sequentially to ensure reliability...`, 'info');
-    
-    let successCount = 0; let failCount = 0; let skipCount = 0;
-    const studentList = Array.from(checked);
 
-    for (const cb of studentList) {
+    toast(`Processing ${checked.length} students...`, 'info');
+    for (const cb of checked) {
       const studentId = cb.dataset.id;
-      // Case-insensitive ID matching
-      const s = allStudents.find(x => String(x.id).toLowerCase() === String(studentId).toLowerCase());
-      if (!s) { failCount++; continue; }
+      const s = allStudents.find(x => String(x.id) === String(studentId));
+      const amt = s ? getStudentMonthlyFee(s) : 5000;
 
-      // Check current audit status before processing
-      const currentStatus = getStudentPaymentStatus(s, window.reportMonth, window.reportYear);
-      if (currentStatus === 'Paid') {
-        skipCount++;
-        continue;
-      }
-
-      const amt = getStudentMonthlyFee(s) || DEFAULT_MONTHLY_FEE;
+      // Update student status and advance due date - Fix #26
       const updates = { payment_status: 'Paid' };
-      
-      // Safe Date Handling for due_date advancement
-      if (s.due_date) {
-        try {
-          const baseDate = new Date(s.due_date);
-          if (!isNaN(baseDate.getTime())) {
-            const nextDate = new Date(baseDate);
-            nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
-            updates.due_date = nextDate.toISOString().split('T')[0];
-          }
-        } catch (e) { console.error('Date error:', e); }
+      if (s) {
+        const baseDate = s.due_date ? new Date(s.due_date) : new Date();
+        const nextDate = new Date(baseDate);
+        nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
+        updates.due_date = nextDate.toISOString().split('T')[0];
       }
 
       try {
-        // 1. Update Profile
-        await apiCall(`${API_BASE}/students?id=${s.id}`, { method: 'PUT', body: JSON.stringify(updates) });
-        
-        // 2. Create Payment
+        await apiCall(`${API_BASE}/students?id=${studentId}`, {
+          method: 'PUT',
+          body: JSON.stringify(updates)
+        });
+
+        // Log history
         await apiCall(`${API_BASE}/payments`, {
-          method: 'POST', body: JSON.stringify({
-            student_id: s.id, amount: amt, status: 'paid', payment_method: 'Bulk Admin', description: 'Bulk mark as paid',
+          method: 'POST',
+          body: JSON.stringify({
+            student_id: studentId,
+            amount: amt,
+            status: 'paid',
+            payment_method: 'Bulk Admin',
+            description: 'Bulk mark as paid by administrator',
             transaction_id: 'BLK-' + Math.floor(Math.random() * 1000000),
-            payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) 
-              ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() 
-              : new Date().toISOString()
+            payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
           })
         });
-        successCount++;
       } catch (e) {
-        console.error('Bulk Pay Error:', s.id, e);
-        failCount++;
+        console.error('Bulk mark paid error for student', studentId, e);
+        toast(`Failed to process student ${getStudentName(s)}: ${e.message}`, 'error');
       }
-      
-      // Delay to respect rate limits (4 requests per second max)
-      await new Promise(r => setTimeout(r, 250));
-    }
-
-    let msg = `Successfully processed ${successCount} students.`;
-    if (skipCount > 0) msg += ` ${skipCount} skipped (already paid).`;
-    if (failCount > 0) msg += ` ${failCount} failed.`;
-    
-    toast(msg, failCount > 0 ? 'warning' : 'success');
-    window.totalPaymentsMap = null;
-    loadAllData(true);
-  }
+     }
+     toast('Bulk payments processed and due dates advanced!', 'success');
+     
+     // FIX #4: Invalidate payment cache before reload
+     window.totalPaymentsMap = null;
+     
+     loadAllData(true);
+   }
 
   window.bulkDeleteStudents = async function () {
     const checked = document.querySelectorAll('.stud-check:checked');
@@ -5078,8 +5058,8 @@ Thank you for your continued support and cooperation.
 
       // 1. Dashboard Sheet (KPIs)
       const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
-    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+      const targetYear = window.reportYear;
+      const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
       const targetStudents = allStudents.filter(s => {
           const enrollStr = getStudentDate(s);
