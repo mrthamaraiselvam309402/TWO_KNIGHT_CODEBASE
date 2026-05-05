@@ -770,15 +770,21 @@ Thank you for your cooperation.
      if (hardDeleteCheckbox) hardDeleteCheckbox.checked = false;
    }
 
-   // Setup global UI event handlers once DOM is ready
-   function initUI() {
-     // Close modals when clicking outside modal content
-     document.querySelectorAll('.modal').forEach(m => {
-       m.addEventListener('click', e => {
-         if (e.target === m) closeModals();
-       });
-     });
-   }
+function initUI() {
+      // Close modals when clicking outside modal content
+      document.querySelectorAll('.modal').forEach(m => {
+        m.addEventListener('click', e => {
+          if (e.target === m) closeModals();
+        });
+      });
+      // Close dropdowns when clicking outside
+      document.addEventListener('click', e => {
+        if (!e.target.closest('.country-selector')) {
+          const dropdowns = document.querySelectorAll('.country-dropdown');
+          dropdowns.forEach(d => d.style.display = 'none');
+        }
+      });
+    }
 
   window.executeDelete = async function () {
     const id = $('delete-item-id').value;
@@ -1023,53 +1029,59 @@ Thank you for your cooperation.
     `).join('');
   }
 
-  window.selectCountry = function(code, dial, length) {
-    window.selectedCountryCode = code;
-    const selected = $('country-selected');
-    const phoneInput = $('m-phone');
-    if (selected) {
-      const country = getCountryByCode(code);
-      selected.innerHTML = `<span>${country.code}</span><span style="margin-left:6px">${country.dial}</span>`;
-    }
-    if (phoneInput) {
-      phoneInput.placeholder = `${country.length} digits for ${country.name}`;
-      phoneInput.maxLength = length + 3;
-    }
-    document.querySelectorAll('.country-option').forEach(el => el.classList.remove('selected'));
-    const opt = document.querySelector(`.country-option[data-code="${code}"]`);
-    if (opt) opt.classList.add('selected');
-    const dropdown = $('country-dropdown');
-    if (dropdown) dropdown.classList.remove('open');
-  };
+window.selectCountry = function(code, dial, length) {
+     window.selectedCountryCode = code;
+     const selected = $('country-selected');
+     const phoneInput = $('m-phone');
+     const country = getCountryByCode(code);
+     if (selected) {
+       selected.innerHTML = `<span>${country.code}</span><span style="margin-left:6px">${country.dial}</span>`;
+     }
+     if (phoneInput) {
+       phoneInput.placeholder = `${country.length} digits for ${country.name}`;
+       phoneInput.maxLength = length + 3;
+     }
+     document.querySelectorAll('.country-option').forEach(el => el.classList.remove('selected'));
+     const opt = document.querySelector(`.country-option[data-code="${code}"]`);
+     if (opt) opt.classList.add('selected');
+     const dropdown = $('country-dropdown');
+     if (dropdown) dropdown.style.display = 'none';
+   };
 
-  window.selectCountryCoach = function(code, dial, length) {
-    window.selectedCountryCodeCoach = code;
-    const selected = $('country-selected-coach');
-    const phoneInput = $('cm-phone');
-    if (selected) {
-      const country = getCountryByCode(code);
-      selected.innerHTML = `<span>${country.code}</span><span style="margin-left:6px">${country.dial}</span>`;
-    }
-    if (phoneInput) {
-      phoneInput.placeholder = `${country.length} digits for ${country.name}`;
-      phoneInput.maxLength = length + 3;
-    }
-    document.querySelectorAll('.country-option').forEach(el => el.classList.remove('selected'));
-    const opt = document.querySelector(`.country-option[data-code="${code}"]`);
-    if (opt) opt.classList.add('selected');
-    const dropdown = $('country-dropdown-coach');
-    if (dropdown) dropdown.classList.remove('open');
-  };
+window.selectCountryCoach = function(code, dial, length) {
+     window.selectedCountryCodeCoach = code;
+     const selected = $('country-selected-coach');
+     const phoneInput = $('cm-phone');
+     const country = getCountryByCode(code);
+     if (selected) {
+       selected.innerHTML = `<span>${country.code}</span><span style="margin-left:6px">${country.dial}</span>`;
+     }
+     if (phoneInput) {
+       phoneInput.placeholder = `${country.length} digits for ${country.name}`;
+       phoneInput.maxLength = length + 3;
+     }
+     document.querySelectorAll('.country-option').forEach(el => el.classList.remove('selected'));
+     const opt = document.querySelector(`.country-option[data-code="${code}"]`);
+     if (opt) opt.classList.add('selected');
+     const dropdown = $('country-dropdown-coach');
+     if (dropdown) dropdown.style.display = 'none';
+   };
 
-  window.openCountryDropdownCoach = function() {
-    const dropdown = $('country-dropdown-coach');
-    if (dropdown) dropdown.classList.toggle('open');
-  };
+window.openCountryDropdownCoach = function() {
+     const dropdown = $('country-dropdown-coach');
+     if (dropdown) {
+       const isOpen = dropdown.style.display === 'block';
+       dropdown.style.display = isOpen ? 'none' : 'block';
+     }
+   };
 
-  window.openCountryDropdown = function() {
-    const dropdown = $('country-dropdown');
-    if (dropdown) dropdown.classList.toggle('open');
-  };
+window.openCountryDropdown = function() {
+     const dropdown = $('country-dropdown');
+     if (dropdown) {
+       const isOpen = dropdown.style.display === 'block';
+       dropdown.style.display = isOpen ? 'none' : 'block';
+     }
+   };
 
 
   function getStudentBatchType(s) {
