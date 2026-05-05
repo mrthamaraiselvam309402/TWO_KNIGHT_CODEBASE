@@ -672,7 +672,16 @@
       </div>
       <div class="form-group">
         <label>Parent Phone</label>
-        <input type="tel" id="e-phone" maxlength="10" inputmode="numeric" pattern="[0-9]{10}">
+        <div style="display:flex;gap:8px">
+          <div class="country-selector" style="position:relative">
+            <div id="country-selected-edit" onclick="event.stopPropagation();openCountryDropdownEdit()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
+              <span>IN</span><span style="margin-left:6px">+91</span>
+            </div>
+            <div id="country-dropdown-edit" class="country-dropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;z-index:1000;display:none;margin-top:4px;box-shadow:var(--shadow)">
+            </div>
+          </div>
+          <input type="tel" id="e-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
+        </div>
       </div>
     </div>
 

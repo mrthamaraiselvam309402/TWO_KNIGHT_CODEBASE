@@ -998,11 +998,12 @@ function initUI() {
     { code: 'CO', name: 'Colombia', dial: '+57', length: 10 },
     { code: 'NZ', name: 'New Zealand', dial: '+64', length: 9 },
     { code: 'TW', name: 'Taiwan', dial: '+886', length: 9 }
-  ];
+   ];
+   
+   window.selectedCountryCode = 'IN';
+   window.selectedCountryCodeEdit = 'IN';
 
-  window.selectedCountryCode = 'IN';
-
-  function getCountryByCode(code) {
+   function getCountryByCode(code) {
     return COUNTRY_CODES.find(c => c.code === code) || COUNTRY_CODES[0];
   }
 
@@ -1077,12 +1078,40 @@ window.openCountryDropdownCoach = function() {
      }
    };
 
-window.openCountryDropdown = function() {
-      const dropdown = $('country-dropdown');
+ window.openCountryDropdown = function() {
+       const dropdown = $('country-dropdown');
+       if (dropdown) {
+         const currentDisplay = dropdown.style.display;
+         dropdown.style.display = currentDisplay === 'block' ? 'none' : 'block';
+       }
+     };
+
+ window.openCountryDropdownEdit = function() {
+      const dropdown = $('country-dropdown-edit');
       if (dropdown) {
-        const currentDisplay = dropdown.style.display;
-        dropdown.style.display = currentDisplay === 'block' ? 'none' : 'block';
+        const isOpen = dropdown.style.display === 'block';
+        dropdown.style.display = isOpen ? 'none' : 'block';
       }
+    };
+
+ window.selectCountryEdit = function(code, dial, length) {
+      window.selectedCountryCodeEdit = code;
+      const country = getCountryByCode(code);
+      if (!country) return;
+      const selected = $('country-selected-edit');
+      const phoneInput = $('e-phone');
+      if (selected) {
+        selected.innerHTML = `<span>${country.code}</span><span style="margin-left:6px">${country.dial}</span>`;
+      }
+      if (phoneInput) {
+        phoneInput.placeholder = `${country.length} digits for ${country.name}`;
+        phoneInput.maxLength = length + 3;
+      }
+      document.querySelectorAll('#country-dropdown-edit .country-option').forEach(el => el.classList.remove('selected'));
+      const opt = document.querySelector(`#country-dropdown-edit .country-option[data-code="${code}"]`);
+      if (opt) opt.classList.add('selected');
+      const dropdown = $('country-dropdown-edit');
+      if (dropdown) dropdown.style.display = 'none';
     };
 
   function getCoachName(c) { return c.name || ''; }
@@ -2653,62 +2682,78 @@ window.openCountryDropdown = function() {
     openModal('student-view-modal');
   }
 
-  function openEdit(id) {
-    const s = allStudents.find(x => String(x.id) === String(id));
-    if (!s) return;
-    const savedCoachId = s.coach_id || '';
-    $('e-id').value = s.id;
-    $('e-name').value = getStudentName(s);
-    $('e-phone').value = getStudentPhone(s);
-    $('e-level').value = getStudentLevel(s);
-    $('e-elo').value = getStudentRating(s);
-    $('e-fee').value = getStudentMonthlyFee(s);
-    if ($('e-enroll-status')) $('e-enroll-status').value = s.status || 'active';
-    if ($('e-payment-status')) $('e-payment-status').value = getStudentPaymentStatus(s);
-    $('e-join').value = getStudentDate(s);
-    $('e-batch-type').value = getStudentBatchType(s);
-    $('e-batch-time').value = getStudentBatchTime(s);
-    if ($('e-due-date')) $('e-due-date').value = s.due_date || '';
-    // BUG FIX: Pre-fill notes so updateStudent never silently blanks them
-    if ($('e-notes')) $('e-notes').value = getStudentCoachNotes(s);
-    syncCoachDropdowns();
-    $('e-coach').value = savedCoachId;
-    openModal('edit-modal');
-  }
+   function openEdit(id) {
+     const s = allStudents.find(x => String(x.id) === String(id));
+     if (!s) return;
+     const savedCoachId = s.coach_id || '';
+     $('e-id').value = s.id;
+     $('e-name').value = getStudentName(s);
+     // Render country dropdown for edit modal
+     renderCountryDropdown('country-dropdown-edit', 'selectCountryEdit');
+     // Set country first so phone placeholder/validation matches
+     const studentCountry = s.country_code || 'IN';
+     const country = getCountryByCode(studentCountry);
+     if (country) {
+       selectCountryEdit(country.code, country.dial, country.length);
+     }
+     $('e-phone').value = getStudentPhone(s);
+     $('e-level').value = getStudentLevel(s);
+     $('e-elo').value = getStudentRating(s);
+     $('e-fee').value = getStudentMonthlyFee(s);
+     if ($('e-enroll-status')) $('e-enroll-status').value = s.status || 'active';
+     if ($('e-payment-status')) $('e-payment-status').value = getStudentPaymentStatus(s);
+     $('e-join').value = getStudentDate(s);
+     $('e-batch-type').value = getStudentBatchType(s);
+     $('e-batch-time').value = getStudentBatchTime(s);
+     if ($('e-due-date')) $('e-due-date').value = s.due_date || '';
+     // BUG FIX: Pre-fill notes so updateStudent never silently blanks them
+     if ($('e-notes')) $('e-notes').value = getStudentCoachNotes(s);
+     syncCoachDropdowns();
+     $('e-coach').value = savedCoachId;
+     openModal('edit-modal');
+   }
 
-  async function updateStudent() {
-    const id = $('e-id').value;
-    const s = allStudents.find(x => String(x.id) === String(id));
-    if (!s) { toast('Student not found', 'error'); return; }
-    const oldElo = getStudentRating(s);
-    const newElo = parseInt($('e-elo').value);
-    const newFee = parseInt($('e-fee').value) || 0;
+   async function updateStudent() {
+     const id = $('e-id').value;
+     const s = allStudents.find(x => String(x.id) === String(id));
+     if (!s) { toast('Student not found', 'error'); return; }
+     const oldElo = getStudentRating(s);
+     const newElo = parseInt($('e-elo').value);
+     const newFee = parseInt($('e-fee').value) || 0;
 
-    // Send fee under every possible field name so whichever Supabase column exists gets updated
-    const data = {
-      full_name: $('e-name').value,
-      name: $('e-name').value,
-      phone: $('e-phone').value,
-      parent_phone: $('e-phone').value,
-      level: $('e-level').value,
-      grade: $('e-level').value,
-      rating: newElo,
-      coach_id: $('e-coach').value,
-      status: $('e-enroll-status')?.value || s.status || 'active',
-      payment_status: $('e-payment-status')?.value || s.payment_status || 'Pending',
-      enrollment_date: $('e-join').value,
-      due_date: $('e-due-date')?.value || null,
-      session_mode: $('e-batch-type').value,
-      batch_type: $('e-batch-type').value,
-      session_time: $('e-batch-time').value,
-      batch_time: $('e-batch-time').value,
-      // Send fee under ALL possible column names
-      monthly_fee: newFee,
-      fee: newFee,
-      fees: newFee,
-      tuition_fee: newFee,
-      notes: $('e-notes')?.value || s.notes || ''
-    };
+     // Validate phone based on selected country for edit modal
+     const rawPhone = $('e-phone').value.trim();
+     const validation = validatePhoneNumber(rawPhone, window.selectedCountryCodeEdit || 'IN');
+     if (!rawPhone) { toast('Parent phone is required', 'error'); return; }
+     if (!validation.valid) { toast(validation.error, 'error'); return; }
+
+     // Send fee under every possible field name so whichever Supabase column exists gets updated
+     const data = {
+       full_name: $('e-name').value,
+       name: $('e-name').value,
+       phone: rawPhone,
+       parent_phone: rawPhone,
+       country_code: window.selectedCountryCodeEdit || 'IN',
+       level: $('e-level').value,
+       grade: $('e-level').value,
+       rating: newElo,
+       coach_id: $('e-coach').value,
+       status: $('e-enroll-status')?.value || s.status || 'active',
+       payment_status: $('e-payment-status')?.value || s.payment_status || 'Pending',
+       enrollment_date: $('e-join').value,
+       due_date: $('e-due-date')?.value || null,
+       session_mode: $('e-batch-type').value,
+       batch_type: $('e-batch-type').value,
+       session_time: $('e-batch-time').value,
+       batch_time: $('e-batch-time').value,
+       // Send fee under ALL possible column names
+       monthly_fee: newFee,
+       fee: newFee,
+       fees: newFee,
+       tuition_fee: newFee,
+       country_code: window.selectedCountryCodeEdit || 'IN',
+       notes: $('e-notes')?.value || s.notes || ''
+     };
 
     try {
       const res = await apiCall(`/api/students?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
@@ -2826,46 +2871,49 @@ window.openCountryDropdown = function() {
       toast('Update failed: ' + e.message, 'error');
     }
   }
-function openEnroll() {
-     $('m-name').value = '';
-     $('m-phone').value = '';
-     $('m-level').value = 'Beginner';
-     $('m-join').value = '';
-     $('m-elo').value = '800';
-     $('m-fee').value = '5000';
-     $('m-batch-type').value = 'Evening';
-     $('m-batch-time').value = '17:00';
-     if ($('m-due-date')) $('m-due-date').value = '';
-     if ($('m-coach')) $('m-coach').value = '';
-     window.selectedCountryCode = 'IN';
-     const selected = $('country-selected');
-     if (selected) selected.innerHTML = '<span>IN</span><span style="margin-left:6px">+91</span>';
-     const phoneInput = $('m-phone');
-     if (phoneInput) phoneInput.placeholder = '10 digits';
+ function openEnroll() {
+      $('m-name').value = '';
+      $('m-phone').value = '';
+      $('m-level').value = 'Beginner';
+      $('m-join').value = '';
+      $('m-elo').value = '800';
+      $('m-fee').value = '5000';
+      $('m-batch-type').value = 'Evening';
+      $('m-batch-time').value = '17:00';
+      if ($('m-due-date')) $('m-due-date').value = '';
+      if ($('m-coach')) $('m-coach').value = '';
+      window.selectedCountryCode = 'IN';
+   window.selectedCountryCodeEdit = 'IN';
+   window.selectedCountryCodeEdit = 'IN';
+      const selected = $('country-selected');
+      if (selected) selected.innerHTML = '<span>IN</span><span style="margin-left:6px">+91</span>';
+      const phoneInput = $('m-phone');
+      if (phoneInput) phoneInput.placeholder = '10 digits';
      syncCoachDropdowns();
      renderCountryDropdown('country-dropdown', 'selectCountry');
      openModal('enroll-modal');
    }
 
-async function saveStudent() {
-     const rawPhone = $('m-phone').value.trim();
-     const validation = validatePhoneNumber(rawPhone, window.selectedCountryCode || 'IN');
-     const data = {
-       full_name: $('m-name').value.trim(),
-       phone: rawPhone,
-       parent_phone: rawPhone,
-       level: $('m-level').value,
-       rating: parseInt($('m-elo').value) || 0,
-       coach_id: $('m-coach').value,
-       enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
-       due_date: $('m-due-date')?.value || null,
-       batch_type: $('m-batch-type').value,
-       batch_time: $('m-batch-time').value,
-       monthly_fee: parseInt($('m-fee').value) || 0,
-       payment_status: 'Due',
-       status: 'active',
-       notes: ''
-     };
+ async function saveStudent() {
+      const rawPhone = $('m-phone').value.trim();
+      const validation = validatePhoneNumber(rawPhone, window.selectedCountryCode || 'IN');
+      const data = {
+        full_name: $('m-name').value.trim(),
+        phone: rawPhone,
+        parent_phone: rawPhone,
+        country_code: window.selectedCountryCode || 'IN',
+        level: $('m-level').value,
+        rating: parseInt($('m-elo').value) || 0,
+        coach_id: $('m-coach').value,
+        enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
+        due_date: $('m-due-date')?.value || null,
+        batch_type: $('m-batch-type').value,
+        batch_time: $('m-batch-time').value,
+        monthly_fee: parseInt($('m-fee').value) || 0,
+        payment_status: 'Due',
+        status: 'active',
+        notes: ''
+      };
 
      if (!data.due_date) {
        const nextMonth = new Date();

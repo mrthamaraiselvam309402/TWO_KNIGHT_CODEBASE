@@ -53,17 +53,25 @@ Deno.serve(async (req) => {
     })
   }
 
-  // --- Input Validation Helpers ---
-  function sanitizeString(str: unknown, maxLength = 255): string {
-    if (typeof str !== 'string') return ''
-    return str.slice(0, maxLength).replace(/[<>"'`;]/g, '').trim()
-  }
+   // --- Input Validation Helpers ---
+   function sanitizeString(str: unknown, maxLength = 255): string {
+     if (typeof str !== 'string') return ''
+     return str.slice(0, maxLength).replace(/[<>"'`;]/g, '').trim()
+   }
 
-  function validatePhone(phone: unknown): string {
-    if (!phone || typeof phone !== 'string') return ''
-    const digits = phone.replace(/\D/g, '').slice(0, 15)
-    return digits.length >= 10 ? digits : ''
-  }
+   function validatePhone(phone: unknown): string {
+     if (!phone || typeof phone !== 'string') return ''
+     const digits = phone.replace(/\D/g, '').slice(0, 15)
+     return digits.length >= 10 ? digits : ''
+   }
+
+   function validateCountryCode(code: unknown): string {
+     if (!code || typeof code !== 'string') return 'IN'
+     const upper = code.toUpperCase()
+     // List of valid ISO 3166-1 alpha-2 country codes supported by the frontend
+     const validCodes = ['IN','US','GB','CA','AU','DE','FR','JP','CN','BR','MX','IT','ES','RU','KR','SG','MY','TH','ID','PH','VN','AE','SA','PK','BD','LK','ZA','NG','EG','NL','BE','SE','NO','DK','FI','PL','TR','IL','AR','CL','CO','NZ','TW']
+     return validCodes.includes(upper) ? upper : 'IN'
+   }
 
   function validateRating(rating: unknown): number {
     const num = parseInt(String(rating))
@@ -76,42 +84,43 @@ Deno.serve(async (req) => {
     return valid.includes(String(status)) ? String(status) : 'pending'
   }
 
-  // Transform DB row to API response
-  function transformStudent(s: Record<string, unknown>) {
-    const status = s.status || 'pending';
-    const fee = s.monthly_fee ?? s.fee ?? s.fees ?? s.tuition_fee ?? 0;
-    
-    return {
-      id: s.id,
-      name: s.name || '',
-      full_name: s.name || '',
-      email: s.email || '',
-      phone: s.phone || '',
-      parent_phone: s.parent_phone || '',
-      parent_name: s.parent_name || '',
-      age: s.age || null,
-      grade: s.grade || null,
-      level: s.grade || 'Beginner',
-      enrollment_date: s.enrollment_date || '',
-      join_date: s.enrollment_date || '',
-      address: s.address || '',
-      status: status,
-      payment_status: s.payment_status || (status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due')),
-      coach_id: s.coach_id || null,
-      rating: s.rating || 800,
-      current_rating: s.rating || 800,
-      notes: s.notes || '',
-      session_mode: s.session_mode || null,
-      session_time: s.session_time || null,
-      batch_type: s.session_mode || null,
-      batch_time: s.session_time || null,
-      monthly_fee: parseInt(String(fee)) || 0,
-      due_date: s.due_date || null,
-      account_status: s.account_status || 'active',
-      created_at: s.created_at,
-      updated_at: s.updated_at
-    }
-  }
+   // Transform DB row to API response
+   function transformStudent(s: Record<string, unknown>) {
+     const status = s.status || 'pending';
+     const fee = s.monthly_fee ?? s.fee ?? s.fees ?? s.tuition_fee ?? 0;
+
+     return {
+       id: s.id,
+       name: s.name || '',
+       full_name: s.name || '',
+       email: s.email || '',
+       phone: s.phone || '',
+       parent_phone: s.parent_phone || '',
+       parent_name: s.parent_name || '',
+       age: s.age || null,
+       grade: s.grade || null,
+       level: s.grade || 'Beginner',
+       enrollment_date: s.enrollment_date || '',
+       join_date: s.enrollment_date || '',
+       address: s.address || '',
+       country_code: s.country_code || 'IN',
+       status: status,
+       payment_status: s.payment_status || (status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due')),
+       coach_id: s.coach_id || null,
+       rating: s.rating || 800,
+       current_rating: s.rating || 800,
+       notes: s.notes || '',
+       session_mode: s.session_mode || null,
+       session_time: s.session_time || null,
+       batch_type: s.session_mode || null,
+       batch_time: s.session_time || null,
+       monthly_fee: parseInt(String(fee)) || 0,
+       due_date: s.due_date || null,
+       account_status: s.account_status || 'active',
+       created_at: s.created_at,
+       updated_at: s.updated_at
+     }
+   }
 
   try {
     const url = new URL(req.url)
@@ -180,34 +189,36 @@ Deno.serve(async (req) => {
         })
       }
 
-      // Encrypt sensitive PII fields
-      const parentPhone = validatePhone(rawBody.parent_phone || rawBody.phone)
-      const phone = validatePhone(rawBody.phone || rawBody.parent_phone)
-      const email = sanitizeString(rawBody.email, 254)
-      const address = sanitizeString(rawBody.address, 500)
-      
-      const newStudent: Record<string, unknown> = {
-        id: crypto.randomUUID(),
-        name: name,
-        phone: phone,  // Will be encrypted via trigger
-        parent_phone: parentPhone,  // Will be encrypted via trigger
-        email: email,  // Will be encrypted via trigger
-        address: address,  // Will be encrypted via trigger
-        parent_name: sanitizeString(rawBody.parent_name, 100),
-        age: rawBody.age ? parseInt(String(rawBody.age)) || null : null,
-        grade: sanitizeString(rawBody.grade || rawBody.level, 50),
-        enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0],
-        status: validateStatus(rawBody.status),
-        coach_id: rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null,
-        rating: validateRating(rawBody.rating || rawBody.current_rating),
-        session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
-        session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
-        monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
-        due_date: rawBody.due_date ? String(rawBody.due_date) : null,
-        notes: sanitizeString(rawBody.notes, 2000),
-        account_status: 'active',
-        created_at: new Date().toISOString()
-       }
+       // Encrypt sensitive PII fields
+       const parentPhone = validatePhone(rawBody.parent_phone || rawBody.phone)
+       const phone = validatePhone(rawBody.phone || rawBody.parent_phone)
+       const email = sanitizeString(rawBody.email, 254)
+       const address = sanitizeString(rawBody.address, 500)
+       const countryCode = validateCountryCode(rawBody.country_code)
+
+       const newStudent: Record<string, unknown> = {
+         id: crypto.randomUUID(),
+         name: name,
+         phone: phone,  // Will be encrypted via trigger
+         parent_phone: parentPhone,  // Will be encrypted via trigger
+         email: email,  // Will be encrypted via trigger
+         address: address,  // Will be encrypted via trigger
+         country_code: countryCode,
+         parent_name: sanitizeString(rawBody.parent_name, 100),
+         age: rawBody.age ? parseInt(String(rawBody.age)) || null : null,
+         grade: sanitizeString(rawBody.grade || rawBody.level, 50),
+         enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0],
+         status: validateStatus(rawBody.status),
+         coach_id: rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null,
+         rating: validateRating(rawBody.rating || rawBody.current_rating),
+         session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
+         session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
+         monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
+         due_date: rawBody.due_date ? String(rawBody.due_date) : null,
+         notes: sanitizeString(rawBody.notes, 2000),
+         account_status: 'active',
+         created_at: new Date().toISOString()
+        }
       
       const { data: insertedStudent, error: insertError } = await supabase
         .from('students')
@@ -286,9 +297,12 @@ Deno.serve(async (req) => {
         const feeVal = parseInt(String(rawBody.monthly_fee ?? rawBody.fee ?? rawBody.fees ?? rawBody.tuition_fee)) || 0;
         updateData.monthly_fee = feeVal;
       }
-      if (rawBody.due_date !== undefined) {
-        updateData.due_date = rawBody.due_date ? String(rawBody.due_date) : null;
-      }
+       if (rawBody.due_date !== undefined) {
+         updateData.due_date = rawBody.due_date ? String(rawBody.due_date) : null;
+       }
+       if (rawBody.country_code !== undefined) {
+         updateData.country_code = validateCountryCode(rawBody.country_code);
+       }
       
       updateData.updated_at = new Date().toISOString();
       
