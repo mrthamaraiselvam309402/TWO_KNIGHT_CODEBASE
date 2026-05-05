@@ -900,8 +900,7 @@ Thank you for your cooperation.
       if (psid === s_id_key && p.status === 'paid') {
         const pDate = new Date(p.payment_date || p.created_at);
         // Only count payments that occurred in or after the enrollment month
-        const auditStart = new Date(Date.UTC(effectiveEnroll.getUTCFullYear(), effectiveEnroll.getUTCMonth(), 1));
-        if (pDate >= auditStart && pDate <= targetMonthEnd) {
+        if (pDate <= targetMonthEnd) {
           const monthKey = `${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
           paidMonths.add(monthKey);
         }
@@ -2082,7 +2081,7 @@ Thank you for your cooperation.
           const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
 
           const pDate = new Date(p.payment_date || p.created_at);
-          if (pDate >= effectiveEnroll && pDate <= targetMonthEnd) {
+          if (pDate <= targetMonthEnd) {
             const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
             if (seenMonthsAudit.has(mKey)) return;
             seenMonthsAudit.add(mKey);
