@@ -873,6 +873,7 @@ function initUI() {
   }
   function getStudentPhone(s) { return s.parent_phone || s.phone || ''; }
   function getStudentEmail(s) { return s.email || ''; }
+  function getStudentStatus(s) { return (s.status || s.account_status || 'active').toLowerCase(); }
   function getStudentBatchType(s) { return s.session_mode || s.batch_type || 'Group'; }
   function getStudentBatchTime(s) { return s.session_time || s.batch_time || ''; }
   function getStudentSessionTime(s) { return s.session_time || s.batch_time || 'TBD'; }
