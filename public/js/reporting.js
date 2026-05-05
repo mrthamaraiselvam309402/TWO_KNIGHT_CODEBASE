@@ -277,7 +277,7 @@ window.generateReportPDF = async function() {
   <meta charset="UTF-8">
   <title>Executive Strategic Audit - ${dateStr}</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cormorant+Garamond:wght@400;600&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js'"></script>
   <style>
     :root {
       --gold: #c9960c;
@@ -588,6 +588,10 @@ window.generateReportPDF = async function() {
     reportHTML += `
   <script>
     const initCharts = () => {
+      if (typeof Chart === 'undefined') {
+        console.warn('[Reporting] Chart.js not loaded - skipping charts');
+        return;
+      }
       new Chart(document.getElementById('revChart').getContext('2d'), {
         type: 'doughnut',
         data: {
