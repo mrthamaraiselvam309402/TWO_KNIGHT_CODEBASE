@@ -873,6 +873,29 @@ function initUI() {
   }
   function getStudentPhone(s) { return s.parent_phone || s.phone || ''; }
   function getStudentEmail(s) { return s.email || ''; }
+  function getStudentBatchType(s) { return s.session_mode || s.batch_type || 'Group'; }
+  function getStudentBatchTime(s) { return s.session_time || s.batch_time || ''; }
+  function getStudentSessionTime(s) { return s.session_time || s.batch_time || 'TBD'; }
+  function getStudentCoachNotes(s) { return s.notes || s.coach_notes || ''; }
+  
+  function isStudentScheduledToday(s) {
+    if (!s || (s.status || 'active').toLowerCase() !== 'active') return false;
+    const now = new Date();
+    const day = now.getDay();
+    const dayName = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+    const time = (s.session_time || s.batch_time || '').toUpperCase();
+    if (!time) return true;
+    if (time.includes('WEEKEND')) { if (day === 0 || day === 6) return true; }
+    if (time.includes('WEEKDAY')) { if (day >= 1 && day <= 5) return true; }
+    if (time.includes('DAILY')) return true;
+    if (time.includes(dayName)) return true;
+    const shortDay = dayName.slice(0, 3);
+    if (time.includes(shortDay)) return true;
+    if (time.includes('FRI') && day === 5) return true;
+    if (time.includes('SAT') && day === 6) return true;
+    if (time.includes('SUN') && day === 0) return true;
+    return false;
+  }
   const DEFAULT_MONTHLY_FEE = 1500; // Configurable default for display
 
   function getStudentMonthlyFee(s) {
@@ -5497,6 +5520,7 @@ Thank you for your continued support and cooperation.
   window.getEventTime = getEventTime;
 
   window.getStudentSessionTime = getStudentSessionTime;
+  window.isStudentScheduledToday = isStudentScheduledToday;
   window.getMessagePriority = getMessagePriority;
   window.getMessageIsRead = getMessageIsRead;
   window.makeAvSrc = makeAvSrc;
