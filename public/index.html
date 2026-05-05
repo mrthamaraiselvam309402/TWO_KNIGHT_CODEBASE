@@ -584,24 +584,54 @@
     <div class="modal-title">Enroll New Student</div>
     <div class="modal-sub">Student Enrollment Details</div>
     
-    <div class="modal-grid">
+<div class="modal-grid">
+       <div class="form-group">
+         <label>Phone (10 digits)</label>
+         <div style="display:flex;gap:8px">
+           <div class="country-selector" style="position:relative">
+             <div id="country-selected-coach" onclick="openCountryDropdownCoach()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
+               <span>IN</span><span style="margin-left:6px">+91</span>
+             </div>
+             <div id="country-dropdown-coach" class="country-dropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;z-index:1000;display:none;margin-top:4px;box-shadow:var(--shadow)">
+             </div>
+           </div>
+           <input type="tel" id="cm-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
+         </div>
+       </div>
+      <div class="form-group">
+        <label>Parent Phone</label>
+        <div style="display:flex;gap:8px">
+          <div class="country-selector" style="position:relative">
+            <div id="country-selected" onclick="openCountryDropdown()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
+              <span>IN</span><span>+91</span>
+            </div>
+            <div id="country-dropdown" class="country-dropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;z-index:1000;display:none;margin-top:4px;box-shadow:var(--shadow)">
+            </div>
+          </div>
+          <input type="tel" id="m-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
+        </div>
+      </div>
+    </div>
+
+<div class="modal-grid">
       <div class="form-group">
         <label>Full Name</label>
         <input type="text" id="m-name" placeholder="Enter student name">
       </div>
       <div class="form-group">
         <label>Parent Phone</label>
-        <input type="tel" id="m-phone" placeholder="10 digits" maxlength="10" inputmode="numeric" pattern="[0-9]{10}">
+        <div style="display:flex;gap:8px">
+          <div class="country-selector" style="position:relative">
+            <div id="country-selected" onclick="openCountryDropdown()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
+              <span>IN</span><span style="margin-left:6px">+91</span>
+            </div>
+            <div id="country-dropdown" class="country-dropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;z-index:1000;display:none;margin-top:4px;box-shadow:var(--shadow)">
+            </div>
+          </div>
+          <input type="tel" id="m-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
+        </div>
       </div>
     </div>
-
-    <div class="modal-grid">
-      <div class="form-group">
-        <label>Student Level</label>
-        <select id="m-level">
-          <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Elite</option>
-        </select>
-      </div>
       <div class="form-group">
         <label>Initial ELO Rating</label>
         <input type="number" id="m-elo" value="800">

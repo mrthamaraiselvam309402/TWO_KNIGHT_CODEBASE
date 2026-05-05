@@ -945,6 +945,132 @@ Thank you for your cooperation.
     return 'Due';
   }
 
+  // ── COUNTRY PHONE VALIDATION ──
+  const COUNTRY_CODES = [
+    { code: 'IN', name: 'India', dial: '+91', length: 10 },
+    { code: 'US', name: 'United States', dial: '+1', length: 10 },
+    { code: 'GB', name: 'United Kingdom', dial: '+44', length: 10 },
+    { code: 'CA', name: 'Canada', dial: '+1', length: 10 },
+    { code: 'AU', name: 'Australia', dial: '+61', length: 9 },
+    { code: 'DE', name: 'Germany', dial: '+49', length: 10 },
+    { code: 'FR', name: 'France', dial: '+33', length: 9 },
+    { code: 'JP', name: 'Japan', dial: '+81', length: 10 },
+    { code: 'CN', name: 'China', dial: '+86', length: 11 },
+    { code: 'BR', name: 'Brazil', dial: '+55', length: 10 },
+    { code: 'MX', name: 'Mexico', dial: '+52', length: 10 },
+    { code: 'IT', name: 'Italy', dial: '+39', length: 10 },
+    { code: 'ES', name: 'Spain', dial: '+34', length: 9 },
+    { code: 'RU', name: 'Russia', dial: '+7', length: 10 },
+    { code: 'KR', name: 'South Korea', dial: '+82', length: 9 },
+    { code: 'SG', name: 'Singapore', dial: '+65', length: 8 },
+    { code: 'MY', name: 'Malaysia', dial: '+60', length: 9 },
+    { code: 'TH', name: 'Thailand', dial: '+66', length: 9 },
+    { code: 'ID', name: 'Indonesia', dial: '+62', length: 10 },
+    { code: 'PH', name: 'Philippines', dial: '+63', length: 10 },
+    { code: 'VN', name: 'Vietnam', dial: '+84', length: 9 },
+    { code: 'AE', name: 'UAE', dial: '+971', length: 9 },
+    { code: 'SA', name: 'Saudi Arabia', dial: '+966', length: 9 },
+    { code: 'PK', name: 'Pakistan', dial: '+92', length: 10 },
+    { code: 'BD', name: 'Bangladesh', dial: '+880', length: 10 },
+    { code: 'LK', name: 'Sri Lanka', dial: '+94', length: 9 },
+    { code: 'ZA', name: 'South Africa', dial: '+27', length: 9 },
+    { code: 'NG', name: 'Nigeria', dial: '+234', length: 10 },
+    { code: 'EG', name: 'Egypt', dial: '+20', length: 10 },
+    { code: 'NL', name: 'Netherlands', dial: '+31', length: 9 },
+    { code: 'BE', name: 'Belgium', dial: '+32', length: 9 },
+    { code: 'SE', name: 'Sweden', dial: '+46', length: 9 },
+    { code: 'NO', name: 'Norway', dial: '+47', length: 8 },
+    { code: 'DK', name: 'Denmark', dial: '+45', length: 8 },
+    { code: 'FI', name: 'Finland', dial: '+358', length: 9 },
+    { code: 'PL', name: 'Poland', dial: '+48', length: 9 },
+    { code: 'TR', name: 'Turkey', dial: '+90', length: 10 },
+    { code: 'IL', name: 'Israel', dial: '+972', length: 9 },
+    { code: 'AR', name: 'Argentina', dial: '+54', length: 10 },
+    { code: 'CL', name: 'Chile', dial: '+56', length: 9 },
+    { code: 'CO', name: 'Colombia', dial: '+57', length: 10 },
+    { code: 'NZ', name: 'New Zealand', dial: '+64', length: 9 },
+    { code: 'TW', name: 'Taiwan', dial: '+886', length: 9 }
+  ];
+
+  window.selectedCountryCode = 'IN';
+
+  function getCountryByCode(code) {
+    return COUNTRY_CODES.find(c => c.code === code) || COUNTRY_CODES[0];
+  }
+
+  function validatePhoneNumber(phone, countryCode = 'IN') {
+    const country = getCountryByCode(countryCode);
+    if (!country) return { valid: false, error: 'Unknown country' };
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 0) return { valid: false, error: 'Phone number is required' };
+    const minLen = country.length - 2;
+    const maxLen = country.length + 2;
+    if (digits.length < minLen || digits.length > maxLen) {
+      return { valid: false, error: `${country.name} phone numbers are typically ${country.length} digits (got ${digits.length})` };
+    }
+    return { valid: true, formatted: `${country.dial} ${digits}` };
+  }
+
+  function renderCountryDropdown(dropdownId = 'country-dropdown', selectFn = 'selectCountry') {
+    const dropdown = $(dropdownId);
+    if (!dropdown) return;
+    dropdown.innerHTML = COUNTRY_CODES.map(c => `
+      <div class="country-option" data-code="${c.code}" data-dial="${c.dial}" onclick="window.${selectFn}('${c.code}', '${c.dial}', ${c.length})">
+        <span class="country-flag">${c.code}</span>
+        <span class="country-name">${c.name}</span>
+        <span class="country-dial">${c.dial}</span>
+      </div>
+    `).join('');
+  }
+
+  window.selectCountry = function(code, dial, length) {
+    window.selectedCountryCode = code;
+    const selected = $('country-selected');
+    const phoneInput = $('m-phone');
+    if (selected) {
+      const country = getCountryByCode(code);
+      selected.innerHTML = `<span>${country.code}</span><span style="margin-left:6px">${country.dial}</span>`;
+    }
+    if (phoneInput) {
+      phoneInput.placeholder = `${country.length} digits for ${country.name}`;
+      phoneInput.maxLength = length + 3;
+    }
+    document.querySelectorAll('.country-option').forEach(el => el.classList.remove('selected'));
+    const opt = document.querySelector(`.country-option[data-code="${code}"]`);
+    if (opt) opt.classList.add('selected');
+    const dropdown = $('country-dropdown');
+    if (dropdown) dropdown.classList.remove('open');
+  };
+
+  window.selectCountryCoach = function(code, dial, length) {
+    window.selectedCountryCodeCoach = code;
+    const selected = $('country-selected-coach');
+    const phoneInput = $('cm-phone');
+    if (selected) {
+      const country = getCountryByCode(code);
+      selected.innerHTML = `<span>${country.code}</span><span style="margin-left:6px">${country.dial}</span>`;
+    }
+    if (phoneInput) {
+      phoneInput.placeholder = `${country.length} digits for ${country.name}`;
+      phoneInput.maxLength = length + 3;
+    }
+    document.querySelectorAll('.country-option').forEach(el => el.classList.remove('selected'));
+    const opt = document.querySelector(`.country-option[data-code="${code}"]`);
+    if (opt) opt.classList.add('selected');
+    const dropdown = $('country-dropdown-coach');
+    if (dropdown) dropdown.classList.remove('open');
+  };
+
+  window.openCountryDropdownCoach = function() {
+    const dropdown = $('country-dropdown-coach');
+    if (dropdown) dropdown.classList.toggle('open');
+  };
+
+  window.openCountryDropdown = function() {
+    const dropdown = $('country-dropdown');
+    if (dropdown) dropdown.classList.toggle('open');
+  };
+
 
   function getStudentBatchType(s) {
     if (!s) return 'Group';
@@ -2740,60 +2866,67 @@ Thank you for your cooperation.
       toast('Update failed: ' + e.message, 'error');
     }
   }
-  function openEnroll() {
-    $('m-name').value = '';
-    $('m-phone').value = '';
-    $('m-level').value = 'Beginner';
-    $('m-join').value = '';
-    $('m-elo').value = '800';
-    $('m-fee').value = '5000';
-    $('m-batch-type').value = 'Evening';
-    $('m-batch-time').value = '17:00';
-    if ($('m-due-date')) $('m-due-date').value = '';
-    if ($('m-coach')) $('m-coach').value = '';
-    syncCoachDropdowns();
-    openModal('enroll-modal');
-  }
+function openEnroll() {
+     $('m-name').value = '';
+     $('m-phone').value = '';
+     $('m-level').value = 'Beginner';
+     $('m-join').value = '';
+     $('m-elo').value = '800';
+     $('m-fee').value = '5000';
+     $('m-batch-type').value = 'Evening';
+     $('m-batch-time').value = '17:00';
+     if ($('m-due-date')) $('m-due-date').value = '';
+     if ($('m-coach')) $('m-coach').value = '';
+     window.selectedCountryCode = 'IN';
+     const selected = $('country-selected');
+     if (selected) selected.innerHTML = '<span>IN</span><span style="margin-left:6px">+91</span>';
+     const phoneInput = $('m-phone');
+     if (phoneInput) phoneInput.placeholder = '10 digits';
+     syncCoachDropdowns();
+     renderCountryDropdown('country-dropdown', 'selectCountry');
+     openModal('enroll-modal');
+   }
 
-  async function saveStudent() {
-    const data = {
-      full_name: $('m-name').value.trim(),
-      phone: $('m-phone').value.trim(),
-      parent_phone: $('m-phone').value.trim(),
-      level: $('m-level').value,
-      rating: parseInt($('m-elo').value) || 0,
-      coach_id: $('m-coach').value,
-      enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
-      due_date: $('m-due-date')?.value || null,
-      batch_type: $('m-batch-type').value,
-      batch_time: $('m-batch-time').value,
-      monthly_fee: parseInt($('m-fee').value) || 0,
-      payment_status: 'Due',
-      status: 'active',
-      notes: ''
-    };
+async function saveStudent() {
+     const rawPhone = $('m-phone').value.trim();
+     const validation = validatePhoneNumber(rawPhone, window.selectedCountryCode || 'IN');
+     const data = {
+       full_name: $('m-name').value.trim(),
+       phone: rawPhone,
+       parent_phone: rawPhone,
+       level: $('m-level').value,
+       rating: parseInt($('m-elo').value) || 0,
+       coach_id: $('m-coach').value,
+       enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
+       due_date: $('m-due-date')?.value || null,
+       batch_type: $('m-batch-type').value,
+       batch_time: $('m-batch-time').value,
+       monthly_fee: parseInt($('m-fee').value) || 0,
+       payment_status: 'Due',
+       status: 'active',
+       notes: ''
+     };
 
-    if (!data.due_date) {
-      const nextMonth = new Date();
-      nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1, 5);
-      data.due_date = nextMonth.toISOString().split('T')[0];
-    }
+     if (!data.due_date) {
+       const nextMonth = new Date();
+       nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1, 5);
+       data.due_date = nextMonth.toISOString().split('T')[0];
+     }
 
-    if (!data.full_name) { toast('Student name is required', 'error'); return; }
-    if (!data.phone) { toast('Parent phone is required', 'error'); return; }
-    const phoneDigits = data.phone.replace(/\D/g, '');
-    if (!/^\d{10}$/.test(phoneDigits)) { toast('Phone number must be exactly 10 digits', 'error'); return; }
+     if (!data.full_name) { toast('Student name is required', 'error'); return; }
+     if (!rawPhone) { toast('Parent phone is required', 'error'); return; }
+     if (!validation.valid) { toast(validation.error, 'error'); return; }
 
-    try {
-      const res = await apiCall('/api/students', { method: 'POST', body: JSON.stringify(data) });
-      if (res.ok) {
-        logAudit('students', 'new', 'create', null, data);
-        toast('Student enrolled successfully!', 'success');
-        closeModals();
-        loadAllData(true);
-      }
-    } catch (e) { toast('Failed to enroll student', 'error'); }
-  }
+     try {
+       const res = await apiCall('/api/students', { method: 'POST', body: JSON.stringify(data) });
+       if (res.ok) {
+         logAudit('students', 'new', 'create', null, data);
+         toast('Student enrolled successfully!', 'success');
+         closeModals();
+         loadAllData(true);
+       }
+     } catch (e) { toast('Failed to enroll student', 'error'); }
+   }
 
   async function deleteStudent(id, name) {
     $('delete-item-type').textContent = 'Student';
@@ -2939,40 +3072,44 @@ Thank you for your cooperation.
     openModal('coach-schedule-modal');
   }
 
-  function openCoachModal(id = null) {
-    if (id) {
-      const c = allCoaches.find(x => String(x.id) === String(id));
-      if (!c) return;
-      $('coach-modal-title').innerText = 'Edit Coach';
-      $('cm-id').value = c.id;
-      $('cm-name').value = getCoachName(c);
-      $('cm-spec').value = getCoachSpecialty(c);
-      $('cm-phone').value = c.phone || '';
-      $('cm-email').value = c.email || '';
-      $('cm-address').value = c.address || '';
-      $('cm-photo').value = (c.photo_url || c.photo || '');
-      $('cm-salary').value = getCoachSalary(c);
-      $('cm-exp').value = c.experience || 0;
-      $('cm-status').value = getCoachStatus(c) || 'active';
-      $('cm-avail').value = c.availability || '';
-      $('cm-etc').value = c.bio || c.additional_details || '';
-    } else {
-      $('coach-modal-title').innerText = 'Add Coach';
-      $('cm-id').value = '';
-      $('cm-name').value = '';
-      $('cm-spec').value = '';
-      $('cm-phone').value = '';
-      $('cm-email').value = '';
-      $('cm-address').value = '';
-      $('cm-photo').value = '';
-      $('cm-salary').value = '0';
-      $('cm-exp').value = '0';
-      $('cm-status').value = 'active';
-      $('cm-avail').value = '';
-      $('cm-etc').value = '';
-    }
-    openModal('coach-crud-modal');
-  }
+function openCoachModal(id = null) {
+     if (id) {
+       const c = allCoaches.find(x => String(x.id) === String(id));
+       if (!c) return;
+       $('coach-modal-title').innerText = 'Edit Coach';
+       $('cm-id').value = c.id;
+       $('cm-name').value = getCoachName(c);
+       $('cm-spec').value = getCoachSpecialty(c);
+       $('cm-phone').value = c.phone || '';
+       $('cm-email').value = c.email || '';
+       $('cm-address').value = c.address || '';
+       $('cm-photo').value = (c.photo_url || c.photo || '');
+       $('cm-salary').value = getCoachSalary(c);
+       $('cm-exp').value = c.experience || 0;
+       $('cm-status').value = getCoachStatus(c) || 'active';
+       $('cm-avail').value = c.availability || '';
+       $('cm-etc').value = c.bio || c.additional_details || '';
+     } else {
+       $('coach-modal-title').innerText = 'Add Coach';
+       $('cm-id').value = '';
+       $('cm-name').value = '';
+       $('cm-spec').value = '';
+       $('cm-phone').value = '';
+       $('cm-email').value = '';
+       $('cm-address').value = '';
+       $('cm-photo').value = '';
+       $('cm-salary').value = '0';
+       $('cm-exp').value = '0';
+       $('cm-status').value = 'active';
+       $('cm-avail').value = '';
+       $('cm-etc').value = '';
+     }
+     window.selectedCountryCodeCoach = 'IN';
+     const selected = $('country-selected-coach');
+     if (selected) selected.innerHTML = '<span>IN</span><span style="margin-left:6px">+91</span>';
+     renderCountryDropdown('country-dropdown-coach', 'selectCountryCoach');
+     openModal('coach-crud-modal');
+   }
 
   async function saveCoach() {
     const id = $('cm-id').value;
