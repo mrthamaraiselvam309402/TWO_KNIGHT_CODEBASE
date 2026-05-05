@@ -43,7 +43,7 @@
 
   // Security validation
   if (!SUPABASE_ANON_KEY) {
-    console.error('Error CRITICAL: Supabase Anon Key is missing!');
+    console.error('❌ CRITICAL: Supabase Anon Key is missing!');
     if (window.location.hostname !== 'localhost') {
       document.body.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px;background:#1a1a1a;color:#fff">
@@ -56,9 +56,9 @@
     }
   }
 
-// ===============================================================
+// ═══════════════════════════════════════════════════════════════
    // STATE
-   // ===============================================================
+   // ═══════════════════════════════════════════════════════════════
    let allCoaches = [];
    let allStudents = [];
   // Period Sync Singleton
@@ -129,7 +129,7 @@
     el.className = `toast toast-${type}`;
     el.innerHTML = `
       <div class="toast-content">
-        <span class="toast-icon">${type === 'success' ? 'OK' : (type === 'error' ? 'Error' : 'Info')}</span>
+        <span class="toast-icon">${type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️')}</span>
         <span class="toast-msg">${msg}</span>
       </div>
     `;
@@ -272,7 +272,7 @@
            </div>
            <div class="ev-footer">
              ${isRegistered ?
-           `<span class="badge badge-success" style="padding:6px 12px">OK Registered</span>` :
+           `<span class="badge badge-success" style="padding:6px 12px">✅ Registered</span>` :
            `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`
          }
            </div>
@@ -427,8 +427,8 @@
           <td>
             <select class="att-status" data-sid="${s.id}" onchange="updateAttStats()">
               <option value="" ${!status ? 'selected' : ''}>-- Select --</option>
-              <option value="present" ${status === 'present' ? 'selected' : ''}>OK Present</option>
-              <option value="absent" ${status === 'absent' ? 'selected' : ''}>Error Absent</option>
+              <option value="present" ${status === 'present' ? 'selected' : ''}>✅ Present</option>
+              <option value="absent" ${status === 'absent' ? 'selected' : ''}>❌ Absent</option>
               <option value="late" ${status === 'late' ? 'selected' : ''}>⏰ Late</option>
               <option value="excused" ${status === 'excused' ? 'selected' : ''}>📋 Excused</option>
             </select>
@@ -455,8 +455,8 @@
     const statsEl = document.getElementById('att-stats');
     if (statsEl) {
       statsEl.innerHTML = `
-        <span style="color:var(--success)">OK ${present}</span> |
-        <span style="color:var(--danger)">Error ${absent}</span> |
+        <span style="color:var(--success)">✅ ${present}</span> |
+        <span style="color:var(--danger)">❌ ${absent}</span> |
         <span style="color:var(--gold)">⏰ ${late}</span> |
         <span style="color:var(--ivory3)">📋 ${excused}</span> |
         <span style="color:var(--ivory3)"> unmarked: ${unmarked}</span>
@@ -620,13 +620,13 @@ Thank you for your cooperation.
 
     const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
-    let msg = `OK *CHESSKIDOO ACADEMY - FEE AUDIT REPORT*
+    let msg = `✅ *CHESSKIDOO ACADEMY - FEE AUDIT REPORT*
 
 `;
     msg += `Hello Coach ${cleanText(getCoachName(c))},
 
 `;
-    msg += `Inform The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:
+    msg += `📢 The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:
 
 `;
 
@@ -1054,9 +1054,9 @@ Thank you.
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Student')}&background=dca33e&color=000000&bold=true&size=80`;
   }
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // DATA LOADING
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
    let isLoadingData = false;
    async function loadAllData(forceRefresh = false) {
      if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
@@ -1269,7 +1269,7 @@ Thank you.
           <p style="color:var(--ivory-dim); margin-bottom:25px; font-size:14px">It's a new month. The system has automatically updated student statuses. Would you like to inform all coaches about their student due lists now?</p>
           <div style="display:flex; gap:10px">
             <button class="btn btn-outline" style="flex:1" onclick="localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">Later</button>
-            <button class="btn btn-gold" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">Inform Inform Coaches</button>
+            <button class="btn btn-gold" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">📢 Inform Coaches</button>
           </div>
         </div>
       `;
@@ -1337,7 +1337,7 @@ Thank you.
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
           const msg = payload.new;
           if (msg.receiver_type === 'admin' && shouldShowNotification('msg_' + msg.id)) {
-             toast(`Messages New Message from ${msg.sender_name || 'User'}!`, 'info');
+             toast(`📬 New Message from ${msg.sender_name || 'User'}!`, 'info');
              debouncedRefresh();
           }
         })
@@ -1369,7 +1369,7 @@ Thank you.
           const newCount = newMsgs.length - lastMsgCount;
           const latest = newMsgs[0];
           if (latest && shouldShowNotification('msg_' + latest.id)) {
-            toast(`Messages ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
+            toast(`📬 ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
           }
           lastMsgCount = newMsgs.length;
           allMessages = newMsgs;
@@ -1408,7 +1408,7 @@ Thank you.
             const latest = failedLogins[0];
             if (latest && shouldShowNotification('fail_' + (latest.id || latest.timestamp || latest.created_at))) {
               const time = new Date(latest.created_at || latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`Failed Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
+              toast(`🚫 Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
             }
           }
         } catch (e) {
@@ -1419,7 +1419,7 @@ Thank you.
             const latest = localFailed[localFailed.length - 1];
             if (latest && shouldShowNotification('fail_local_' + latest.timestamp)) {
               const time = new Date(latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`Failed Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
+              toast(`🚫 Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
             }
           }
         }
@@ -1433,7 +1433,7 @@ Thank you.
 
         if (due.length > lastDueCount && lastDueCount > 0) {
           const newDue = due.length - lastDueCount;
-          toast(`Due ${newDue} new payment${newDue > 1 ? 's' : ''} now Due!`, 'warning');
+          toast(`💰 ${newDue} new payment${newDue > 1 ? 's' : ''} now Due!`, 'warning');
         }
         lastDueCount = due.length;
 
@@ -1455,9 +1455,9 @@ Thank you.
     updateNotificationBadge();
   }
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // NAVIGATION
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   function toggleSidebar() {
     const sidebar = $('sidebar');
     const overlay = $('sidebar-overlay');
@@ -1513,12 +1513,12 @@ Thank you.
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             <input type="month" id="report-period" class="selector-minimal" onchange="updateReportContext()" value="${periodValue}">
           </div>
-          <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">PDF Financial Report</button>
-          <button class="btn btn-gold" onclick="exportAcademyData()">Export Export Academy Data</button>
+          <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">📄 Financial Report</button>
+          <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
         `;
         }
         if (p === 'stud') btnArea.innerHTML = `
-          <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">Batch Attendance Batch Attendance</button>
+          <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">🗓️ Batch Attendance</button>
           <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
         `;
         if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEventModal()">+ Create Event</button>`;
@@ -1571,9 +1571,9 @@ Thank you.
     window.setReportPeriod(parts[0], parseInt(parts[1]) - 1);
   };
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // AUTHENTICATION
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   function toggleEye() {
     const p = $('li-pass');
     const btn = $('eye-btn');
@@ -1841,9 +1841,9 @@ Thank you.
     }
   }
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // CHARTS & DASHBOARD
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   function formatTimeAgo(dateStr) {
     const now = new Date();
     const date = new Date(dateStr);
@@ -2283,14 +2283,14 @@ Thank you.
         <td class="${profitClass}">₹${netProfit.toLocaleString()}</td>
         <td class="${potentialProfitClass}">₹${potentialNetProfit.toLocaleString()}</td>
         <td>${roi}% / <span class="text-gold">${potentialRoi}%</span></td>
-        <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">Inform Inform</button></td>
+        <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">📢 Inform</button></td>
       </tr>`;
     }).join('');
   }
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // STUDENTS, COACHES, EVENTS, ACHIEVEMENTS
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   function clearFilters() {
     ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search', 'f-bill-month-stud'].forEach(id => { const el = $(id); if (el) el.value = ''; });
     resetStudMonth();
@@ -2403,9 +2403,9 @@ Thank you.
                   </div>
                 `;
                moreActions = `
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">History History</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">PDF Receipt</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">WhatsApp WhatsApp</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
              } else if (status === 'Pending' || status === 'Due') {
                 primaryActions = `
@@ -2413,13 +2413,13 @@ Thank you.
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                   <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
-                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">Inform Inform</button>
+                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
                   </div>
                 `;
                moreActions = `
-                 <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">Pay Now Pay Now</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">History History</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">WhatsApp WhatsApp</button>
+                 <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
              } else {
               primaryActions = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
@@ -2791,7 +2791,7 @@ Thank you.
            <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr; gap: 8px;">
              <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
              <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️ Edit</button>
-             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">Inform Inform</button>
+             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
              <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${escapeHtml(getCoachName(c)).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
            </div>
            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
@@ -3366,7 +3366,7 @@ Thank you.
       const coachName = coach ? getCoachName(coach) : 'N/A';
       const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(getStudentName(s))}&amount=${amt}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
 
-      const message = `OK Hello Sir/Madam,
+      const message = `✅ Hello Sir/Madam,
 
 This is to inform you about the chess class fee payment you have completed for ${cleanText(getStudentName(s))} (INR ${amt.toLocaleString()}).
 
@@ -3641,8 +3641,8 @@ Thank you for your continued support and cooperation.
          <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || 'N/A'}</td>
          <td>
            <div style="display:flex;gap:5px">
-             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">PDF</button>
-             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">Delete</button>
+             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">📄</button>
+             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
            </div>
          </td>
        </tr>
@@ -3761,8 +3761,8 @@ Thank you for your continued support and cooperation.
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             ${status === 'Pending' ?
-          `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">OK Mark Paid</button>` :
-          `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">Error Mark Unpaid</button>`}
+          `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">✅ Mark Paid</button>` :
+          `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">❌ Mark Unpaid</button>`}
           </div>
         </td>
       </tr>`;
@@ -3875,16 +3875,16 @@ Thank you for your continued support and cooperation.
         let actionButtons = '';
         if (status === 'Paid') {
           actionButtons = `
-            <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">PDF Receipt</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">History History</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
             <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
           `;
         } else if (status === 'Pending' || status === 'Due') {
           actionButtons = `
-            <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">Pay Now Pay Now</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">History History</button>
-            <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">Inform Inform</button>
-            <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">OK Mark Paid</button>
+            <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+            <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
+            <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
           `;
         } else {
          actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
@@ -3921,15 +3921,8 @@ Thank you for your continued support and cooperation.
       return;
     }
     if (!confirm(`Mark ${checked.length} students as Paid?`)) return;
-
-    const btn = document.querySelector('button[onclick="bulkMarkPaid()"]');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-    }
-
-    try {
-      toast(`Processing ${checked.length} students sequentially...`, 'info');
+    
+    toast(`Processing ${checked.length} students sequentially to ensure reliability...`, 'info');
     
     let successCount = 0; let failCount = 0; let skipCount = 0;
     const studentList = Array.from(checked);
@@ -3992,16 +3985,7 @@ Thank you for your continued support and cooperation.
     
     toast(msg, failCount > 0 ? 'warning' : 'success');
     window.totalPaymentsMap = null;
-    await loadAllData(true);
-    } catch (err) {
-      console.error('Critical bulk pay failure:', err);
-      toast('Operation failed. Please try again.', 'error');
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-credit-card"></i> Bulk Pay';
-      }
-    }
+    loadAllData(true);
   }
 
   window.bulkDeleteStudents = async function () {
@@ -4110,9 +4094,9 @@ Thank you for your continued support and cooperation.
   function showReceiptPreview() { openModal('receipt-preview-modal'); }
   function printReceipt() { window.print(); }
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // MESSAGES
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   async function renderMsgs() {
     const listEl = $('msgs-list');
     const loadingEl = $('msgs-loading');
@@ -4122,7 +4106,7 @@ Thank you for your continued support and cooperation.
 
     if (!allMessages || allMessages.length === 0) {
       listEl.style.display = 'grid';
-      listEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">WhatsApp</span><p>No messages yet</p></div>';
+      listEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">💬</span><p>No messages yet</p></div>';
       return;
     }
 
@@ -4140,7 +4124,7 @@ Thank you for your continued support and cooperation.
          <div class="msg-card-body">${escapeHtml(m.message || '')}</div>
          <div class="msg-card-actions">
            ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')">✓ Mark Read</button>` : ''}
-           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${m.id}')">Delete Delete</button>
+           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${m.id}')">🗑️ Delete</button>
          </div>
        </div>
      `).join('');
@@ -4154,9 +4138,9 @@ Thank you for your continued support and cooperation.
     loadAllData(true);
   }
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // PARENT VIEW
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   function renderChild() {
     const loadingEl = $('child-loading');
     const contentEl = $('child-content');
@@ -4301,9 +4285,9 @@ Thank you for your continued support and cooperation.
     }
   }
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // AI & CHAT
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   let currentAIModule = 'global';
 
   // ── PRIVACY GUARDRAILS FOR PARENT AI ──
@@ -4424,8 +4408,8 @@ Thank you for your continued support and cooperation.
     buttons.forEach(btn => btn.classList.remove('active'));
 
     const moduleConfig = {
-      global: { title: 'Global Insights', icon: 'Online', btnIndex: 0, roles: ['admin', 'master'] },
-      finance: { title: 'Financial Analysis', icon: 'Due', btnIndex: 1, roles: ['admin', 'master'] },
+      global: { title: 'Global Insights', icon: '⚡', btnIndex: 0, roles: ['admin', 'master'] },
+      finance: { title: 'Financial Analysis', icon: '💰', btnIndex: 1, roles: ['admin', 'master'] },
       coach: { title: 'Coach Performance', icon: '🧑‍🏫', btnIndex: 2, roles: ['admin', 'master'] },
       parent: { title: 'My Child Progress', icon: '👶', btnIndex: 3, roles: ['parent'] }
     };
@@ -4481,9 +4465,9 @@ Thank you for your continued support and cooperation.
     }
   }
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // REAL-TIME INTELLIGENCE ENGINE (RAG + AGENTIC AI)
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
 
   // ── API ORCHESTRATION LAYER ──
   const API_ORCHESTRATION = {
@@ -4823,7 +4807,7 @@ Thank you for your continued support and cooperation.
         if (stats) {
           response += `📊 **Statistics:** ${stats.totalStudents} students, ${stats.totalCoaches} coaches
 `;
-          response += `Due **Revenue:** ₹${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)
+          response += `💰 **Revenue:** ₹${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)
 `;
         }
 
@@ -5003,9 +4987,9 @@ Thank you for your continued support and cooperation.
   // Initialize RAG on load
   VECTOR_RAG.indexData();
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // THEME & PDF
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   function toggleTheme() {
     const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
     document.body.dataset.theme = newTheme;
@@ -5226,9 +5210,9 @@ Thank you for your continued support and cooperation.
     }
   }
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // INIT & EXPOSE
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // Role-based session timeouts (in milliseconds)
   const SESSION_TIMEOUTS = {
     'admin': 15 * 60 * 1000,   // 15 minutes for admin
@@ -5278,9 +5262,9 @@ Thank you for your continued support and cooperation.
      }
    });
 
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   // EXPOSE GLOBALS TO WINDOW
-  // ===============================================================
+  // ═══════════════════════════════════════════════════════════════
   window.$ = $;
   window.toast = toast;
   window.apiCall = apiCall;
@@ -5411,7 +5395,7 @@ Thank you for your continued support and cooperation.
 
      if (unread.length > 0) {
        html += `<div style="padding:12px;background:var(--gold-glow);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--gold)">Messages Unread Messages (${unread.length})</div>
+         <div style="font-weight:600;color:var(--gold)">📬 Unread Messages (${unread.length})</div>
          ${unread.slice(0, 5).map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
            <div>
              <div style="font-size:13px;font-weight:500">${escapeHtml(m.subject || 'No Subject')}</div>
@@ -5424,7 +5408,7 @@ Thank you for your continued support and cooperation.
 
      if (due.length > 0) {
        html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--danger)">Due Due Payments (${due.length})</div>
+         <div style="font-weight:600;color:var(--danger)">💰 Due Payments (${due.length})</div>
          <div style="font-size:12px;color:var(--ivory-dim)">Students with pending fees</div>
          ${due.slice(0, 5).map(s => `<div style="padding:6px 0;font-size:12px;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div>`).join('')}
        </div>`;
@@ -5432,7 +5416,7 @@ Thank you for your continued support and cooperation.
 
      if (failedLogins.length > 0) {
        html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--danger)">Failed Failed Logins (${failedLogins.length})</div>
+         <div style="font-weight:600;color:var(--danger)">🚫 Failed Logins (${failedLogins.length})</div>
          ${failedLogins.slice(0, 5).map(l => `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
            <span>${escapeHtml(l.user || 'Unknown')}</span>
            <span style="color:var(--ivory-dim);float:right">${new Date(l.timestamp).toLocaleString('en-IN')}</span>
@@ -5447,7 +5431,7 @@ Thank you for your continued support and cooperation.
     content.innerHTML = `
       <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
         <h3 style="margin:0">System Notifications</h3>
-        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">Delete Clear All</button>
+        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">🗑️ Clear All</button>
       </div>
       ${html}
     `;
@@ -5466,48 +5450,5 @@ Thank you for your continued support and cooperation.
   window.markCoachPaid = markCoachPaid;
   window.markCoachUnpaid = markCoachUnpaid;
   window.getStudentPaymentStatus = getStudentPaymentStatus;
-  window.deletePaymentRecord = async function(pid, sid) {
-    if (!confirm('Are you sure you want to delete this payment record?')) return;
-    try {
-      const resp = await apiCall(API_BASE + '/payments?id=' + pid, { method: 'DELETE' });
-      if (!resp.ok) throw new Error('Delete failed');
-      toast('Payment record deleted', 'success');
-      window.totalPaymentsMap = null;
-      await loadAllData(true);
-      if (sid) viewPaymentHistory(sid);
-    } catch (e) {
-      toast('Failed to delete payment', 'error');
-    }
-  };
-
-  window.viewPaymentHistory = function(id) {
-    const s = allStudents.find(x => String(x.id).toLowerCase() === String(id).toLowerCase());
-    if (!s) return;
-    const payments = (allPayments || []).filter(p => String(p.student_id).toLowerCase() === String(id).toLowerCase());
-    payments.sort((a,b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at));
-
-    const rows = payments.map(p => {
-      const d = new Date(p.payment_date || p.created_at).toLocaleDateString();
-      const amt = (parseFloat(p.amount) || 0).toLocaleString();
-      return '<tr><td>'+d+'</td><td>₹'+amt+'</td><td>'+(p.payment_method||'Cash')+'</td>' +
-        '<td style="display:flex; justify-content:space-between; align-items:center"><span>'+(p.description||'-')+'</span>' +
-        '<button class="btn btn-outline-ruby btn-xs" onclick="deletePaymentRecord(\'' + p.id + '\', \'' + s.id + '\')" title="Delete duplicate">' +
-          '<i class="fas fa-trash"></i>' +
-        '</button></td></tr>';
-    }).join('');
-
-    const html = '<div class="modal-content"><div class="modal-header">' +
-      '<h3 class="modal-title">Payment History: ' + (s.full_name || s.name) + '</h3>' +
-      '<button class="close-btn" onclick="closeModals()">&times;</button>' +
-      '</div><div class="modal-body"><div class="table-responsive"><table class="table">' +
-      '<thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th></tr></thead>' +
-      '<tbody>' + (rows || '<tr><td colspan="4" class="text-center">No records found</td></tr>') + '</tbody></table></div></div></div>';
-
-    let m = $('history-modal');
-    if (!m) { m = document.createElement('div'); m.id = 'history-modal'; m.className = 'modal'; document.body.appendChild(m); }
-    m.innerHTML = html;
-    openModal('history-modal');
-  };
-
   window.getStudentMonthlyFee = getStudentMonthlyFee;
 })();
