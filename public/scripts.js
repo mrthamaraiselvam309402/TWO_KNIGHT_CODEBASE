@@ -2374,7 +2374,7 @@ Thank you.
          return;
        }
 
-       console.log(`[UI] Rendering ${studs.length} students...`);
+       console.log(`[UI] Rendering ${studs.length} students...`); console.log('[UI] First student:', studs[0]);
        tbody.innerHTML = studs.map((s, i) => {
          try {
            const status = getStudentPaymentStatus(s, targetMonth, targetYear);
