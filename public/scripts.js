@@ -2074,13 +2074,20 @@ Thank you for your cooperation.
     if ($('s-elo')) $('s-elo').textContent = targetStudents.length ? Math.round(targetStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / targetStudents.length) : 0;
 
     // 1. Precise Cash-Based Revenue (Only 'paid' transactions IN the target month)
+    const seenFuzzyDash = new Set();
     const paidRevenue = (allPayments || []).reduce((sum, p) => {
+      if (p.status !== 'paid') return sum;
       const pDate = new Date(p.payment_date || p.created_at);
-      if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
-        // Validation: Only count if student is not archived AND their slot-status is 'Paid' for this month
-        const s = allStudents.find(x => String(x.id) === String(p.student_id));
+      if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear) {
+        const sid = String(p.student_id).toLowerCase();
+        const amt = parseFloat(p.amount) || 0;
+        const fuzzyKey = `${sid}_${targetMonth}_${targetYear}_${amt}`;
+        if (seenFuzzyDash.has(fuzzyKey)) return sum;
+
+        const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
         if (s && (s.status || 'active').toLowerCase() !== 'archived' && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
-           return sum + (parseFloat(p.amount) || 0);
+           seenFuzzyDash.add(fuzzyKey);
+           return sum + amt;
         }
       }
       return sum;
