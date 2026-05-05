@@ -2134,21 +2134,26 @@ Thank you for your cooperation.
 
       const status = getStudentPaymentStatus(s, targetMonth, targetYear);
       
-      if (status === 'Due') {
-        const enrollDateStr = getStudentDate(s);
-        const baseline = new Date(2026, 3, 1);
-        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-        const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-        const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
-        const totalCredits = s_id_map[String(s.id).toLowerCase()] || 0;
+      const enrollDateStr = getStudentDate(s);
+      const baseline = new Date(Date.UTC(2026, 3, 1));
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+      
+      const sid = String(s.id).toLowerCase();
+      const totalCredits = s_id_map[sid] || 0;
+      
+      const totalMonthsUnpaid = Math.max(0, monthsRequired - totalCredits);
+      if (totalMonthsUnpaid > 0) {
+        const isPaidThisMonth = (status === 'Paid');
+        const histMonths = totalMonthsUnpaid - (isPaidThisMonth ? 0 : 1);
         
-        const monthsBehind = Math.max(0, monthsRequired - totalCredits);
-        if (monthsBehind > 1) {
-          totalArrears += (fee * (monthsBehind - 1));
+        if (histMonths > 0) {
+          totalArrears += (fee * histMonths);
         }
-        currMonthPending += fee;
-      } else if (status === 'Pending') {
-        currMonthPending += fee;
+        if (!isPaidThisMonth) {
+          currMonthPending += fee;
+        }
       }
     });
 

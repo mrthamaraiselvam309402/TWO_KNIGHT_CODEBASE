@@ -96,10 +96,13 @@ window.generateReportPDF = async function() {
         const hasPaidThisSlot = (totalCredits >= monthsRequired) || hasDirectPayment;
 
         potential += fee;
-        if (!hasPaidThisSlot) {
-            const monthsRequiredLastMonth = monthsRequired - 1;
-            if (totalCredits < monthsRequiredLastMonth) lastDueAmount += fee;
-            else currPendingAmount += fee;
+        const totalMonthsUnpaid = Math.max(0, monthsRequired - totalCredits);
+        if (totalMonthsUnpaid > 0) {
+            const isPaidThisMonth = (getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid');
+            const histMonths = totalMonthsUnpaid - (isPaidThisMonth ? 0 : 1);
+            
+            if (histMonths > 0) lastDueAmount += (fee * histMonths);
+            if (!isPaidThisMonth) currPendingAmount += fee;
         }
     });
 
