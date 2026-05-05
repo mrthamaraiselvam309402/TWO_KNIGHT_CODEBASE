@@ -1878,6 +1878,10 @@ Thank you for your cooperation.
   }
 
   function buildCharts(studs) {
+    if (typeof Chart === 'undefined') {
+      console.warn('[UI] Chart.js not loaded. Skipping chart rendering.');
+      return;
+    }
     if (chartInstances.childElo) { chartInstances.childElo.destroy(); delete chartInstances.childElo; }
     Object.values(chartInstances).forEach(chart => { if (chart) chart.destroy(); });
     chartInstances = {};
