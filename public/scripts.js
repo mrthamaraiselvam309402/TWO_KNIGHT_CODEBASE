@@ -600,21 +600,21 @@
     const status = getStudentPaymentStatus(s);
     const statusText = (status === 'Due' || status === 'Overdue') ? 'DUE' : 'PENDING';
 
-    const msg = `⚠️ FEE PAYMENT PENDING 🚨
+    const msg = `\u26A0\uFE0F FEE PAYMENT PENDING \uD83D\uDEA8
 
-Hello Sir/Madam 👋,
+Hello Sir/Madam \uD83D\uDC4B,
 
-This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* 💳.
-❗ *Amount Due:* ₹${totalPending.toLocaleString()}
+This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} \uD83D\uDCB3.
+\u2757 Amount Due: \u20B9${totalPending.toLocaleString()}
 
-We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
+We kindly request you to complete the payment on or before ${dueDateStr} \u23F0 to avoid any interruption in class participation \uD83D\uDEAB.
 
-❗ Additionally, we request you to please pay at least ₹500 *on or before ${dueDateStr}* as a minimum confirmation amount ✅.
+\u2757 Additionally, we request you to please pay at least \u20B9500 on or before ${dueDateStr} as a minimum confirmation amount \u2705.
 
-💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
+\uD83D\uDCB3 You may make the payment to: 9025846663 (Ranjith) \uD83D\uDCDE
 
-Thank you for your understanding 🙏.
-– Chesskidoo Academy 🎓✨`;
+Thank you for your understanding \uD83D\uDE4F.
+\u2013 Chesskidoo Academy \uD83C\uDF93\u2728`;
 
     const parsed = parseStoredPhone(phone);
     const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -669,19 +669,19 @@ Thank you for your understanding 🙏.
     };
     const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-        let msg = `⚠️ CHESSKIDOO ACADEMY – FEE AUDIT REPORT 📊
+        let msg = `\u26A0\uFE0F CHESSKIDOO ACADEMY \u2013 FEE AUDIT REPORT \uD83D\uDCCA
 
-Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} 👨‍🏫,
+Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} \uD83D\uDC68\u200D\uD83C\uDFEB,
 
-The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle 📅:
+The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle \uD83D\uDCC5:
 
 ${pending.map(s => {
   const status = getStudentPaymentStatus(s);
-  let label = '⏳ PENDING';
+  let label = '\u23F3 PENDING';
   if (status === 'Overdue') {
-    label = '🚨 ARREARS';
+    label = '\uD83D\uDEA8 ARREARS';
   } else if (status === 'Due') {
-    label = '⏳ DUE';
+    label = '\u23F3 DUE';
   }
   const sName = cleanText(getStudentName(s).toUpperCase());
   const coach = allCoaches.find(cc => String(cc.id) === String(s.coach_id));
@@ -694,19 +694,19 @@ ${pending.map(s => {
   };
   const monthName2 = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
   const dueDateStr = `${getOrdinal2(dueCfg.day)} ${monthName2} ${targetYear}`;
-  return `❗ ${sName} — ${label} (Due: ${dueDateStr})`;
+  return `\u2757 ${sName} \u2014 ${label} (Due: ${dueDateStr})`;
 }).join('\n')}
 
-Please coordinate with the guardians to ensure these balances are settled 🤝.
-Last Date to Pay: ${lastDateToPayStr} 🗓️
+Please coordinate with the guardians to ensure these balances are settled \uD83E\uDD1D.
+Last Date to Pay: ${lastDateToPayStr} \uD83D\uDCC5
 
-📝 Note:
+\uD83D\uDCDD Note:
 
-🚨 ARREARS = Unpaid fees from previous months
-⏳ PENDING = Current month's unpaid fee
+\uD83D\uDEA8 ARREARS = Unpaid fees from previous months
+\u23F3 PENDING = Current month's unpaid fee
 
 Regards,
-Administrative Team | Chesskidoo Academy 🏆✨`;
+Administrative Team | Chesskidoo Academy \uD83C\uDFC6\u2728`;
 
     const phone = c.phone || c.contact || '0000000000';
     const parsed = parseStoredPhone(phone);
@@ -808,21 +808,21 @@ Administrative Team | Chesskidoo Academy 🏆✨`;
        const payStatus = getStudentPaymentStatus(s);
        const statusText = (payStatus === 'Due' || payStatus === 'Overdue') ? 'DUE' : 'PENDING';
 
-          const msg = `⚠️ FEE PAYMENT PENDING 🚨
+          const msg = `\u26A0\uFE0F FEE PAYMENT PENDING \uD83D\uDEA8
 
-Hello Sir/Madam 👋,
+Hello Sir/Madam \uD83D\uDC4B,
 
-This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} 💳.
-❗ Amount Due: ₹${totalDebt.toLocaleString()}
+This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} \uD83D\uDCB3.
+\u2757 Amount Due: \u20B9${totalDebt.toLocaleString()}
 
-We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation 🚫.
+We kindly request you to complete the payment on or before ${dueDateStr} \u23F0 to avoid any interruption in class participation \uD83D\uDEAB.
 
-❗ Additionally, we request you to please pay at least ₹500 on or before ${dueDateStr} as a minimum confirmation amount ✅.
+\u2757 Additionally, we request you to please pay at least \u20B9500 on or before ${dueDateStr} as a minimum confirmation amount \u2705.
 
-💳 You may make the payment to: 9025846663 (Ranjith) 📞
+\uD83D\uDCB3 You may make the payment to: 9025846663 (Ranjith) \uD83D\uDCDE
 
-Thank you for your understanding 🙏.
-– Chesskidoo Academy 🎓✨`;
+Thank you for your understanding \uD83D\uDE4F.
+\u2013 Chesskidoo Academy \uD83C\uDF93\u2728`;
 
       const parsed = parseStoredPhone(phone);
       const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -1745,10 +1745,11 @@ function initUI() {
   }
 
   function syncCoachDropdowns() {
-    const dropdowns = ['m-coach', 'ev-coach', 'f-coach', 'att-coach-filter'];
+    const dropdowns = ['m-coach', 'ev-coach', 'f-coach', 'att-coach-filter', 'f-bill-coach'];
     const options = allCoaches.map(c => `<option value="${c.id}">${getCoachName(c)}</option>`).join('');
     
     if ($('f-coach')) $('f-coach').innerHTML = '<option value="">All Coaches</option>' + options;
+    if ($('f-bill-coach')) $('f-bill-coach').innerHTML = '<option value="">All Coaches</option>' + options;
     if ($('m-coach')) $('m-coach').innerHTML = options;
     if ($('e-coach')) $('e-coach').innerHTML = options;
     if ($('att-coach-filter')) $('att-coach-filter').innerHTML = '<option value="">All Coaches</option>' + options;
@@ -4139,21 +4140,21 @@ Thank you for your continued support and cooperation.
 
         // Build notification content
         let message = customMsg ? `${customMsg}\n\n` : '';
-        message += `⚠️ FEE PAYMENT PENDING 🚨
+        message += `\u26A0\uFE0F FEE PAYMENT PENDING \uD83D\uDEA8
 
-Hello Sir/Madam 👋,
+Hello Sir/Madam \uD83D\uDC4B,
 
-This is to inform you that the chess class fee for ${cleanText(studentName)} is still ${statusText} 💳.
-❗ Amount Due: ₹${totalDue.toLocaleString()}
+This is to inform you that the chess class fee for ${cleanText(studentName)} is still ${statusText} \uD83D\uDCB3.
+\u2757 Amount Due: \u20B9${totalDue.toLocaleString()}
 
-We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation 🚫.
+We kindly request you to complete the payment on or before ${dueDateStr} \u23F0 to avoid any interruption in class participation \uD83D\uDEAB.
 
-❗ Additionally, we request you to please pay at least ₹500 on or before ${dueDateStr} as a minimum confirmation amount ✅.
+\u2757 Additionally, we request you to please pay at least \u20B9500 on or before ${dueDateStr} as a minimum confirmation amount \u2705.
 
-💳 You may make the payment to: 9025846663 (Ranjith) 📞
+\uD83D\uDCB3 You may make the payment to: 9025846663 (Ranjith) \uD83D\uDCDE
 
-Thank you for your understanding 🙏.
-– Chesskidoo Academy 🎓✨`;
+Thank you for your understanding \uD83D\uDE4F.
+\u2013 Chesskidoo Academy \uD83C\uDF93\u2728`;
 
       try {
         let sent = false;
@@ -4527,9 +4528,18 @@ Thank you for your understanding 🙏.
     });
 
     const fBillStatus = $('f-bill-status')?.value || '';
+    const fBillSearch = $('f-bill-search')?.value.trim().toLowerCase() || '';
+    const fBillCoach = $('f-bill-coach')?.value || '';
+
     let filteredStudents = allStudents;
     if (fBillStatus) {
-      filteredStudents = allStudents.filter(s => statusCache.get(s.id) === fBillStatus);
+      filteredStudents = filteredStudents.filter(s => statusCache.get(s.id) === fBillStatus);
+    }
+    if (fBillSearch) {
+      filteredStudents = filteredStudents.filter(s => getStudentName(s).toLowerCase().includes(fBillSearch));
+    }
+    if (fBillCoach) {
+      filteredStudents = filteredStudents.filter(s => String(s.coach_id) === String(fBillCoach));
     }
 
     const now = new Date();

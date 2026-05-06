@@ -394,6 +394,15 @@
           </select>
         </div>
 
+        <input type="text" id="f-bill-search" placeholder="Search Student Name..." oninput="renderBills()" style="padding:6px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px; width:180px">
+
+        <div style="display:flex; align-items:center; gap:8px">
+          <span style="font-size:13px; color:var(--ivory-dim)">Coach:</span>
+          <select id="f-bill-coach" onchange="renderBills()" style="padding:6px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px; width:150px">
+            <option value="">All Coaches</option>
+          </select>
+        </div>
+
         <button class="btn btn-gold btn-sm" onclick="informAllCoaches()" style="margin-left: auto;">📢 Inform All Coaches</button>
       </div>
 
