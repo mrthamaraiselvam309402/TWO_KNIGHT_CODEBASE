@@ -1049,16 +1049,23 @@ function initUI() {
     const dropdown = $(dropdownId);
     if (!dropdown) return;
     dropdown.innerHTML = `
-      <div class="country-search-container" onclick="event.stopPropagation()">
-        <input type="text" class="country-search-input" placeholder="Search country or dial code..." oninput="window.filterCountryDropdown('${dropdownId}', this.value)">
+      <div class="country-search-container" onclick="event.stopPropagation()" style="position: relative; display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); background: rgba(0, 0, 0, 0.15);">
+        <span class="country-search-icon" style="position: absolute; left: 22px; color: rgba(220, 163, 62, 0.65); display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 2;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </span>
+        <input type="text" class="country-search-input" placeholder="Search country or dial code..." oninput="window.filterCountryDropdown('${dropdownId}', this.value)" style="width: 100%; padding: 8px 12px 8px 32px !important; background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(220, 163, 62, 0.18) !important; border-radius: 6px !important; color: var(--ivory) !important; font-size: 13px !important; outline: none !important; margin-bottom: 0 !important; transition: all 0.2s ease !important;">
       </div>
       <div class="country-options-wrapper">
         ${COUNTRY_CODES.map(c => `
           <div class="country-option" data-code="${c.code}" data-dial="${c.dial}" data-name="${c.name.toLowerCase()}" onclick="window.${selectFn}('${c.code}', '${c.dial}', ${c.length})">
-            <div class="country-flag-box">
-              <span class="country-flag-emoji">${c.flag}</span>
+            <div class="country-flag-box" style="display: flex; align-items: center; gap: 6px;">
+              <span class="country-flag-emoji" style="font-size: 17px; line-height: 1;">${c.flag}</span>
+              <span class="country-iso-badge" style="font-family: monospace, var(--font-mono); font-size: 11px; font-weight: 700; color: rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.08); padding: 1px 4px; border-radius: 4px; letter-spacing: 0.5px;">${c.code}</span>
             </div>
-            <div class="country-name">${c.name}</div>
+            <div class="country-name" style="margin-left: 4px;">${c.name}</div>
             <div class="country-dial">${c.dial}</div>
           </div>
         `).join('')}
@@ -1089,7 +1096,7 @@ function initUI() {
     const phoneInput = $('m-phone');
     const country = getCountryByCode(code);
     if (selected) {
-      selected.innerHTML = `<span>${country.flag}</span><span class="country-dial">${country.dial}</span>`;
+      selected.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><span>${country.flag}</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">${country.code}</span></span><span class="country-dial">${country.dial}</span>`;
     }
     if (phoneInput) {
       phoneInput.placeholder = `${country.length} digits for ${country.name}`;
@@ -1108,7 +1115,7 @@ function initUI() {
     const phoneInput = $('cm-phone');
     const country = getCountryByCode(code);
     if (selected) {
-      selected.innerHTML = `<span>${country.flag}</span><span class="country-dial">${country.dial}</span>`;
+      selected.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><span>${country.flag}</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">${country.code}</span></span><span class="country-dial">${country.dial}</span>`;
     }
     if (phoneInput) {
       phoneInput.placeholder = `${country.length} digits for ${country.name}`;
@@ -1128,7 +1135,7 @@ function initUI() {
     const selected = $('country-selected-edit');
     const phoneInput = $('e-phone');
     if (selected) {
-      selected.innerHTML = `<span>${country.flag}</span><span class="country-dial">${country.dial}</span>`;
+      selected.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><span>${country.flag}</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">${country.code}</span></span><span class="country-dial">${country.dial}</span>`;
     }
     if (phoneInput) {
       phoneInput.placeholder = `${country.length} digits for ${country.name}`;
@@ -2982,10 +2989,9 @@ function initUI() {
       if ($('m-due-date')) $('m-due-date').value = '';
       if ($('m-coach')) $('m-coach').value = '';
       window.selectedCountryCode = 'IN';
-   window.selectedCountryCodeEdit = 'IN';
-   window.selectedCountryCodeEdit = 'IN';
+      window.selectedCountryCodeEdit = 'IN';
       const selected = $('country-selected');
-      if (selected) selected.innerHTML = '<span>🇮🇳</span><span class="country-dial">+91</span>';
+      if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><span>🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
       const phoneInput = $('m-phone');
       if (phoneInput) phoneInput.placeholder = '10 digits';
      syncCoachDropdowns();
@@ -3213,7 +3219,7 @@ function openCoachModal(id = null) {
      }
      window.selectedCountryCodeCoach = 'IN';
      const selected = $('country-selected-coach');
-     if (selected) selected.innerHTML = '<span>🇮🇳</span><span class="country-dial">+91</span>';
+     if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><span>🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
      renderCountryDropdown('country-dropdown-coach', 'selectCountryCoach');
      openModal('coach-crud-modal');
    }

@@ -866,7 +866,7 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 110px;
+  min-width: 122px;
   justify-content: space-between;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: 600;
