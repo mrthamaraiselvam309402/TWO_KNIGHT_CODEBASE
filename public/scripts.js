@@ -24,6 +24,16 @@
   };
   window.formatTime = formatTime;
 
+  const openWhatsApp = (dialCode, localNumber, msg) => {
+    const cleanDial = (dialCode || '').toString().replace(/\D/g, '');
+    const cleanNum = (localNumber || '').toString().replace(/\D/g, '');
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const base = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+    const url = `${base}?phone=${cleanDial}${cleanNum}&text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  };
+  window.openWhatsApp = openWhatsApp;
+
   const EMOJI = {
     warning: "⚠️",
     siren: "🚨",
@@ -649,7 +659,7 @@
     const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
     const country = getCountryByCode(inferredCountry);
     const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
-    window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+    openWhatsApp(dialCode, parsed.localNumber, msg);
   }
 
   window.informCoachFees = function (id, silent = false) {
@@ -746,7 +756,9 @@
     const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (c.country_code || 'IN');
     const country = getCountryByCode(inferredCountry);
     const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
-    const waUrl = `https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const base = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+    const waUrl = `${base}?phone=${dialCode}${parsed.localNumber}&text=${encodeURIComponent(msg)}`;
 
     if (!silent) window.open(waUrl, '_blank');
     return waUrl;
@@ -860,7 +872,7 @@ const payStatus = getStudentPaymentStatus(s);
       const country = getCountryByCode(inferredCountry);
       const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
       setTimeout(() => {
-        window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+        openWhatsApp(dialCode, parsed.localNumber, msg);
         sent++;
         if (sent === dueStudents.length) toast(`📱 Sent ${sent} payment reminders`, 'success');
       }, idx * 800);
@@ -4040,7 +4052,7 @@ Best regards,
       const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
       const country = getCountryByCode(inferredCountry);
       const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
-      window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(message)}`, '_blank');
+      openWhatsApp(dialCode, parsed.localNumber, message);
     }
   }
   window.sendPaymentReceiptNotification = sendPaymentReceiptNotification;
@@ -4216,7 +4228,7 @@ Best regards,
           const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
           const country = getCountryByCode(inferredCountry);
           const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
-          window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(message)}`, '_blank');
+          openWhatsApp(dialCode, parsed.localNumber, message);
           sent = true;
         } else if (channel === 'sms') {
           const parsed = parseStoredPhone(phone);

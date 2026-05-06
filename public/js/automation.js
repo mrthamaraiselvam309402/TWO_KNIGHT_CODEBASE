@@ -317,7 +317,13 @@
       const cCountry = inferredCountry;
       const country = window.getCountryByCode ? window.getCountryByCode(cCountry) : { dial: '+91' };
       const dialCode = country.dial.replace(/\D/g, '');
-      window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+      if (window.openWhatsApp) {
+        window.openWhatsApp(dialCode, parsed.localNumber, msg);
+      } else {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const base = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+        window.open(`${base}?phone=${dialCode}${parsed.localNumber}&text=${encodeURIComponent(msg)}`, '_blank');
+      }
 
       count++;
       setTimeout(() => {
@@ -376,7 +382,13 @@
         const sCountry = inferredCountry;
         const country = window.getCountryByCode ? window.getCountryByCode(sCountry) : { dial: '+91' };
         const dialCode = country.dial.replace(/\D/g, '');
-        window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(waMsg)}`, '_blank');
+        if (window.openWhatsApp) {
+          window.openWhatsApp(dialCode, parsed.localNumber, waMsg);
+        } else {
+          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          const base = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+          window.open(`${base}?phone=${dialCode}${parsed.localNumber}&text=${encodeURIComponent(waMsg)}`, '_blank');
+        }
       }, 500);
     }
   };
