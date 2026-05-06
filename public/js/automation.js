@@ -10,6 +10,36 @@
   const SUPABASE_ANON = APP_CONFIG.SUPABASE_ANON_KEY || '';
   function $ (id) { return document.getElementById(id); }
 
+  const EMOJI = window.EMOJI || {
+    warning: String.fromCodePoint(0x26A0, 0xFE0F),
+    siren: String.fromCodePoint(0x1F6A8),
+    wave: String.fromCodePoint(0x1F44B),
+    card: String.fromCodePoint(0x1F4B3),
+    alert: String.fromCodePoint(0x2757),
+    clock: String.fromCodePoint(0x23F0),
+    prohibited: String.fromCodePoint(0x1F6AB),
+    check: String.fromCodePoint(0x2705),
+    phone: String.fromCodePoint(0x1F4DE),
+    pray: String.fromCodePoint(0x1F64F),
+    grad: String.fromCodePoint(0x1F393),
+    sparkle: String.fromCodePoint(0x2728),
+    chart: String.fromCodePoint(0x1F4CA),
+    teacher: String.fromCodePoint(0x1F468, 0x200D, 0x1F3EB),
+    calendar: String.fromCodePoint(0x1F4C5),
+    pending: String.fromCodePoint(0x23F3),
+    handshake: String.fromCodePoint(0x1F91D),
+    spiral_calendar: String.fromCodePoint(0x1F5D3, 0xFE0F),
+    memo: String.fromCodePoint(0x1F4DD),
+    trophy: String.fromCodePoint(0x1F3C6),
+    star: String.fromCodePoint(0x1F31F),
+    crown: String.fromCodePoint(0x1F451),
+    receipt: String.fromCodePoint(0x1F9FE),
+    cash: String.fromCodePoint(0x1F4B5),
+    party: String.fromCodePoint(0x1F389),
+    tear_calendar: String.fromCodePoint(0x1F4C6),
+    link: String.fromCodePoint(0x1F517)
+  };
+
   function toast (msg, type = 'info') {
     if (window.toast) window.toast(msg, type);
     else console.log('[Automation]', type.toUpperCase(), msg);
@@ -243,14 +273,14 @@
       };
       const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-      let msg = `\u26A0\uFE0F *CHESSKIDOO ACADEMY \u2013 FEE AUDIT REPORT* \u{1F4CA}\n\n`;
-      msg += `Hello Coach ${cleanText(coach.name || 'Coach').toUpperCase()} \u{1F468}\u200D\u{1F3EB},\n\n`;
-      msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle \u{1F4C5}:\n\n`;
+      let msg = `${EMOJI.warning} *CHESSKIDOO ACADEMY \u2013 FEE AUDIT REPORT* ${EMOJI.chart}\n\n`;
+      msg += `Hello Coach ${cleanText(coach.name || 'Coach').toUpperCase()} ${EMOJI.teacher},\n\n`;
+      msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle ${EMOJI.calendar}:\n\n`;
 
       const studentLines = [];
       pendingAndDue.forEach(s => {
         const status = window.getStudentPaymentStatus ? window.getStudentPaymentStatus(s) : 'Pending';
-        const label = status === 'Due' ? '\u{1F6A8} ARREARS' : '\u23F3 PENDING';
+        const label = status === 'Due' ? `${EMOJI.siren} ARREARS` : `${EMOJI.pending} PENDING`;
         const sName = cleanText(getName(s).toUpperCase());
         let dueDateStr = '';
         if (window.getStudentDueConfig) {
@@ -259,17 +289,17 @@
         } else {
           dueDateStr = `5th ${today.toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
         }
-        studentLines.push(`\u2757 *${sName}* \u2014 ${label} (Due: ${dueDateStr})`);
+        studentLines.push(`${EMOJI.alert} *${sName}* \u2014 ${label} (Due: ${dueDateStr})`);
       });
       msg += studentLines.join('\n') + '\n\n';
 
-      msg += `Please coordinate with the guardians to ensure these balances are settled \u{1F91D}.\n`;
-      msg += `*Last Date to Pay:* ${lastDateToPayStr} \u{1F5D3}\uFE0F\n\n`;
-      msg += `\u{1F4DD} *Note:*\n\n`;
-      msg += `\u{1F6A8} *ARREARS* = Unpaid fees from previous months\n`;
-      msg += `\u23F3 *PENDING* = Current month's unpaid fee\n\n`;
+      msg += `Please coordinate with the guardians to ensure these balances are settled ${EMOJI.handshake}.\n`;
+      msg += `*Last Date to Pay:* ${lastDateToPayStr} ${EMOJI.spiral_calendar}\n\n`;
+      msg += `${EMOJI.memo} *Note:*\n\n`;
+      msg += `${EMOJI.siren} *ARREARS* = Unpaid fees from previous months\n`;
+      msg += `${EMOJI.pending} *PENDING* = Current month's unpaid fee\n\n`;
       msg += `Regards,\n`;
-      msg += `*Administrative Team* | Chesskidoo Academy \u{1F3C6}\u2728`;
+      msg += `*Administrative Team* | Chesskidoo Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
 
             const parsed = window.parseStoredPhone ? window.parseStoredPhone(phone) : { countryCode: 'IN', localNumber: phone };
       const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (coach.country_code || 'IN');
@@ -326,7 +356,7 @@
 
     const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(cleanName)}&amount=${fee}&date=${new Date().toISOString()}&level=${encodeURIComponent(cleanLevel)}&coach=${encodeURIComponent(cleanCoach)}`;
 
-    const waMsg = `✅ *CHESSKIDOO ACADEMY - PAYMENT CONFIRMATION*\n\nStudent: ${cleanName}\nAmount Paid: INR ${Number(fee).toLocaleString()}\nDate: ${cleanText(today)}\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Chesskidoo Academy.`;
+    const waMsg = `${EMOJI.check} *CHESSKIDOO ACADEMY - PAYMENT CONFIRMATION*\n\nStudent: ${cleanName}\nAmount Paid: INR ${Number(fee).toLocaleString()}\nDate: ${cleanText(today)}\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Chesskidoo Academy.`;
 
         const parsed = window.parseStoredPhone ? window.parseStoredPhone(phone) : { countryCode: 'IN', localNumber: phone };
     if (parsed.localNumber) {
