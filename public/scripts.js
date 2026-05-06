@@ -5766,58 +5766,73 @@ Best regards,
 
 
   function exportAcademyData() {
+    if (typeof XLSX === 'undefined') {
+      toast('Export library not loaded yet. Please wait a moment and try again.', 'error');
+      return;
+    }
     if (!allStudents || allStudents.length === 0) {
       toast('No student data to export', 'error');
       return;
     }
 
-    const headers = [
-      'Student Name', 'Parent Phone', 'Level', 'Rating', 'Join Date',
-      'Fee Due Date', 'Monthly Fee', 'Payment Status', 'Session Mode', 'Session Time',
-      'Assigned Coach', 'Coach Phone', 'Coach Specialty'
-    ];
-    const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
-    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+    toast('Generating Academy Excel Spreadsheet...', 'info');
 
-    const rows = allStudents
-      .filter(s => {
-          const enrollStr = getStudentDate(s);
-          const enrollDate = enrollStr ? new Date(enrollStr) : new Date(2026, 3, 1);
-          return enrollDate <= targetMonthEnd && (s.status || 'active') !== 'archived';
-      })
-      .map(s => {
-        const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
-        return [
-          getStudentName(s),
-          getStudentPhone(s),
-          getStudentLevel(s),
-          getStudentRating(s),
-          getStudentDate(s),
-          s.due_date || 'N/A',
-          getStudentMonthlyFee(s),
-          getStudentPaymentStatus(s, targetMonth, targetYear),
-          getStudentBatchType(s),
-          s.session_time || s.batch_time || 'TBD',
-          coach ? getCoachName(coach) : 'None',
-          coach ? (coach.phone || 'N/A') : 'N/A',
-          coach ? (getCoachSpecialty(coach) || 'N/A') : 'N/A'
-        ].map(val => `"${String(val).replace(/"/g, '""')}"`);
-      });
+    try {
+      const targetMonth = window.reportMonth;
+      const targetYear = window.reportYear;
+      const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
+      const excelRows = allStudents
+        .filter(s => {
+            const enrollStr = getStudentDate(s);
+            const enrollDate = enrollStr ? new Date(enrollStr) : new Date(2026, 3, 1);
+            return enrollDate <= targetMonthEnd && (s.status || 'active') !== 'archived';
+        })
+        .map(s => {
+          const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+          return {
+            'Student Name': getStudentName(s),
+            'Parent Phone': getStudentPhone(s),
+            'Level': getStudentLevel(s),
+            'Elo Rating': getStudentRating(s),
+            'Join Date': getStudentDate(s),
+            'Fee Due Date': s.due_date || 'N/A',
+            'Monthly Fee': getStudentMonthlyFee(s),
+            'Payment Status': getStudentPaymentStatus(s, targetMonth, targetYear),
+            'Session Mode': getStudentBatchType(s),
+            'Session Time': s.session_time || s.batch_time || 'TBD',
+            'Assigned Coach': coach ? getCoachName(coach) : 'None',
+            'Coach Phone': coach ? (coach.phone || 'N/A') : 'N/A',
+            'Coach Specialty': coach ? (getCoachSpecialty(coach) || 'N/A') : 'N/A'
+          };
+        });
 
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Chesskidoo_Academy_Data_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(excelRows);
 
-    toast('Academy Data Exported (CSV)', 'success');
+      // Auto-fit column widths
+      if (excelRows.length > 0) {
+        const colWidths = Object.keys(excelRows[0]).map(key => {
+          let maxLen = key.length;
+          excelRows.forEach(row => {
+            const val = row[key];
+            if (val) maxLen = Math.max(maxLen, String(val).length);
+          });
+          return { wch: maxLen + 3 };
+        });
+        ws['!cols'] = colWidths;
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws, "Academy Registry");
+
+      const fileName = `Chesskidoo_Academy_Data_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast('Academy Data Exported (Excel)', 'success');
+    } catch (err) {
+      console.error('Academy Export Error:', err);
+      toast('Excel Export Failed: System Error', 'error');
+    }
   }
 
    function exportData() {
@@ -6222,5 +6237,5 @@ Best regards,
   window.getCountryByCode = getCountryByCode;
   window.COUNTRY_CODES = COUNTRY_CODES;
   window.getStudentDueConfig = getStudentDueConfig;
-  if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.5 (UTF-8 Escaped)';
+  if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.6 (Excel & UTF-8 Escaped)';
 })();
