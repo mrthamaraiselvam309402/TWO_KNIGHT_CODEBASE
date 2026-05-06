@@ -2978,17 +2978,17 @@ function initUI() {
               <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
               <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
               <td>${dueDateHtml}</td>
-               <td style="overflow-x:auto;white-space:nowrap">
-                  <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;min-width:0">
-                   ${primaryActions}
-                   ${moreActions ? `
-                     <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
-                     <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:160px;box-shadow:var(--shadow);margin-top:4px">
-                       ${moreActions}
-                     </div>
-                   ` : ''}
-                 </div>
-              </td>
+                <td style="overflow-x:auto;white-space:nowrap">
+                   <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;min-width:0" class="action-menu-container">
+                    ${primaryActions}
+                    ${moreActions ? `
+                      <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
+                      <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:160px;box-shadow:var(--shadow);margin-top:4px">
+                        ${moreActions}
+                      </div>
+                    ` : ''}
+                  </div>
+               </td>
             </tr>`;
          } catch (rowErr) {
            console.error(`[UI] Error rendering student row ${i}:`, rowErr, s);
