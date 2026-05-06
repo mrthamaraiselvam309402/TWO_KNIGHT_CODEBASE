@@ -638,12 +638,12 @@
       `This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} ${EMOJI.card}.\n` +
       `${EMOJI.alert} Amount Due: \u{20B9}${totalPending.toLocaleString()}\n` +
       `\n` +
-      `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
-      `\n` +
-      `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
-      `\n` +
-      `Thank you for your understanding ${EMOJI.pray}.\n` +
-      `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
+           `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
+           `\n` +
+           `${EMOJI.card} You may make the payment to: 8825731470 (Ranjith) ${EMOJI.phone}\n` +
+           `\n` +
+           `Thank you for your understanding ${EMOJI.pray}.\n` +
+           `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
 
     const parsed = parseStoredPhone(phone);
     const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -850,7 +850,7 @@ const payStatus = getStudentPaymentStatus(s);
           `\n` +
           `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
           `\n` +
-          `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
+          `${EMOJI.card} You may make the payment to: 8825731470 (Ranjith) ${EMOJI.phone}\n` +
           `\n` +
           `Thank you for your understanding ${EMOJI.pray}.\n` +
           `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
@@ -4203,7 +4203,7 @@ Best regards,
           `\n` +
           `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
           `\n` +
-          `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
+          `${EMOJI.card} You may make the payment to: 8825731470 (Ranjith) ${EMOJI.phone}\n` +
           `\n` +
           `Thank you for your understanding ${EMOJI.pray}.\n` +
           `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
