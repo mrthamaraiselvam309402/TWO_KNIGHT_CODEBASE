@@ -138,11 +138,11 @@ Deno.serve(async (req) => {
        const coachFilter = sanitizeString(url.searchParams.get('coach_id') || '', 50)
        const statusFilter = sanitizeString(url.searchParams.get('status') || '', 50)
        
-       let query = supabase
-         .from('students')  // Use raw table (encryption disabled)
-         .select('*', { count: 'exact' })
-         .order('created_at', { ascending: false })
-         .range(offset, offset + limit - 1)
+        let query = supabase
+          .from('students_decrypted')  // Use decrypted view to automatically decrypt PII
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1)
        
        if (search) {
          query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,parent_phone.ilike.%${search}%`)
