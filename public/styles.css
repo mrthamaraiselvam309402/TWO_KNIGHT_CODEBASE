@@ -1,14 +1,12 @@
 /* Ensure proper emoji rendering across all browsers including Edge */
-.emoji, .msg-text, [class*="whatsapp"], [class*="message"], body {
+.emoji, .msg-text, [class*="whatsapp"], [class*="message"], .chat-msg {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Apple Color Emoji", "Twemoji Mozilla", sans-serif !important;
   font-variant-emoji: text;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
 }
 
 /* Specific fix for Edge desktop emoji rendering */
 @supports (-ms-ime-align: auto) {
-  body,
   .msg-text,
   .chat-body,
   .modal-body,
@@ -18,30 +16,11 @@
   }
 }
 
-/* Force emoji rendering in all contexts */
-* {
-  font-variant-emoji: emoji;
-}
-
-/* WhatsApp message container specific fixes */
-.whatsapp-message,
-.msg-text,
-.chat-msg {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Segoe Color Emoji", "Apple Color Emoji", sans-serif !important;
-  line-height: 1.6;
-}
-
-/* Prevent emoji substitution issues */
-*:not(.no-emoji-fix)::before,
-*:not(.no-emoji-fix)::after {
-  font-family: inherit !important;
-}
-
-/* Edge-specific: prevent font substitution */
-_:-ms-lang(x) {
-  body {
-    font-family: "Segoe UI Emoji", sans-serif;
-  }
+/* Base headers typography styling */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-head);
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 
@@ -218,7 +197,7 @@ body.login-mode .sidebar-overlay { display: none !important; }
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-.logo-text { font-family: var(--font-head); font-size: 20px; font-weight: 700; letter-spacing: 1px; color: var(--gold); }
+.logo-text { font-family: 'Cinzel', var(--font-head); font-size: 20px; font-weight: 700; letter-spacing: 1.5px; color: var(--gold); text-transform: uppercase; }
 
 .nav-group { padding: 12px; flex-grow: 1; overflow-y: auto; }
 .nav-item {
@@ -492,7 +471,7 @@ input[type='month']::-webkit-calendar-picker-indicator { filter: invert(0.8) sep
 }
 .logo-area { margin-bottom: 40px; }
 .logo-chess-large { width: 64px; height: 64px; background: linear-gradient(135deg, var(--amber), var(--amber-dim)); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 8px 24px rgba(232,168,48,0.3); margin-bottom: 16px; color: var(--obsidian); }
-.logo-name { font-family: var(--font-head); font-size: 28px; font-weight: 700; color: var(--amber); letter-spacing: 1px; display: block; }
+.logo-name { font-family: 'Cinzel', var(--font-head); font-size: 28px; font-weight: 700; color: var(--amber); letter-spacing: 1.5px; display: block; text-transform: uppercase; }
 .logo-tagline { font-size: 11px; color: var(--ivory3); text-transform: uppercase; letter-spacing: 3px; font-weight: 500; }
 .form-group { margin-bottom: 24px; text-align: left; }
 .label { display: block; font-size: 12px; color: var(--ivory3); margin-bottom: 8px; margin-left: 4px; text-transform: uppercase; letter-spacing: 1px; }
