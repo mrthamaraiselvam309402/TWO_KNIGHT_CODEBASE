@@ -202,7 +202,7 @@
         <input type="text" id="f-search" placeholder="Search Student Name..." oninput="renderStudents()" style="flex:1;min-width:200px">
         <select id="f-coach" onchange="renderStudents()"><option value="">All Coaches</option></select>
         <select id="f-session" onchange="renderStudents()"><option value="">All Sessions</option><option value="Group">Group</option><option value="Single">Single</option></select>
-        <select id="f-status" onchange="renderStudents()"><option value="">All Payment Status</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option></select>
+        <select id="f-status" onchange="renderStudents()"><option value="">All Payment Status</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option><option value="Overdue">Overdue</option></select>
         <input type="number" id="f-min-fee" placeholder="Min Fee ₹" oninput="renderStudents()">
         <input type="number" id="f-max-fee" placeholder="Max Fee ₹" oninput="renderStudents()">
         <button class="btn btn-outline-amber btn-sm" onclick="bulkMarkPaid()">💳 Bulk Pay</button>
@@ -740,6 +740,7 @@
         <option value="Paid">Paid</option>
         <option value="Due">Due</option>
         <option value="Pending">Pending</option>
+        <option value="Overdue">Overdue</option>
       </select>
     </div>
 

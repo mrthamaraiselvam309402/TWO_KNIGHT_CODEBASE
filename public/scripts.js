@@ -3168,9 +3168,9 @@ function initUI() {
         // AUTOMATION: Create transaction record if status was manually changed to 'Paid'
         const newStatus = $('e-payment-status')?.value || s.payment_status || 'Pending';
         
-        // NEW: If status changed FROM 'Paid' TO 'Pending' or 'Due', delete the payment record for this month.
-        // This follows the concept: "If I mark it as Pending/Due, it means no payment is recorded for that month."
-        if ((s.payment_status === 'Paid' || getStudentPaymentStatus(s) === 'Paid') && (newStatus === 'Pending' || newStatus === 'Due')) {
+        // NEW: If status changed FROM 'Paid' TO 'Pending', 'Due', or 'Overdue', delete the payment record for this month.
+        // This follows the concept: "If I mark it as Pending/Due/Overdue, it means no payment is recorded for that month."
+        if ((s.payment_status === 'Paid' || getStudentPaymentStatus(s) === 'Paid') && (newStatus === 'Pending' || newStatus === 'Due' || newStatus === 'Overdue')) {
             const now = new Date();
             const targetMonth = now.getUTCMonth();
             const targetYear = now.getUTCFullYear();
