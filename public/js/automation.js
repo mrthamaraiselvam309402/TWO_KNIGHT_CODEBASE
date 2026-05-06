@@ -320,8 +320,7 @@
       if (window.openWhatsApp) {
         window.openWhatsApp(dialCode, parsed.localNumber, msg);
       } else {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const base = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+        const base = 'https://api.whatsapp.com/send';
         window.open(`${base}?phone=${dialCode}${parsed.localNumber}&text=${encodeURIComponent(msg)}`, '_blank');
       }
 
@@ -385,8 +384,7 @@
         if (window.openWhatsApp) {
           window.openWhatsApp(dialCode, parsed.localNumber, waMsg);
         } else {
-          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-          const base = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+          const base = 'https://api.whatsapp.com/send';
           window.open(`${base}?phone=${dialCode}${parsed.localNumber}&text=${encodeURIComponent(waMsg)}`, '_blank');
         }
       }, 500);

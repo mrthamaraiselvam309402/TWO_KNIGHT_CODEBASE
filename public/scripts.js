@@ -27,8 +27,7 @@
   const openWhatsApp = (dialCode, localNumber, msg) => {
     const cleanDial = (dialCode || '').toString().replace(/\D/g, '');
     const cleanNum = (localNumber || '').toString().replace(/\D/g, '');
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const base = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+    const base = 'https://api.whatsapp.com/send';
     const url = `${base}?phone=${cleanDial}${cleanNum}&text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   };
@@ -756,8 +755,7 @@
     const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (c.country_code || 'IN');
     const country = getCountryByCode(inferredCountry);
     const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const base = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+    const base = 'https://api.whatsapp.com/send';
     const waUrl = `${base}?phone=${dialCode}${parsed.localNumber}&text=${encodeURIComponent(msg)}`;
 
     if (!silent) window.open(waUrl, '_blank');
