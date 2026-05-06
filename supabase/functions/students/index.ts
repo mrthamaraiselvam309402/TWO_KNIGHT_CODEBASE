@@ -154,13 +154,35 @@ Deno.serve(async (req) => {
          query = query.eq('status', statusFilter)
        }
        
-       const { data: students, error, count } = await query
+       let { data: students, error, count } = await query
        
        if (error) {
-         return new Response(JSON.stringify({ error: error.message }), {
-           status: 500,
-           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-         })
+         console.warn('Decrypted view query failed, falling back to raw students table:', error.message)
+         let fallbackQuery = supabase
+           .from('students')
+           .select('*', { count: 'exact' })
+           .order('created_at', { ascending: false })
+           .range(offset, offset + limit - 1)
+         
+         if (search) {
+           fallbackQuery = fallbackQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%,parent_phone.ilike.%${search}%`)
+         }
+         if (coachFilter) {
+           fallbackQuery = fallbackQuery.eq('coach_id', coachFilter)
+         }
+         if (statusFilter) {
+           fallbackQuery = fallbackQuery.eq('status', statusFilter)
+         }
+         
+         const fallbackRes = await fallbackQuery
+         if (fallbackRes.error) {
+           return new Response(JSON.stringify({ error: fallbackRes.error.message }), {
+             status: 500,
+             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+           })
+         }
+         students = fallbackRes.data
+         count = fallbackRes.count
        }
        
        const transformed = (students || []).map(transformStudent)
@@ -173,9 +195,9 @@ Deno.serve(async (req) => {
            total: count || transformed.length,
            total_pages: count ? Math.ceil(count / limit) : 1
          }
-}), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+       }), {
+         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+       })
       }
 
     // POST - Create new student
@@ -222,11 +244,28 @@ Deno.serve(async (req) => {
          created_at: new Date().toISOString()
         }
       
-      const { data: insertedStudent, error: insertError } = await supabase
+      let { data: insertedStudent, error: insertError } = await supabase
         .from('students')
         .insert(newStudent)
         .select('id')
         .single()
+      
+      if (insertError) {
+        if (insertError.message.includes('country_code') || insertError.code === 'PGRST204') {
+          console.warn('country_code column not found, retrying insert without country_code')
+          const fallbackStudent = { ...newStudent }
+          delete fallbackStudent.country_code
+          
+          const retryRes = await supabase
+            .from('students')
+            .insert(fallbackStudent)
+            .select('id')
+            .single()
+          
+          insertedStudent = retryRes.data
+          insertError = retryRes.error
+        }
+      }
       
       if (insertError) {
         return new Response(JSON.stringify({ error: insertError.message }), {
@@ -235,17 +274,30 @@ Deno.serve(async (req) => {
         })
       }
 
-      const { data: decryptedStudent, error: decryptError } = await supabase
+      let decryptedStudent = null
+      const { data: viewStudent, error: decryptError } = await supabase
         .from('students_decrypted')
         .select('*')
         .eq('id', insertedStudent.id)
         .single()
       
       if (decryptError) {
-        return new Response(JSON.stringify({ error: decryptError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+        console.warn('Decrypted view fetch failed on insert, falling back to raw students table:', decryptError.message)
+        const fallbackRes = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', insertedStudent.id)
+          .single()
+        
+        if (fallbackRes.error) {
+          return new Response(JSON.stringify({ error: fallbackRes.error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+        decryptedStudent = fallbackRes.data
+      } else {
+        decryptedStudent = viewStudent
       }
       
       return new Response(JSON.stringify(decryptedStudent ? transformStudent(decryptedStudent) : { success: true }), {
@@ -321,12 +373,30 @@ Deno.serve(async (req) => {
       
       updateData.updated_at = new Date().toISOString();
       
-      const { data: updatedStudent, error: updateError } = await supabase
+      let { data: updatedStudent, error: updateError } = await supabase
         .from('students')
         .update(updateData)
         .eq('id', id)
         .select('id')
         .single()
+      
+      if (updateError) {
+        if (updateError.message.includes('country_code') || updateError.code === 'PGRST204') {
+          console.warn('country_code column not found, retrying update without country_code')
+          const fallbackData = { ...updateData }
+          delete fallbackData.country_code
+          
+          const retryRes = await supabase
+            .from('students')
+            .update(fallbackData)
+            .eq('id', id)
+            .select('id')
+            .single()
+          
+          updatedStudent = retryRes.data
+          updateError = retryRes.error
+        }
+      }
       
       if (updateError) {
         return new Response(JSON.stringify({ error: updateError.message }), {
@@ -335,17 +405,30 @@ Deno.serve(async (req) => {
         })
       }
 
-      const { data: decryptedStudent, error: decryptError } = await supabase
+      let decryptedStudent = null
+      const { data: viewStudent, error: decryptError } = await supabase
         .from('students_decrypted')
         .select('*')
         .eq('id', id)
         .single()
       
       if (decryptError) {
-        return new Response(JSON.stringify({ error: decryptError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+        console.warn('Decrypted view fetch failed on update, falling back to raw students table:', decryptError.message)
+        const fallbackRes = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', id)
+          .single()
+        
+        if (fallbackRes.error) {
+          return new Response(JSON.stringify({ error: fallbackRes.error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+        decryptedStudent = fallbackRes.data
+      } else {
+        decryptedStudent = viewStudent
       }
       
       return new Response(JSON.stringify(decryptedStudent ? transformStudent(decryptedStudent) : { success: true }), {
