@@ -1026,3 +1026,156 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
   text-align: right;
 }
 
+
+/* ── PREMIUM NOTIFICATION SELECTION CARDS ── */
+.channel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.channel-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface2);
+  border: 1px solid rgba(232, 168, 48, 0.08);
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.channel-card:hover {
+  background: var(--surface3);
+  border-color: rgba(232, 168, 48, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 10px var(--gold-mist);
+}
+
+/* Hide standard radio */
+.channel-card input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px !important;
+  height: 18px !important;
+  border: 2px solid var(--ivory3);
+  border-radius: 50% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  outline: none !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.channel-card input[type="radio"]::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  transform: scale(0);
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Checked states */
+.channel-card.active,
+.channel-card:has(input[type="radio"]:checked) {
+  background: linear-gradient(135deg, rgba(220, 163, 62, 0.1) 0%, rgba(220, 163, 62, 0.02) 100%);
+  border-color: var(--gold) !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), 0 0 15px var(--gold-glow) !important;
+}
+
+.channel-card:has(input[type="radio"]:checked) input[type="radio"] {
+  border-color: var(--gold);
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+
+.channel-card:has(input[type="radio"]:checked) input[type="radio"]::before {
+  transform: scale(1);
+}
+
+/* Brand colored selection glows */
+.channel-card[data-channel="whatsapp"]:has(input[type="radio"]:checked) {
+  border-color: var(--success) !important;
+  background: linear-gradient(135deg, rgba(82, 196, 26, 0.08) 0%, rgba(82, 196, 26, 0.01) 100%) !important;
+}
+.channel-card[data-channel="whatsapp"]:has(input[type="radio"]:checked) input[type="radio"] {
+  border-color: var(--success) !important;
+}
+.channel-card[data-channel="whatsapp"]:has(input[type="radio"]:checked) input[type="radio"]::before {
+  background: var(--success) !important;
+}
+
+.channel-card[data-channel="sms"]:has(input[type="radio"]:checked) {
+  border-color: var(--accent) !important;
+  background: linear-gradient(135deg, rgba(90, 159, 255, 0.08) 0%, rgba(90, 159, 255, 0.01) 100%) !important;
+}
+.channel-card[data-channel="sms"]:has(input[type="radio"]:checked) input[type="radio"] {
+  border-color: var(--accent) !important;
+}
+.channel-card[data-channel="sms"]:has(input[type="radio"]:checked) input[type="radio"]::before {
+  background: var(--accent) !important;
+}
+
+.channel-card[data-channel="email"]:has(input[type="radio"]:checked) {
+  border-color: var(--amber) !important;
+  background: linear-gradient(135deg, rgba(232, 168, 48, 0.08) 0%, rgba(232, 168, 48, 0.01) 100%) !important;
+}
+.channel-card[data-channel="email"]:has(input[type="radio"]:checked) input[type="radio"] {
+  border-color: var(--amber) !important;
+}
+.channel-card[data-channel="email"]:has(input[type="radio"]:checked) input[type="radio"]::before {
+  background: var(--amber) !important;
+}
+
+.channel-card[data-channel="push"]:has(input[type="radio"]:checked) {
+  border-color: #ff4d4f !important;
+  background: linear-gradient(135deg, rgba(255, 77, 79, 0.08) 0%, rgba(255, 77, 79, 0.01) 100%) !important;
+}
+.channel-card[data-channel="push"]:has(input[type="radio"]:checked) input[type="radio"] {
+  border-color: #ff4d4f !important;
+}
+.channel-card[data-channel="push"]:has(input[type="radio"]:checked) input[type="radio"]::before {
+  background: #ff4d4f !important;
+}
+
+.channel-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.channel-card:hover .channel-icon {
+  transform: scale(1.15) rotate(5deg);
+}
+
+.channel-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.channel-name {
+  font-weight: 700;
+  color: var(--ivory);
+  font-size: 13.5px;
+}
+
+.channel-desc {
+  font-size: 10px;
+  color: var(--ivory3);
+  margin-top: 3px;
+}
+
