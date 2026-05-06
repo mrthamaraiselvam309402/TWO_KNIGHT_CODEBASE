@@ -59,11 +59,13 @@ Deno.serve(async (req) => {
      return str.slice(0, maxLength).replace(/[<>"'`;]/g, '').trim()
    }
 
-   function validatePhone(phone: unknown): string {
-     if (!phone || typeof phone !== 'string') return ''
-     const digits = phone.replace(/\D/g, '').slice(0, 15)
-     return digits.length >= 10 ? digits : ''
-   }
+    function validatePhone(phone: unknown): string {
+      if (!phone || typeof phone !== 'string') return ''
+      const digits = phone.replace(/\D/g, '').slice(0, 15)
+      // Accept phone numbers with at least 1 digit to support international numbers
+      // Country-specific validation is done in the frontend
+      return digits.length >= 1 ? digits : ''
+    }
 
    function validateCountryCode(code: unknown): string {
      if (!code || typeof code !== 'string') return 'IN'

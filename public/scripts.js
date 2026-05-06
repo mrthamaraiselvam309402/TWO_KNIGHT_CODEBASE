@@ -640,32 +640,39 @@ Thank you for your understanding.
     };
     const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-    let msg = `⚠️ *CHESSKIDOO ACADEMY – FEE AUDIT REPORT*
+       let msg = `⚠️ *CHESSKIDOO ACADEMY – FEE AUDIT REPORT* 📊
 
-Hello Coach ${cleanText(getCoachName(c)).toUpperCase()},
+Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} 👨‍🏫,
 
-The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:
+The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle 📅:
 
-`;
+${pending.map(s => {
+  const status = getStudentPaymentStatus(s);
+  const label = status === 'Due' ? '🚨 ARREARS' : '⏳ PENDING';
+  const sName = cleanText(getStudentName(s).toUpperCase());
+  const coach = allCoaches.find(cc => String(cc.id) === String(s.coach_id));
+  const cName = coach ? (coach.name || '') : '';
+  const dueCfg = getStudentDueConfig(s, cName, targetMonth, targetYear);
+  const getOrdinal2 = (n) => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+  const monthName2 = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
+  const dueDateStr = `${getOrdinal2(dueCfg.day)} ${monthName2} ${targetYear}`;
+  return `❗ *${sName}* — ${label} (Due: ${dueDateStr})`;
+}).join('\n')}
 
-    pending.forEach((s) => {
-      const status = getStudentPaymentStatus(s);
-      const label = status === 'Due' ? 'ARREARS' : 'PENDING';
-      const sName = cleanText(getStudentName(s).toUpperCase());
-      msg += `❗ *${sName}* — ${label}
-`;
-    });
+Please coordinate with the guardians to ensure these balances are settled 🤝.
+*Last Date to Pay:* ${lastDateToPayStr} 🗓️
 
-    msg += `
-Please coordinate with the guardians to ensure these balances are settled.
-*Last Date to Pay:* ${lastDateToPayStr}
+📝 *Note:*
 
-*Note:*
-*ARREARS* = Unpaid fees from previous months
-*PENDING* = Current month’s unpaid fee
+🚨 *ARREARS* = Unpaid fees from previous months
+⏳ *PENDING* = Current month's unpaid fee
 
 Regards,
-*Administrative Team* | Chesskidoo Academy`;
+*Administrative Team* | Chesskidoo Academy 🏆✨`;
 
     const phone = c.phone || c.contact || '0000000000';
     const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
@@ -757,29 +764,29 @@ Regards,
         const v = n % 100;
         return n + (s[(v - 20) % 10] || s[v] || s[0]);
       };
-      const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
-      const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
+       const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
+       const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
-      const msg = `⚠️ *FEE PAYMENT PENDING*
+         const msg = `⚠️ *FEE PAYMENT PENDING* 🚨
 
-Hello Sir/Madam,
+Hello Sir/Madam 👋,
 
-This is to inform you that the chess class fee for *${cleanText(name)}* is still pending.
+This is to inform you that the chess class fee for *${cleanText(name)}* is still *${status === 'Due' ? 'DUE' : 'PENDING'}* 💳.
 ❗ *Amount Due:* ₹${totalDebt.toLocaleString()}
 
-We kindly request you to complete the payment on or before *${dueDateStr}* to avoid any interruption in class participation.
+We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
 
-❗ Additionally, we request you to please pay at least ₹500 on or before *5th May 2026* as a minimum confirmation amount.
+❗ *Additionally,* we request you to please pay at least *₹500* on or before *${dueDateStr}* as a minimum confirmation amount ✅.
 
-You may make the payment to: *9025846663 (Ranjith)*.
+💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
 
-Thank you for your understanding.
-– Chesskidoo Academy`;
+Thank you for your understanding 🙏.
+– Chesskidoo Academy 🎓✨`;
 
       setTimeout(() => {
         window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
         sent++;
-        if (sent === dueStudents.length) toast(`Sent ${sent} payment reminders`, 'success');
+        if (sent === dueStudents.length) toast(`📱 Sent ${sent} payment reminders`, 'success');
       }, idx * 800);
     });
   };
@@ -1001,11 +1008,14 @@ function initUI() {
         day = 15;
       } else if (sName.includes('SATHYA')) {
         day = 13;
-      } else if (sName.includes('SAKTHI')) {
-        day = 13;
-      }
-      // 2. Coach-specific fallbacks for other students
-      else if (cName.includes('VISHNU')) {
+        } else if (sName.includes('SAKTHI')) {
+          day = 13;
+        }
+        else if (sName.includes('VELAVA')) {
+          day = 20;
+        }
+        // 2. Coach-specific fallbacks for other students
+        else if (cName.includes('VISHNU')) {
         day = 20; // Velava and other 5 students
       } else if (cName.includes('ARIVUSELVAM') || cName.includes('SRIVUSELVAM')) {
         day = 4; // Other Arivuselvam students
@@ -1417,11 +1427,19 @@ function initUI() {
   function getMessagePriority(m) { return m.priority || 'normal'; }
   function getMessageIsRead(m) { return m.is_read || false; }
 
-  function makeAvSrc(s) {
-    if (s.custom_avatar) return s.custom_avatar;
-    const name = getStudentName(s);
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Student')}&background=dca33e&color=000000&bold=true&size=80`;
-  }
+   function makeAvSrc(s) {
+     const custom = s.custom_avatar;
+     if (custom) {
+       // Allow data URLs (already inline) and Supabase storage URLs
+       if (custom.startsWith('data:') || custom.includes('.supabase.co') || (window.SUPABASE_URL && custom.includes(window.SUPABASE_URL))) {
+         return custom;
+       }
+       // External avatar services may be blocked - use local generation
+       console.warn('[Avatar] External avatar URL ignored for', getStudentName(s));
+     }
+     const name = getStudentName(s);
+     return generateAvatarURL(name || 'Student', 80, 'dca33e', '000000');
+   }
 
   // ═══════════════════════════════════════════════════════════════
   // DATA LOADING
@@ -1979,7 +1997,7 @@ function initUI() {
 
     if ($('top-profile')) $('top-profile').style.display = 'flex';
     if ($('top-profile-name')) $('top-profile-name').textContent = displayName.split(' ')[0] || 'User';
-    if ($('top-profile-av')) $('top-profile-av').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=dca33e&color=000&bold=true&size=80`;
+     if ($('top-profile-av')) $('top-profile-av').src = generateAvatarURL(displayName, 80, 'dca33e', '000000');
 
     const isAdmin = userRole === 'admin' || userRole === 'master';
     const isParent = userRole === 'parent';
@@ -2947,47 +2965,47 @@ function initUI() {
      openModal('edit-modal');
    }
 
-   async function updateStudent() {
-     const id = $('e-id').value;
-     const s = allStudents.find(x => String(x.id) === String(id));
-     if (!s) { toast('Student not found', 'error'); return; }
-     const oldElo = getStudentRating(s);
-     const newElo = parseInt($('e-elo').value);
-     const newFee = parseInt($('e-fee').value) || 0;
+    async function updateStudent() {
+      const id = $('e-id').value;
+      const s = allStudents.find(x => String(x.id) === String(id));
+      if (!s) { toast('Student not found', 'error'); return; }
+      const oldElo = getStudentRating(s);
+      const newElo = parseInt($('e-elo').value);
+      const newFee = parseInt($('e-fee').value) || 0;
 
-     // Validate phone based on selected country for edit modal
-     const rawPhone = $('e-phone').value.trim();
-     const validation = validatePhoneNumber(rawPhone, window.selectedCountryCodeEdit || 'IN');
-     if (!rawPhone) { toast('Parent phone is required', 'error'); return; }
-     if (!validation.valid) { toast(validation.error, 'error'); return; }
+      // Validate phone based on selected country for edit modal
+      const rawPhone = $('e-phone').value.trim();
+      const phoneDigits = rawPhone.replace(/\D/g, ''); // Strip non-digits for storage
+      const validation = validatePhoneNumber(rawPhone, window.selectedCountryCodeEdit || 'IN');
+      if (!rawPhone) { toast('Parent phone is required', 'error'); return; }
+      if (!validation.valid) { toast(validation.error, 'error'); return; }
 
-     // Send fee under every possible field name so whichever Supabase column exists gets updated
-     const data = {
-       full_name: $('e-name').value,
-       name: $('e-name').value,
-       phone: rawPhone,
-       parent_phone: rawPhone,
-       country_code: window.selectedCountryCodeEdit || 'IN',
-       level: $('e-level').value,
-       grade: $('e-level').value,
-       rating: newElo,
-       coach_id: $('e-coach').value,
-       status: $('e-enroll-status')?.value || s.status || 'active',
-       payment_status: $('e-payment-status')?.value || s.payment_status || 'Pending',
-       enrollment_date: $('e-join').value,
-       due_date: $('e-due-date')?.value || null,
-       session_mode: $('e-batch-type').value,
-       batch_type: $('e-batch-type').value,
-       session_time: $('e-batch-time').value,
-       batch_time: $('e-batch-time').value,
-       // Send fee under ALL possible column names
-       monthly_fee: newFee,
-       fee: newFee,
-       fees: newFee,
-       tuition_fee: newFee,
-       country_code: window.selectedCountryCodeEdit || 'IN',
-       notes: $('e-notes')?.value || s.notes || ''
-     };
+      // Send fee under every possible field name so whichever Supabase column exists gets updated
+      const data = {
+        full_name: $('e-name').value,
+        name: $('e-name').value,
+        phone: phoneDigits,
+        parent_phone: phoneDigits,
+        country_code: window.selectedCountryCodeEdit || 'IN',
+        level: $('e-level').value,
+        grade: $('e-level').value,
+        rating: newElo,
+        coach_id: $('e-coach').value,
+        status: $('e-enroll-status')?.value || s.status || 'active',
+        payment_status: $('e-payment-status')?.value || s.payment_status || 'Pending',
+        enrollment_date: $('e-join').value,
+        due_date: $('e-due-date')?.value || null,
+        session_mode: $('e-batch-type').value,
+        batch_type: $('e-batch-type').value,
+        session_time: $('e-batch-time').value,
+        batch_time: $('e-batch-time').value,
+        // Send fee under ALL possible column names
+        monthly_fee: newFee,
+        fee: newFee,
+        fees: newFee,
+        tuition_fee: newFee,
+        notes: $('e-notes')?.value || s.notes || ''
+      };
 
     try {
       const res = await apiCall(`/api/students?id=${id}`, { method: 'PUT', body: JSON.stringify(data) });
@@ -3128,25 +3146,26 @@ function initUI() {
    }
 
  async function saveStudent() {
-      const rawPhone = $('m-phone').value.trim();
-      const validation = validatePhoneNumber(rawPhone, window.selectedCountryCode || 'IN');
-      const data = {
-        full_name: $('m-name').value.trim(),
-        phone: rawPhone,
-        parent_phone: rawPhone,
-        country_code: window.selectedCountryCode || 'IN',
-        level: $('m-level').value,
-        rating: parseInt($('m-elo').value) || 0,
-        coach_id: $('m-coach').value,
-        enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
-        due_date: $('m-due-date')?.value || null,
-        batch_type: $('m-batch-type').value,
-        batch_time: $('m-batch-time').value,
-        monthly_fee: parseInt($('m-fee').value) || 0,
-        payment_status: 'Due',
-        status: 'active',
-        notes: ''
-      };
+       const rawPhone = $('m-phone').value.trim();
+       const phoneDigits = rawPhone.replace(/\D/g, '');
+       const validation = validatePhoneNumber(rawPhone, window.selectedCountryCode || 'IN');
+       const data = {
+         full_name: $('m-name').value.trim(),
+         phone: phoneDigits,
+         parent_phone: phoneDigits,
+         country_code: window.selectedCountryCode || 'IN',
+         level: $('m-level').value,
+         rating: parseInt($('m-elo').value) || 0,
+         coach_id: $('m-coach').value,
+         enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
+         due_date: $('m-due-date')?.value || null,
+         batch_type: $('m-batch-type').value,
+         batch_time: $('m-batch-time').value,
+         monthly_fee: parseInt($('m-fee').value) || 0,
+         payment_status: 'Due',
+         status: 'active',
+         notes: ''
+       };
 
      if (!data.due_date) {
        const nextMonth = new Date();
@@ -3158,15 +3177,18 @@ function initUI() {
      if (!rawPhone) { toast('Parent phone is required', 'error'); return; }
      if (!validation.valid) { toast(validation.error, 'error'); return; }
 
-     try {
-       const res = await apiCall('/api/students', { method: 'POST', body: JSON.stringify(data) });
-       if (res.ok) {
-         logAudit('students', 'new', 'create', null, data);
-         toast('Student enrolled successfully!', 'success');
-         closeModals();
-         loadAllData(true);
-       }
-     } catch (e) { toast('Failed to enroll student', 'error'); }
+      try {
+        const res = await apiCall('/api/students', { method: 'POST', body: JSON.stringify(data) });
+        if (res.ok) {
+          logAudit('students', 'new', 'create', null, data);
+          toast('Student enrolled successfully!', 'success');
+          closeModals();
+          loadAllData(true);
+        } else {
+          const err = await res.json().catch(() => ({}));
+          toast('Enrollment failed: ' + (err.error || err.message || `Server error ${res.status}`), 'error');
+        }
+      } catch (e) { toast('Failed to enroll student: ' + e.message, 'error'); }
    }
 
   async function deleteStudent(id, name) {
@@ -3190,7 +3212,17 @@ function initUI() {
       const studs = allStudents.filter(s => String(s.coach_id) === String(c.id));
       const studentCount = studs.length;
       const avgRating = studs.length ? Math.round(studs.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / studs.length) : 800;
-      const photo = c.photo_url || c.photo || c.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000000&bold=true&size=120`;
+        let photo = c.photo_url || c.photo || c.image;
+        if (photo) {
+          // Allow data URLs and Supabase storage URLs; block external services
+          if (!photo.startsWith('data:') && !photo.includes('.supabase.co') && (window.SUPABASE_URL && !photo.includes(window.SUPABASE_URL))) {
+            console.warn('[Avatar] External coach photo ignored for', getCoachName(c));
+            photo = null;
+          }
+        }
+        if (!photo) {
+          photo = generateAvatarURL(getCoachName(c), 120, 'dca33e', '000000');
+        }
 
        return `
          <div class="coach-card">
@@ -3250,7 +3282,17 @@ function initUI() {
     $('cv-stud-count').innerText = studs.length;
     $('cv-avg-elo').innerText = avgRating;
     $('cv-exp').innerText = (c.experience || 0) + 'y';
-    $('cv-av').src = c.photo_url || c.photo || c.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCoachName(c))}&background=dca33e&color=000000&bold=true&size=200`;
+     let photo2 = c.photo_url || c.photo || c.image;
+     if (photo2) {
+       if (!photo2.startsWith('data:') && !photo2.includes('.supabase.co') && (window.SUPABASE_URL && !photo2.includes(window.SUPABASE_URL))) {
+         console.warn('[Avatar] External coach photo (modal) ignored for', getCoachName(c));
+         photo2 = null;
+       }
+     }
+     if (!photo2) {
+       photo2 = generateAvatarURL(getCoachName(c), 200, 'dca33e', '000000');
+     }
+     $('cv-av').src = photo2;
 
     $('cv-edit-btn').onclick = () => { closeModals(); openCoachModal(id); };
     openModal('coach-view-modal');
