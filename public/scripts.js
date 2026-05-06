@@ -631,19 +631,19 @@
     const status = getStudentPaymentStatus(s);
     const statusText = (status === 'Due' || status === 'Overdue') ? 'DUE' : 'PENDING';
 
-    const msg = `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}
-
-Hello Sir/Madam ${EMOJI.wave},
-
-This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} ${EMOJI.card}.
-${EMOJI.alert} Amount Due: \u{20B9}${totalPending.toLocaleString()}
-
-We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.
-
-${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}
-
-Thank you for your understanding ${EMOJI.pray}.
-– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
+    const msg = `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}\n` +
+      `\n` +
+      `Hello Sir/Madam ${EMOJI.wave},\n` +
+      `\n` +
+      `This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} ${EMOJI.card}.\n` +
+      `${EMOJI.alert} Amount Due: \u{20B9}${totalPending.toLocaleString()}\n` +
+      `\n` +
+      `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
+      `\n` +
+      `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
+      `\n` +
+      `Thank you for your understanding ${EMOJI.pray}.\n` +
+      `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
 
     const parsed = parseStoredPhone(phone);
     const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -659,21 +659,38 @@ Thank you for your understanding ${EMOJI.pray}.
     const studs = allStudents.filter(s => String(s.coach_id) === String(id));
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
+    const today = new Date();
 
-    const pending = studs.filter(s => {
+    // Get pending students with their due dates for sorting
+    const pendingWithDates = studs.map(s => {
       const status = getStudentPaymentStatus(s, targetMonth, targetYear);
-      if (status !== 'Due' && status !== 'Pending' && status !== 'Overdue') return false;
+      if (status !== 'Due' && status !== 'Pending' && status !== 'Overdue') return null;
 
-      if (status === 'Pending') {
-        let daysLeft = 99;
-        const dueCfg = getStudentDueConfig(s, getCoachName(c), targetMonth, targetYear);
-        const dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
-        const diffTime = dueDateObj.getTime() - new Date().getTime();
-        daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (daysLeft > 5) return false;
-      }
-      return true;
+      const dueCfg = getStudentDueConfig(s, getCoachName(c), targetMonth, targetYear);
+      const dueDate = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
+      const daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      // For Pending status, only include if due within 5 days
+      if (status === 'Pending' && daysLeft > 5) return null;
+
+      return { student: s, status, dueDate, daysLeft, dueDay: dueCfg.day };
+    }).filter(item => item !== null);
+
+    // Sort: 1. Overdue first, 2. Then Due by closest date, 3. Then Pending by closest date
+    // Within each status group, sort by due date (closest first)
+    pendingWithDates.sort((a, b) => {
+      // Status priority: Overdue (0) > Due (1) > Pending (2)
+      const statusOrder = { 'Overdue': 0, 'Due': 1, 'Pending': 2 };
+      const aOrder = statusOrder[a.status];
+      const bOrder = statusOrder[b.status];
+      
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      
+      // Same status - sort by due date (closest first, for overdue use daysLeft as negative)
+      return a.dueDate - b.dueDate;
     });
+
+    const pending = pendingWithDates.map(item => item.student);
 
     if (pending.length === 0) {
       if (!silent) toast(`No pending/due fees (or within 5-day deadline) for students under ${getCoachName(c)}`, 'info');
@@ -684,12 +701,8 @@ Thank you for your understanding ${EMOJI.pray}.
 
     // Determine min due day among pending students to use as deadline
     let minDueDay = 10;
-    if (pending.length > 0) {
-      const days = pending.map(s => {
-        const dueCfg = getStudentDueConfig(s, getCoachName(c), targetMonth, targetYear);
-        return dueCfg.day;
-      });
-      minDueDay = Math.min(...days);
+    if (pendingWithDates.length > 0) {
+      minDueDay = Math.min(...pendingWithDates.map(item => item.dueDay));
     }
 
     const getOrdinal = (n) => {
@@ -699,44 +712,34 @@ Thank you for your understanding ${EMOJI.pray}.
     };
     const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-        let msg = `${EMOJI.warning} CHESSKIDOO ACADEMY \u{2013} FEE AUDIT REPORT ${EMOJI.chart}
+    // Build sorted student lines
+    const studentLines = pendingWithDates.map(({ student: s, status, dueDay }) => {
+      let label;
+      if (status === 'Overdue' || status === 'Due') {
+        label = `${EMOJI.siren} ARREARS`;
+      } else {
+        label = `${EMOJI.pending} PENDING`;
+      }
+      const sName = cleanText(getStudentName(s).toUpperCase());
+      const coach = allCoaches.find(cc => String(cc.id) === String(s.coach_id));
+      const cName = coach ? (coach.name || '') : '';
+      const monthName2 = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
+      const dueDateStr = `${getOrdinal(dueDay)} ${monthName2} ${targetYear}`;
+      return `${EMOJI.alert} ${sName} — ${label} (Due: ${dueDateStr})`;
+    });
 
-Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} ${EMOJI.teacher},
-
-The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle ${EMOJI.calendar}:
-
-${pending.map(s => {
-  const status = getStudentPaymentStatus(s);
-  let label = `${EMOJI.pending} PENDING`;
-  if (status === 'Overdue') {
-    label = `${EMOJI.siren} ARREARS`;
-  } else if (status === 'Due') {
-    label = `${EMOJI.pending} DUE`;
-  }
-  const sName = cleanText(getStudentName(s).toUpperCase());
-  const coach = allCoaches.find(cc => String(cc.id) === String(s.coach_id));
-  const cName = coach ? (coach.name || '') : '';
-  const dueCfg = getStudentDueConfig(s, cName, targetMonth, targetYear);
-  const getOrdinal2 = (n) => {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-  };
-  const monthName2 = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
-  const dueDateStr = `${getOrdinal2(dueCfg.day)} ${monthName2} ${targetYear}`;
-  return `${EMOJI.alert} ${sName} \u{2014} ${label} (Due: ${dueDateStr})`;
-}).join('\n')}
-
-Please coordinate with the guardians to ensure these balances are settled ${EMOJI.handshake}.
-Last Date to Pay: ${lastDateToPayStr} ${EMOJI.spiral_calendar}
-
-${EMOJI.memo} Note:
-
-${EMOJI.siren} ARREARS = Unpaid fees from previous months
-${EMOJI.pending} PENDING = Current month's unpaid fee
-
-Regards,
-Administrative Team | Chesskidoo Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
+    let msg = `${EMOJI.warning} *CHESSKIDOO ACADEMY – FEE AUDIT REPORT* ${EMOJI.chart}\n\n` +
+        `Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} ${EMOJI.teacher},\n\n` +
+        `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle ${EMOJI.calendar}:\n\n` +
+        studentLines.join('\n') +
+        `\n\n` +
+        `Please coordinate with the guardians to ensure these balances are settled ${EMOJI.handshake}.\n` +
+        `*Last Date to Pay:* ${lastDateToPayStr} ${EMOJI.spiral_calendar}\n\n` +
+        `${EMOJI.memo} *Note:*\n\n` +
+        `${EMOJI.siren} *ARREARS* = Unpaid fees from previous months\n` +
+        `${EMOJI.pending} *PENDING* = Current month's unpaid fee\n\n` +
+        `Regards,\n` +
+        `*Administrative Team* | Chesskidoo Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
 
     const phone = c.phone || c.contact || '0000000000';
     const parsed = parseStoredPhone(phone);
@@ -835,22 +838,22 @@ Administrative Team | Chesskidoo Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
        const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
        const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
-       const payStatus = getStudentPaymentStatus(s);
-       const statusText = (payStatus === 'Due' || payStatus === 'Overdue') ? 'DUE' : 'PENDING';
+const payStatus = getStudentPaymentStatus(s);
+        const statusText = (payStatus === 'Due' || payStatus === 'Overdue') ? 'DUE' : 'PENDING';
 
-          const msg = `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}
-
-Hello Sir/Madam ${EMOJI.wave},
-
-This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} ${EMOJI.card}.
-${EMOJI.alert} Amount Due: \u{20B9}${totalDebt.toLocaleString()}
-
-We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.
-
-${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}
-
-Thank you for your understanding ${EMOJI.pray}.
-– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
+        const msg = `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}\n` +
+          `\n` +
+          `Hello Sir/Madam ${EMOJI.wave},\n` +
+          `\n` +
+          `This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} ${EMOJI.card}.\n` +
+          `${EMOJI.alert} Amount Due: \u{20B9}${totalDebt.toLocaleString()}\n` +
+          `\n` +
+          `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
+          `\n` +
+          `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
+          `\n` +
+          `Thank you for your understanding ${EMOJI.pray}.\n` +
+          `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
 
       const parsed = parseStoredPhone(phone);
       const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -4191,19 +4194,19 @@ Best regards,
 
         // Build notification content
         let message = customMsg ? `${customMsg}\n\n` : '';
-        message += `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}
-
-Hello Sir/Madam ${EMOJI.wave},
-
-This is to inform you that the chess class fee for ${cleanText(studentName)} is still ${statusText} ${EMOJI.card}.
-${EMOJI.alert} Amount Due: \u{20B9}${totalDue.toLocaleString()}
-
-We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.
-
-${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}
-
-Thank you for your understanding ${EMOJI.pray}.
-– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
+        message += `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}\n` +
+          `\n` +
+          `Hello Sir/Madam ${EMOJI.wave},\n` +
+          `\n` +
+          `This is to inform you that the chess class fee for ${cleanText(studentName)} is still ${statusText} ${EMOJI.card}.\n` +
+          `${EMOJI.alert} Amount Due: \u{20B9}${totalDue.toLocaleString()}\n` +
+          `\n` +
+          `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
+          `\n` +
+          `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
+          `\n` +
+          `Thank you for your understanding ${EMOJI.pray}.\n` +
+          `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
 
       try {
         let sent = false;

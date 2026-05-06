@@ -190,14 +190,17 @@
     const today       = new Date();
     const monthName   = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
-    const coachMap = {};
+    // Get students with their due dates for proper sorting
+    const coachStudentsWithDates = {};
+    
     allStudents.forEach(s => {
       const status = window.getStudentPaymentStatus ? window.getStudentPaymentStatus(s) : s.payment_status;
       if (status !== 'Due' && status !== 'Pending' && status !== 'Overdue') return;
 
+      const targetMonth = today.getUTCMonth();
+      const targetYear = today.getUTCFullYear();
+      
       if (status === 'Pending') {
-        const targetMonth = today.getUTCMonth();
-        const targetYear = today.getUTCFullYear();
         let daysLeft = 99;
         if (window.getStudentDueConfig) {
           const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
@@ -211,12 +214,34 @@
 
       const cid = s.coach_id;
       if (!cid) return;
-      if (!coachMap[cid]) coachMap[cid] = { due: [], pending: [] };
-      if (status === 'Due' || status === 'Overdue') coachMap[cid].due.push(s);
-      else coachMap[cid].pending.push(s);
+      
+      if (!coachStudentsWithDates[cid]) coachStudentsWithDates[cid] = [];
+      
+      let dueDay = 5;
+      if (window.getStudentDueConfig) {
+        const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+        const dueCfg = window.getStudentDueConfig(s, coach ? (coach.name || '') : '', targetMonth, targetYear);
+        dueDay = dueCfg.day;
+      }
+      coachStudentsWithDates[cid].push({ student: s, status, dueDay });
     });
 
-    const coachIds = Object.keys(coachMap);
+    // Sort students in each coach's list: Overdue/Due first (by due date), then Pending (by due date)
+    Object.keys(coachStudentsWithDates).forEach(cid => {
+      coachStudentsWithDates[cid].sort((a, b) => {
+        // Status priority: Overdue (0) > Due (1) > Pending (2)
+        const statusOrder = { 'Overdue': 0, 'Due': 1, 'Pending': 2 };
+        const aOrder = statusOrder[a.status];
+        const bOrder = statusOrder[b.status];
+        
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        
+        // Same status - sort by due date (smaller day = closer date)
+        return a.dueDay - b.dueDay;
+      });
+    });
+
+    const coachIds = Object.keys(coachStudentsWithDates);
     if (coachIds.length === 0) {
       toast('✅ No coaches have pending/due students!', 'success');
       if (panel) panel.style.opacity = '1';
@@ -245,7 +270,7 @@
       const phone = (coach.phone || '').replace(/\D/g, '');
       if (!phone || phone.length < 10) { count++; processNext(); return; }
 
-      const data   = coachMap[cid];
+      const studentData = coachStudentsWithDates[cid];
       const getName = s => cleanText(s.full_name || s.name || 'Unknown');
 
       const targetMonth = today.getUTCMonth();
@@ -253,17 +278,9 @@
       const dateStr = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
       // Determine min due day among pending students to use as deadline
-      const pendingAndDue = [...data.due, ...data.pending];
       let minDueDay = 10;
-      if (pendingAndDue.length > 0) {
-        const days = pendingAndDue.map(s => {
-          if (window.getStudentDueConfig) {
-            const dueCfg = window.getStudentDueConfig(s, coach.name || '', targetMonth, targetYear);
-            return dueCfg.day;
-          }
-          return 5;
-        });
-        minDueDay = Math.min(...days);
+      if (studentData.length > 0) {
+        minDueDay = Math.min(...studentData.map(item => item.dueDay));
       }
 
       const getOrdinal = (n) => {
@@ -273,23 +290,17 @@
       };
       const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-      let msg = `${EMOJI.warning} *CHESSKIDOO ACADEMY \u2013 FEE AUDIT REPORT* ${EMOJI.chart}\n\n`;
+      let msg = `${EMOJI.warning} *CHESSKIDOO ACADEMY – FEE AUDIT REPORT* ${EMOJI.chart}\n\n`;
       msg += `Hello Coach ${cleanText(coach.name || 'Coach').toUpperCase()} ${EMOJI.teacher},\n\n`;
       msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle ${EMOJI.calendar}:\n\n`;
 
       const studentLines = [];
-      pendingAndDue.forEach(s => {
-        const status = window.getStudentPaymentStatus ? window.getStudentPaymentStatus(s) : 'Pending';
-        const label = status === 'Due' ? `${EMOJI.siren} ARREARS` : `${EMOJI.pending} PENDING`;
+      studentData.forEach(({ student: s, status, dueDay }) => {
+        // Due and Overdue both show as ARREARS
+        const label = (status === 'Due' || status === 'Overdue') ? `${EMOJI.siren} ARREARS` : `${EMOJI.pending} PENDING`;
         const sName = cleanText(getName(s).toUpperCase());
-        let dueDateStr = '';
-        if (window.getStudentDueConfig) {
-          const dueCfg = window.getStudentDueConfig(s, coach.name || '', targetMonth, targetYear);
-          dueDateStr = `${getOrdinal(dueCfg.day)} ${today.toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
-        } else {
-          dueDateStr = `5th ${today.toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
-        }
-        studentLines.push(`${EMOJI.alert} *${sName}* \u2014 ${label} (Due: ${dueDateStr})`);
+        const dueDateStr = `${getOrdinal(dueDay)} ${today.toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
+        studentLines.push(`${EMOJI.alert} *${sName}* — ${label} (Due: ${dueDateStr})`);
       });
       msg += studentLines.join('\n') + '\n\n';
 
