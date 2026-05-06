@@ -4172,7 +4172,7 @@ We kindly request you to complete the payment on or before ${dueDateStr} \u{23F0
 \u{1F4B3} You may make the payment to: 9025846663 (Ranjith) \u{1F4DE}
 
 Thank you for your understanding \u{1F64F}.
-– Chesskidoo Academy \u{1F393}\u{2728}\`;
+– Chesskidoo Academy \u{1F393}\u{2728}`;
 
       try {
         let sent = false;
