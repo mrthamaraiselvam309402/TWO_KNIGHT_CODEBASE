@@ -640,7 +640,7 @@
       `\n` +
            `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
            `\n` +
-           `${EMOJI.card} You may make the payment to: 8825731470 (Ranjith) ${EMOJI.phone}\n` +
+           `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
            `\n` +
            `Thank you for your understanding ${EMOJI.pray}.\n` +
            `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
@@ -850,7 +850,7 @@ const payStatus = getStudentPaymentStatus(s);
           `\n` +
           `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
           `\n` +
-          `${EMOJI.card} You may make the payment to: 8825731470 (Ranjith) ${EMOJI.phone}\n` +
+          `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
           `\n` +
           `Thank you for your understanding ${EMOJI.pray}.\n` +
           `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
@@ -4203,7 +4203,7 @@ Best regards,
           `\n` +
           `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
           `\n` +
-          `${EMOJI.card} You may make the payment to: 8825731470 (Ranjith) ${EMOJI.phone}\n` +
+          `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
           `\n` +
           `Thank you for your understanding ${EMOJI.pray}.\n` +
           `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
