@@ -1137,10 +1137,7 @@ function initUI() {
     // A. PAID AUDIT: Primary source of truth. If audit confirms payment, they are Paid.
     if (totalPaidInvoices >= monthsRequired && hasPaymentThisMonth) return 'Paid';
 
-    // B. SPECIAL NAMES: SUDARSAN and SURESHBABU are "Due" if any missing payments at all.
-    const studentName = (s.full_name || s.name || '').toUpperCase();
-    const isSpecial = ['SUDARSAN', 'SURESHBABU'].some(n => studentName.includes(n));
-    if (isSpecial && totalPaidInvoices < monthsRequired) return 'Due';
+
 
     // C. DATE-BASED TRANSITION (Current Month): Transition automatically based on student-specific due date
     if (isCurrentMonth) {
