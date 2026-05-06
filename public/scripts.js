@@ -593,11 +593,9 @@
 Hello Sir/Madam 👋,
 
 This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* 💳.
-❗ *Amount Due:* ₹s*${totalPending.toLocaleString()}
+❗ *Amount Due:* ₹${totalPending.toLocaleString()}
 
 We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
-
-❗ *Additionally,* we request you to please pay at least *₹500* on or before *${dueDateStr}* as a minimum confirmation amount ✅.
 
 💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
 
@@ -783,8 +781,6 @@ This is to inform you that the chess class fee for *${cleanText(name)}* is still
 ❗ *Amount Due:* ₹${totalDebt.toLocaleString()}
 
 We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
-
-❗ *Additionally,* we request you to please pay at least *₹500* on or before *${dueDateStr}* as a minimum confirmation amount ✅.
 
 💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
 
@@ -3990,8 +3986,6 @@ This is to inform you that the chess class fee for *${cleanText(studentName)}* i
 ❗ *Amount Due:* ₹${totalDue.toLocaleString()}
 
 We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
-
-❗ *Additionally,* we request you to please pay at least *₹500* on or before *${dueDateStr}* as a minimum confirmation amount ✅.
 
 💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
 
