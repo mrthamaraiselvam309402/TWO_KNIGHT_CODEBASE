@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
        enrollment_date: s.enrollment_date || '',
        join_date: s.enrollment_date || '',
        address: s.address || '',
-       country_code: s.country_code || parsed.countryCode || 'IN',
+       country_code: (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN'),
        status: status,
        payment_status: s.payment_status || (status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due')),
        coach_id: s.coach_id || null,

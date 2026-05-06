@@ -588,22 +588,23 @@
     const status = getStudentPaymentStatus(s);
     const statusText = status === 'Due' ? 'DUE' : 'PENDING';
 
-    const msg = `⚠️ *FEE PAYMENT PENDING* 🚨
+    const msg = `\u26A0\uFE0F *FEE PAYMENT PENDING* \u{1F6A8}
 
-Hello Sir/Madam 👋,
+Hello Sir/Madam \u{1F44B},
 
-This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* 💳.
-❗ *Amount Due:* ₹${totalPending.toLocaleString()}
+This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* \u{1F4B3}.
+\u2757 *Amount Due:* \u20B9${totalPending.toLocaleString()}
 
-We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
+We kindly request you to complete the payment *on or before ${dueDateStr}* \u23F0 to avoid any interruption in class participation \u{1F6AB}.
 
-💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
+\u{1F4B3} *You may make the payment to:* 9025846663 (Ranjith) \u{1F4DE}
 
-Thank you for your understanding 🙏.
-– Chesskidoo Academy 🎓✨`;
+Thank you for your understanding \u{1F64F}.
+\u2013 Chesskidoo Academy \u{1F393}\u2728`;
 
-        const parsed = parseStoredPhone(phone);
-    const country = getCountryByCode(s.country_code || parsed.countryCode || 'IN');
+    const parsed = parseStoredPhone(phone);
+    const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
+    const country = getCountryByCode(inferredCountry);
     const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
     window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`, '_blank');
   }
@@ -644,15 +645,15 @@ Thank you for your understanding 🙏.
     };
     const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-       let msg = `⚠️ *CHESSKIDOO ACADEMY – FEE AUDIT REPORT* 📊
+       let msg = `\u26A0\uFE0F *CHESSKIDOO ACADEMY \u2013 FEE AUDIT REPORT* \u{1F4CA}
 
-Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} 👨‍🏫,
+Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} \u{1F468}\u200D\u{1F3EB},
 
-The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle 📅:
+The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle \u{1F4C5}:
 
 ${pending.map(s => {
   const status = getStudentPaymentStatus(s);
-  const label = status === 'Due' ? '🚨 ARREARS' : '⏳ PENDING';
+  const label = status === 'Due' ? '\u{1F6A8} ARREARS' : '\u23F3 PENDING';
   const sName = cleanText(getStudentName(s).toUpperCase());
   const coach = allCoaches.find(cc => String(cc.id) === String(s.coach_id));
   const cName = coach ? (coach.name || '') : '';
@@ -664,23 +665,24 @@ ${pending.map(s => {
   };
   const monthName2 = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
   const dueDateStr = `${getOrdinal2(dueCfg.day)} ${monthName2} ${targetYear}`;
-  return `❗ *${sName}* — ${label} (Due: ${dueDateStr})`;
+  return `\u2757 *${sName}* \u2014 ${label} (Due: ${dueDateStr})`;
 }).join('\n')}
 
-Please coordinate with the guardians to ensure these balances are settled 🤝.
-*Last Date to Pay:* ${lastDateToPayStr} 🗓️
+Please coordinate with the guardians to ensure these balances are settled \u{1F91D}.
+*Last Date to Pay:* ${lastDateToPayStr} \u{1F5D3}\uFE0F
 
-📝 *Note:*
+\u{1F4DD} *Note:*
 
-🚨 *ARREARS* = Unpaid fees from previous months
-⏳ *PENDING* = Current month's unpaid fee
+\u{1F6A8} *ARREARS* = Unpaid fees from previous months
+\u23F3 *PENDING* = Current month's unpaid fee
 
 Regards,
-*Administrative Team* | Chesskidoo Academy 🏆✨`;
+*Administrative Team* | Chesskidoo Academy \u{1F3C6}\u2728`;
 
-        const phone = c.phone || c.contact || '0000000000';
+    const phone = c.phone || c.contact || '0000000000';
     const parsed = parseStoredPhone(phone);
-    const country = getCountryByCode(parsed.countryCode);
+    const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (c.country_code || 'IN');
+    const country = getCountryByCode(inferredCountry);
     const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
     const waUrl = `https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`;
 
@@ -777,22 +779,23 @@ Regards,
        const payStatus = getStudentPaymentStatus(s);
        const statusText = payStatus === 'Due' ? 'DUE' : 'PENDING';
 
-         const msg = `⚠️ *FEE PAYMENT PENDING* 🚨
+         const msg = `\u26A0\uFE0F *FEE PAYMENT PENDING* \u{1F6A8}
 
-Hello Sir/Madam 👋,
+Hello Sir/Madam \u{1F44B},
 
-This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* 💳.
-❗ *Amount Due:* ₹${totalDebt.toLocaleString()}
+This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* \u{1F4B3}.
+\u2757 *Amount Due:* \u20B9${totalDebt.toLocaleString()}
 
-We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
+We kindly request you to complete the payment *on or before ${dueDateStr}* \u23F0 to avoid any interruption in class participation \u{1F6AB}.
 
-💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
+\u{1F4B3} *You may make the payment to:* 9025846663 (Ranjith) \u{1F4DE}
 
-Thank you for your understanding 🙏.
-– Chesskidoo Academy 🎓✨`;
+Thank you for your understanding \u{1F64F}.
+\u2013 Chesskidoo Academy \u{1F393}\u2728`;
 
-            const parsed = parseStoredPhone(phone);
-      const country = getCountryByCode(s.country_code || parsed.countryCode || 'IN');
+      const parsed = parseStoredPhone(phone);
+      const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
+      const country = getCountryByCode(inferredCountry);
       const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
       setTimeout(() => {
         window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -2981,10 +2984,11 @@ function initUI() {
      $('e-name').value = getStudentName(s);
      // Render country dropdown for edit modal
      renderCountryDropdown('country-dropdown-edit', 'selectCountryEdit');
-           // Set country first so phone placeholder/validation matches
+                 // Set country first so phone placeholder/validation matches
       const studentPhone = getStudentPhone(s);
       const parsed = parseStoredPhone(studentPhone);
-      const country = getCountryByCode(s.country_code || parsed.countryCode || 'IN');
+      const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
+      const country = getCountryByCode(inferredCountry);
       if (country) {
         selectCountryEdit(country.code, country.dial, country.length);
       }
@@ -3913,7 +3917,8 @@ Thank you for your continued support and cooperation.
             const studentPhone = getStudentPhone(s);
       const parsed = parseStoredPhone(studentPhone);
       if (parsed.localNumber) {
-        const country = getCountryByCode(s.country_code || parsed.countryCode || 'IN');
+        const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
+        const country = getCountryByCode(inferredCountry);
         const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
         window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(message)}`, '_blank');
       }
@@ -4024,26 +4029,27 @@ Thank you for your continued support and cooperation.
 
        // Build notification content
        let message = customMsg ? `${customMsg}\n\n` : '';
-       message += `⚠️ *FEE PAYMENT PENDING* 🚨
+       message += `\u26A0\uFE0F *FEE PAYMENT PENDING* \u{1F6A8}
 
-Hello Sir/Madam 👋,
+Hello Sir/Madam \u{1F44B},
 
-This is to inform you that the chess class fee for *${cleanText(studentName)}* is still *${statusText}* 💳.
-❗ *Amount Due:* ₹${totalDue.toLocaleString()}
+This is to inform you that the chess class fee for *${cleanText(studentName)}* is still *${statusText}* \u{1F4B3}.
+\u2757 *Amount Due:* \u20B9${totalDue.toLocaleString()}
 
-We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
+We kindly request you to complete the payment *on or before ${dueDateStr}* \u23F0 to avoid any interruption in class participation \u{1F6AB}.
 
-💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
+\u{1F4B3} *You may make the payment to:* 9025846663 (Ranjith) \u{1F4DE}
 
-Thank you for your understanding 🙏.
-– Chesskidoo Academy 🎓✨`;
+Thank you for your understanding \u{1F64F}.
+\u2013 Chesskidoo Academy \u{1F393}\u2728`;
 
       try {
         let sent = false;
 
-                if (channel === 'whatsapp') {
+        if (channel === 'whatsapp') {
           const parsed = parseStoredPhone(phone);
-          const country = getCountryByCode(s.country_code || parsed.countryCode || 'IN');
+          const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
+          const country = getCountryByCode(inferredCountry);
           const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
           window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(message)}`, '_blank');
           sent = true;

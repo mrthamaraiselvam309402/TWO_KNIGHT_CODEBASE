@@ -228,14 +228,14 @@
       };
       const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-      let msg = `⚠️ *CHESSKIDOO ACADEMY – FEE AUDIT REPORT* 📊\n\n`;
-      msg += `Hello Coach ${cleanText(coach.name || 'Coach').toUpperCase()} 👨‍🏫,\n\n`;
-      msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle 📅:\n\n`;
+      let msg = `\u26A0\uFE0F *CHESSKIDOO ACADEMY \u2013 FEE AUDIT REPORT* \u{1F4CA}\n\n`;
+      msg += `Hello Coach ${cleanText(coach.name || 'Coach').toUpperCase()} \u{1F468}\u200D\u{1F3EB},\n\n`;
+      msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle \u{1F4C5}:\n\n`;
 
       const studentLines = [];
       pendingAndDue.forEach(s => {
         const status = window.getStudentPaymentStatus ? window.getStudentPaymentStatus(s) : 'Pending';
-        const label = status === 'Due' ? '🚨 ARREARS' : '⏳ PENDING';
+        const label = status === 'Due' ? '\u{1F6A8} ARREARS' : '\u23F3 PENDING';
         const sName = cleanText(getName(s).toUpperCase());
         let dueDateStr = '';
         if (window.getStudentDueConfig) {
@@ -244,20 +244,21 @@
         } else {
           dueDateStr = `5th ${today.toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
         }
-        studentLines.push(`❗ *${sName}* — ${label} (Due: ${dueDateStr})`);
+        studentLines.push(`\u2757 *${sName}* \u2014 ${label} (Due: ${dueDateStr})`);
       });
       msg += studentLines.join('\n') + '\n\n';
 
-      msg += `Please coordinate with the guardians to ensure these balances are settled 🤝.\n`;
-      msg += `*Last Date to Pay:* ${lastDateToPayStr} 🗓️\n\n`;
-      msg += `📝 *Note:*\n\n`;
-      msg += `🚨 *ARREARS* = Unpaid fees from previous months\n`;
-      msg += `⏳ *PENDING* = Current month's unpaid fee\n\n`;
+      msg += `Please coordinate with the guardians to ensure these balances are settled \u{1F91D}.\n`;
+      msg += `*Last Date to Pay:* ${lastDateToPayStr} \u{1F5D3}\uFE0F\n\n`;
+      msg += `\u{1F4DD} *Note:*\n\n`;
+      msg += `\u{1F6A8} *ARREARS* = Unpaid fees from previous months\n`;
+      msg += `\u23F3 *PENDING* = Current month's unpaid fee\n\n`;
       msg += `Regards,\n`;
-      msg += `*Administrative Team* | Chesskidoo Academy 🏆✨`;
+      msg += `*Administrative Team* | Chesskidoo Academy \u{1F3C6}\u2728`;
 
             const parsed = window.parseStoredPhone ? window.parseStoredPhone(phone) : { countryCode: 'IN', localNumber: phone };
-      const cCountry = coach.country_code || parsed.countryCode || 'IN';
+      const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (coach.country_code || 'IN');
+      const cCountry = inferredCountry;
       const country = window.getCountryByCode ? window.getCountryByCode(cCountry) : { dial: '+91' };
       const dialCode = country.dial.replace(/\D/g, '');
       window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -315,7 +316,8 @@
         const parsed = window.parseStoredPhone ? window.parseStoredPhone(phone) : { countryCode: 'IN', localNumber: phone };
     if (parsed.localNumber) {
       setTimeout(() => {
-        const sCountry = s.country_code || parsed.countryCode || 'IN';
+        const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
+        const sCountry = inferredCountry;
         const country = window.getCountryByCode ? window.getCountryByCode(sCountry) : { dial: '+91' };
         const dialCode = country.dial.replace(/\D/g, '');
         window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(waMsg)}`, '_blank');
