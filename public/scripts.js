@@ -6222,4 +6222,5 @@ Best regards,
   window.getCountryByCode = getCountryByCode;
   window.COUNTRY_CODES = COUNTRY_CODES;
   window.getStudentDueConfig = getStudentDueConfig;
+  if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.5 (UTF-8 Escaped)';
 })();
