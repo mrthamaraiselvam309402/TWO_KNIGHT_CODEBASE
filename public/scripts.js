@@ -1895,7 +1895,7 @@ function initUI() {
         const now = new Date();
         const due = dedupedStuds.filter(s => {
           const status = getStudentPaymentStatus(s);
-          return status === 'Due';
+          return status === 'Due' || status === 'Overdue';
         });
 
         if (due.length > lastDueCount && lastDueCount > 0) {
@@ -2392,17 +2392,16 @@ function initUI() {
       const targetYear = window.reportYear;
       const paid = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid').length;
       const pending = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Pending').length;
-      const due = studs.filter(s => {
-        const st = getStudentPaymentStatus(s, targetMonth, targetYear);
-        return st === 'Due' || st === 'Overdue';
-      }).length;
+      const due = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Due').length;
+      const overdue = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Overdue').length;
+
       chartInstances.payment = new Chart(paymentCtx, {
         type: 'doughnut',
         data: {
-          labels: ['Paid', 'Pending', 'Due'],
+          labels: ['Paid', 'Pending', 'Due', 'Overdue'],
           datasets: [{
-            data: [paid, pending, due],
-            backgroundColor: ['#52c41a', '#e8a830', '#ff4d4f'],
+            data: [paid, pending, due, overdue],
+            backgroundColor: ['#52c41a', '#e8a830', '#ff4d4f', '#722ed1'],
             borderWidth: 0
           }]
         },
@@ -5623,7 +5622,10 @@ Thank you for your understanding \uD83D\uDE4F.
         const coachesCount = allCoaches.length;
         const totalRevenue = allStudents.reduce((acc, s) => acc + (getStudentMonthlyFee(s) || 0), 0);
         const activeStudents = allStudents.filter(s => getStudentStatus(s) === 'active').length;
-        const pendingPayments = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due').length;
+        const pendingPayments = allStudents.filter(s => {
+          const st = getStudentPaymentStatus(s);
+          return st === 'Due' || st === 'Overdue';
+        }).length;
         const activeTab = document.querySelector('.nav-item.active')?.dataset.page || 'Dashboard';
 
         context = {
@@ -6080,7 +6082,10 @@ Thank you for your understanding \uD83D\uDE4F.
     if (!content) return;
 
     const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin' && !dismissedNotifications.messages.includes(m.id));
-    const due = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due' && !dismissedNotifications.payments.includes(s.id));
+    const due = allStudents.filter(s => {
+      const st = getStudentPaymentStatus(s);
+      return (st === 'Due' || st === 'Overdue') && !dismissedNotifications.payments.includes(s.id);
+    });
     const auditLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
     const failedLogins = auditLogs.filter(l => l.action === 'login_failed').slice(-10).reverse();
 
@@ -6101,9 +6106,13 @@ Thank you for your understanding \uD83D\uDE4F.
 
      if (due.length > 0) {
        html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--danger)">💰 Due Payments (${due.length})</div>
-         <div style="font-size:12px;color:var(--ivory-dim)">Students with pending fees</div>
-         ${due.slice(0, 5).map(s => `<div style="padding:6px 0;font-size:12px;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div>`).join('')}
+         <div style="font-weight:600;color:var(--danger)">💰 Outstanding / Overdue Payments (${due.length})</div>
+         <div style="font-size:12px;color:var(--ivory-dim)">Students with pending or overdue fees</div>
+         ${due.slice(0, 5).map(s => {
+           const st = getStudentPaymentStatus(s);
+           const badgeHtml = st === 'Overdue' ? `<span class="badge badge-danger" style="margin-left:6px;font-size:9px;padding:2px 5px">OVERDUE</span>` : '';
+           return `<div style="padding:6px 0;font-size:12px;color:var(--ivory);display:flex;align-items:center">${escapeHtml(getStudentName(s))}${badgeHtml}</div>`;
+         }).join('')}
        </div>`;
      }
 
