@@ -90,8 +90,13 @@
    let loadingStates = {};
    // Optimized cache for faster dashboard loading
    const CACHE_DURATION = 30000; // 30 seconds cache for better performance
-  // ── CORE UTILITIES ──
-  window.apiCall = async function(endpoint, options = {}) {
+  // ── CORE UTILITIES ──  window.apiCall = async function(endpoint, options = {}) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const err = new TypeError('Failed to fetch (offline)');
+      err.isOffline = true;
+      throw err;
+    }
+
     const url = (endpoint.startsWith('http') || endpoint.startsWith(API_BASE)) 
       ? endpoint 
       : `${API_BASE}${endpoint}`;
@@ -109,7 +114,7 @@
       }
       return res;
     } catch (e) {
-      console.error(`[API] Connection Error (${endpoint}):`, e);
+      console.warn(`[API] Connection failed for ${endpoint}:`, e.message || e);
       throw e;
     }
   }
@@ -1785,12 +1790,11 @@ function initUI() {
     lastStudCount = allStudents ? allStudents.length : 0;
     const dueStudents = allStudents ? allStudents.filter(s => getStudentPaymentStatus(s) === 'Due') : [];
     lastDueCount = dueStudents.length;
-  }
-
-  function startNotificationPolling() {
+  }  function startNotificationPolling() {
     if (notificationPolling) return;
 
     notificationPolling = setInterval(async () => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return; // Silent skip when offline
       try {
         // 1. New messages
         const res = await apiCall('/api/messages');
@@ -1847,7 +1851,7 @@ function initUI() {
           const localLogs = JSON.parse(localStorage.getItem('audit_logs') || '[]');
           const localFailed = localLogs.filter(l => l.action === 'login_failed');
           if (localFailed.length > 0) {
-            const latest = localFailed[localFailed.length - 1];
+            const latest = localLogs[localLogs.length - 1];
             if (latest && shouldShowNotification('fail_local_' + latest.timestamp)) {
               const time = new Date(latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
               toast(`🚫 Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
@@ -1869,6 +1873,10 @@ function initUI() {
         lastDueCount = due.length;
 
       } catch (e) {
+        // Suppress console error output for offline/temporary network glitches during background polling
+        if (e.isOffline || !navigator.onLine || e.name === 'TypeError') {
+          return;
+        }
         console.error('Notification polling error:', e);
       }
     }, 15000);
