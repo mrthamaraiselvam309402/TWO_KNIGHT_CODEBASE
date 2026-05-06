@@ -1186,6 +1186,9 @@ function initUI() {
   function parseStoredPhone(phoneStr) {
     if (!phoneStr) return { countryCode: 'IN', localNumber: '' };
     const digits = phoneStr.replace(/\D/g, '');
+    if (digits.length === 10 && (digits.startsWith('7') || digits.startsWith('8') || digits.startsWith('9'))) {
+      return { countryCode: 'IN', localNumber: digits };
+    }
     const sortedCountries = [...COUNTRY_CODES].sort((a, b) => b.dial.length - a.dial.length);
     for (const c of sortedCountries) {
       const dialDigits = c.dial.replace(/\D/g, '');

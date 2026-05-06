@@ -133,19 +133,22 @@ Deno.serve(async (req) => {
    ];
 
    function parseStoredPhone(phoneStr: string) {
-     if (!phoneStr) return { countryCode: 'IN', localNumber: '' };
-     const digits = phoneStr.replace(/\D/g, '');
-     const sortedCountries = [...COUNTRY_CODES].sort((a, b) => b.dial.length - a.dial.length);
-     for (const c of sortedCountries) {
-       if (digits.startsWith(c.dial)) {
-         const local = digits.slice(c.dial.length);
-         if (local.length >= c.length - 2 && local.length <= c.length + 2) {
-           return { countryCode: c.code, localNumber: local };
-         }
-       }
-     }
-     return { countryCode: 'IN', localNumber: digits };
-   }
+      if (!phoneStr) return { countryCode: 'IN', localNumber: '' };
+      const digits = phoneStr.replace(/\D/g, '');
+      if (digits.length === 10 && (digits.startsWith('7') || digits.startsWith('8') || digits.startsWith('9'))) {
+        return { countryCode: 'IN', localNumber: digits };
+      }
+      const sortedCountries = [...COUNTRY_CODES].sort((a, b) => b.dial.length - a.dial.length);
+      for (const c of sortedCountries) {
+        if (digits.startsWith(c.dial)) {
+          const local = digits.slice(c.dial.length);
+          if (local.length >= c.length - 2 && local.length <= c.length + 2) {
+            return { countryCode: c.code, localNumber: local };
+          }
+        }
+      }
+      return { countryCode: 'IN', localNumber: digits };
+    }
 
    // Transform DB row to API response
    function transformStudent(s: Record<string, unknown>) {
