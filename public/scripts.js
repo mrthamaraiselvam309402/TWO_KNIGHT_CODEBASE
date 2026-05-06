@@ -641,6 +641,7 @@ Thank you for your understanding \u{1F64F}.
         daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         if (daysLeft > 5) return false;
       }
+      return true;
     });
 
     if (pending.length === 0) {
