@@ -294,14 +294,14 @@
       msg += `Hello Coach ${cleanText(coach.name || 'Coach').toUpperCase()} ${EMOJI.teacher},\n\n`;
       msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle ${EMOJI.calendar}:\n\n`;
 
-      const studentLines = [];
-      studentData.forEach(({ student: s, status, dueDay }) => {
-        // Due and Overdue both show as ARREARS
-        const label = (status === 'Due' || status === 'Overdue') ? `${EMOJI.siren} ARREARS` : `${EMOJI.pending} PENDING`;
-        const sName = cleanText(getName(s).toUpperCase());
-        const dueDateStr = `${getOrdinal(dueDay)} ${today.toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
-        studentLines.push(`${EMOJI.alert} *${sName}* — ${label} (Due: ${dueDateStr})`);
-      });
+       const studentLines = [];
+       studentData.forEach(({ student: s, status, dueDay }) => {
+         // Due and Overdue both show as ARREARS
+         const label = (status === 'Due' || status === 'Overdue') ? `${EMOJI.siren} ARREARS` : `${EMOJI.pending} PENDING`;
+         const sName = cleanText(getName(s).toUpperCase());
+         const dueDateStr = `${getOrdinal(dueDay)} ${today.toLocaleDateString('en-IN', { month: 'long' })} ${targetYear}`;
+         studentLines.push(`${EMOJI.alert} *${sName}* — ${label} (Due: ${dueDateStr})`);
+       });
       msg += studentLines.join('\n') + '\n\n';
 
       msg += `Please coordinate with the guardians to ensure these balances are settled ${EMOJI.handshake}.\n`;
