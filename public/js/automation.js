@@ -203,23 +203,63 @@
       const data   = coachMap[cid];
       const getName = s => cleanText(s.full_name || s.name || 'Unknown');
 
-      let msg = `✅ *CHESSKIDOO ACADEMY - FEE AUDIT REPORT*\n\n`;
-      msg += `Hello Coach ${cleanText(coach.name || 'Coach')},\n\n`;
-      msg += `📢 The following student under your mentorship has an outstanding balance for the ${cleanText(monthName)} billing cycle:\n\n`;
+      const targetMonth = today.getUTCMonth();
+      const targetYear = today.getUTCFullYear();
+      const dateStr = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+      // Determine min due day among pending students to use as deadline
+      const pendingAndDue = [...data.due, ...data.pending];
+      let minDueDay = 10;
+      if (pendingAndDue.length > 0) {
+        const days = pendingAndDue.map(s => {
+          if (window.getStudentDueConfig) {
+            const dueCfg = window.getStudentDueConfig(s, coach.name || '', targetMonth, targetYear);
+            return dueCfg.day;
+          }
+          return 5;
+        });
+        minDueDay = Math.min(...days);
+      }
+
+      const getOrdinal = (n) => {
+        const s = ["th", "st", "nd", "rd"];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+      };
+      const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
+
+      let msg = `⚠️ *CHESSKIDOO ACADEMY – FEE AUDIT REPORT* 📊\n\n`;
+      msg += `Hello Coach ${cleanText(coach.name || 'Coach').toUpperCase()} 👨‍🏫,\n\n`;
+      msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle 📅:\n\n`;
 
       const studentLines = [];
-      if (data.due.length > 0) {
-        data.due.forEach(s => { studentLines.push(`${getName(s)} (Arrears)`); });
-      }
-      if (data.pending.length > 0) {
-        data.pending.forEach(s => { studentLines.push(`${getName(s)} (Pending)`); });
-      }
-      msg += studentLines.join(', ') + '\n\n';
+      pendingAndDue.forEach(s => {
+        const status = window.getStudentPaymentStatus ? window.getStudentPaymentStatus(s) : 'Pending';
+        const label = status === 'Due' ? '🚨 ARREARS' : '⏳ PENDING';
+        const sName = cleanText(getName(s).toUpperCase());
+        let dueDateStr = '';
+        if (window.getStudentDueConfig) {
+          const dueCfg = window.getStudentDueConfig(s, coach.name || '', targetMonth, targetYear);
+          dueDateStr = `${getOrdinal(dueCfg.day)} ${today.toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
+        } else {
+          dueDateStr = `5th ${today.toLocaleString('en-IN', { month: 'long' })} ${targetYear}`;
+        }
+        studentLines.push(`❗ *${sName}* — ${label} (Due: ${dueDateStr})`);
+      });
+      msg += studentLines.join('\n') + '\n\n';
 
-      msg += `Please coordinate with the guardians to ensure this balance is settled.\n`;
-      msg += `Note: Arrears indicates unpaid fees from previous months, while Pending refers to the current cycle.\n\n`;
-      msg += `Regards,\nAdministrative Team | Chesskidoo Academy`;
-      window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+      msg += `Please coordinate with the guardians to ensure these balances are settled 🤝.\n`;
+      msg += `*Last Date to Pay:* ${lastDateToPayStr} 🗓️\n\n`;
+      msg += `📝 *Note:*\n\n`;
+      msg += `🚨 *ARREARS* = Unpaid fees from previous months\n`;
+      msg += `⏳ *PENDING* = Current month's unpaid fee\n\n`;
+      msg += `Regards,\n`;
+      msg += `*Administrative Team* | Chesskidoo Academy 🏆✨`;
+
+      const cCountry = coach.country_code || 'IN';
+      const country = window.getCountryByCode ? window.getCountryByCode(cCountry) : { dial: '+91' };
+      const dialCode = country.dial.replace(/\D/g, '');
+      window.open(`https://wa.me/${dialCode}${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 
       count++;
       setTimeout(() => {
@@ -273,7 +313,10 @@
 
     if (phone && phone.length >= 10) {
       setTimeout(() => {
-        window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(waMsg)}`, '_blank');
+        const sCountry = s.country_code || 'IN';
+        const country = window.getCountryByCode ? window.getCountryByCode(sCountry) : { dial: '+91' };
+        const dialCode = country.dial.replace(/\D/g, '');
+        window.open(`https://wa.me/${dialCode}${phone}?text=${encodeURIComponent(waMsg)}`, '_blank');
       }, 500);
     }
   };

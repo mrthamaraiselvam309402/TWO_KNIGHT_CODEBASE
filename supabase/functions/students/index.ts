@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
       const { data: insertedStudent, error: insertError } = await supabase
         .from('students')
         .insert(newStudent)
-        .select()
+        .select('id')
         .single()
       
       if (insertError) {
@@ -234,8 +234,21 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      return new Response(JSON.stringify(insertedStudent ? transformStudent(insertedStudent) : { success: true }), {
-        status: 201,
+
+      const { data: decryptedStudent, error: decryptError } = await supabase
+        .from('students_decrypted')
+        .select('*')
+        .eq('id', insertedStudent.id)
+        .single()
+      
+      if (decryptError) {
+        return new Response(JSON.stringify({ error: decryptError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      return new Response(JSON.stringify(decryptedStudent ? transformStudent(decryptedStudent) : { success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -312,7 +325,7 @@ Deno.serve(async (req) => {
         .from('students')
         .update(updateData)
         .eq('id', id)
-        .select()
+        .select('id')
         .single()
       
       if (updateError) {
@@ -321,8 +334,21 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
+
+      const { data: decryptedStudent, error: decryptError } = await supabase
+        .from('students_decrypted')
+        .select('*')
+        .eq('id', id)
+        .single()
       
-      return new Response(JSON.stringify(updatedStudent ? transformStudent(updatedStudent) : { success: true }), {
+      if (decryptError) {
+        return new Response(JSON.stringify({ error: decryptError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      return new Response(JSON.stringify(decryptedStudent ? transformStudent(decryptedStudent) : { success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }

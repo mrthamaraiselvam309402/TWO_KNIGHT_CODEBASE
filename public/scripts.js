@@ -585,23 +585,28 @@
     const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
     const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
-    const msg = `⚠️ *FEE PAYMENT PENDING*
+    const status = getStudentPaymentStatus(s);
+    const statusText = status === 'Due' ? 'DUE' : 'PENDING';
 
-Hello Sir/Madam,
+    const msg = `⚠️ *FEE PAYMENT PENDING* 🚨
 
-This is to inform you that the chess class fee for *${cleanText(name)}* is still pending.
-❗ *Amount Due:* ₹${totalPending.toLocaleString()}
+Hello Sir/Madam 👋,
 
-We kindly request you to complete the payment on or before *${dueDateStr}* to avoid any interruption in class participation.
+This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* 💳.
+❗ *Amount Due:* ₹s*${totalPending.toLocaleString()}
 
-❗ Additionally, we request you to please pay at least ₹500 on or before *5th May 2026* as a minimum confirmation amount.
+We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
 
-You may make the payment to: *9025846663 (Ranjith)*.
+❗ *Additionally,* we request you to please pay at least *₹500* on or before *${dueDateStr}* as a minimum confirmation amount ✅.
 
-Thank you for your understanding.
-– Chesskidoo Academy`;
+💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
 
-    window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+Thank you for your understanding 🙏.
+– Chesskidoo Academy 🎓✨`;
+
+    const country = getCountryByCode(s.country_code || 'IN');
+    const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
+    window.open(`https://wa.me/${dialCode}${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
   window.informCoachFees = function (id, silent = false) {
@@ -767,11 +772,14 @@ Regards,
        const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
        const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
+       const payStatus = getStudentPaymentStatus(s);
+       const statusText = payStatus === 'Due' ? 'DUE' : 'PENDING';
+
          const msg = `⚠️ *FEE PAYMENT PENDING* 🚨
 
 Hello Sir/Madam 👋,
 
-This is to inform you that the chess class fee for *${cleanText(name)}* is still *${status === 'Due' ? 'DUE' : 'PENDING'}* 💳.
+This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* 💳.
 ❗ *Amount Due:* ₹${totalDebt.toLocaleString()}
 
 We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
@@ -783,8 +791,10 @@ We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ t
 Thank you for your understanding 🙏.
 – Chesskidoo Academy 🎓✨`;
 
+      const country = getCountryByCode(s.country_code || 'IN');
+      const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
       setTimeout(() => {
-        window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`https://wa.me/${dialCode}${phone}?text=${encodeURIComponent(msg)}`, '_blank');
         sent++;
         if (sent === dueStudents.length) toast(`📱 Sent ${sent} payment reminders`, 'success');
       }, idx * 800);
@@ -3861,7 +3871,9 @@ Thank you for your continued support and cooperation.
 
       const parentPhone = getStudentPhone(s).replace(/\D/g, '');
       if (parentPhone && parentPhone.length >= 10) {
-        window.open(`https://wa.me/91${parentPhone}?text=${encodeURIComponent(message)}`, '_blank');
+        const country = getCountryByCode(s.country_code || 'IN');
+        const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
+        window.open(`https://wa.me/${dialCode}${parentPhone}?text=${encodeURIComponent(message)}`, '_blank');
       }
     } catch (e) { toast('Failed to process payment', 'error'); }
   };
@@ -3965,29 +3977,34 @@ Thank you for your continued support and cooperation.
        const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
        const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
-      // Build notification content
-      let message = customMsg ? `${customMsg}\n\n` : '';
-      message += `⚠️ *FEE PAYMENT PENDING*
+              const payStatus = getStudentPaymentStatus(s);
+        const statusText = payStatus === 'Due' ? 'DUE' : 'PENDING';
 
-Hello Sir/Madam,
+       // Build notification content
+       let message = customMsg ? `${customMsg}\n\n` : '';
+       message += `⚠️ *FEE PAYMENT PENDING* 🚨
 
-This is to inform you that the chess class fee for *${cleanText(studentName)}* is still pending.
+Hello Sir/Madam 👋,
+
+This is to inform you that the chess class fee for *${cleanText(studentName)}* is still *${statusText}* 💳.
 ❗ *Amount Due:* ₹${totalDue.toLocaleString()}
 
-We kindly request you to complete the payment on or before *${dueDateStr}* to avoid any interruption in class participation.
+We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
 
-❗ Additionally, we request you to please pay at least ₹500 on or before *5th May 2026* as a minimum confirmation amount.
+❗ *Additionally,* we request you to please pay at least *₹500* on or before *${dueDateStr}* as a minimum confirmation amount ✅.
 
-You may make the payment to: *9025846663 (Ranjith)*.
+💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
 
-Thank you for your cooperation.
-– Chesskidoo Academy`;
+Thank you for your understanding 🙏.
+– Chesskidoo Academy 🎓✨`;
 
-     try {
-       let sent = false;
+      try {
+        let sent = false;
 
-       if (channel === 'whatsapp') {
-         window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(message)}`, '_blank');
+        if (channel === 'whatsapp') {
+          const country = getCountryByCode(s.country_code || 'IN');
+          const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
+          window.open(`https://wa.me/${dialCode}${phone}?text=${encodeURIComponent(message)}`, '_blank');
          sent = true;
        } else if (channel === 'sms') {
          window.location.href = `sms:${phone}?body=${encodeURIComponent(message)}`;
@@ -5948,4 +5965,7 @@ Thank you for your cooperation.
   window.markCoachUnpaid = markCoachUnpaid;
   window.getStudentPaymentStatus = getStudentPaymentStatus;
   window.getStudentMonthlyFee = getStudentMonthlyFee;
+  window.getCountryByCode = getCountryByCode;
+  window.COUNTRY_CODES = COUNTRY_CODES;
+  window.getStudentDueConfig = getStudentDueConfig;
 })();
