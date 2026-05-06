@@ -565,37 +565,41 @@
 
     const s_id_key = String(s.id || '').trim().toLowerCase();
     const totalCredits = freshPaymentsMap[s_id_key] || 0;
-     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+    const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
     const pendingMonths = Math.max(1, monthsRequired - totalCredits);
-    const totalPending = pendingMonths * monthlyFee;
+    let totalPending = pendingMonths * monthlyFee;
 
-    // Format Due Date
-    let dueDateStr = "";
-    if (s.due_date) {
-      const d = new Date(s.due_date);
-      const day = d.getDate();
-      const month = d.toLocaleString('en-IN', { month: 'long' });
-      const year = d.getFullYear();
-      const getOrdinal = (n) => {
-        const s = ["th", "st", "nd", "rd"];
-        const v = n % 100;
-        return n + (s[(v - 20) % 10] || s[v] || s[0]);
-      };
-      dueDateStr = `${getOrdinal(day)} ${month} ${year}`;
-    } else {
-      const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
-      dueDateStr = `5th ${monthName} ${targetYear}`;
+    const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+    const coachName = coach ? (coach.name || '') : '';
+    const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
+    if (dueCfg.feeOverride !== null) {
+      totalPending = dueCfg.feeOverride;
     }
 
-    const msg = `Hello Sir/Madam,
+    const getOrdinal = (n) => {
+      const s = ["th", "st", "nd", "rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+    const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
+    const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
-This is a gentle reminder regarding the pending chess class fee of INR ${totalPending.toLocaleString()} for your child ${cleanText(name)}. We kindly request you to please settle this on or before ${cleanText(dueDateStr)}.
+    const msg = `⚠️ *FEE PAYMENT PENDING*
 
-You may make the payment to: 9025846663 (Ranjith).
+Hello Sir/Madam,
 
-Thank you for your cooperation.
-- Chesskidoo Academy`;
+This is to inform you that the chess class fee for *${cleanText(name)}* is still pending.
+❗ *Amount Due:* ₹${totalPending.toLocaleString()}
+
+We kindly request you to complete the payment on or before *${dueDateStr}* to avoid any interruption in class participation.
+
+❗ Additionally, we request you to please pay at least ₹500 on or before *5th May 2026* as a minimum confirmation amount.
+
+You may make the payment to: *9025846663 (Ranjith)*.
+
+Thank you for your understanding.
+– Chesskidoo Academy`;
 
     window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
@@ -615,15 +619,32 @@ Thank you for your cooperation.
       return;
     }
 
-    const dateStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
+    const dateStr = new Date(targetYear, targetMonth).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
-    let msg = `✅ *CHESSKIDOO ACADEMY - FEE AUDIT REPORT*
+    // Determine min due day among pending students to use as deadline
+    let minDueDay = 10;
+    if (pending.length > 0) {
+      const days = pending.map(s => {
+        const dueCfg = getStudentDueConfig(s, getCoachName(c), targetMonth, targetYear);
+        return dueCfg.day;
+      });
+      minDueDay = Math.min(...days);
+    }
 
-`;
-    msg += `Hello Coach ${cleanText(getCoachName(c))},
+    const getOrdinal = (n) => {
+      const s = ["th", "st", "nd", "rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+    const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-`;
-    msg += `📢 The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:
+    let msg = `⚠️ *CHESSKIDOO ACADEMY – FEE AUDIT REPORT*
+
+Hello Coach ${cleanText(getCoachName(c)).toUpperCase()},
+
+The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle:
 
 `;
 
@@ -631,24 +652,26 @@ Thank you for your cooperation.
       const status = getStudentPaymentStatus(s);
       const label = status === 'Due' ? 'ARREARS' : 'PENDING';
       const sName = cleanText(getStudentName(s).toUpperCase());
-      msg += `*${sName}* (${label})
+      msg += `❗ *${sName}* — ${label}
 `;
     });
 
     msg += `
-Please coordinate with the guardians to ensure these balances are settled. 'ARREARS' indicates unpaid fees from previous months, while 'PENDING' is for the current cycle.
+Please coordinate with the guardians to ensure these balances are settled.
+*Last Date to Pay:* ${lastDateToPayStr}
 
-`;
-    msg += `Regards,
-`;
-    msg += `*Administrative Team* | Chesskidoo Academy`;
+*Note:*
+*ARREARS* = Unpaid fees from previous months
+*PENDING* = Current month’s unpaid fee
 
+Regards,
+*Administrative Team* | Chesskidoo Academy`;
 
     const phone = c.phone || c.contact || '0000000000';
     const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
 
     if (!silent) window.open(waUrl, '_blank');
-    else return waUrl;
+    return waUrl;
   };
 
   window.informAllCoaches = function () {
@@ -682,17 +705,18 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
   window.informAllDueStudents = function () {
     const dueStudents = (allStudents || []).filter(s => {
       const st = getStudentPaymentStatus(s);
-      return st === 'Due';
+      return st === 'Due' || st === 'Pending';
     });
 
     if (dueStudents.length === 0) {
-      toast('No students with due payments!', 'success');
+      toast('No students with pending or due payments!', 'success');
       return;
     }
 
-    if (!confirm(`Notify parents of ${dueStudents.length} students with due payments? This will open multiple WhatsApp tabs.`)) return;
+    if (!confirm(`Notify parents of ${dueStudents.length} students with pending/due payments? This will open multiple WhatsApp tabs.`)) return;
 
-    const nowUTC = new Date();
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
     let sent = 0;
 
     dueStudents.forEach((s, idx) => {
@@ -707,7 +731,7 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
       const baseline = new Date(Date.UTC(2026, 3, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-      const monthsReq = ((nowUTC.getUTCFullYear() - effectiveEnroll.getUTCFullYear()) * 12) + (nowUTC.getUTCMonth() - effectiveEnroll.getUTCMonth()) + 1;
+      const monthsReq = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
       
       const sid = String(s.id).toLowerCase();
       const paidMonthsSet = new Set();
@@ -719,22 +743,38 @@ Please coordinate with the guardians to ensure these balances are settled. 'ARRE
         }
       });
       
-      const totalDebt = Math.max(0, (fee * monthsReq) - (fee * paidMonthsSet.size));
-      const monthsBehind = Math.ceil(totalDebt / fee);
-      const arrearsNote = monthsBehind > 1 ? ` (including ${monthsBehind - 1} months arrears)` : '';
+      let totalDebt = Math.max(0, (fee * monthsReq) - (fee * paidMonthsSet.size));
+      
+      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+      const coachName = coach ? (coach.name || '') : '';
+      const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
+      if (dueCfg.feeOverride !== null) {
+        totalDebt = dueCfg.feeOverride;
+      }
 
-      const dueDateStr = s.due_date
-        ? new Date(s.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-        : `5th ${nowUTC.toLocaleString('en-IN', { month: 'long' })} ${nowUTC.getFullYear()}`;
+      const getOrdinal = (n) => {
+        const s = ["th", "st", "nd", "rd"];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+      };
+      const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
+      const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
-      const msg = `Hello Sir/Madam,
+      const msg = `⚠️ *FEE PAYMENT PENDING*
 
-This is a gentle reminder regarding the pending chess class fee of *INR ${totalDebt.toLocaleString()}*${arrearsNote} for your child *${name}*. The current month due date is ${dueDateStr}.
+Hello Sir/Madam,
 
-Please settle the payment at your earliest convenience to ensure continued classes.
+This is to inform you that the chess class fee for *${cleanText(name)}* is still pending.
+❗ *Amount Due:* ₹${totalDebt.toLocaleString()}
 
-Thank you for your cooperation.
-- Chesskidoo Academy`;
+We kindly request you to complete the payment on or before *${dueDateStr}* to avoid any interruption in class participation.
+
+❗ Additionally, we request you to please pay at least ₹500 on or before *5th May 2026* as a minimum confirmation amount.
+
+You may make the payment to: *9025846663 (Ranjith)*.
+
+Thank you for your understanding.
+– Chesskidoo Academy`;
 
       setTimeout(() => {
         window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -903,6 +943,97 @@ function initUI() {
     if (!s) return DEFAULT_MONTHLY_FEE;
     return parseInt(s.monthly_fee || s.fee || s.fees || 0) || DEFAULT_MONTHLY_FEE;
   }
+
+  function getStudentDueConfig(s, coachName, month = 4, year = 2026) {
+    if (!s) return { day: 5, feeOverride: null };
+    const sName = (s.full_name || s.name || '').toUpperCase().trim();
+    const cName = (coachName || '').toUpperCase().trim();
+    
+    let day = 5;
+    let feeOverride = null;
+    
+    const isMay2026 = (month === 4 && year === 2026);
+    
+    if (isMay2026) {
+      // 1. Matches by student name FIRST (across all coaches or specific ones)
+      if (sName.includes('ARUNYA')) {
+        day = 24;
+      } else if (sName.includes('MANAV')) {
+        day = 10;
+      } else if (sName.includes('PRNAVAV') || sName.includes('PRANAV')) {
+        day = 10;
+      } else if (sName.includes('ATHIVIK')) {
+        day = 12;
+      } else if (sName.includes('FAITHMA') || sName.includes('FATHIMA')) {
+        day = 14;
+      } else if (sName.includes('RAYAN') || sName.includes('MOHAMMED RAYAN')) {
+        day = 18;
+      } else if (sName.includes('SURESHBABU')) {
+        day = 24;
+      } else if (sName.includes('JEEVAN')) {
+        day = 25;
+        feeOverride = 3700;
+      } else if (sName.includes('SREELAXMI')) {
+        day = 9;
+      } else if (sName.includes('MUKILAN')) {
+        day = 4;
+      } else if (sName.includes('ANUSHYA')) {
+        day = 18;
+      } else if (sName.includes('MEGAHA') || sName.includes('MEGHA')) {
+        day = 18;
+      } else if (sName.includes('MOHAMMED ATIFK') || sName.includes('ATIFK')) {
+        day = 18;
+      } else if (sName.includes('AARA')) {
+        day = 14;
+      } else if (sName.includes('ANYUSH')) {
+        day = 18;
+      } else if (sName.includes('BALAJI')) {
+        day = 5;
+      } else if (sName.includes('NIGUNAN')) {
+        day = 9;
+      } else if (sName.includes('RAKISTHA') || sName.includes('RAKSHITHA')) {
+        day = 20;
+      } else if (sName.includes('SHERVIN')) {
+        day = 24;
+      } else if (sName.includes('RIYAS')) {
+        day = 15;
+      } else if (sName.includes('VARUN')) {
+        day = 15;
+      } else if (sName.includes('SATHYA')) {
+        day = 13;
+      } else if (sName.includes('SAKTHI')) {
+        day = 13;
+      }
+      // 2. Coach-specific fallbacks for other students
+      else if (cName.includes('VISHNU')) {
+        day = 20; // Velava and other 5 students
+      } else if (cName.includes('ARIVUSELVAM') || cName.includes('SRIVUSELVAM')) {
+        day = 4; // Other Arivuselvam students
+      } else if (cName.includes('SUDHIN') || cName.includes('SUDIN')) {
+        day = 18; // Other Sudhin students
+      } else {
+        // Fallback to database s.due_date if present, otherwise 5
+        if (s.due_date) {
+          try {
+            day = new Date(s.due_date).getUTCDate() || 5;
+          } catch (e) {
+            day = 5;
+          }
+        }
+      }
+    } else {
+      // Non-May 2026 fallback
+      if (s.due_date) {
+        try {
+          day = new Date(s.due_date).getUTCDate() || 5;
+        } catch (e) {
+          day = 5;
+        }
+      }
+    }
+    
+    return { day, feeOverride };
+  }
   
   function getStudentPaymentStatus(s, monthOverride = null, yearOverride = null) {
     if (!s) return 'Due';
@@ -956,22 +1087,19 @@ function initUI() {
     const isSpecial = ['SUDARSAN', 'SURESHBABU'].some(n => studentName.includes(n));
     if (isSpecial && totalPaidInvoices < monthsRequired) return 'Due';
 
-    // C. MANUAL OVERRIDE: Respect DB status for current month.
-    if (isCurrentMonth && s.payment_status && s.payment_status !== 'Not Enrolled') {
-       if (s.payment_status === 'Pending') return 'Pending';
-       if (s.payment_status === 'Due') return 'Due';
+    // C. DATE-BASED TRANSITION (Current Month): Transition automatically based on student-specific due date
+    if (isCurrentMonth) {
+       const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+       const coachName = coach ? (coach.name || '') : '';
+       const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
        
-       // If DB says "Paid", it only counts as "Paid" for the current month if a payment record exists.
-       // This effectively "rolls over" the status to Pending when a new month starts.
-       if (s.payment_status === 'Paid') {
-          return hasPaymentThisMonth ? 'Paid' : 'Pending';
-       }
+       const currentDate = new Date();
+       const dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
+       
+       return (currentDate >= dueDateObj) ? 'Due' : 'Pending';
     }
 
-    // D. PENDING/DEFAULT: Default to Pending for current month if not paid.
-    if (isCurrentMonth) return 'Pending';
-
-    // E. ARREARS: If missing payments and in the past.
+    // D. ARREARS (Past Months): If missing payments and in the past.
     if (totalPaidInvoices < monthsRequired) return 'Due';
 
     return 'Due';
@@ -3746,47 +3874,72 @@ Thank you for your continued support and cooperation.
    };
 
    window.sendInform = async function() {
-     const modal = $('inform-modal');
-     const studentId = modal.dataset.studentId;
-     const s = allStudents.find(x => String(x.id) === String(studentId));
-     if (!s) { toast('Student not found', 'error'); closeModals(); return; }
+      const modal = $('inform-modal');
+      const studentId = modal.dataset.studentId;
+      const s = allStudents.find(x => String(x.id) === String(studentId));
+      if (!s) { toast('Student not found', 'error'); closeModals(); return; }
 
-     const channel = (document.querySelector('input[name="notify-channel"]:checked') || {}).value || 'whatsapp';
-     const customMsg = $('#inform-custom-msg')?.value || '';
+      const channel = (document.querySelector('input[name="notify-channel"]:checked') || {}).value || 'whatsapp';
+      const customMsg = $('#inform-custom-msg')?.value || '';
 
-     const studentName = getStudentName(s);
-     const fee = getStudentMonthlyFee(s);
-     const phone = getStudentPhone(s).replace(/\D/g, '');
-     const parentName = s.parent_name || 'Parent';
-     const parentEmail = s.email || ''; // Students table has email column (parent's email)
+      const studentName = getStudentName(s);
+      const fee = getStudentMonthlyFee(s);
+      const phone = getStudentPhone(s).replace(/\D/g, '');
+      const parentName = s.parent_name || 'Parent';
+      const parentEmail = s.email || ''; // Students table has email column (parent's email)
 
-     // Calculate exact pending amount
-     const targetMonth = window.reportMonth;
-     const targetYear = window.reportYear;
-     const enrollDateStr = getStudentDate(s);
-     const baseline = new Date(2026, 3, 1);
-     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-     const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+      // Calculate exact pending amount
+      const targetMonth = window.reportMonth;
+      const targetYear = window.reportYear;
+      const enrollDateStr = getStudentDate(s);
+      const baseline = new Date(2026, 3, 1);
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
-      const sid = String(s.id).toLowerCase();
-      const paidMonthsSet = new Set();
-      (window.allPayments || []).forEach(p => {
-        if (p.status === "paid" && String(p.student_id).toLowerCase() === sid) {
-          const pDate = new Date(p.payment_date || p.created_at);
-          const mKey = `${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
-          paidMonthsSet.add(mKey);
-        }
-      });
-      const totalDue = Math.max(0, (monthsRequired * fee) - (fee * paidMonthsSet.size));
+       const sid = String(s.id).toLowerCase();
+       const paidMonthsSet = new Set();
+       (window.allPayments || []).forEach(p => {
+         if (p.status === "paid" && String(p.student_id).toLowerCase() === sid) {
+           const pDate = new Date(p.payment_date || p.created_at);
+           const mKey = `${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+           paidMonthsSet.add(mKey);
+         }
+       });
+       let totalDue = Math.max(0, (monthsRequired * fee) - (fee * paidMonthsSet.size));
 
-     // Build notification content
-     let message = customMsg ? `${customMsg}\n\n` : '';
-      message += `Hello Sir/Madam,\n\n`;
-      message += `This is a gentle reminder regarding the chess class fee for your child ${studentName}.\n\n`;
-      message += `The amount of ₹${totalDue.toLocaleString()} is currently pending. We kindly request you to complete the payment at the earliest to continue uninterrupted access to classes.\n\n`;
-      message += `Thank you for your cooperation.\n`;
-      message += `– Chesskidoo Academy`;
+       const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+       const coachName = coach ? (coach.name || '') : '';
+       const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
+       if (dueCfg.feeOverride !== null) {
+         totalDue = dueCfg.feeOverride;
+       }
+
+       const getOrdinal = (n) => {
+         const s = ["th", "st", "nd", "rd"];
+         const v = n % 100;
+         return n + (s[(v - 20) % 10] || s[v] || s[0]);
+       };
+       const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
+       const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
+
+      // Build notification content
+      let message = customMsg ? `${customMsg}\n\n` : '';
+      message += `⚠️ *FEE PAYMENT PENDING*
+
+Hello Sir/Madam,
+
+This is to inform you that the chess class fee for *${cleanText(studentName)}* is still pending.
+❗ *Amount Due:* ₹${totalDue.toLocaleString()}
+
+We kindly request you to complete the payment on or before *${dueDateStr}* to avoid any interruption in class participation.
+
+❗ Additionally, we request you to please pay at least ₹500 on or before *5th May 2026* as a minimum confirmation amount.
+
+You may make the payment to: *9025846663 (Ranjith)*.
+
+Thank you for your cooperation.
+– Chesskidoo Academy`;
 
      try {
        let sent = false;
