@@ -86,18 +86,81 @@ Deno.serve(async (req) => {
     return valid.includes(String(status)) ? String(status) : 'pending'
   }
 
+   const COUNTRY_CODES = [
+     { code: 'IN', dial: '91', length: 10 },
+     { code: 'US', dial: '1', length: 10 },
+     { code: 'GB', dial: '44', length: 10 },
+     { code: 'CA', dial: '1', length: 10 },
+     { code: 'AU', dial: '61', length: 9 },
+     { code: 'DE', dial: '49', length: 10 },
+     { code: 'FR', dial: '33', length: 9 },
+     { code: 'JP', dial: '81', length: 10 },
+     { code: 'CN', dial: '86', length: 11 },
+     { code: 'BR', dial: '55', length: 10 },
+     { code: 'MX', dial: '52', length: 10 },
+     { code: 'IT', dial: '39', length: 10 },
+     { code: 'ES', dial: '34', length: 9 },
+     { code: 'RU', dial: '7', length: 10 },
+     { code: 'KR', dial: '82', length: 9 },
+     { code: 'SG', dial: '65', length: 8 },
+     { code: 'MY', dial: '60', length: 9 },
+     { code: 'TH', dial: '66', length: 9 },
+     { code: 'ID', dial: '62', length: 10 },
+     { code: 'PH', dial: '63', length: 10 },
+     { code: 'VN', dial: '84', length: 9 },
+     { code: 'AE', dial: '971', length: 9 },
+     { code: 'SA', dial: '966', length: 9 },
+     { code: 'PK', dial: '92', length: 10 },
+     { code: 'BD', dial: '880', length: 10 },
+     { code: 'LK', dial: '94', length: 9 },
+     { code: 'ZA', dial: '27', length: 9 },
+     { code: 'NG', dial: '234', length: 10 },
+     { code: 'EG', dial: '20', length: 10 },
+     { code: 'NL', dial: '31', length: 9 },
+     { code: 'BE', dial: '32', length: 9 },
+     { code: 'SE', dial: '46', length: 9 },
+     { code: 'NO', dial: '47', length: 8 },
+     { code: 'DK', dial: '45', length: 8 },
+     { code: 'FI', dial: '358', length: 9 },
+     { code: 'PL', dial: '48', length: 9 },
+     { code: 'TR', dial: '90', length: 10 },
+     { code: 'IL', dial: '972', length: 9 },
+     { code: 'AR', dial: '54', length: 10 },
+     { code: 'CL', dial: '56', length: 9 },
+     { code: 'CO', dial: '57', length: 10 },
+     { code: 'NZ', dial: '64', length: 9 },
+     { code: 'TW', dial: '886', length: 9 }
+   ];
+
+   function parseStoredPhone(phoneStr: string) {
+     if (!phoneStr) return { countryCode: 'IN', localNumber: '' };
+     const digits = phoneStr.replace(/\D/g, '');
+     const sortedCountries = [...COUNTRY_CODES].sort((a, b) => b.dial.length - a.dial.length);
+     for (const c of sortedCountries) {
+       if (digits.startsWith(c.dial)) {
+         const local = digits.slice(c.dial.length);
+         if (local.length >= c.length - 2 && local.length <= c.length + 2) {
+           return { countryCode: c.code, localNumber: local };
+         }
+       }
+     }
+     return { countryCode: 'IN', localNumber: digits };
+   }
+
    // Transform DB row to API response
    function transformStudent(s: Record<string, unknown>) {
      const status = s.status || 'pending';
      const fee = s.monthly_fee ?? s.fee ?? s.fees ?? s.tuition_fee ?? 0;
+     const originalPhone = String(s.parent_phone || s.phone || '');
+     const parsed = parseStoredPhone(originalPhone);
 
      return {
        id: s.id,
        name: s.name || '',
        full_name: s.name || '',
        email: s.email || '',
-       phone: s.phone || '',
-       parent_phone: s.parent_phone || '',
+       phone: parsed.localNumber || originalPhone,
+       parent_phone: parsed.localNumber || originalPhone,
        parent_name: s.parent_name || '',
        age: s.age || null,
        grade: s.grade || null,
@@ -105,7 +168,7 @@ Deno.serve(async (req) => {
        enrollment_date: s.enrollment_date || '',
        join_date: s.enrollment_date || '',
        address: s.address || '',
-       country_code: s.country_code || 'IN',
+       country_code: s.country_code || parsed.countryCode || 'IN',
        status: status,
        payment_status: s.payment_status || (status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due')),
        coach_id: s.coach_id || null,

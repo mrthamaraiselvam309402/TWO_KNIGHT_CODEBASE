@@ -256,10 +256,11 @@
       msg += `Regards,\n`;
       msg += `*Administrative Team* | Chesskidoo Academy 🏆✨`;
 
-      const cCountry = coach.country_code || 'IN';
+            const parsed = window.parseStoredPhone ? window.parseStoredPhone(phone) : { countryCode: 'IN', localNumber: phone };
+      const cCountry = coach.country_code || parsed.countryCode || 'IN';
       const country = window.getCountryByCode ? window.getCountryByCode(cCountry) : { dial: '+91' };
       const dialCode = country.dial.replace(/\D/g, '');
-      window.open(`https://wa.me/${dialCode}${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+      window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`, '_blank');
 
       count++;
       setTimeout(() => {
@@ -311,12 +312,13 @@
 
     const waMsg = `✅ *CHESSKIDOO ACADEMY - PAYMENT CONFIRMATION*\n\nStudent: ${cleanName}\nAmount Paid: INR ${Number(fee).toLocaleString()}\nDate: ${cleanText(today)}\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Chesskidoo Academy.`;
 
-    if (phone && phone.length >= 10) {
+        const parsed = window.parseStoredPhone ? window.parseStoredPhone(phone) : { countryCode: 'IN', localNumber: phone };
+    if (parsed.localNumber) {
       setTimeout(() => {
-        const sCountry = s.country_code || 'IN';
+        const sCountry = s.country_code || parsed.countryCode || 'IN';
         const country = window.getCountryByCode ? window.getCountryByCode(sCountry) : { dial: '+91' };
         const dialCode = country.dial.replace(/\D/g, '');
-        window.open(`https://wa.me/${dialCode}${phone}?text=${encodeURIComponent(waMsg)}`, '_blank');
+        window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(waMsg)}`, '_blank');
       }, 500);
     }
   };

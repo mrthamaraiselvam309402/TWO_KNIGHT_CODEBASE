@@ -602,9 +602,10 @@ We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ t
 Thank you for your understanding 🙏.
 – Chesskidoo Academy 🎓✨`;
 
-    const country = getCountryByCode(s.country_code || 'IN');
+        const parsed = parseStoredPhone(phone);
+    const country = getCountryByCode(s.country_code || parsed.countryCode || 'IN');
     const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
-    window.open(`https://wa.me/${dialCode}${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+    window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
   window.informCoachFees = function (id, silent = false) {
@@ -677,8 +678,11 @@ Please coordinate with the guardians to ensure these balances are settled 🤝.
 Regards,
 *Administrative Team* | Chesskidoo Academy 🏆✨`;
 
-    const phone = c.phone || c.contact || '0000000000';
-    const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
+        const phone = c.phone || c.contact || '0000000000';
+    const parsed = parseStoredPhone(phone);
+    const country = getCountryByCode(parsed.countryCode);
+    const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
+    const waUrl = `https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`;
 
     if (!silent) window.open(waUrl, '_blank');
     return waUrl;
@@ -787,10 +791,11 @@ We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ t
 Thank you for your understanding 🙏.
 – Chesskidoo Academy 🎓✨`;
 
-      const country = getCountryByCode(s.country_code || 'IN');
+            const parsed = parseStoredPhone(phone);
+      const country = getCountryByCode(s.country_code || parsed.countryCode || 'IN');
       const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
       setTimeout(() => {
-        window.open(`https://wa.me/${dialCode}${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(msg)}`, '_blank');
         sent++;
         if (sent === dueStudents.length) toast(`📱 Sent ${sent} payment reminders`, 'success');
       }, idx * 800);
@@ -1170,11 +1175,39 @@ function initUI() {
   
   window.selectedCountryCode = 'IN';
   window.selectedCountryCodeEdit = 'IN';
-  window.selectedCountryCodeCoach = 'IN';
-
-  function getCountryByCode(code) {
+  window.selectedCountryCodeCoach = 'IN';  function getCountryByCode(code) {
     return COUNTRY_CODES.find(c => c.code === code) || COUNTRY_CODES[0];
   }
+  window.getCountryByCode = getCountryByCode;
+
+  function parseStoredPhone(phoneStr) {
+    if (!phoneStr) return { countryCode: 'IN', localNumber: '' };
+    const digits = phoneStr.replace(/\D/g, '');
+    const sortedCountries = [...COUNTRY_CODES].sort((a, b) => b.dial.length - a.dial.length);
+    for (const c of sortedCountries) {
+      const dialDigits = c.dial.replace(/\D/g, '');
+      if (digits.startsWith(dialDigits)) {
+        const local = digits.slice(dialDigits.length);
+        if (local.length >= c.length - 2 && local.length <= c.length + 2) {
+          return { countryCode: c.code, localNumber: local };
+        }
+      }
+    }
+    return { countryCode: 'IN', localNumber: digits };
+  }
+  window.parseStoredPhone = parseStoredPhone;
+
+  function getFullInternationalPhoneDigits(rawPhone, countryCode) {
+    const digits = rawPhone.replace(/\D/g, '');
+    const country = getCountryByCode(countryCode);
+    if (!country) return digits;
+    const dialDigits = country.dial.replace(/\D/g, '');
+    if (digits.startsWith(dialDigits)) {
+      return digits;
+    }
+    return dialDigits + digits;
+  }
+  window.getFullInternationalPhoneDigits = getFullInternationalPhoneDigits;
 
   function validatePhoneNumber(phone, countryCode = 'IN') {
     const country = getCountryByCode(countryCode);
@@ -2948,13 +2981,14 @@ function initUI() {
      $('e-name').value = getStudentName(s);
      // Render country dropdown for edit modal
      renderCountryDropdown('country-dropdown-edit', 'selectCountryEdit');
-     // Set country first so phone placeholder/validation matches
-     const studentCountry = s.country_code || 'IN';
-     const country = getCountryByCode(studentCountry);
-     if (country) {
-       selectCountryEdit(country.code, country.dial, country.length);
-     }
-     $('e-phone').value = getStudentPhone(s);
+           // Set country first so phone placeholder/validation matches
+      const studentPhone = getStudentPhone(s);
+      const parsed = parseStoredPhone(studentPhone);
+      const country = getCountryByCode(s.country_code || parsed.countryCode || 'IN');
+      if (country) {
+        selectCountryEdit(country.code, country.dial, country.length);
+      }
+      $('e-phone').value = parsed.localNumber;
      $('e-level').value = getStudentLevel(s);
      $('e-elo').value = getStudentRating(s);
      $('e-fee').value = getStudentMonthlyFee(s);
@@ -2979,20 +3013,21 @@ function initUI() {
       const newElo = parseInt($('e-elo').value);
       const newFee = parseInt($('e-fee').value) || 0;
 
-      // Validate phone based on selected country for edit modal
+            // Validate phone based on selected country for edit modal
       const rawPhone = $('e-phone').value.trim();
-      const phoneDigits = rawPhone.replace(/\D/g, ''); // Strip non-digits for storage
-      const validation = validatePhoneNumber(rawPhone, window.selectedCountryCodeEdit || 'IN');
+      const countryCode = window.selectedCountryCodeEdit || 'IN';
+      const validation = validatePhoneNumber(rawPhone, countryCode);
       if (!rawPhone) { toast('Parent phone is required', 'error'); return; }
       if (!validation.valid) { toast(validation.error, 'error'); return; }
+      const fullPhone = getFullInternationalPhoneDigits(rawPhone, countryCode);
 
       // Send fee under every possible field name so whichever Supabase column exists gets updated
       const data = {
         full_name: $('e-name').value,
         name: $('e-name').value,
-        phone: phoneDigits,
-        parent_phone: phoneDigits,
-        country_code: window.selectedCountryCodeEdit || 'IN',
+        phone: fullPhone,
+        parent_phone: fullPhone,
+        country_code: countryCode,
         level: $('e-level').value,
         grade: $('e-level').value,
         rating: newElo,
@@ -3152,14 +3187,15 @@ function initUI() {
    }
 
  async function saveStudent() {
-       const rawPhone = $('m-phone').value.trim();
-       const phoneDigits = rawPhone.replace(/\D/g, '');
-       const validation = validatePhoneNumber(rawPhone, window.selectedCountryCode || 'IN');
-       const data = {
-         full_name: $('m-name').value.trim(),
-         phone: phoneDigits,
-         parent_phone: phoneDigits,
-         country_code: window.selectedCountryCode || 'IN',
+        const rawPhone = $('m-phone').value.trim();
+        const countryCode = window.selectedCountryCode || 'IN';
+        const validation = validatePhoneNumber(rawPhone, countryCode);
+        const fullPhone = getFullInternationalPhoneDigits(rawPhone, countryCode);
+        const data = {
+          full_name: $('m-name').value.trim(),
+          phone: fullPhone,
+          parent_phone: fullPhone,
+          country_code: countryCode,
          level: $('m-level').value,
          rating: parseInt($('m-elo').value) || 0,
          coach_id: $('m-coach').value,
@@ -3369,7 +3405,13 @@ function openCoachModal(id = null) {
        $('cm-id').value = c.id;
        $('cm-name').value = getCoachName(c);
        $('cm-spec').value = getCoachSpecialty(c);
-       $('cm-phone').value = c.phone || '';
+               const parsed = parseStoredPhone(c.phone || '');
+        window.selectedCountryCodeCoach = parsed.countryCode;
+        const country = getCountryByCode(parsed.countryCode);
+        if (country) {
+          selectCountryCoach(country.code, country.dial, country.length);
+        }
+        $('cm-phone').value = parsed.localNumber;
        $('cm-email').value = c.email || '';
        $('cm-address').value = c.address || '';
        $('cm-photo').value = (c.photo_url || c.photo || '');
@@ -3403,10 +3445,10 @@ function openCoachModal(id = null) {
   async function saveCoach() {
     const id = $('cm-id').value;
     const salaryVal = parseInt($('cm-salary').value) || 0;
-    const data = {
+        const data = {
       name: $('cm-name').value.trim(),
       specialization: $('cm-spec').value.trim(),
-      phone: $('cm-phone').value.trim(),
+      phone: fullPhone,
       email: $('cm-email').value.trim(),
       address: $('cm-address').value.trim(),
       // BUG FIX: send both field names so getCoachSalary (reads salary||hourly_rate) always picks it up
@@ -3422,10 +3464,13 @@ function openCoachModal(id = null) {
 
     if (!data.name) { toast('Coach name is required', 'error'); return; }
 
-    const rawPhone = $('cm-phone').value.trim();
+        const rawPhone = $('cm-phone').value.trim();
+    let fullPhone = rawPhone;
     if (rawPhone) {
-      const validation = validatePhoneNumber(rawPhone, window.selectedCountryCodeCoach || 'IN');
+      const countryCode = window.selectedCountryCodeCoach || 'IN';
+      const validation = validatePhoneNumber(rawPhone, countryCode);
       if (!validation.valid) { toast(validation.error, 'error'); return; }
+      fullPhone = getFullInternationalPhoneDigits(rawPhone, countryCode);
     }
 
     try {
@@ -3865,11 +3910,12 @@ ${receiptUrl}
 Thank you for your continued support and cooperation.
 - Chesskidoo Academy`;
 
-      const parentPhone = getStudentPhone(s).replace(/\D/g, '');
-      if (parentPhone && parentPhone.length >= 10) {
-        const country = getCountryByCode(s.country_code || 'IN');
+            const studentPhone = getStudentPhone(s);
+      const parsed = parseStoredPhone(studentPhone);
+      if (parsed.localNumber) {
+        const country = getCountryByCode(s.country_code || parsed.countryCode || 'IN');
         const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
-        window.open(`https://wa.me/${dialCode}${parentPhone}?text=${encodeURIComponent(message)}`, '_blank');
+        window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(message)}`, '_blank');
       }
     } catch (e) { toast('Failed to process payment', 'error'); }
   };
@@ -3995,15 +4041,17 @@ Thank you for your understanding 🙏.
       try {
         let sent = false;
 
-        if (channel === 'whatsapp') {
-          const country = getCountryByCode(s.country_code || 'IN');
+                if (channel === 'whatsapp') {
+          const parsed = parseStoredPhone(phone);
+          const country = getCountryByCode(s.country_code || parsed.countryCode || 'IN');
           const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
-          window.open(`https://wa.me/${dialCode}${phone}?text=${encodeURIComponent(message)}`, '_blank');
-         sent = true;
-       } else if (channel === 'sms') {
-         window.location.href = `sms:${phone}?body=${encodeURIComponent(message)}`;
-         sent = true;
-       } else if (channel === 'email') {
+          window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(message)}`, '_blank');
+          sent = true;
+        } else if (channel === 'sms') {
+          const parsed = parseStoredPhone(phone);
+          window.location.href = `sms:${parsed.localNumber}?body=${encodeURIComponent(message)}`;
+          sent = true;
+        } else if (channel === 'email') {
          if (!parentEmail) {
            toast('No email address on file for this student', 'error');
            return;
