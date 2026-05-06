@@ -201,7 +201,10 @@
   function clearNotifications() {
     const unreadMsgs = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin');
     unreadMsgs.forEach(m => { if (!dismissedNotifications.messages.includes(m.id)) dismissedNotifications.messages.push(m.id); });
-    const dueStudents = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due');
+    const dueStudents = allStudents.filter(s => {
+      const status = getStudentPaymentStatus(s);
+      return status === 'Due' || status === 'Overdue';
+    });
     dueStudents.forEach(s => { if (!dismissedNotifications.payments.includes(s.id)) dismissedNotifications.payments.push(s.id); });
     localStorage.removeItem('audit_logs');
     saveNotificationState();
@@ -213,7 +216,10 @@
 
   function updateNotificationBadge() {
     const unread = allMessages.filter(m => !getMessageIsRead(m) && m.receiver_type === 'admin' && !dismissedNotifications.messages.includes(m.id)).length;
-    const dueCount = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due' && !dismissedNotifications.payments.includes(s.id)).length;
+    const dueCount = allStudents.filter(s => {
+      const status = getStudentPaymentStatus(s);
+      return (status === 'Due' || status === 'Overdue') && !dismissedNotifications.payments.includes(s.id);
+    }).length;
     const total = unread + dueCount;
     const badge = $('notification-badge');
     if (badge) { badge.textContent = total; badge.style.display = total > 0 ? 'inline' : 'none'; }
@@ -592,21 +598,23 @@
     const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
     const status = getStudentPaymentStatus(s);
-    const statusText = status === 'Due' ? 'DUE' : 'PENDING';
+    const statusText = (status === 'Due' || status === 'Overdue') ? 'DUE' : 'PENDING';
 
-    const msg = `\u26A0\uFE0F *FEE PAYMENT PENDING* \u{1F6A8}
+    const msg = `⚠️ FEE PAYMENT PENDING 🚨
 
-Hello Sir/Madam \u{1F44B},
+Hello Sir/Madam 👋,
 
-This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* \u{1F4B3}.
-\u2757 *Amount Due:* \u20B9${totalPending.toLocaleString()}
+This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* 💳.
+❗ *Amount Due:* ₹${totalPending.toLocaleString()}
 
-We kindly request you to complete the payment *on or before ${dueDateStr}* \u23F0 to avoid any interruption in class participation \u{1F6AB}.
+We kindly request you to complete the payment *on or before ${dueDateStr}* ⏰ to avoid any interruption in class participation 🚫.
 
-\u{1F4B3} *You may make the payment to:* 9025846663 (Ranjith) \u{1F4DE}
+❗ Additionally, we request you to please pay at least ₹500 *on or before ${dueDateStr}* as a minimum confirmation amount ✅.
 
-Thank you for your understanding \u{1F64F}.
-\u2013 Chesskidoo Academy \u{1F393}\u2728`;
+💳 *You may make the payment to:* 9025846663 (Ranjith) 📞
+
+Thank you for your understanding 🙏.
+– Chesskidoo Academy 🎓✨`;
 
     const parsed = parseStoredPhone(phone);
     const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -620,18 +628,28 @@ Thank you for your understanding \u{1F64F}.
     if (!c) return;
 
     const studs = allStudents.filter(s => String(s.coach_id) === String(id));
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
+
     const pending = studs.filter(s => {
-      const status = getStudentPaymentStatus(s);
-      return status === 'Due' || status === 'Pending';
+      const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+      if (status !== 'Due' && status !== 'Pending' && status !== 'Overdue') return false;
+
+      if (status === 'Pending') {
+        let daysLeft = 99;
+        const dueCfg = getStudentDueConfig(s, getCoachName(c), targetMonth, targetYear);
+        const dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
+        const diffTime = dueDateObj.getTime() - new Date().getTime();
+        daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (daysLeft > 5) return false;
+      }
     });
 
     if (pending.length === 0) {
-      if (!silent) toast(`No pending fees for students under ${getCoachName(c)}`, 'info');
+      if (!silent) toast(`No pending/due fees (or within 5-day deadline) for students under ${getCoachName(c)}`, 'info');
       return;
     }
 
-    const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
     const dateStr = new Date(targetYear, targetMonth).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
     // Determine min due day among pending students to use as deadline
@@ -655,11 +673,16 @@ Thank you for your understanding \u{1F64F}.
 
 Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} 👨‍🏫,
 
-The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle 📅:
+The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle 📅:
 
 ${pending.map(s => {
   const status = getStudentPaymentStatus(s);
-  const label = status === 'Due' ? '🚨 ARREARS' : '⏳ PENDING';
+  let label = '⏳ PENDING';
+  if (status === 'Overdue') {
+    label = '🚨 ARREARS';
+  } else if (status === 'Due') {
+    label = '⏳ DUE';
+  }
   const sName = cleanText(getStudentName(s).toUpperCase());
   const coach = allCoaches.find(cc => String(cc.id) === String(s.coach_id));
   const cName = coach ? (coach.name || '') : '';
@@ -675,7 +698,7 @@ ${pending.map(s => {
 }).join('\n')}
 
 Please coordinate with the guardians to ensure these balances are settled 🤝.
-*Last Date to Pay:* ${lastDateToPayStr} 🗓️
+Last Date to Pay: ${lastDateToPayStr} 🗓️
 
 📝 Note:
 
@@ -783,7 +806,7 @@ Administrative Team | Chesskidoo Academy 🏆✨`;
        const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
        const payStatus = getStudentPaymentStatus(s);
-       const statusText = payStatus === 'Due' ? 'DUE' : 'PENDING';
+       const statusText = (payStatus === 'Due' || payStatus === 'Overdue') ? 'DUE' : 'PENDING';
 
           const msg = `⚠️ FEE PAYMENT PENDING 🚨
 
@@ -793,6 +816,8 @@ This is to inform you that the chess class fee for ${cleanText(name)} is still $
 ❗ Amount Due: ₹${totalDebt.toLocaleString()}
 
 We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation 🚫.
+
+❗ Additionally, we request you to please pay at least ₹500 on or before ${dueDateStr} as a minimum confirmation amount ✅.
 
 💳 You may make the payment to: 9025846663 (Ranjith) 📞
 
@@ -1119,6 +1144,11 @@ function initUI() {
 
     // C. DATE-BASED TRANSITION (Current Month): Transition automatically based on student-specific due date
     if (isCurrentMonth) {
+       // If the student has unpaid dues from previous months (arrears/overdue), they are immediately 'Overdue'
+       if (totalPaidInvoices < monthsRequired - 1) {
+         return 'Overdue';
+       }
+
        const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
        const coachName = coach ? (coach.name || '') : '';
        const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
@@ -1129,8 +1159,8 @@ function initUI() {
        return (currentDate >= dueDateObj) ? 'Due' : 'Pending';
     }
 
-    // D. ARREARS (Past Months): If missing payments and in the past.
-    if (totalPaidInvoices < monthsRequired) return 'Due';
+    // D. ARREARS (Past Months): If missing payments and in the past, status is 'Overdue'
+    if (totalPaidInvoices < monthsRequired) return 'Overdue';
 
     return 'Due';
   }
@@ -1789,7 +1819,10 @@ function initUI() {
     // Call this AFTER data is loaded to set initial counts
     lastMsgCount = allMessages ? allMessages.length : 0;
     lastStudCount = allStudents ? allStudents.length : 0;
-    const dueStudents = allStudents ? allStudents.filter(s => getStudentPaymentStatus(s) === 'Due') : [];
+    const dueStudents = allStudents ? allStudents.filter(s => {
+      const status = getStudentPaymentStatus(s);
+      return status === 'Due' || status === 'Overdue';
+    }) : [];
     lastDueCount = dueStudents.length;
   }  function startNotificationPolling() {
     if (notificationPolling) return;
@@ -2361,7 +2394,10 @@ function initUI() {
       const targetYear = window.reportYear;
       const paid = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid').length;
       const pending = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Pending').length;
-      const due = studs.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Due').length;
+      const due = studs.filter(s => {
+        const st = getStudentPaymentStatus(s, targetMonth, targetYear);
+        return st === 'Due' || st === 'Overdue';
+      }).length;
       chartInstances.payment = new Chart(paymentCtx, {
         type: 'doughnut',
         data: {
@@ -2946,7 +2982,7 @@ function initUI() {
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
-              } else if (status === 'Pending' || status === 'Due') {
+              } else if (status === 'Pending' || status === 'Due' || status === 'Overdue') {
                  primaryActions = `
                    <div style="display:flex;gap:4px;flex-wrap:nowrap">
                    <button class="btn btn-gold btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">✅ Mark as Paid</button>
@@ -4099,7 +4135,7 @@ Thank you for your continued support and cooperation.
        const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
               const payStatus = getStudentPaymentStatus(s);
-        const statusText = payStatus === 'Due' ? 'DUE' : 'PENDING';
+        const statusText = (payStatus === 'Due' || payStatus === 'Overdue') ? 'DUE' : 'PENDING';
 
         // Build notification content
         let message = customMsg ? `${customMsg}\n\n` : '';
@@ -4111,6 +4147,8 @@ This is to inform you that the chess class fee for ${cleanText(studentName)} is 
 ❗ Amount Due: ₹${totalDue.toLocaleString()}
 
 We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation 🚫.
+
+❗ Additionally, we request you to please pay at least ₹500 on or before ${dueDateStr} as a minimum confirmation amount ✅.
 
 💳 You may make the payment to: 9025846663 (Ranjith) 📞
 
@@ -4275,13 +4313,18 @@ Thank you for your understanding 🙏.
 
     const body = $('p-history-body');
     if (myPayments.length === 0) {
-      body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--ivory-dim)">No payment records found.</td></tr>';
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--ivory-dim)">No payment records found.</td></tr>';
       return;
     }
 
-     body.innerHTML = myPayments.map(p => `
+     body.innerHTML = myPayments.map(p => {
+       const pDate = new Date(p.payment_date || p.created_at);
+       const transDate = pDate.toLocaleDateString();
+       const billingMonth = pDate.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+       return `
        <tr>
-         <td>${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
+         <td>${transDate}</td>
+         <td style="color:var(--gold);font-weight:600">${billingMonth}</td>
          <td style="color:var(--success);font-weight:600">₹${(p.amount || 0).toLocaleString()}</td>
          <td>${escapeHtml(p.payment_method || 'Cash')}</td>
          <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || 'N/A'}</td>
@@ -4291,8 +4334,8 @@ Thank you for your understanding 🙏.
              <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
            </div>
          </td>
-       </tr>
-     `).join('');
+       </tr>`;
+     }).join('');
   };
 
   window.deletePayment = async function (paymentId, studentId) {
@@ -4483,6 +4526,12 @@ Thank you for your understanding 🙏.
       statusCache.set(key, status);
     });
 
+    const fBillStatus = $('f-bill-status')?.value || '';
+    let filteredStudents = allStudents;
+    if (fBillStatus) {
+      filteredStudents = allStudents.filter(s => statusCache.get(s.id) === fBillStatus);
+    }
+
     const now = new Date();
     const currentMonth = now.getUTCMonth();
     const currentYear = now.getUTCFullYear();
@@ -4490,7 +4539,7 @@ Thank you for your understanding 🙏.
     const isPastMonth = (targetYear < currentYear) || (targetYear === currentYear && targetMonth < currentMonth);
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-    tbody.innerHTML = allStudents.map(s => {
+    tbody.innerHTML = filteredStudents.map(s => {
       const enrollDateStr = getStudentDate(s);
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
 
@@ -4515,6 +4564,7 @@ Thank you for your understanding 🙏.
       if (status === 'Paid') statusClass = 'badge-success';
       else if (status === 'Pending') statusClass = 'badge-warning';
       else if (status === 'Due') statusClass = 'badge-danger';
+      else if (status === 'Overdue') statusClass = 'badge-danger';
       else if (status === 'Not Enrolled') statusClass = 'badge-outline-grey';
 
       const invoiceId = 'INV-' + (s.id ? s.id.toString().slice(-6) : '000000');
@@ -4532,7 +4582,7 @@ Thank you for your understanding 🙏.
             <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
             <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔁 Mark Unpaid</button>
           `;
-        } else if (status === 'Pending' || status === 'Due') {
+        } else if (status === 'Pending' || status === 'Due' || status === 'Overdue') {
           actionButtons = `
             <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
             <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
@@ -5217,7 +5267,7 @@ Thank you for your understanding 🙏.
           const totalCoaches = allCoaches.filter(c => c.status !== 'archived').length;
           const revenue = allStudents.filter(s => s.status !== 'archived').reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
           const paid = allStudents.filter(s => s.status !== 'archived' && getStudentPaymentStatus(s) === 'Paid').length;
-          const due = allStudents.filter(s => s.status !== 'archived' && getStudentPaymentStatus(s) === 'Due').length;
+          const due = allStudents.filter(s => s.status !== 'archived' && (getStudentPaymentStatus(s) === 'Due' || getStudentPaymentStatus(s) === 'Overdue')).length;
           const pending = allStudents.filter(s => s.status !== 'archived' && getStudentPaymentStatus(s) === 'Pending').length;
           return { totalStudents, totalCoaches, revenue, paid, due, pending, collectionRate: ((paid / totalStudents) * 100 || 0).toFixed(1) };
         }

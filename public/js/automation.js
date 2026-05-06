@@ -163,11 +163,26 @@
     const coachMap = {};
     allStudents.forEach(s => {
       const status = window.getStudentPaymentStatus ? window.getStudentPaymentStatus(s) : s.payment_status;
-      if (status !== 'Due' && status !== 'Pending') return;
+      if (status !== 'Due' && status !== 'Pending' && status !== 'Overdue') return;
+
+      if (status === 'Pending') {
+        const targetMonth = today.getUTCMonth();
+        const targetYear = today.getUTCFullYear();
+        let daysLeft = 99;
+        if (window.getStudentDueConfig) {
+          const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+          const dueCfg = window.getStudentDueConfig(s, coach ? (coach.name || '') : '', targetMonth, targetYear);
+          const dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
+          const diffTime = dueDateObj.getTime() - today.getTime();
+          daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+        if (daysLeft > 5) return;
+      }
+
       const cid = s.coach_id;
       if (!cid) return;
       if (!coachMap[cid]) coachMap[cid] = { due: [], pending: [] };
-      if (status === 'Due') coachMap[cid].due.push(s);
+      if (status === 'Due' || status === 'Overdue') coachMap[cid].due.push(s);
       else coachMap[cid].pending.push(s);
     });
 
