@@ -24,6 +24,37 @@
   };
   window.formatTime = formatTime;
 
+  const EMOJI = {
+    warning: String.fromCodePoint(0x26A0, 0xFE0F),
+    siren: String.fromCodePoint(0x1F6A8),
+    wave: String.fromCodePoint(0x1F44B),
+    card: String.fromCodePoint(0x1F4B3),
+    alert: String.fromCodePoint(0x2757),
+    clock: String.fromCodePoint(0x23F0),
+    prohibited: String.fromCodePoint(0x1F6AB),
+    check: String.fromCodePoint(0x2705),
+    phone: String.fromCodePoint(0x1F4DE),
+    pray: String.fromCodePoint(0x1F64F),
+    grad: String.fromCodePoint(0x1F393),
+    sparkle: String.fromCodePoint(0x2728),
+    chart: String.fromCodePoint(0x1F4CA),
+    teacher: String.fromCodePoint(0x1F468, 0x200D, 0x1F3EB),
+    calendar: String.fromCodePoint(0x1F4C5),
+    pending: String.fromCodePoint(0x23F3),
+    handshake: String.fromCodePoint(0x1F91D),
+    spiral_calendar: String.fromCodePoint(0x1F5D3, 0xFE0F),
+    memo: String.fromCodePoint(0x1F4DD),
+    trophy: String.fromCodePoint(0x1F3C6),
+    star: String.fromCodePoint(0x1F31F),
+    crown: String.fromCodePoint(0x1F451),
+    receipt: String.fromCodePoint(0x1F9FE),
+    cash: String.fromCodePoint(0x1F4B5),
+    party: String.fromCodePoint(0x1F389),
+    tear_calendar: String.fromCodePoint(0x1F4C6),
+    link: String.fromCodePoint(0x1F517)
+  };
+  window.EMOJI = EMOJI;
+
   let SUPABASE_URL = '';
   let SUPABASE_ANON_KEY = '';
   const API_BASE = '/api';
@@ -600,19 +631,19 @@
     const status = getStudentPaymentStatus(s);
     const statusText = (status === 'Due' || status === 'Overdue') ? 'DUE' : 'PENDING';
 
-    const msg = `\u{26A0}\u{FE0F} FEE PAYMENT PENDING \u{1F6A8}
+    const msg = `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}
 
-Hello Sir/Madam \u{1F44B},
+Hello Sir/Madam ${EMOJI.wave},
 
-This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} \u{1F4B3}.
-\u{2757} Amount Due: \u{20B9}${totalPending.toLocaleString()}
+This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} ${EMOJI.card}.
+${EMOJI.alert} Amount Due: \u{20B9}${totalPending.toLocaleString()}
 
-We kindly request you to complete the payment on or before ${dueDateStr} \u{23F0} to avoid any interruption in class participation \u{1F6AB}.
+We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.
 
-\u{1F4B3} You may make the payment to: 9025846663 (Ranjith) \u{1F4DE}
+${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}
 
-Thank you for your understanding \u{1F64F}.
-– Chesskidoo Academy \u{1F393}\u{2728}`;
+Thank you for your understanding ${EMOJI.pray}.
+– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
 
     const parsed = parseStoredPhone(phone);
     const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -668,19 +699,19 @@ Thank you for your understanding \u{1F64F}.
     };
     const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-        let msg = `\u{26A0}\u{FE0F} CHESSKIDOO ACADEMY \u{2013} FEE AUDIT REPORT \u{1F4CA}
+        let msg = `${EMOJI.warning} CHESSKIDOO ACADEMY \u{2013} FEE AUDIT REPORT ${EMOJI.chart}
 
-Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} \u{1F468}\u{200D}\u{1F3EB},
+Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} ${EMOJI.teacher},
 
-The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle \u{1F4C5}:
+The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle ${EMOJI.calendar}:
 
 ${pending.map(s => {
   const status = getStudentPaymentStatus(s);
-  let label = '\u{23F3} PENDING';
+  let label = `${EMOJI.pending} PENDING`;
   if (status === 'Overdue') {
-    label = '\u{1F6A8} ARREARS';
+    label = `${EMOJI.siren} ARREARS`;
   } else if (status === 'Due') {
-    label = '\u{23F3} DUE';
+    label = `${EMOJI.pending} DUE`;
   }
   const sName = cleanText(getStudentName(s).toUpperCase());
   const coach = allCoaches.find(cc => String(cc.id) === String(s.coach_id));
@@ -693,19 +724,19 @@ ${pending.map(s => {
   };
   const monthName2 = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
   const dueDateStr = `${getOrdinal2(dueCfg.day)} ${monthName2} ${targetYear}`;
-  return `\u{2757} ${sName} \u{2014} ${label} (Due: ${dueDateStr})`;
+  return `${EMOJI.alert} ${sName} \u{2014} ${label} (Due: ${dueDateStr})`;
 }).join('\n')}
 
-Please coordinate with the guardians to ensure these balances are settled \u{1F91D}.
-Last Date to Pay: ${lastDateToPayStr} \u{1F5D3}\u{FE0F}
+Please coordinate with the guardians to ensure these balances are settled ${EMOJI.handshake}.
+Last Date to Pay: ${lastDateToPayStr} ${EMOJI.spiral_calendar}
 
-\u{1F4DD} Note:
+${EMOJI.memo} Note:
 
-\u{1F6A8} ARREARS = Unpaid fees from previous months
-\u{23F3} PENDING = Current month's unpaid fee
+${EMOJI.siren} ARREARS = Unpaid fees from previous months
+${EMOJI.pending} PENDING = Current month's unpaid fee
 
 Regards,
-Administrative Team | Chesskidoo Academy \u{1F3C6}\u{2728}`;
+Administrative Team | Chesskidoo Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
 
     const phone = c.phone || c.contact || '0000000000';
     const parsed = parseStoredPhone(phone);
@@ -807,19 +838,19 @@ Administrative Team | Chesskidoo Academy \u{1F3C6}\u{2728}`;
        const payStatus = getStudentPaymentStatus(s);
        const statusText = (payStatus === 'Due' || payStatus === 'Overdue') ? 'DUE' : 'PENDING';
 
-          const msg = `\u{26A0}\u{FE0F} FEE PAYMENT PENDING \u{1F6A8}
+          const msg = `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}
 
-Hello Sir/Madam \u{1F44B},
+Hello Sir/Madam ${EMOJI.wave},
 
-This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} \u{1F4B3}.
-\u{2757} Amount Due: \u{20B9}${totalDebt.toLocaleString()}
+This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} ${EMOJI.card}.
+${EMOJI.alert} Amount Due: \u{20B9}${totalDebt.toLocaleString()}
 
-We kindly request you to complete the payment on or before ${dueDateStr} \u{23F0} to avoid any interruption in class participation \u{1F6AB}.
+We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.
 
-\u{1F4B3} You may make the payment to: 9025846663 (Ranjith) \u{1F4DE}
+${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}
 
-Thank you for your understanding \u{1F64F}.
-– Chesskidoo Academy \u{1F393}\u{2728}`;
+Thank you for your understanding ${EMOJI.pray}.
+– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
 
       const parsed = parseStoredPhone(phone);
       const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -3981,24 +4012,24 @@ function openCoachModal(id = null) {
     const billingMonthName = new Date(window.reportYear, window.reportMonth).toLocaleString('en-IN', { month: 'long' });
     const billingCycleStr = `${billingMonthName} ${window.reportYear}`;
 
-    const message = `\u{2705} PAYMENT RECEIVED \u{2014} RECEIPT CONFIRMED \u{1F4FE}\u{2728}
+    const message = `${EMOJI.check} PAYMENT RECEIVED \u{2014} RECEIPT CONFIRMED ${EMOJI.receipt}${EMOJI.sparkle}
 
-Hello Sir/Madam \u{1F44B},
+Hello Sir/Madam ${EMOJI.wave},
 
-We are happy to inform you that we have successfully received and recorded your chess class fee payment for ${cleanText(getStudentName(s))}! \u{1F4B3}\u{1F389}
+We are happy to inform you that we have successfully received and recorded your chess class fee payment for ${cleanText(getStudentName(s))}! ${EMOJI.card}${EMOJI.party}
 
-\u{1F4FE} PAYMENT DETAILS:
-\u{1F4B5} Amount Paid: \u{20B9}${parseFloat(amount).toLocaleString()}
-\u{1F5D3}\u{FE0F} Billing Cycle: ${billingCycleStr}
-\u{1F4C6} Confirmed On: ${formattedDate}
+${EMOJI.receipt} PAYMENT DETAILS:
+${EMOJI.cash} Amount Paid: \u{20B9}${parseFloat(amount).toLocaleString()}
+${EMOJI.spiral_calendar} Billing Cycle: ${billingCycleStr}
+${EMOJI.tear_calendar} Confirmed On: ${formattedDate}
 
-\u{1F517} Download Your Official Receipt:
+${EMOJI.link} Download Your Official Receipt:
 ${receiptUrl}
 
-Thank you for your prompt payment and continued support of Chesskidoo Academy! \u{1F393}\u{1F3C6}
+Thank you for your prompt payment and continued support of Chesskidoo Academy! ${EMOJI.grad}${EMOJI.trophy}
 
 Best regards,
-– Chesskidoo Academy \u{1F31F}\u{1F451}`;
+– Chesskidoo Academy ${EMOJI.star}${EMOJI.crown}`;
 
     const studentPhone = getStudentPhone(s);
     const parsed = parseStoredPhone(studentPhone);
@@ -4118,7 +4149,7 @@ Best regards,
       const fee = getStudentMonthlyFee(s);
       const phone = getStudentPhone(s).replace(/\D/g, '');
       const parentName = s.parent_name || 'Parent';
-      const parentEmail = s.email || ''; // Students table has email column (parent's email)
+      const parentEmail = s.email || ''; 
 
       // Calculate exact pending amount
       const targetMonth = window.reportMonth;
@@ -4160,19 +4191,19 @@ Best regards,
 
         // Build notification content
         let message = customMsg ? `${customMsg}\n\n` : '';
-        message += `\u{26A0}\u{FE0F} FEE PAYMENT PENDING \u{1F6A8}
+        message += `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}
 
-Hello Sir/Madam \u{1F44B},
+Hello Sir/Madam ${EMOJI.wave},
 
-This is to inform you that the chess class fee for ${cleanText(studentName)} is still ${statusText} \u{1F4B3}.
-\u{2757} Amount Due: \u{20B9}${totalDue.toLocaleString()}
+This is to inform you that the chess class fee for ${cleanText(studentName)} is still ${statusText} ${EMOJI.card}.
+${EMOJI.alert} Amount Due: \u{20B9}${totalDue.toLocaleString()}
 
-We kindly request you to complete the payment on or before ${dueDateStr} \u{23F0} to avoid any interruption in class participation \u{1F6AB}.
+We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.
 
-\u{1F4B3} You may make the payment to: 9025846663 (Ranjith) \u{1F4DE}
+${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}
 
-Thank you for your understanding \u{1F64F}.
-– Chesskidoo Academy \u{1F393}\u{2728}`;
+Thank you for your understanding ${EMOJI.pray}.
+– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
 
       try {
         let sent = false;
