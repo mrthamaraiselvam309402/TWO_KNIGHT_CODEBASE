@@ -979,55 +979,56 @@ function initUI() {
 
   // ── COUNTRY PHONE VALIDATION ──
   const COUNTRY_CODES = [
-    { code: 'IN', name: 'India', dial: '+91', length: 10 },
-    { code: 'US', name: 'United States', dial: '+1', length: 10 },
-    { code: 'GB', name: 'United Kingdom', dial: '+44', length: 10 },
-    { code: 'CA', name: 'Canada', dial: '+1', length: 10 },
-    { code: 'AU', name: 'Australia', dial: '+61', length: 9 },
-    { code: 'DE', name: 'Germany', dial: '+49', length: 10 },
-    { code: 'FR', name: 'France', dial: '+33', length: 9 },
-    { code: 'JP', name: 'Japan', dial: '+81', length: 10 },
-    { code: 'CN', name: 'China', dial: '+86', length: 11 },
-    { code: 'BR', name: 'Brazil', dial: '+55', length: 10 },
-    { code: 'MX', name: 'Mexico', dial: '+52', length: 10 },
-    { code: 'IT', name: 'Italy', dial: '+39', length: 10 },
-    { code: 'ES', name: 'Spain', dial: '+34', length: 9 },
-    { code: 'RU', name: 'Russia', dial: '+7', length: 10 },
-    { code: 'KR', name: 'South Korea', dial: '+82', length: 9 },
-    { code: 'SG', name: 'Singapore', dial: '+65', length: 8 },
-    { code: 'MY', name: 'Malaysia', dial: '+60', length: 9 },
-    { code: 'TH', name: 'Thailand', dial: '+66', length: 9 },
-    { code: 'ID', name: 'Indonesia', dial: '+62', length: 10 },
-    { code: 'PH', name: 'Philippines', dial: '+63', length: 10 },
-    { code: 'VN', name: 'Vietnam', dial: '+84', length: 9 },
-    { code: 'AE', name: 'UAE', dial: '+971', length: 9 },
-    { code: 'SA', name: 'Saudi Arabia', dial: '+966', length: 9 },
-    { code: 'PK', name: 'Pakistan', dial: '+92', length: 10 },
-    { code: 'BD', name: 'Bangladesh', dial: '+880', length: 10 },
-    { code: 'LK', name: 'Sri Lanka', dial: '+94', length: 9 },
-    { code: 'ZA', name: 'South Africa', dial: '+27', length: 9 },
-    { code: 'NG', name: 'Nigeria', dial: '+234', length: 10 },
-    { code: 'EG', name: 'Egypt', dial: '+20', length: 10 },
-    { code: 'NL', name: 'Netherlands', dial: '+31', length: 9 },
-    { code: 'BE', name: 'Belgium', dial: '+32', length: 9 },
-    { code: 'SE', name: 'Sweden', dial: '+46', length: 9 },
-    { code: 'NO', name: 'Norway', dial: '+47', length: 8 },
-    { code: 'DK', name: 'Denmark', dial: '+45', length: 8 },
-    { code: 'FI', name: 'Finland', dial: '+358', length: 9 },
-    { code: 'PL', name: 'Poland', dial: '+48', length: 9 },
-    { code: 'TR', name: 'Turkey', dial: '+90', length: 10 },
-    { code: 'IL', name: 'Israel', dial: '+972', length: 9 },
-    { code: 'AR', name: 'Argentina', dial: '+54', length: 10 },
-    { code: 'CL', name: 'Chile', dial: '+56', length: 9 },
-    { code: 'CO', name: 'Colombia', dial: '+57', length: 10 },
-    { code: 'NZ', name: 'New Zealand', dial: '+64', length: 9 },
-    { code: 'TW', name: 'Taiwan', dial: '+886', length: 9 }
-   ];
-   
-   window.selectedCountryCode = 'IN';
-   window.selectedCountryCodeEdit = 'IN';
+    { code: 'IN', name: 'India', dial: '+91', length: 10, flag: '🇮🇳' },
+    { code: 'US', name: 'United States', dial: '+1', length: 10, flag: '🇺🇸' },
+    { code: 'GB', name: 'United Kingdom', dial: '+44', length: 10, flag: '🇬🇧' },
+    { code: 'CA', name: 'Canada', dial: '+1', length: 10, flag: '🇨🇦' },
+    { code: 'AU', name: 'Australia', dial: '+61', length: 9, flag: '🇦🇺' },
+    { code: 'DE', name: 'Germany', dial: '+49', length: 10, flag: '🇩🇪' },
+    { code: 'FR', name: 'France', dial: '+33', length: 9, flag: '🇫🇷' },
+    { code: 'JP', name: 'Japan', dial: '+81', length: 10, flag: '🇯🇵' },
+    { code: 'CN', name: 'China', dial: '+86', length: 11, flag: '🇨🇳' },
+    { code: 'BR', name: 'Brazil', dial: '+55', length: 10, flag: '🇧🇷' },
+    { code: 'MX', name: 'Mexico', dial: '+52', length: 10, flag: '🇲🇽' },
+    { code: 'IT', name: 'Italy', dial: '+39', length: 10, flag: '🇮🇹' },
+    { code: 'ES', name: 'Spain', dial: '+34', length: 9, flag: '🇪🇸' },
+    { code: 'RU', name: 'Russia', dial: '+7', length: 10, flag: '🇷🇺' },
+    { code: 'KR', name: 'South Korea', dial: '+82', length: 9, flag: '🇰🇷' },
+    { code: 'SG', name: 'Singapore', dial: '+65', length: 8, flag: '🇸🇬' },
+    { code: 'MY', name: 'Malaysia', dial: '+60', length: 9, flag: '🇲🇾' },
+    { code: 'TH', name: 'Thailand', dial: '+66', length: 9, flag: '🇹🇭' },
+    { code: 'ID', name: 'Indonesia', dial: '+62', length: 10, flag: '🇮🇩' },
+    { code: 'PH', name: 'Philippines', dial: '+63', length: 10, flag: '🇵🇭' },
+    { code: 'VN', name: 'Vietnam', dial: '+84', length: 9, flag: '🇻🇳' },
+    { code: 'AE', name: 'UAE', dial: '+971', length: 9, flag: '🇦🇪' },
+    { code: 'SA', name: 'Saudi Arabia', dial: '+966', length: 9, flag: '🇸🇦' },
+    { code: 'PK', name: 'Pakistan', dial: '+92', length: 10, flag: '🇵🇰' },
+    { code: 'BD', name: 'Bangladesh', dial: '+880', length: 10, flag: '🇧🇩' },
+    { code: 'LK', name: 'Sri Lanka', dial: '+94', length: 9, flag: '🇱🇰' },
+    { code: 'ZA', name: 'South Africa', dial: '+27', length: 9, flag: '🇿🇦' },
+    { code: 'NG', name: 'Nigeria', dial: '+234', length: 10, flag: '🇳🇬' },
+    { code: 'EG', name: 'Egypt', dial: '+20', length: 10, flag: '🇪🇬' },
+    { code: 'NL', name: 'Netherlands', dial: '+31', length: 9, flag: '🇳🇱' },
+    { code: 'BE', name: 'Belgium', dial: '+32', length: 9, flag: '🇧🇪' },
+    { code: 'SE', name: 'Sweden', dial: '+46', length: 9, flag: '🇸🇪' },
+    { code: 'NO', name: 'Norway', dial: '+47', length: 8, flag: '🇳🇴' },
+    { code: 'DK', name: 'Denmark', dial: '+45', length: 8, flag: '🇩🇰' },
+    { code: 'FI', name: 'Finland', dial: '+358', length: 9, flag: '🇫🇮' },
+    { code: 'PL', name: 'Poland', dial: '+48', length: 9, flag: '🇵🇱' },
+    { code: 'TR', name: 'Turkey', dial: '+90', length: 10, flag: '🇹🇷' },
+    { code: 'IL', name: 'Israel', dial: '+972', length: 9, flag: '🇮🇱' },
+    { code: 'AR', name: 'Argentina', dial: '+54', length: 10, flag: '🇦🇷' },
+    { code: 'CL', name: 'Chile', dial: '+56', length: 9, flag: '🇨🇱' },
+    { code: 'CO', name: 'Colombia', dial: '+57', length: 10, flag: '🇨🇴' },
+    { code: 'NZ', name: 'New Zealand', dial: '+64', length: 9, flag: '🇳🇿' },
+    { code: 'TW', name: 'Taiwan', dial: '+886', length: 9, flag: '🇹🇼' }
+  ];
+  
+  window.selectedCountryCode = 'IN';
+  window.selectedCountryCodeEdit = 'IN';
+  window.selectedCountryCodeCoach = 'IN';
 
-   function getCountryByCode(code) {
+  function getCountryByCode(code) {
     return COUNTRY_CODES.find(c => c.code === code) || COUNTRY_CODES[0];
   }
 
@@ -1047,96 +1048,170 @@ function initUI() {
   function renderCountryDropdown(dropdownId = 'country-dropdown', selectFn = 'selectCountry') {
     const dropdown = $(dropdownId);
     if (!dropdown) return;
-    dropdown.innerHTML = COUNTRY_CODES.map(c => `
-      <div class="country-option" data-code="${c.code}" data-dial="${c.dial}" onclick="window.${selectFn}('${c.code}', '${c.dial}', ${c.length})">
-        <span class="country-flag">${c.code}</span>
-        <span class="country-name">${c.name}</span>
-        <span class="country-dial">${c.dial}</span>
+    dropdown.innerHTML = `
+      <div class="country-search-container" onclick="event.stopPropagation()">
+        <input type="text" class="country-search-input" placeholder="Search country or dial code..." oninput="window.filterCountryDropdown('${dropdownId}', this.value)">
       </div>
-    `).join('');
+      <div class="country-options-wrapper">
+        ${COUNTRY_CODES.map(c => `
+          <div class="country-option" data-code="${c.code}" data-dial="${c.dial}" data-name="${c.name.toLowerCase()}" onclick="window.${selectFn}('${c.code}', '${c.dial}', ${c.length})">
+            <div class="country-flag-box">
+              <span class="country-flag-emoji">${c.flag}</span>
+            </div>
+            <div class="country-name">${c.name}</div>
+            <div class="country-dial">${c.dial}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
   }
 
-window.selectCountry = function(code, dial, length) {
-     window.selectedCountryCode = code;
-     const selected = $('country-selected');
-     const phoneInput = $('m-phone');
-     const country = getCountryByCode(code);
-     if (selected) {
-       selected.innerHTML = `<span>${country.code}</span><span style="margin-left:6px">${country.dial}</span>`;
-     }
-     if (phoneInput) {
-       phoneInput.placeholder = `${country.length} digits for ${country.name}`;
-       phoneInput.maxLength = length + 3;
-     }
-     document.querySelectorAll('.country-option').forEach(el => el.classList.remove('selected'));
-     const opt = document.querySelector(`.country-option[data-code="${code}"]`);
-     if (opt) opt.classList.add('selected');
-     const dropdown = $('country-dropdown');
-     if (dropdown) dropdown.style.display = 'none';
-   };
-
-window.selectCountryCoach = function(code, dial, length) {
-     window.selectedCountryCodeCoach = code;
-     const selected = $('country-selected-coach');
-     const phoneInput = $('cm-phone');
-     const country = getCountryByCode(code);
-     if (selected) {
-       selected.innerHTML = `<span>${country.code}</span><span style="margin-left:6px">${country.dial}</span>`;
-     }
-     if (phoneInput) {
-       phoneInput.placeholder = `${country.length} digits for ${country.name}`;
-       phoneInput.maxLength = length + 3;
-     }
-     document.querySelectorAll('.country-option').forEach(el => el.classList.remove('selected'));
-     const opt = document.querySelector(`.country-option[data-code="${code}"]`);
-     if (opt) opt.classList.add('selected');
-     const dropdown = $('country-dropdown-coach');
-     if (dropdown) dropdown.style.display = 'none';
-   };
-
-window.openCountryDropdownCoach = function() {
-     const dropdown = $('country-dropdown-coach');
-     if (dropdown) {
-       const isOpen = dropdown.style.display === 'block';
-       dropdown.style.display = isOpen ? 'none' : 'block';
-     }
-   };
-
- window.openCountryDropdown = function() {
-       const dropdown = $('country-dropdown');
-       if (dropdown) {
-         const currentDisplay = dropdown.style.display;
-         dropdown.style.display = currentDisplay === 'block' ? 'none' : 'block';
-       }
-     };
-
- window.openCountryDropdownEdit = function() {
-      const dropdown = $('country-dropdown-edit');
-      if (dropdown) {
-        const isOpen = dropdown.style.display === 'block';
-        dropdown.style.display = isOpen ? 'none' : 'block';
+  window.filterCountryDropdown = function(dropdownId, query) {
+    const dropdown = $(dropdownId);
+    if (!dropdown) return;
+    const q = query.toLowerCase().trim();
+    const options = dropdown.querySelectorAll('.country-option');
+    options.forEach(opt => {
+      const name = opt.getAttribute('data-name') || '';
+      const code = opt.getAttribute('data-code').toLowerCase() || '';
+      const dial = opt.getAttribute('data-dial').toLowerCase() || '';
+      if (name.includes(q) || code.includes(q) || dial.includes(q)) {
+        opt.style.display = 'flex';
+      } else {
+        opt.style.display = 'none';
       }
-    };
+    });
+  };
 
- window.selectCountryEdit = function(code, dial, length) {
-      window.selectedCountryCodeEdit = code;
-      const country = getCountryByCode(code);
-      if (!country) return;
-      const selected = $('country-selected-edit');
-      const phoneInput = $('e-phone');
-      if (selected) {
-        selected.innerHTML = `<span>${country.code}</span><span style="margin-left:6px">${country.dial}</span>`;
+  window.selectCountry = function(code, dial, length) {
+    window.selectedCountryCode = code;
+    const selected = $('country-selected');
+    const phoneInput = $('m-phone');
+    const country = getCountryByCode(code);
+    if (selected) {
+      selected.innerHTML = `<span>${country.flag}</span><span class="country-dial">${country.dial}</span>`;
+    }
+    if (phoneInput) {
+      phoneInput.placeholder = `${country.length} digits for ${country.name}`;
+      phoneInput.maxLength = length + 3;
+    }
+    document.querySelectorAll(`#country-dropdown .country-option`).forEach(el => el.classList.remove('selected'));
+    const opt = document.querySelector(`#country-dropdown .country-option[data-code="${code}"]`);
+    if (opt) opt.classList.add('selected');
+    const dropdown = $('country-dropdown');
+    if (dropdown) dropdown.classList.remove('open');
+  };
+
+  window.selectCountryCoach = function(code, dial, length) {
+    window.selectedCountryCodeCoach = code;
+    const selected = $('country-selected-coach');
+    const phoneInput = $('cm-phone');
+    const country = getCountryByCode(code);
+    if (selected) {
+      selected.innerHTML = `<span>${country.flag}</span><span class="country-dial">${country.dial}</span>`;
+    }
+    if (phoneInput) {
+      phoneInput.placeholder = `${country.length} digits for ${country.name}`;
+      phoneInput.maxLength = length + 3;
+    }
+    document.querySelectorAll(`#country-dropdown-coach .country-option`).forEach(el => el.classList.remove('selected'));
+    const opt = document.querySelector(`#country-dropdown-coach .country-option[data-code="${code}"]`);
+    if (opt) opt.classList.add('selected');
+    const dropdown = $('country-dropdown-coach');
+    if (dropdown) dropdown.classList.remove('open');
+  };
+
+  window.selectCountryEdit = function(code, dial, length) {
+    window.selectedCountryCodeEdit = code;
+    const country = getCountryByCode(code);
+    if (!country) return;
+    const selected = $('country-selected-edit');
+    const phoneInput = $('e-phone');
+    if (selected) {
+      selected.innerHTML = `<span>${country.flag}</span><span class="country-dial">${country.dial}</span>`;
+    }
+    if (phoneInput) {
+      phoneInput.placeholder = `${country.length} digits for ${country.name}`;
+      phoneInput.maxLength = length + 3;
+    }
+    document.querySelectorAll('#country-dropdown-edit .country-option').forEach(el => el.classList.remove('selected'));
+    const opt = document.querySelector(`#country-dropdown-edit .country-option[data-code="${code}"]`);
+    if (opt) opt.classList.add('selected');
+    const dropdown = $('country-dropdown-edit');
+    if (dropdown) dropdown.classList.remove('open');
+  };
+
+  window.openCountryDropdown = function() {
+    closeAllCountryDropdowns('country-dropdown');
+    const dropdown = $('country-dropdown');
+    if (dropdown) {
+      const isOpen = dropdown.classList.contains('open');
+      if (isOpen) {
+        dropdown.classList.remove('open');
+      } else {
+        dropdown.classList.add('open');
+        const searchInput = dropdown.querySelector('.country-search-input');
+        if (searchInput) {
+          searchInput.value = '';
+          window.filterCountryDropdown('country-dropdown', '');
+          setTimeout(() => searchInput.focus(), 50);
+        }
       }
-      if (phoneInput) {
-        phoneInput.placeholder = `${country.length} digits for ${country.name}`;
-        phoneInput.maxLength = length + 3;
+    }
+  };
+
+  window.openCountryDropdownEdit = function() {
+    closeAllCountryDropdowns('country-dropdown-edit');
+    const dropdown = $('country-dropdown-edit');
+    if (dropdown) {
+      const isOpen = dropdown.classList.contains('open');
+      if (isOpen) {
+        dropdown.classList.remove('open');
+      } else {
+        dropdown.classList.add('open');
+        const searchInput = dropdown.querySelector('.country-search-input');
+        if (searchInput) {
+          searchInput.value = '';
+          window.filterCountryDropdown('country-dropdown-edit', '');
+          setTimeout(() => searchInput.focus(), 50);
+        }
       }
-      document.querySelectorAll('#country-dropdown-edit .country-option').forEach(el => el.classList.remove('selected'));
-      const opt = document.querySelector(`#country-dropdown-edit .country-option[data-code="${code}"]`);
-      if (opt) opt.classList.add('selected');
-      const dropdown = $('country-dropdown-edit');
-      if (dropdown) dropdown.style.display = 'none';
-    };
+    }
+  };
+
+  window.openCountryDropdownCoach = function() {
+    closeAllCountryDropdowns('country-dropdown-coach');
+    const dropdown = $('country-dropdown-coach');
+    if (dropdown) {
+      const isOpen = dropdown.classList.contains('open');
+      if (isOpen) {
+        dropdown.classList.remove('open');
+      } else {
+        dropdown.classList.add('open');
+        const searchInput = dropdown.querySelector('.country-search-input');
+        if (searchInput) {
+          searchInput.value = '';
+          window.filterCountryDropdown('country-dropdown-coach', '');
+          setTimeout(() => searchInput.focus(), 50);
+        }
+      }
+    }
+  };
+
+  function closeAllCountryDropdowns(exceptId = null) {
+    ['country-dropdown', 'country-dropdown-edit', 'country-dropdown-coach'].forEach(id => {
+      if (id !== exceptId) {
+        const el = $(id);
+        if (el) el.classList.remove('open');
+      }
+    });
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.country-selector')) {
+      closeAllCountryDropdowns();
+    }
+  });
 
   function getCoachName(c) { return c.name || ''; }
   function getCoachSpecialty(c) { return c.specialization || ''; }
@@ -2910,7 +2985,7 @@ window.openCountryDropdownCoach = function() {
    window.selectedCountryCodeEdit = 'IN';
    window.selectedCountryCodeEdit = 'IN';
       const selected = $('country-selected');
-      if (selected) selected.innerHTML = '<span>IN</span><span style="margin-left:6px">+91</span>';
+      if (selected) selected.innerHTML = '<span>🇮🇳</span><span class="country-dial">+91</span>';
       const phoneInput = $('m-phone');
       if (phoneInput) phoneInput.placeholder = '10 digits';
      syncCoachDropdowns();
@@ -3138,7 +3213,7 @@ function openCoachModal(id = null) {
      }
      window.selectedCountryCodeCoach = 'IN';
      const selected = $('country-selected-coach');
-     if (selected) selected.innerHTML = '<span>IN</span><span style="margin-left:6px">+91</span>';
+     if (selected) selected.innerHTML = '<span>🇮🇳</span><span class="country-dial">+91</span>';
      renderCountryDropdown('country-dropdown-coach', 'selectCountryCoach');
      openModal('coach-crud-modal');
    }
@@ -3164,6 +3239,12 @@ function openCoachModal(id = null) {
     };
 
     if (!data.name) { toast('Coach name is required', 'error'); return; }
+
+    const rawPhone = $('cm-phone').value.trim();
+    if (rawPhone) {
+      const validation = validatePhoneNumber(rawPhone, window.selectedCountryCodeCoach || 'IN');
+      if (!validation.valid) { toast(validation.error, 'error'); return; }
+    }
 
     try {
       let res;

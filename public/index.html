@@ -6,7 +6,7 @@
   <title>Chesskidoo — Premium Chess Academy</title>
   <meta name="description" content="Chesskidoo Academy — Premium chess coaching management system for students, coaches, and parents."/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=2026-04-23-v55"/>
+  <link rel="stylesheet" href="styles.css?v=2026-05-06-v56"/>
 
   <!-- CDN Libraries with fallbacks -->
 <script>
@@ -592,11 +592,11 @@
       <div class="form-group">
         <label>Parent Phone</label>
         <div style="display:flex;gap:8px">
-          <div class="country-selector" style="position:relative">
-            <div id="country-selected" onclick="event.stopPropagation();openCountryDropdown()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
-              <span>IN</span><span style="margin-left:6px">+91</span>
+          <div class="country-selector">
+            <div id="country-selected" onclick="event.stopPropagation();openCountryDropdown()" class="country-selected-display">
+              <span>🇮🇳</span><span class="country-dial">+91</span>
             </div>
-            <div id="country-dropdown" class="country-dropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;z-index:1000;display:none;margin-top:4px;box-shadow:var(--shadow)">
+            <div id="country-dropdown" class="country-dropdown" >
             </div>
           </div>
           <input type="tel" id="m-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
@@ -647,7 +647,7 @@
         <input type="number" id="m-fee" value="5000">
       </div>
       <div class="form-group">
-        <label>Next Due Date</label>
+        <label>Due Date</label>
         <input type="date" id="m-due-date">
       </div>
     </div>
@@ -673,11 +673,11 @@
       <div class="form-group">
         <label>Parent Phone</label>
         <div style="display:flex;gap:8px">
-          <div class="country-selector" style="position:relative">
-            <div id="country-selected-edit" onclick="event.stopPropagation();openCountryDropdownEdit()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
-              <span>IN</span><span style="margin-left:6px">+91</span>
+          <div class="country-selector">
+            <div id="country-selected-edit" onclick="event.stopPropagation();openCountryDropdownEdit()" class="country-selected-display">
+              <span>🇮🇳</span><span class="country-dial">+91</span>
             </div>
-            <div id="country-dropdown-edit" class="country-dropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;z-index:1000;display:none;margin-top:4px;box-shadow:var(--shadow)">
+            <div id="country-dropdown-edit" class="country-dropdown" >
             </div>
           </div>
           <input type="tel" id="e-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
@@ -837,11 +837,11 @@
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div style="display:flex;gap:8px">
-        <div class="country-selector" style="position:relative">
-<div id="country-selected-coach" onclick="event.stopPropagation();openCountryDropdownCoach()" style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center">
-              <span>IN</span><span style="margin-left:6px">+91</span>
+        <div class="country-selector">
+<div id="country-selected-coach" onclick="event.stopPropagation();openCountryDropdownCoach()" class="country-selected-display">
+              <span>🇮🇳</span><span class="country-dial">+91</span>
             </div>
-          <div id="country-dropdown-coach" class="country-dropdown" style="position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;z-index:1000;display:none;margin-top:4px;box-shadow:var(--shadow)">
+          <div id="country-dropdown-coach" class="country-dropdown" >
           </div>
         </div>
         <input type="tel" id="cm-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
@@ -1158,7 +1158,7 @@
 
    <!-- PDF libraries loaded dynamically in reporting.js -->
 
-      <script src="scripts.js?v=3.5&t=20260504_2020"></script>
+      <script src="scripts.js?v=3.6&t=20260506_1200"></script>
      <script src="js/reporting.js?v=v7"></script>
      <script src="js/ai-assistant.js?v=v2"></script>
      <script src="js/auth.js?v=v2&t=20260504_2020"></script>
