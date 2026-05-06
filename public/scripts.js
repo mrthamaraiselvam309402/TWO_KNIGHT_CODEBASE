@@ -90,7 +90,8 @@
    let loadingStates = {};
    // Optimized cache for faster dashboard loading
    const CACHE_DURATION = 30000; // 30 seconds cache for better performance
-  // ── CORE UTILITIES ──  window.apiCall = async function(endpoint, options = {}) {
+  // ── CORE UTILITIES ──
+  window.apiCall = async function(endpoint, options = {}) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       const err = new TypeError('Failed to fetch (offline)');
       err.isOffline = true;
