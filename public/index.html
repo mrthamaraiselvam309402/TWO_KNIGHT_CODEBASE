@@ -208,17 +208,22 @@
         <button class="btn btn-outline-amber btn-sm" onclick="bulkMarkPaid()">💳 Bulk Pay</button>
         <button class="btn btn-outline-amber btn-sm" onclick="informAllDueStudents()">📢 Notify Due</button>
         <button class="btn btn-outline-danger btn-sm" onclick="bulkDeleteStudents()">🗑️ Bulk Delete</button>
-        <div style="display:flex; align-items:center; gap:8px">
-          <label style="font-size:12px; color:var(--ivory-dim)">Billing Month:</label>
-          <input type="month" id="f-bill-month-stud" onchange="syncStudMonth(this.value)" 
-                 style="width:160px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
-          <button class="btn btn-outline-grey btn-sm" onclick="resetStudMonth()">This Month</button>
-        </div>
-        <div style="display:flex; align-items:center; gap:8px">
-          <label style="font-size:12px; color:var(--ivory-dim)">Specific Due Date:</label>
-          <input type="date" id="f-due-date-stud" onchange="syncDueDateFilter(this.value)" 
-                 style="width:150px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
-        </div>
+         <div style="display:flex; align-items:center; gap:8px">
+           <label style="font-size:12px; color:var(--ivory-dim)">Billing Month:</label>
+           <input type="month" id="f-bill-month-stud" onchange="syncStudMonth(this.value)" 
+                  style="width:160px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+           <button class="btn btn-outline-grey btn-sm" onclick="resetStudMonth()">This Month</button>
+         </div>
+         <div style="display:flex; align-items:center; gap:8px">
+           <label style="font-size:12px; color:var(--ivory-dim)">Due Date:</label>
+           <input type="date" id="f-due-date-stud" onchange="syncDueDateFilter(this.value)" 
+                  style="width:150px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+         </div>
+         <div style="display:flex; align-items:center; gap:8px">
+           <label style="font-size:12px; color:var(--ivory-dim)">Enroll Date:</label>
+           <input type="date" id="f-enroll-date-stud" onchange="syncEnrollDateFilter(this.value)" 
+                  style="width:150px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+         </div>
         <button class="btn btn-outline-grey btn-sm" onclick="clearFilters()">Clear</button>
       </div>
       <div class="table-wrap">

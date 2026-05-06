@@ -651,15 +651,15 @@ Thank you for your understanding \u{1F64F}.
     };
     const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-       let msg = `\u26A0\uFE0F *CHESSKIDOO ACADEMY \u2013 FEE AUDIT REPORT* \u{1F4CA}
+        let msg = `⚠️ CHESSKIDOO ACADEMY – FEE AUDIT REPORT 📊
 
-Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} \u{1F468}\u200D\u{1F3EB},
+Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} 👨‍🏫,
 
-The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle \u{1F4C5}:
+The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle 📅:
 
 ${pending.map(s => {
   const status = getStudentPaymentStatus(s);
-  const label = status === 'Due' ? '\u{1F6A8} ARREARS' : '\u23F3 PENDING';
+  const label = status === 'Due' ? '🚨 ARREARS' : '⏳ PENDING';
   const sName = cleanText(getStudentName(s).toUpperCase());
   const coach = allCoaches.find(cc => String(cc.id) === String(s.coach_id));
   const cName = coach ? (coach.name || '') : '';
@@ -671,19 +671,19 @@ ${pending.map(s => {
   };
   const monthName2 = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
   const dueDateStr = `${getOrdinal2(dueCfg.day)} ${monthName2} ${targetYear}`;
-  return `\u2757 *${sName}* \u2014 ${label} (Due: ${dueDateStr})`;
+  return `❗ ${sName} — ${label} (Due: ${dueDateStr})`;
 }).join('\n')}
 
-Please coordinate with the guardians to ensure these balances are settled \u{1F91D}.
-*Last Date to Pay:* ${lastDateToPayStr} \u{1F5D3}\uFE0F
+Please coordinate with the guardians to ensure these balances are settled 🤝.
+*Last Date to Pay:* ${lastDateToPayStr} 🗓️
 
-\u{1F4DD} *Note:*
+📝 Note:
 
-\u{1F6A8} *ARREARS* = Unpaid fees from previous months
-\u23F3 *PENDING* = Current month's unpaid fee
+🚨 ARREARS = Unpaid fees from previous months
+⏳ PENDING = Current month's unpaid fee
 
 Regards,
-*Administrative Team* | Chesskidoo Academy \u{1F3C6}\u2728`;
+Administrative Team | Chesskidoo Academy 🏆✨`;
 
     const phone = c.phone || c.contact || '0000000000';
     const parsed = parseStoredPhone(phone);
@@ -785,19 +785,19 @@ Regards,
        const payStatus = getStudentPaymentStatus(s);
        const statusText = payStatus === 'Due' ? 'DUE' : 'PENDING';
 
-         const msg = `\u26A0\uFE0F *FEE PAYMENT PENDING* \u{1F6A8}
+          const msg = `⚠️ FEE PAYMENT PENDING 🚨
 
-Hello Sir/Madam \u{1F44B},
+Hello Sir/Madam 👋,
 
-This is to inform you that the chess class fee for *${cleanText(name)}* is still *${statusText}* \u{1F4B3}.
-\u2757 *Amount Due:* \u20B9${totalDebt.toLocaleString()}
+This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} 💳.
+❗ Amount Due: ₹${totalDebt.toLocaleString()}
 
-We kindly request you to complete the payment *on or before ${dueDateStr}* \u23F0 to avoid any interruption in class participation \u{1F6AB}.
+We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation 🚫.
 
-\u{1F4B3} *You may make the payment to:* 9025846663 (Ranjith) \u{1F4DE}
+💳 You may make the payment to: 9025846663 (Ranjith) 📞
 
-Thank you for your understanding \u{1F64F}.
-\u2013 Chesskidoo Academy \u{1F393}\u2728`;
+Thank you for your understanding 🙏.
+– Chesskidoo Academy 🎓✨`;
 
       const parsed = parseStoredPhone(phone);
       const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -2758,19 +2758,19 @@ function initUI() {
   // ═══════════════════════════════════════════════════════════════
   // STUDENTS, COACHES, EVENTS, ACHIEVEMENTS
   // ═══════════════════════════════════════════════════════════════
-  function clearFilters() {
-    ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search', 'f-bill-month-stud', 'f-due-date-stud'].forEach(id => { const el = $(id); if (el) el.value = ''; });
-    resetStudMonth();
-    /* renderStudents(); */
-    renderStudents();
-  }  window.syncStudMonth = function(val) {
-    if (!val) return;
-    const [y, m] = val.split('-');
-    window.reportMonth = parseInt(m) - 1;
-    window.reportYear = parseInt(y);
-    renderStudents();
-    toast(`Viewing billing status for ${val}`, 'info');
-  };
+   function clearFilters() {
+     ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search', 'f-bill-month-stud', 'f-due-date-stud', 'f-enroll-date-stud'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+     resetStudMonth();
+     /* renderStudents(); */
+     renderStudents();
+   }  window.syncStudMonth = function(val) {
+     if (!val) return;
+     const [y, m] = val.split('-');
+     window.reportMonth = parseInt(m) - 1;
+     window.reportYear = parseInt(y);
+     renderStudents();
+     toast(`Viewing billing status for ${val}`, 'info');
+   };
 
   window.syncDueDateFilter = function(val) {
     if (!val) {
@@ -2785,6 +2785,17 @@ function initUI() {
     renderStudents();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     toast(`Viewing students due on ${parseInt(d)}-${months[window.reportMonth]}-${window.reportYear}`, 'info');
+  };
+
+  window.syncEnrollDateFilter = function(val) {
+    if (!val) {
+      renderStudents();
+      return;
+    }
+    renderStudents();
+    const [y, m, d] = val.split('-');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    toast(`Viewing students enrolled on ${parseInt(d)}-${months[parseInt(m)-1]}-${y}`, 'info');
   };
 
   window.resetStudMonth = function() {
@@ -2839,18 +2850,23 @@ function initUI() {
          return enrollDate <= targetMonthEnd;
        });
 
-       // Apply UI Filters
-       if (role === 'admin' || role === 'master') {
-         const fSearch = ($('f-search')?.value || '').toLowerCase().trim();
-         const fCoach = $('f-coach')?.value;
-         const fSession = $('f-session')?.value;
-         const fStatus = $('f-status')?.value;
-         const fMin = parseInt($('f-min-fee')?.value) || 0;
-         const fMax = parseInt($('f-max-fee')?.value) || 999999;          const fDueDate = $('f-due-date-stud')?.value;
-          let selectedDay = null;
+        // Apply UI Filters
+        if (role === 'admin' || role === 'master') {
+          const fSearch = ($('f-search')?.value || '').toLowerCase().trim();
+          const fCoach = $('f-coach')?.value;
+          const fSession = $('f-session')?.value;
+          const fStatus = $('f-status')?.value;
+          const fMin = parseInt($('f-min-fee')?.value) || 0;
+          const fMax = parseInt($('f-max-fee')?.value) || 999999;          const fDueDate = $('f-due-date-stud')?.value;
+          const fEnrollDate = $('f-enroll-date-stud')?.value;
+           let selectedDay = null;
+          let selectedEnrollDate = null;
           if (fDueDate) {
             const [y, m, d] = fDueDate.split('-');
             selectedDay = parseInt(d);
+          }
+          if (fEnrollDate) {
+            selectedEnrollDate = fEnrollDate;
           }
 
           studs = studs.filter(s => {
@@ -2869,7 +2885,13 @@ function initUI() {
               dueDateMatch = (dueCfg.day === selectedDay);
             }
             
-            return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch && dueDateMatch;
+            let enrollDateMatch = true;
+            if (selectedEnrollDate) {
+              const enrollDate = getStudentDate(s);
+              enrollDateMatch = enrollDate === selectedEnrollDate;
+            }
+            
+            return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch && dueDateMatch && enrollDateMatch;
           });
 
          studs.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
@@ -4079,21 +4101,21 @@ Thank you for your continued support and cooperation.
               const payStatus = getStudentPaymentStatus(s);
         const statusText = payStatus === 'Due' ? 'DUE' : 'PENDING';
 
-       // Build notification content
-       let message = customMsg ? `${customMsg}\n\n` : '';
-       message += `\u26A0\uFE0F *FEE PAYMENT PENDING* \u{1F6A8}
+        // Build notification content
+        let message = customMsg ? `${customMsg}\n\n` : '';
+        message += `⚠️ FEE PAYMENT PENDING 🚨
 
-Hello Sir/Madam \u{1F44B},
+Hello Sir/Madam 👋,
 
-This is to inform you that the chess class fee for *${cleanText(studentName)}* is still *${statusText}* \u{1F4B3}.
-\u2757 *Amount Due:* \u20B9${totalDue.toLocaleString()}
+This is to inform you that the chess class fee for ${cleanText(studentName)} is still ${statusText} 💳.
+❗ Amount Due: ₹${totalDue.toLocaleString()}
 
-We kindly request you to complete the payment *on or before ${dueDateStr}* \u23F0 to avoid any interruption in class participation \u{1F6AB}.
+We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation 🚫.
 
-\u{1F4B3} *You may make the payment to:* 9025846663 (Ranjith) \u{1F4DE}
+💳 You may make the payment to: 9025846663 (Ranjith) 📞
 
-Thank you for your understanding \u{1F64F}.
-\u2013 Chesskidoo Academy \u{1F393}\u2728`;
+Thank you for your understanding 🙏.
+– Chesskidoo Academy 🎓✨`;
 
       try {
         let sent = false;
