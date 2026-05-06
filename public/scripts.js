@@ -1274,7 +1274,7 @@ function initUI() {
         ${COUNTRY_CODES.map(c => `
           <div class="country-option" data-code="${c.code}" data-dial="${c.dial}" data-name="${c.name.toLowerCase()}" onclick="window.${selectFn}('${c.code}', '${c.dial}', ${c.length})">
             <div class="country-flag-box" style="display: flex; align-items: center; gap: 6px;">
-              <span class="country-flag-emoji" style="font-size: 17px; line-height: 1;">${c.flag}</span>
+              <img src="https://flagcdn.com/w20/${c.code.toLowerCase()}.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); display: inline-block; vertical-align: middle;" alt="${c.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">${c.flag}</span>
               <span class="country-iso-badge" style="font-family: monospace, var(--font-mono); font-size: 11px; font-weight: 700; color: rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.08); padding: 1px 4px; border-radius: 4px; letter-spacing: 0.5px;">${c.code}</span>
             </div>
             <div class="country-name" style="margin-left: 4px;">${c.name}</div>
@@ -1308,7 +1308,7 @@ function initUI() {
     const phoneInput = $('m-phone');
     const country = getCountryByCode(code);
     if (selected) {
-      selected.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><span>${country.flag}</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">${country.code}</span></span><span class="country-dial">${country.dial}</span>`;
+      selected.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/${country.code.toLowerCase()}.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="${country.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">${country.flag}</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">${country.code}</span></span><span class="country-dial">${country.dial}</span>`;
     }
     if (phoneInput) {
       phoneInput.placeholder = `${country.length} digits for ${country.name}`;
@@ -1327,7 +1327,7 @@ function initUI() {
     const phoneInput = $('cm-phone');
     const country = getCountryByCode(code);
     if (selected) {
-      selected.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><span>${country.flag}</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">${country.code}</span></span><span class="country-dial">${country.dial}</span>`;
+      selected.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/${country.code.toLowerCase()}.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="${country.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">${country.flag}</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">${country.code}</span></span><span class="country-dial">${country.dial}</span>`;
     }
     if (phoneInput) {
       phoneInput.placeholder = `${country.length} digits for ${country.name}`;
@@ -1347,7 +1347,7 @@ function initUI() {
     const selected = $('country-selected-edit');
     const phoneInput = $('e-phone');
     if (selected) {
-      selected.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><span>${country.flag}</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">${country.code}</span></span><span class="country-dial">${country.dial}</span>`;
+      selected.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/${country.code.toLowerCase()}.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="${country.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">${country.flag}</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">${country.code}</span></span><span class="country-dial">${country.dial}</span>`;
     }
     if (phoneInput) {
       phoneInput.placeholder = `${country.length} digits for ${country.name}`;
@@ -3285,7 +3285,7 @@ function initUI() {
       window.selectedCountryCode = 'IN';
       window.selectedCountryCodeEdit = 'IN';
       const selected = $('country-selected');
-      if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><span>🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
+      if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline-block\';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
       const phoneInput = $('m-phone');
       if (phoneInput) phoneInput.placeholder = '10 digits';
      syncCoachDropdowns();
@@ -3544,7 +3544,7 @@ function openCoachModal(id = null) {
      }
      window.selectedCountryCodeCoach = 'IN';
      const selected = $('country-selected-coach');
-     if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><span>🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
+     if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline-block\';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
      renderCountryDropdown('country-dropdown-coach', 'selectCountryCoach');
      openModal('coach-crud-modal');
    }
