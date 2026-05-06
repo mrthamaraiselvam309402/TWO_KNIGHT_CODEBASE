@@ -1,3 +1,50 @@
+/* Ensure proper emoji rendering across all browsers including Edge */
+.emoji, .msg-text, [class*="whatsapp"], [class*="message"], body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Apple Color Emoji", "Twemoji Mozilla", sans-serif !important;
+  font-variant-emoji: text;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Specific fix for Edge desktop emoji rendering */
+@supports (-ms-ime-align: auto) {
+  body,
+  .msg-text,
+  .chat-body,
+  .modal-body,
+  [data-whatsapp-text] {
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", sans-serif !important;
+    image-rendering: -webkit-optimize-contrast;
+  }
+}
+
+/* Force emoji rendering in all contexts */
+* {
+  font-variant-emoji: emoji;
+}
+
+/* WhatsApp message container specific fixes */
+.whatsapp-message,
+.msg-text,
+.chat-msg {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Segoe Color Emoji", "Apple Color Emoji", sans-serif !important;
+  line-height: 1.6;
+}
+
+/* Prevent emoji substitution issues */
+*:not(.no-emoji-fix)::before,
+*:not(.no-emoji-fix)::after {
+  font-family: inherit !important;
+}
+
+/* Edge-specific: prevent font substitution */
+_:-ms-lang(x) {
+  body {
+    font-family: "Segoe UI Emoji", sans-serif;
+  }
+}
+
+
 /* ═══════════════════════════════════════════════════════════════
    CHESSKIDOO ACADEMY - Premium Admin Panel Styles
    Modern design with gold accents and dark theme
