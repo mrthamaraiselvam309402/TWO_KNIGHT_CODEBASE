@@ -2759,13 +2759,11 @@ function initUI() {
   // STUDENTS, COACHES, EVENTS, ACHIEVEMENTS
   // ═══════════════════════════════════════════════════════════════
   function clearFilters() {
-    ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search', 'f-bill-month-stud'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+    ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search', 'f-bill-month-stud', 'f-due-date-stud'].forEach(id => { const el = $(id); if (el) el.value = ''; });
     resetStudMonth();
     /* renderStudents(); */
     renderStudents();
-  }
-
-  window.syncStudMonth = function(val) {
+  }  window.syncStudMonth = function(val) {
     if (!val) return;
     const [y, m] = val.split('-');
     window.reportMonth = parseInt(m) - 1;
@@ -2774,11 +2772,27 @@ function initUI() {
     toast(`Viewing billing status for ${val}`, 'info');
   };
 
+  window.syncDueDateFilter = function(val) {
+    if (!val) {
+      renderStudents();
+      return;
+    }
+    const [y, m, d] = val.split('-');
+    window.reportMonth = parseInt(m) - 1;
+    window.reportYear = parseInt(y);
+    const monthVal = `${y}-${m}`;
+    if ($('f-bill-month-stud')) $('f-bill-month-stud').value = monthVal;
+    renderStudents();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    toast(`Viewing students due on ${parseInt(d)}-${months[window.reportMonth]}-${window.reportYear}`, 'info');
+  };
+
   window.resetStudMonth = function() {
     const now = new Date();
     window.reportMonth = now.getUTCMonth();
     window.reportYear = now.getUTCFullYear();
     if ($('f-bill-month-stud')) $('f-bill-month-stud').value = '';
+    if ($('f-due-date-stud')) $('f-due-date-stud').value = '';
     renderStudents();
     toast('Switched to current month view', 'info');
   };
@@ -2832,17 +2846,31 @@ function initUI() {
          const fSession = $('f-session')?.value;
          const fStatus = $('f-status')?.value;
          const fMin = parseInt($('f-min-fee')?.value) || 0;
-         const fMax = parseInt($('f-max-fee')?.value) || 999999;
+         const fMax = parseInt($('f-max-fee')?.value) || 999999;          const fDueDate = $('f-due-date-stud')?.value;
+          let selectedDay = null;
+          if (fDueDate) {
+            const [y, m, d] = fDueDate.split('-');
+            selectedDay = parseInt(d);
+          }
 
-         studs = studs.filter(s => {
-           const nameMatch = !fSearch || getStudentName(s).toLowerCase().includes(fSearch);
-           const coachMatch = !fCoach || String(s.coach_id) === String(fCoach);
-           const sessionMatch = !fSession || getStudentBatchType(s) === fSession;
-           const statusMatch = !fStatus || getStudentPaymentStatus(s, targetMonth, targetYear) === fStatus;
-           const fee = getStudentMonthlyFee(s);
-           const feeMatch = fee >= fMin && fee <= fMax;
-           return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch;
-         });
+          studs = studs.filter(s => {
+            const nameMatch = !fSearch || getStudentName(s).toLowerCase().includes(fSearch);
+            const coachMatch = !fCoach || String(s.coach_id) === String(fCoach);
+            const sessionMatch = !fSession || getStudentBatchType(s) === fSession;
+            const statusMatch = !fStatus || getStudentPaymentStatus(s, targetMonth, targetYear) === fStatus;
+            const fee = getStudentMonthlyFee(s);
+            const feeMatch = fee >= fMin && fee <= fMax;
+            
+            let dueDateMatch = true;
+            if (selectedDay !== null) {
+              const c = allCoaches.find(x => String(x.id) === String(s.coach_id));
+              const cName = c ? getCoachName(c) : '';
+              const dueCfg = getStudentDueConfig(s, cName, targetMonth, targetYear);
+              dueDateMatch = (dueCfg.day === selectedDay);
+            }
+            
+            return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch && dueDateMatch;
+          });
 
          studs.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
        }
@@ -2860,12 +2888,23 @@ function initUI() {
            const time = s.session_time || s.class_time || s.batch_time || '';
            const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
            const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
-           const uniqueId = 'more-' + (s.id || 'err').replace(/[^a-zA-Z0-9]/g, '');
-
-           const pInfo = paymentsOfMonth[String(s.id).toLowerCase()];
-           const paidThisMonthHtml = pInfo
-             ? `<span class="text-success" style="cursor:pointer" onclick="viewPaymentHistory('${s.id}')">₹${pInfo.total.toLocaleString()} (${pInfo.count})</span>`
-             : '<span class="text-muted">₹0</span>';
+           const uniqueId = 'more-' + (s.id || 'err').replace(/[^a-zA-Z0-9]/g, '');            const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
+            const dueDay = String(dueCfg.day).padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const dueMonthName = months[targetMonth];
+            const dueDateString = `${dueDay}-${dueMonthName}-${targetYear}`;
+            
+            const dueDateObj = new Date(Date.UTC(targetYear, targetMonth, dueCfg.day, 23, 59, 59));
+            const isOverdue = dueDateObj < new Date() && status !== 'Paid';
+            
+            let dueDateHtml = '';
+            if (status === 'Paid') {
+              dueDateHtml = `<span class="text-success" style="opacity: 0.85; font-weight: 500; cursor:pointer" onclick="viewPaymentHistory('${s.id}')">${dueDateString}</span>`;
+            } else if (isOverdue) {
+              dueDateHtml = `<span class="text-danger" style="font-weight: 700;">⚠️ ${dueDateString}</span>`;
+            } else {
+              dueDateHtml = `<span style="color: var(--warning); font-weight: 600;">${dueDateString}</span>`;
+            }
 
             // Primary action buttons (always visible)
             let primaryActions = '';
@@ -2915,7 +2954,7 @@ function initUI() {
               <td>${time}</td>
               <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
               <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
-              <td>${paidThisMonthHtml}</td>
+              <td>${dueDateHtml}</td>
                <td style="overflow-x:auto;white-space:nowrap">
                   <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;min-width:0">
                    ${primaryActions}

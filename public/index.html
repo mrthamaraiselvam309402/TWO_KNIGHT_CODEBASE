@@ -214,6 +214,11 @@
                  style="width:160px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
           <button class="btn btn-outline-grey btn-sm" onclick="resetStudMonth()">This Month</button>
         </div>
+        <div style="display:flex; align-items:center; gap:8px">
+          <label style="font-size:12px; color:var(--ivory-dim)">Specific Due Date:</label>
+          <input type="date" id="f-due-date-stud" onchange="syncDueDateFilter(this.value)" 
+                 style="width:150px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+        </div>
         <button class="btn btn-outline-grey btn-sm" onclick="clearFilters()">Clear</button>
       </div>
       <div class="table-wrap">
@@ -230,7 +235,7 @@
               <th>Schedule</th>
               <th>Fee</th>
               <th>Status</th>
-              <th>Paid This Month</th>
+              <th>Due Date</th>
               <th>Actions</th>
             </tr>
           </thead>
