@@ -376,12 +376,24 @@
         <button class="tab-link" onclick="setBillTab('coaches', this)">Coach Salaries</button>
       </div>
 
-      <div class="filter-bar" style="margin-bottom:20px; background:var(--glass); padding:12px; border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; gap:12px">
+      <div class="filter-bar" style="margin-bottom:20px; background:var(--glass); padding:12px; border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
         <div style="display:flex; align-items:center; gap:8px">
           <span style="font-size:13px; color:var(--ivory-dim)">View Month:</span>
           <input type="month" id="f-bill-month" onchange="syncBillMonth(this.value)" style="width:160px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
         </div>
         <button class="btn btn-outline-grey btn-sm" onclick="resetBillMonth()">This Month</button>
+
+        <div style="display:flex; align-items:center; gap:8px; margin-left: 10px;">
+          <span style="font-size:13px; color:var(--ivory-dim)">Status:</span>
+          <select id="f-bill-status" onchange="renderBills()" style="padding:6px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px">
+            <option value="">All Statuses</option>
+            <option value="Paid">Paid</option>
+            <option value="Pending">Pending</option>
+            <option value="Due">Due</option>
+            <option value="Overdue">Overdue</option>
+          </select>
+        </div>
+
         <button class="btn btn-gold btn-sm" onclick="informAllCoaches()" style="margin-left: auto;">📢 Inform All Coaches</button>
       </div>
 
