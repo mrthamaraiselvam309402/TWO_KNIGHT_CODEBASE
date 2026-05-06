@@ -3198,6 +3198,7 @@ function initUI() {
                 payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
               })
             });
+            sendPaymentReceiptNotification(id, newFee);
           } catch (pe) { 
         console.warn('Payment logging failed during profile update:', pe); 
         toast('Warning: Payment record not created. Student status updated though.', 'warning');
@@ -3962,6 +3963,53 @@ function openCoachModal(id = null) {
     } catch (e) { toast('Error saving achievement', 'error'); }
   }
 
+  function sendPaymentReceiptNotification(studentId, amount) {
+    const s = allStudents.find(x => String(x.id) === String(studentId));
+    if (!s) return;
+    const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+    const coachName = coach ? getCoachName(coach) : 'N/A';
+    const receiptUrl = `${window.location.origin}/receipt.html?id=${studentId}&name=${encodeURIComponent(getStudentName(s))}&amount=${amount}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
+
+    const ordinalText = (n) => {
+      const s = ["th", "st", "nd", "rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+    const now = new Date();
+    const formattedDate = `${ordinalText(now.getDate())} ${now.toLocaleString('en-IN', { month: 'long' })} ${now.getFullYear()}`;
+    const billingMonthName = new Date(window.reportYear, window.reportMonth).toLocaleString('en-IN', { month: 'long' });
+    const billingCycleStr = `${billingMonthName} ${window.reportYear}`;
+
+    const message = `✅ PAYMENT RECEIVED — RECEIPT CONFIRMED 🧾✨
+
+Hello Sir/Madam 👋,
+
+We are happy to inform you that we have successfully received and recorded your chess class fee payment for ${cleanText(getStudentName(s))}! 💳🎉
+
+🧾 PAYMENT DETAILS:
+💵 Amount Paid: ₹${parseFloat(amount).toLocaleString()}
+🗓️ Billing Cycle: ${billingCycleStr}
+📆 Confirmed On: ${formattedDate}
+
+🔗 Download Your Official Receipt:
+${receiptUrl}
+
+Thank you for your prompt payment and continued support of Chesskidoo Academy! 🎓🏆
+
+Best regards,
+– Chesskidoo Academy 🌟👑`;
+
+    const studentPhone = getStudentPhone(s);
+    const parsed = parseStoredPhone(studentPhone);
+    if (parsed.localNumber) {
+      const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
+      const country = getCountryByCode(inferredCountry);
+      const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
+      window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(message)}`, '_blank');
+    }
+  }
+  window.sendPaymentReceiptNotification = sendPaymentReceiptNotification;
+
   window.markPaid = async function (id, amount, method = 'Cash', desc = 'Monthly Tuition Fee') {
     try {
       const s = allStudents.find(x => String(x.id) === String(id));
@@ -4003,28 +4051,7 @@ function openCoachModal(id = null) {
       renderBills();
 
       // 3. Auto-Notify Parent with Receipt Link
-      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
-      const coachName = coach ? getCoachName(coach) : 'N/A';
-      const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(getStudentName(s))}&amount=${amt}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
-
-      const message = `✅ Hello Sir/Madam,
-
-This is to inform you about the chess class fee payment you have completed for ${cleanText(getStudentName(s))} (INR ${amt.toLocaleString()}).
-
-Here is your receipt link for download:
-${receiptUrl}
-
-Thank you for your continued support and cooperation.
-- Chesskidoo Academy`;
-
-            const studentPhone = getStudentPhone(s);
-      const parsed = parseStoredPhone(studentPhone);
-      if (parsed.localNumber) {
-        const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
-        const country = getCountryByCode(inferredCountry);
-        const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
-        window.open(`https://wa.me/${dialCode}${parsed.localNumber}?text=${encodeURIComponent(message)}`, '_blank');
-      }
+      sendPaymentReceiptNotification(id, amt);
     } catch (e) { toast('Failed to process payment', 'error'); }
   };
 
