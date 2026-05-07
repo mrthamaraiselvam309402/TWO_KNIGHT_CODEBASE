@@ -209,7 +209,7 @@
           const diffTime = dueDateObj.getTime() - today.getTime();
           daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         }
-        if (daysLeft > 5) return;
+        if (daysLeft > 4) return;
       }
 
       const cid = s.coach_id;
