@@ -1974,7 +1974,7 @@ function initUI() {
     const sidebar = $('sidebar');
     const overlay = $('sidebar-overlay');
     const main = document.querySelector('.main');
-    if (window.innerWidth <= 768) {
+    if (window.innerWidth <= 1024) {
       sidebar.classList.toggle('open');
       if (sidebar.classList.contains('open')) overlay.classList.add('active');
       else overlay.classList.remove('active');
@@ -6220,6 +6220,22 @@ Best regards,
     `;
     openModal('notification-modal');
   }
+
+  function toggleMobileFilters() {
+    const bar = document.getElementById('student-filter-bar');
+    if (bar) {
+      bar.classList.toggle('active');
+      const btn = document.getElementById('filter-toggle-btn');
+      if (bar.classList.contains('active')) {
+        btn.style.background = 'rgba(232,168,48,0.15)';
+        btn.style.borderColor = 'var(--gold)';
+      } else {
+        btn.style.background = 'transparent';
+        btn.style.borderColor = 'var(--border)';
+      }
+    }
+  }
+  window.toggleMobileFilters = toggleMobileFilters;
 
   window.sendPaymentReminder = sendPaymentReminder;
   window.showNotifications = showNotifications;

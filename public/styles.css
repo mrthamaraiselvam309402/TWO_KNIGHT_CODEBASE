@@ -827,6 +827,91 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
 }
 
 @media (max-width: 768px) {
+  /* ── PREMIUM MOBILE TOP-BAR FLEX WRAPPING ── */
+  .top-bar {
+    flex-wrap: wrap !important;
+    padding: 12px 16px !important;
+    gap: 12px 0 !important;
+  }
+  .page-title {
+    width: auto !important;
+    font-size: 18px !important;
+    gap: 12px !important;
+  }
+  .top-nav-right {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-top: 4px !important;
+  }
+  #top-btn-area {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  #top-btn-area .btn {
+    flex: 1 1 auto !important;
+    text-align: center !important;
+    font-size: 11px !important;
+    padding: 8px 12px !important;
+    white-space: nowrap !important;
+    height: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* ── COMPACT ADAPTIVE STAT CARDS GRID ── */
+  .dash-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+  .card {
+    padding: 14px 16px !important;
+    border-radius: 12px !important;
+  }
+  .stat-label {
+    font-size: 9px !important;
+    letter-spacing: 1px !important;
+    margin-bottom: 4px !important;
+  }
+  .stat-value {
+    font-size: 20px !important;
+  }
+
+  /* ── COLLAPSIBLE FILTERS PANEL SYSTEM ── */
+  #filter-toggle-btn {
+    display: flex !important;
+  }
+  #student-filter-bar {
+    display: none !important;
+    width: 100% !important;
+  }
+  #student-filter-bar.active {
+    display: flex !important;
+    animation: slideDownFade 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .filter-bar select, .filter-bar input, .filter-bar button {
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+    min-width: 110px !important;
+  }
+
+  @keyframes slideDownFade {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .page-title { font-size: 20px; }
 
   .profile-hdr { padding: 24px; flex-direction: column; align-items: center; text-align: center; gap: 20px; }
@@ -834,7 +919,6 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
   .profile-actions { width: 100%; justify-content: center; flex-direction: column; }
   .profile-actions .btn { width: 100%; }
 
-  .stat-value { font-size: 22px; }
   .hero-img { height: 160px; }
 
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; margin: 0 -10px; padding: 0 10px; width: calc(100% + 20px); }

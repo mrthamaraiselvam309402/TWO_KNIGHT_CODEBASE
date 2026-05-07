@@ -10,7 +10,7 @@
   <!-- Force UTF-8 encoding for all browsers including Edge -->
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <link href="/fonts/fonts.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=2026-05-07_v01"/>
+  <link rel="stylesheet" href="styles.css?v=2026-05-07_v02"/>
 
    <!-- Local Libraries (self-hosted) -->
    <script src="lib/chart.umd.min.js"></script>
@@ -204,8 +204,16 @@
 
     <!-- Students -->
     <div id="page-stud" class="page admin-only">
-      <div class="filter-bar">
-        <input type="text" id="f-search" placeholder="Search Student Name..." oninput="renderStudents()" style="flex:1;min-width:200px">
+      <!-- ALWAYS VISIBLE MAIN ROW -->
+      <div class="filter-main-row" style="display:flex; gap:12px; margin-bottom:12px; align-items:center; width:100%">
+        <input type="text" id="f-search" placeholder="Search Student Name..." oninput="renderStudents()" style="flex:1; min-width:180px; padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px">
+        <button type="button" class="btn btn-outline-amber" id="filter-toggle-btn" onclick="toggleMobileFilters()" style="display:none; gap:6px; align-items:center; height:42px; padding:0 16px">
+          <span>⚙️</span> <span style="font-size:13px">Filters</span>
+        </button>
+      </div>
+
+      <!-- COLLAPSIBLE ADVANCED FILTER BAR -->
+      <div class="filter-bar" id="student-filter-bar">
         <select id="f-coach" onchange="renderStudents()"><option value="">All Coaches</option></select>
         <select id="f-session" onchange="renderStudents()"><option value="">All Sessions</option><option value="Group">Group</option><option value="Single">Single</option></select>
         <select id="f-status" onchange="renderStudents()"><option value="">All Payment Status</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option><option value="Overdue">Overdue</option></select>
@@ -215,20 +223,20 @@
         <button class="btn btn-outline-amber btn-sm" onclick="informAllDueStudents()">📢 Notify Due</button>
         <button class="btn btn-outline-danger btn-sm" onclick="bulkDeleteStudents()">🗑️ Bulk Delete</button>
          <div style="display:flex; align-items:center; gap:8px">
-           <label style="font-size:12px; color:var(--ivory-dim)">Billing Month:</label>
+           <label style="font-size:12px; color:var(--ivory-dim)">Billing:</label>
            <input type="month" id="f-bill-month-stud" onchange="syncStudMonth(this.value)" 
-                  style="width:160px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+                  style="width:140px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
            <button class="btn btn-outline-grey btn-sm" onclick="resetStudMonth()">This Month</button>
          </div>
          <div style="display:flex; align-items:center; gap:8px">
-           <label style="font-size:12px; color:var(--ivory-dim)">Due Date:</label>
+           <label style="font-size:12px; color:var(--ivory-dim)">Due:</label>
            <input type="date" id="f-due-date-stud" onchange="syncDueDateFilter(this.value)" 
-                  style="width:150px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+                  style="width:130px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
          </div>
          <div style="display:flex; align-items:center; gap:8px">
-           <label style="font-size:12px; color:var(--ivory-dim)">Enroll Date:</label>
+           <label style="font-size:12px; color:var(--ivory-dim)">Enroll:</label>
            <input type="date" id="f-enroll-date-stud" onchange="syncEnrollDateFilter(this.value)" 
-                  style="width:150px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+                  style="width:130px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
          </div>
         <button class="btn btn-outline-grey btn-sm" onclick="clearFilters()">Clear</button>
       </div>
