@@ -290,9 +290,9 @@
       };
       const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-      let msg = `${EMOJI.warning} *CHESSKIDOO ACADEMY – FEE AUDIT REPORT* ${EMOJI.chart}\n\n`;
+      let msg = `${EMOJI.warning} CHESSKIDOO ACADEMY – FEE AUDIT REPORT ${EMOJI.chart}\n\n`;
       msg += `Hello Coach ${cleanText(coach.name || 'Coach').toUpperCase()} ${EMOJI.teacher},\n\n`;
-      msg += `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle ${EMOJI.calendar}:\n\n`;
+      msg += `The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle ${EMOJI.calendar}:\n\n`;
 
        const studentLines = [];
        studentData.forEach(({ student: s, status, dueDay }) => {
@@ -300,17 +300,17 @@
          const label = (status === 'Due' || status === 'Overdue') ? `${EMOJI.siren} ARREARS` : `${EMOJI.pending} PENDING`;
          const sName = cleanText(getName(s).toUpperCase());
          const dueDateStr = `${getOrdinal(dueDay)} ${today.toLocaleDateString('en-IN', { month: 'long' })} ${targetYear}`;
-         studentLines.push(`${EMOJI.alert} *${sName}* — ${label} (Due: ${dueDateStr})`);
+         studentLines.push(`${EMOJI.alert} ${sName} — ${label} (Due: ${dueDateStr})`);
        });
       msg += studentLines.join('\n') + '\n\n';
 
       msg += `Please coordinate with the guardians to ensure these balances are settled ${EMOJI.handshake}.\n`;
-      msg += `*Last Date to Pay:* ${lastDateToPayStr} ${EMOJI.spiral_calendar}\n\n`;
-      msg += `${EMOJI.memo} *Note:*\n\n`;
-      msg += `${EMOJI.siren} *ARREARS* = Unpaid fees from previous months\n`;
-      msg += `${EMOJI.pending} *PENDING* = Current month's unpaid fee\n\n`;
+      msg += `Last Date to Pay: ${lastDateToPayStr} ${EMOJI.spiral_calendar}\n\n`;
+      msg += `${EMOJI.memo} Note:\n\n`;
+      msg += `${EMOJI.siren} ARREARS = Unpaid fees from previous months\n`;
+      msg += `${EMOJI.pending} PENDING = Current month's unpaid fee\n\n`;
       msg += `Regards,\n`;
-      msg += `*Administrative Team* | Chesskidoo Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
+      msg += `Administrative Team | Chesskidoo Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
 
             const parsed = window.parseStoredPhone ? window.parseStoredPhone(phone) : { countryCode: 'IN', localNumber: phone };
       const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (coach.country_code || 'IN');

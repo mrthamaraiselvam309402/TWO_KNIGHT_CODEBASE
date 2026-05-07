@@ -737,18 +737,18 @@
       return `${EMOJI.alert} ${sName} — ${label} (Due: ${dueDateStr})`;
     });
 
-    let msg = `${EMOJI.warning} *CHESSKIDOO ACADEMY – FEE AUDIT REPORT* ${EMOJI.chart}\n\n` +
+    let msg = `${EMOJI.warning} CHESSKIDOO ACADEMY – FEE AUDIT REPORT ${EMOJI.chart}\n\n` +
         `Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} ${EMOJI.teacher},\n\n` +
-        `The following students under your mentorship have an outstanding balance for the *${dateStr}* billing cycle ${EMOJI.calendar}:\n\n` +
+        `The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle ${EMOJI.calendar}:\n\n` +
         studentLines.join('\n') +
         `\n\n` +
         `Please coordinate with the guardians to ensure these balances are settled ${EMOJI.handshake}.\n` +
-        `*Last Date to Pay:* ${lastDateToPayStr} ${EMOJI.spiral_calendar}\n\n` +
-        `${EMOJI.memo} *Note:*\n\n` +
-        `${EMOJI.siren} *ARREARS* = Unpaid fees from previous months\n` +
-        `${EMOJI.pending} *PENDING* = Current month's unpaid fee\n\n` +
+        `Last Date to Pay: ${lastDateToPayStr} ${EMOJI.spiral_calendar}\n\n` +
+        `${EMOJI.memo} Note:\n\n` +
+        `${EMOJI.siren} ARREARS = Unpaid fees from previous months\n` +
+        `${EMOJI.pending} PENDING = Current month's unpaid fee\n\n` +
         `Regards,\n` +
-        `*Administrative Team* | Chesskidoo Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
+        `Administrative Team | Chesskidoo Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
 
     const phone = c.phone || c.contact || '0000000000';
     const parsed = parseStoredPhone(phone);
@@ -6253,5 +6253,5 @@ Best regards,
   window.getCountryByCode = getCountryByCode;
   window.COUNTRY_CODES = COUNTRY_CODES;
   window.getStudentDueConfig = getStudentDueConfig;
-  if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.7 (Excel & Smart Coach Priority)';
+  if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.8 (Clean Messages & Excel)';
 })();
