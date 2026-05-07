@@ -679,8 +679,8 @@
       const dueDate = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
       const daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-      // For Pending status, only include if due within 5 days
-      if (status === 'Pending' && daysLeft > 5) return null;
+      // For Pending status, only include if due within 4 days (upcoming)
+      if (status === 'Pending' && daysLeft > 4) return null;
 
       return { student: s, status, dueDate, daysLeft, dueDay: dueCfg.day };
     }).filter(item => item !== null);
@@ -702,7 +702,7 @@
     const pending = pendingWithDates.map(item => item.student);
 
     if (pending.length === 0) {
-      if (!silent) toast(`No pending/due fees (or within 5-day deadline) for students under ${getCoachName(c)}`, 'info');
+      if (!silent) toast(`No pending/due fees (or within 4-day deadline) for students under ${getCoachName(c)}`, 'info');
       return;
     }
 
@@ -6253,5 +6253,5 @@ Best regards,
   window.getCountryByCode = getCountryByCode;
   window.COUNTRY_CODES = COUNTRY_CODES;
   window.getStudentDueConfig = getStudentDueConfig;
-  if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.6 (Excel & UTF-8 Escaped)';
+  if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.7 (Excel & Smart Coach Priority)';
 })();
