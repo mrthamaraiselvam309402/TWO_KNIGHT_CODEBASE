@@ -3009,6 +3009,7 @@ function initUI() {
              if (status === 'Paid') {
                 primaryActions = `
                   <div style="display:flex;gap:4px;flex-wrap:nowrap">
+                  <button class="btn btn-gold btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="sendPaymentReceiptNotification('${s.id}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                   <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
@@ -4342,7 +4343,7 @@ Best regards,
              method: 'PUT',
              body: JSON.stringify({ payment_status: 'Paid' })
            });
-           toast('Marked as Paid with transaction record', 'success');
+           toast('Marked as Paid with transaction record', 'success'); sendPaymentReceiptNotification(id, fee);
          }
        }
 
