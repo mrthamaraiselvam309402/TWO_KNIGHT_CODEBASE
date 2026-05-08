@@ -146,58 +146,76 @@
 
     <!-- Dashboard -->
     <div id="page-dash" class="page admin-only">
-       <img src="/images/hero.jpg" class="hero-img" alt="Chess">
-      <div class="dash-grid">
-        <div class="card card-clickable" onclick="setPage('stud')"><div class="stat-label">Total Students</div><div class="stat-value" id="s-total">—</div></div>
-        <div class="card"><div class="stat-label">Avg Academy ELO</div><div class="stat-value" id="s-elo">—</div></div>
-        <div class="card card-clickable" onclick="setPage('coach-mgmt')"><div class="stat-label">Active Coaches</div><div class="stat-value" id="s-coaches">—</div></div>
+      <!-- Premium Dashboard Tabs -->
+      <div class="tabs-nav" style="margin-bottom: 24px; border-bottom: 1px solid var(--border);">
+        <button class="tab-link active" onclick="setDashTab('ops', this)" style="display: flex; align-items: center; gap: 8px;">📊 Operations & Growth</button>
+        <button class="tab-link" onclick="setDashTab('finance', this)" style="display: flex; align-items: center; gap: 8px;">💰 Financials & Billing</button>
       </div>
-      <div class="dash-grid" style="margin-bottom:32px">
-        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Collected Revenue</div><div class="stat-value text-success" id="s-rev">—</div></div>
-        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Revenue Growth (MoM)</div><div class="stat-value" id="s-due">—</div></div>
-        <div class="card"><div class="stat-label">Active Enrollments</div><div class="stat-value" style="color:var(--emerald)" id="s-active-enroll">—</div></div>
+
+      <!-- TAB 1: OPERATIONS & GROWTH -->
+      <div id="dash-tab-ops" class="dash-tab-content active">
+        <img src="/images/hero.jpg" class="hero-img" alt="Chess">
+        
+        <div class="dash-grid" style="margin-bottom:24px">
+          <div class="card card-clickable" onclick="setPage('stud')"><div class="stat-label">Total Students</div><div class="stat-value" id="s-total">—</div></div>
+          <div class="card"><div class="stat-label">Avg Academy ELO</div><div class="stat-value" id="s-elo">—</div></div>
+          <div class="card card-clickable" onclick="setPage('coach-mgmt')"><div class="stat-label">Active Coaches</div><div class="stat-value" id="s-coaches">—</div></div>
+        </div>
+        <div class="dash-grid" style="margin-bottom:32px">
+          <div class="card"><div class="stat-label">Active Enrollments</div><div class="stat-value" style="color:var(--emerald)" id="s-active-enroll">—</div></div>
+          <div class="card"><div class="stat-label">Group Sessions</div><div class="stat-value" id="s-group">—</div></div>
+          <div class="card"><div class="stat-label">Single Sessions</div><div class="stat-value" id="s-single">—</div></div>
+        </div>
+
+        <!-- Golden State: Attendance Insights -->
+        <h3 style="color:var(--gold);margin-bottom:18px;font-family:var(--font-head);letter-spacing:1px">Today's Attendance Insights</h3>
+        <div class="dash-grid" style="margin-bottom:32px">
+          <div class="card"><div class="stat-label">Present Today</div><div class="stat-value text-success" id="s-att-present">0</div></div>
+          <div class="card"><div class="stat-label">Absent Today</div><div class="stat-value text-danger" id="s-att-absent">0</div></div>
+          <div class="card"><div class="stat-label">Class Pending</div><div class="stat-value" style="color:var(--surface3)" id="s-att-pending">0</div></div>
+        </div>
+
+        <div class="dash-charts" style="margin-bottom: 24px;">
+          <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Enrollment Trend</h3><canvas id="chartRevenue" height="160"></canvas></div>
+          <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Coach Load</h3><canvas id="chartCoach" height="260"></canvas></div>
+        </div>
+        <div class="dash-charts">
+          <div class="card" style="grid-column: 1/-1;"><h3 style="margin-bottom:18px;color:var(--gold)">Session Distribution</h3><canvas id="chartSession" height="120"></canvas></div>
+        </div>
       </div>
-      <div style="height: 20px;"></div>
-      <!-- Financial Analytics Cards -->
-      <div class="dash-grid" style="margin-bottom:32px">
-        <div class="card"><div class="stat-label">Projected Revenue</div><div class="stat-value" style="color:var(--blue)" id="s-total-revenue">—</div></div>
-        <div class="card"><div class="stat-label">Total Coach Cost</div><div class="stat-value" style="color:var(--danger)" id="s-total-cost">—</div></div>
-        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Net Profit</div><div class="stat-value" style="color:var(--success)" id="s-profit">—</div></div>
-      </div>
-      <div class="dash-grid" style="margin-bottom:32px">
-            <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Historical Arrears</div><div class="stat-value text-danger" id="s-last-due">₹0</div></div>
-        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Month Pending</div><div class="stat-value" style="color:var(--gold)" id="s-curr-pending">₹0</div></div>
-        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Total Outstanding</div><div class="stat-value text-danger" id="s-total-outstanding">₹0</div></div>
-      </div>
-      <div class="dash-grid" style="margin-bottom:32px">
-        <div class="card"><div class="stat-label">Collection Rate</div><div class="stat-value" style="color:var(--blue)" id="s-rate">—</div></div>
-        <div class="card"><div class="stat-label">Group Sessions</div><div class="stat-value" id="s-group">—</div></div>
-        <div class="card"><div class="stat-label">Single Sessions</div><div class="stat-value" id="s-single">—</div></div>
-      </div>
-      
-      <!-- Golden State: Attendance Insights -->
-      <h3 style="color:var(--gold);margin-bottom:18px;font-family:var(--font-head);letter-spacing:1px">Today's Attendance Insights</h3>
-      <div class="dash-grid" style="margin-bottom:32px">
-        <div class="card"><div class="stat-label">Present Today</div><div class="stat-value text-success" id="s-att-present">0</div></div>
-        <div class="card"><div class="stat-label">Absent Today</div><div class="stat-value text-danger" id="s-att-absent">0</div></div>
-        <div class="card"><div class="stat-label">Class Pending</div><div class="stat-value" style="color:var(--surface3)" id="s-att-pending">0</div></div>
-      </div>
-      <div class="dash-charts">
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Enrollment Trend</h3><canvas id="chartRevenue" height="160"></canvas></div>
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Coach Load</h3><canvas id="chartCoach" height="260"></canvas></div>
-      </div>
-      <div class="dash-charts">
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Payment Status</h3><canvas id="chartPayment" height="160"></canvas></div>
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Session Distribution</h3><canvas id="chartSession" height="160"></canvas></div>
-      </div>
-      <!-- Coach Financial Table -->
-      <div style="margin-top:32px">
-        <h3 style="color:var(--gold);margin-bottom:18px">Coach Financial Analytics</h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Coach</th><th>Students</th><th>Revenue</th><th>Pending</th><th>Salary Cost</th><th>Net Profit</th><th>Potential Net</th><th>ROI / Pot.ROI</th><th>Action</th></tr></thead>
-            <tbody id="coach-finance-body"><tr><td colspan="9"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
-          </table>
+
+      <!-- TAB 2: FINANCIALS & BILLING -->
+      <div id="dash-tab-finance" class="dash-tab-content">
+        <div class="dash-grid" style="margin-bottom:24px">
+          <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Collected Revenue</div><div class="stat-value text-success" id="s-rev">—</div></div>
+          <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Revenue Growth (MoM)</div><div class="stat-value" id="s-due">—</div></div>
+          <div class="card"><div class="stat-label">Collection Rate</div><div class="stat-value" style="color:var(--blue)" id="s-rate">—</div></div>
+        </div>
+        <div class="dash-grid" style="margin-bottom:24px">
+          <div class="card"><div class="stat-label">Projected Revenue</div><div class="stat-value" style="color:var(--blue)" id="s-total-revenue">—</div></div>
+          <div class="card"><div class="stat-label">Total Coach Cost</div><div class="stat-value" style="color:var(--danger)" id="s-total-cost">—</div></div>
+          <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Net Profit</div><div class="stat-value" style="color:var(--success)" id="s-profit">—</div></div>
+        </div>
+        <div class="dash-grid" style="margin-bottom:32px">
+          <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Historical Arrears</div><div class="stat-value text-danger" id="s-last-due">₹0</div></div>
+          <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Month Pending</div><div class="stat-value" style="color:var(--gold)" id="s-curr-pending">₹0</div></div>
+          <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Total Outstanding</div><div class="stat-value text-danger" id="s-total-outstanding">₹0</div></div>
+        </div>
+
+        <div class="dash-charts" style="margin-bottom: 32px;">
+          <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Collection Split & Status</h3><canvas id="chartPayment" height="160"></canvas></div>
+          <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Monthly Business Growth (6m)</h3><canvas id="chartFinanceHistory" height="160"></canvas></div>
+        </div>
+
+        <!-- Coach Financial Table -->
+        <div style="margin-top:32px">
+          <h3 style="color:var(--gold);margin-bottom:18px;font-family:var(--font-head);letter-spacing:1px">Coach Financial Performance</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Coach</th><th>Students</th><th>Revenue</th><th>Pending</th><th>Salary Cost</th><th>Net Profit</th><th>Potential Net</th><th>ROI / Pot.ROI</th><th>Action</th></tr></thead>
+              <tbody id="coach-finance-body"><tr><td colspan="9"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

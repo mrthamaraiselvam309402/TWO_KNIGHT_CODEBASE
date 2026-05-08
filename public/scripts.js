@@ -269,15 +269,46 @@
   // ── NEW ADVANCED LOGIC ──
   function setChildTab(tabId, btn) {
     document.querySelectorAll('.child-tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+    if (btn) {
+      const parentNav = btn.parentElement;
+      if (parentNav) {
+        parentNav.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+      }
+      btn.classList.add('active');
+    }
     const target = document.getElementById('child-tab-' + tabId);
     if (target) target.classList.add('active');
-    if (btn) btn.classList.add('active');
     if (tabId === 'growth') renderChildGrowth();
     if (tabId === 'learning') renderChildResources();
     if (tabId === 'billing') renderChildBilling();
     if (tabId === 'events') renderChildEvents();
   }
+
+  function setDashTab(tabId, btn) {
+    document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
+    if (btn) {
+      const parentNav = btn.parentElement;
+      if (parentNav) {
+        parentNav.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+      }
+      btn.classList.add('active');
+    }
+    const target = document.getElementById('dash-tab-' + tabId);
+    if (target) {
+      target.classList.add('active');
+      // Force Chart.js to recompute dimensions now that the container is visible (display: block)
+      setTimeout(() => {
+        if (window.chartInstances) {
+          Object.values(window.chartInstances).forEach(chart => {
+            if (chart && typeof chart.resize === 'function') {
+              chart.resize();
+            }
+          });
+        }
+      }, 50);
+    }
+  }
+  window.setDashTab = setDashTab;
 
   function renderChildEvents() {
     const grid = document.getElementById('child-events-grid');
@@ -2887,6 +2918,81 @@ function initUI() {
           indexAxis: 'y',
           plugins: { legend: { display: false } },
           scales: { x: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { precision: 0 } }, y: { grid: { display: false } } }
+        }
+      });
+    }
+
+    const financeHistoryCtx = $('chartFinanceHistory');
+    if (financeHistoryCtx) {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const currentYear = new Date().getUTCFullYear();
+      const currentMonth = new Date().getUTCMonth();
+      
+      const labels = [];
+      const paidData = [];
+      const outstandingData = [];
+
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(Date.UTC(currentYear, currentMonth - i, 1));
+        const m = d.getUTCMonth();
+        const y = d.getUTCFullYear();
+        labels.push(`${months[m]} ${y}`);
+
+        // Compute paid revenue for this specific month
+        let paidVal = 0;
+        const paidSet = new Set();
+        (allPayments || []).forEach(p => {
+          const pDate = new Date(p.payment_date || p.created_at);
+          if (pDate.getUTCMonth() === m && pDate.getUTCFullYear() === y && p.status === 'paid') {
+            const sid = String(p.student_id).toLowerCase();
+            if (paidSet.has(sid)) return;
+            paidSet.add(sid);
+            const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+            paidVal += s ? getStudentMonthlyFee(s) : (parseFloat(p.amount) || 0);
+          }
+        });
+        paidData.push(paidVal);
+
+        // Compute outstanding revenue for this specific month
+        let outstandingVal = 0;
+        allStudents.forEach(s => {
+          if ((s.status || 'active').toLowerCase() === 'archived') return;
+          const status = getStudentPaymentStatus(s, m, y);
+          if (status !== 'Paid') {
+            outstandingVal += getStudentMonthlyFee(s) || 0;
+          }
+        });
+        outstandingData.push(outstandingVal);
+      }
+
+      chartInstances.financeHistory = new Chart(financeHistoryCtx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Collected Revenue',
+              data: paidData,
+              backgroundColor: '#52c41a',
+              borderRadius: 4
+            },
+            {
+              label: 'Outstanding Amount',
+              data: outstandingData,
+              backgroundColor: '#ff4d4f',
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: value => '₹' + value.toLocaleString() }
+            }
+          }
         }
       });
     }
