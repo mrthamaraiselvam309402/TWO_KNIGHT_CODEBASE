@@ -4951,12 +4951,12 @@ Best regards,
     const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
     const name = getCoachName(c);
     const salary = getCoachSalary(c) || 0;
-    const msg = `🌟 *SALARY CREDITED SUCCESSFULLY* 🌟\n` +
-                `Hello Coach *${name}*,\n\n` +
-                `We are pleased to inform you that your salary of *₹${salary.toLocaleString()}* for this period has been successfully processed and credited to your account! 💳💸\n\n` +
+    const msg = `🌟 SALARY CREDITED SUCCESSFULLY 🌟\n` +
+                `Hello Coach ${name},\n\n` +
+                `We are pleased to inform you that your salary of ₹${salary.toLocaleString()} for this period has been successfully processed and credited to your account! 💳💸\n\n` +
                 `Thank you so much for your incredible dedication, training expertise, and mentorship. You make Chesskidoo Academy shine! 🏆🎓\n\n` +
                 `Warm regards,\n` +
-                `– *Chesskidoo Academy Team* 👑✨`;
+                `– Chesskidoo Academy Team 👑✨`;
     openWhatsApp(dialCode, parsed.localNumber, msg);
   }
 
