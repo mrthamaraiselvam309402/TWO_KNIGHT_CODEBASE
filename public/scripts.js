@@ -5288,6 +5288,17 @@ Best regards,
     if (previewBanner) {
       if (role === 'admin' || role === 'master') {
         previewBanner.style.setProperty('display', 'flex', 'important');
+        // Populate quick student switcher
+        const switcher = $('preview-student-switcher');
+        if (switcher) {
+          const activeStudents = (allStudents || [])
+            .filter(st => (st.status || 'active').toLowerCase() !== 'archived')
+            .sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
+
+          switcher.innerHTML = activeStudents.map(st => 
+            `<option value="${st.id}" ${String(st.id) === String(s.id) ? 'selected' : ''}>${escapeHtml(getStudentName(st))}</option>`
+          ).join('');
+        }
       } else {
         previewBanner.style.setProperty('display', 'none', 'important');
       }
@@ -6646,5 +6657,14 @@ Best regards,
   window.getCountryByCode = getCountryByCode;
   window.COUNTRY_CODES = COUNTRY_CODES;
   window.getStudentDueConfig = getStudentDueConfig;
+  function quickSwitchPreviewStudent(id) {
+    const s = allStudents.find(x => String(x.id) === String(id));
+    if (!s) return;
+    setCurrentStudent(s);
+    renderChild();
+    toast(`Switched preview context to ${getStudentName(s)}`, 'success');
+  }
+  window.quickSwitchPreviewStudent = quickSwitchPreviewStudent;
+
   if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.8 (Clean Messages & Excel)';
 })();
