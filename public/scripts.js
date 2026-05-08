@@ -3599,8 +3599,20 @@ function openCoachModal(id = null) {
   async function saveCoach() {
     const id = $('cm-id').value;
     const salaryVal = parseInt($('cm-salary').value) || 0;
-        const data = {
-      name: $('cm-name').value.trim(),
+    const name = $('cm-name').value.trim();
+    if (!name) { toast('Coach name is required', 'error'); return; }
+
+    const rawPhone = $('cm-phone').value.trim();
+    let fullPhone = rawPhone;
+    if (rawPhone) {
+      const countryCode = window.selectedCountryCodeCoach || 'IN';
+      const validation = validatePhoneNumber(rawPhone, countryCode);
+      if (!validation.valid) { toast(validation.error, 'error'); return; }
+      fullPhone = getFullInternationalPhoneDigits(rawPhone, countryCode);
+    }
+
+    const data = {
+      name: name,
       specialization: $('cm-spec').value.trim(),
       phone: fullPhone,
       email: $('cm-email').value.trim(),
@@ -3615,17 +3627,6 @@ function openCoachModal(id = null) {
       additional_details: $('cm-etc').value.trim(),
       photo_url: $('cm-photo').value.trim()
     };
-
-    if (!data.name) { toast('Coach name is required', 'error'); return; }
-
-        const rawPhone = $('cm-phone').value.trim();
-    let fullPhone = rawPhone;
-    if (rawPhone) {
-      const countryCode = window.selectedCountryCodeCoach || 'IN';
-      const validation = validatePhoneNumber(rawPhone, countryCode);
-      if (!validation.valid) { toast(validation.error, 'error'); return; }
-      fullPhone = getFullInternationalPhoneDigits(rawPhone, countryCode);
-    }
 
     try {
       let res;
