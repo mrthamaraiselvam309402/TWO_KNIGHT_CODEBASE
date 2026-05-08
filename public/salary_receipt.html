@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chesskidoo Academy - Official Salary Slip</title>
+  <link href="/fonts/fonts.css" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #10b981; /* Emerald compensation theme */
+      --primary-dark: #047857;
+      --accent: #d97706; /* Amber gold accents */
+      --bg-slate: #f8fafc;
+      --text-main: #0f172a;
+      --text-dim: #475569;
+      --border-sep: #e2e8f0;
+    }
+
+    body { 
+      background: var(--bg-slate); 
+      font-family: 'Cormorant Garamond', Georgia, serif; 
+      display: flex; 
+      flex-direction: column;
+      align-items: center; 
+      min-height: 100vh; 
+      padding: 40px 16px; 
+    }
+
+    .no-print-zone {
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-print {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .btn-print:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .receipt { 
+      background: #ffffff; 
+      width: 100%; 
+      max-width: 680px; 
+      border-radius: 4px; 
+      box-shadow: 0 15px 50px rgba(0,0,0,0.05); 
+      overflow: hidden; 
+      position: relative; 
+    }
+
+    .receipt-header { 
+      background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%); 
+      padding: 40px 48px 32px; 
+      text-align: center; 
+      position: relative; 
+    }
+
+    .receipt-header::after { 
+      content: ''; 
+      position: absolute; 
+      bottom: 0; 
+      left: 0; 
+      right: 0; 
+      height: 4px; 
+      background: repeating-linear-gradient(90deg, #fff2 0px, #fff2 8px, transparent 8px, transparent 16px); 
+    }
+
+    .academy-name { 
+      font-family: 'Syne', sans-serif; 
+      font-size: 32px; 
+      font-weight: 700; 
+      color: #ffffff; 
+      letter-spacing: 4px; 
+      text-transform: uppercase; 
+      margin-bottom: 8px; 
+    }
+
+    .academy-tagline { 
+      font-size: 14px; 
+      color: #d1fae5; 
+      letter-spacing: 1.5px; 
+      margin-bottom: 12px; 
+      font-style: italic; 
+    }
+
+    .academy-contact { 
+      font-family: 'DM Mono', monospace; 
+      font-size: 12px; 
+      color: #a7f3d0; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      gap: 20px; 
+      flex-wrap: wrap; 
+    }
+
+    .receipt-title-bar { 
+      padding: 20px 48px; 
+      text-align: center; 
+      border-bottom: 1px solid var(--border-sep); 
+    }
+
+    .receipt-title-bar h2 { 
+      font-family: 'Syne', sans-serif; 
+      font-size: 15px; 
+      font-weight: 700; 
+      letter-spacing: 5px; 
+      color: var(--text-main); 
+      text-transform: uppercase; 
+    }
+
+    .receipt-meta { 
+      display: flex; 
+      justify-content: space-between; 
+      padding: 16px 48px; 
+      border-bottom: 1px solid var(--border-sep); 
+      font-size: 14px; 
+    }
+
+    .label { color: #64748b; margin-right: 8px; }
+    .value { font-family: 'DM Mono', monospace; color: var(--text-main); font-weight: 500; }
+
+    .receipt-section { padding: 28px 48px; border-bottom: 1px solid var(--border-sep); position: relative; }
+    .section-title { 
+      font-family: 'Syne', sans-serif; 
+      font-size: 12px; 
+      font-weight: 700; 
+      letter-spacing: 3px; 
+      text-transform: uppercase; 
+      color: var(--primary-dark); 
+      margin-bottom: 20px; 
+      padding-bottom: 8px; 
+      border-bottom: 1px solid #d1fae5; 
+    }
+
+    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; font-size: 17px; }
+    .detail-row:not(:last-child) { border-bottom: 1px dashed #e2e8f0; }
+    .detail-label { color: var(--text-dim); font-size: 14px; }
+    .detail-value { color: var(--text-main); font-weight: 600; font-size: 15px; text-align: right; }
+    .detail-value.mono { font-family: 'DM Mono', monospace; }
+
+    .paid-stamp { 
+      position: absolute; 
+      right: 48px; 
+      top: 50%; 
+      transform: translateY(-50%) rotate(-15deg); 
+      font-family: 'Syne', sans-serif; 
+      font-size: 64px; 
+      font-weight: 700; 
+      color: rgba(16, 185, 129, 0.08); 
+      border: 6px solid rgba(16, 185, 129, 0.08); 
+      border-radius: 12px; 
+      padding: 8px 24px; 
+      letter-spacing: 6px; 
+      pointer-events: none; 
+    }
+
+    .receipt-total { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      padding: 24px 48px; 
+      background: #f0fdf4; 
+      border-top: 2px solid var(--primary); 
+    }
+
+    .total-label { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-main); }
+    .total-amount { font-family: 'DM Mono', monospace; font-size: 32px; font-weight: 500; color: var(--text-main); }
+    .total-amount .currency { font-size: 22px; color: var(--primary-dark); margin-right: 4px; }
+
+    .total-words { 
+      padding: 0 48px 24px; 
+      background: #f0fdf4; 
+      font-size: 14px; 
+      color: var(--text-dim); 
+      font-style: italic; 
+      border-bottom: 2px solid var(--border-sep); 
+    }
+
+    .receipt-footer { padding: 30px 48px; text-align: center; background: #fafafa; }
+    .receipt-footer p { font-size: 12px; color: #94a3b8; line-height: 2; }
+    .receipt-footer .thank-you { font-size: 16px; font-style: italic; color: var(--primary-dark); margin-top: 10px; }
+
+    @media print {
+      body { background: white; padding: 0; min-height: 0; }
+      .no-print-zone { display: none; }
+      .receipt { box-shadow: none; max-width: 100%; border: none; }
+      .receipt-header { -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print-zone">
+    <button class="btn-print" onclick="window.print()">🖨️ Download / Print Payslip</button>
+  </div>
+
+  <div class="receipt">
+    <div class="receipt-header">
+      <div class="academy-name">Chesskidoo Academy</div>
+      <div class="academy-tagline">Building Champions, One Move at a Time</div>
+      <div class="academy-contact">
+        <span>📞 +91 88257 31470</span>
+        <span>📧 Chesskidoo37@gmail.com</span>
+      </div>
+    </div>
+
+    <div class="receipt-title-bar"><h2>Salary Credit Receipt</h2></div>
+
+    <div class="receipt-meta">
+      <div><span class="label">Reference No:</span><span class="value" id="disp-receipt-id">TXN-000000</span></div>
+      <div><span class="label">Credit Date:</span><span class="value" id="disp-date">-- / -- / ----</span></div>
+    </div>
+
+    <div class="receipt-section">
+      <div class="paid-stamp">CREDITED</div>
+      <div class="section-title">Employee Details</div>
+      <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value" id="disp-name">Loading...</span></div>
+      <div class="detail-row"><span class="detail-label">Role</span><span class="detail-value" id="disp-role">Chess Coach</span></div>
+      <div class="detail-row"><span class="detail-label">Designation</span><span class="detail-value" id="disp-specialty">Mentor</span></div>
+    </div>
+
+    <div class="receipt-section">
+      <div class="section-title">Compensation Breakdown</div>
+      <div class="detail-row"><span class="detail-label">Monthly Remuneration</span><span class="detail-value mono" id="disp-amount-row">₹ 0</span></div>
+      <div class="detail-row"><span class="detail-label">Disbursement Mode</span><span class="detail-value" id="disp-method">Online Transfer</span></div>
+      <div class="detail-row"><span class="detail-label">Transaction Status</span><span class="detail-value"><span style="color:#059669;font-weight:700">✓ SUCCESS (CREDITED)</span></span></div>
+    </div>
+
+    <div class="receipt-total">
+      <span class="total-label">Total Amount Disbursed</span>
+      <span class="total-amount"><span class="currency">₹</span><span id="disp-total">0</span></span>
+    </div>
+    <div class="total-words" id="disp-words">Zero Rupees Only</div>
+
+    <div class="receipt-footer">
+      <p>This is a computer-generated salary credit certification slip.</p>
+      <p>For pay queries, contact accounts@chesskidoo.com</p>
+      <p class="thank-you">♟ &nbsp; Thank you for your leadership and dedication! &nbsp; ♟</p>
+    </div>
+  </div>
+
+  <script>
+    function numberToWords(num) {
+      const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+      const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+      if (num === 0) return 'Zero Rupees Only';
+      let words = '';
+      let n = num;
+      if (n >= 10000000) { words += getChunk(Math.floor(n / 10000000)) + ' Crore '; n %= 10000000; }
+      if (n >= 100000) { words += getChunk(Math.floor(n / 100000)) + ' Lakh '; n %= 100000; }
+      if (n >= 1000) { words += getChunk(Math.floor(n / 1000)) + ' Thousand '; n %= 1000; }
+      if (n > 0) words += getChunk(n);
+      function getChunk(num) {
+        if (num < 20) return ones[num];
+        if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + ones[num % 10] : '');
+        return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 ? ' ' + getChunk(num % 100) : '');
+      }
+      return words.trim() + ' Rupees Only';
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id') || 'COACH';
+    const name = params.get('name') || 'Coach Name';
+    const amount = parseInt(params.get('amount')) || 0;
+    const dateStr = params.get('date');
+    const role = params.get('role') || 'Chess Coach';
+    const specialty = params.get('specialty') || 'Mentor';
+    const method = params.get('method') || 'Online Transfer';
+
+    const date = dateStr ? new Date(dateStr) : new Date();
+    
+    document.getElementById('disp-receipt-id').textContent = 'TXN-C' + id.slice(-5).toUpperCase();
+    document.getElementById('disp-date').textContent = date.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' }).replace(/\//g, ' / ');
+    document.getElementById('disp-name').textContent = name;
+    document.getElementById('disp-role').textContent = role;
+    document.getElementById('disp-specialty').textContent = specialty;
+    document.getElementById('disp-amount-row').textContent = '₹ ' + amount.toLocaleString();
+    document.getElementById('disp-method').textContent = method;
+    document.getElementById('disp-total').textContent = amount.toLocaleString();
+    document.getElementById('disp-words').textContent = numberToWords(amount);
+
+    if (params.has('print')) {
+      setTimeout(() => window.print(), 800);
+    }
+  </script>
+</body>
+</html>

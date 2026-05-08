@@ -4951,9 +4951,13 @@ Best regards,
     const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
     const name = getCoachName(c);
     const salary = getCoachSalary(c) || 0;
+    const receiptUrl = `${window.location.origin}/salary_receipt.html?id=${c.id}&name=${encodeURIComponent(name)}&amount=${salary}&role=${encodeURIComponent(c.specialty || 'Chess Coach')}&specialty=${encodeURIComponent(c.specialty || 'Chess Academy Mentor')}&method=Online%20Transfer`;
+
     const msg = `🌟 SALARY CREDITED SUCCESSFULLY 🌟\n` +
                 `Hello Coach ${name},\n\n` +
                 `We are pleased to inform you that your salary of ₹${salary.toLocaleString()} for this period has been successfully processed and credited to your account! 💳💸\n\n` +
+                `📄 View/Download your Official Salary Slip here:\n` +
+                `${receiptUrl}\n\n` +
                 `Thank you so much for your incredible dedication, training expertise, and mentorship. You make Chesskidoo Academy shine! 🏆🎓\n\n` +
                 `Warm regards,\n` +
                 `– Chesskidoo Academy Team 👑✨`;
