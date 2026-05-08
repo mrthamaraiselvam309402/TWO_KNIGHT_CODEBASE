@@ -5447,6 +5447,9 @@ Best regards,
     if ($('c-elo')) $('c-elo').textContent = getStudentRating(s);
     if ($('c-level')) $('c-level').textContent = getStudentLevel(s);
     if ($('p-av-wrap')) $('p-av-wrap').innerHTML = `<img src="${makeAvSrc(s)}" class="profile-av">`;
+    if ($('c-parent-name')) $('c-parent-name').textContent = s.parent_name || 'Not Provided';
+    if ($('c-parent-phone')) $('c-parent-phone').textContent = getStudentPhone(s) || 'Not Provided';
+    if ($('c-parent-email')) $('c-parent-email').textContent = getStudentEmail(s) || 'Not Provided';
 
     // Coach name
     const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
@@ -5469,6 +5472,48 @@ Best regards,
     if (loadingEl) loadingEl.style.display = 'none';
     if (contentEl) contentEl.style.display = 'block';
     setChildTab('overview');
+  }
+
+  function openStudentEditPortalModal() {
+    if (!currentStudent) return;
+    const s = currentStudent;
+    if ($('spe-name')) $('spe-name').value = getStudentName(s);
+    if ($('spe-parent-name')) $('spe-parent-name').value = s.parent_name || '';
+    if ($('spe-phone')) $('spe-phone').value = getStudentPhone(s);
+    if ($('spe-email')) $('spe-email').value = getStudentEmail(s);
+    openModal('student-portal-edit-modal');
+  }
+
+  async function saveStudentPortalDetails() {
+    if (!currentStudent) return;
+    const s = currentStudent;
+    const id = s.id;
+    const name = $('spe-name')?.value.trim();
+    const parent_name = $('spe-parent-name')?.value.trim();
+    const phone = $('spe-phone')?.value.trim();
+    const email = $('spe-email')?.value.trim();
+    if (!name) { toast('Student Name is required', 'error'); return; }
+    const payload = { name, parent_name, phone, parent_phone: phone, email };
+    try {
+      toast('Saving details...', 'info');
+      const res = await apiCall(`/api/students?id=${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      if (res.ok) {
+        toast('Details updated successfully!', 'success');
+        closeModals();
+        s.name = name;
+        s.parent_name = parent_name;
+        s.phone = phone;
+        s.parent_phone = phone;
+        s.email = email;
+        if (window.allStudents) {
+          const idx = window.allStudents.findIndex(x => String(x.id) === String(id));
+          if (idx !== -1) window.allStudents[idx] = { ...window.allStudents[idx], ...payload };
+        }
+        currentStudent = { ...s, ...payload };
+        renderChild();
+        loadAllData(true);
+      } else { toast('Failed to save details', 'error'); }
+    } catch (err) { console.error(err); toast('An error occurred', 'error'); }
   }
 
   function renderChildSkills(s) {
@@ -6638,6 +6683,8 @@ Best regards,
   window.clearFilters = clearFilters;
   window.renderStudents = renderStudents;
   window.viewStudent = viewStudent;
+  window.openStudentEditPortalModal = openStudentEditPortalModal;
+  window.saveStudentPortalDetails = saveStudentPortalDetails;
   window.openEdit = openEdit;
   window.updateStudent = updateStudent;
   window.openEnroll = openEnroll;

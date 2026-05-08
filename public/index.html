@@ -309,13 +309,17 @@
             <div id="p-av-wrap"></div>
             <div class="profile-details">
               <h1 id="c-name">—</h1>
-              <div class="profile-meta">
+              <div class="profile-meta" style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px;">
                 <span><b>Level:</b> <span id="c-level" class="text-gold">—</span></span>
                 <span><b>Coach:</b> <span id="c-coach">—</span></span>
+                <span><b>Parent:</b> <span id="c-parent-name">—</span></span>
+                <span><b>Phone:</b> <span id="c-parent-phone" style="font-family: monospace;">—</span></span>
+                <span><b>Email:</b> <span id="c-parent-email">—</span></span>
               </div>
             </div>
           </div>
           <div class="profile-actions">
+            <button class="btn btn-outline" onclick="openStudentEditPortalModal()" style="display: flex; align-items: center; gap: 6px;"><span style="font-size: 13px;">⚙️</span> Edit Details</button>
             <button class="btn btn-gold" onclick="openContactModal()">✉️ Message Coach</button>
             <button class="btn btn-outline" onclick="openModal('fb-modal')">📝 Feedback</button>
           </div>
@@ -1146,6 +1150,37 @@
     <div style="display:flex;gap:10px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
       <button class="btn btn-gold" style="flex:1" onclick="sendFeedback()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Student Portal Edit Modal -->
+<div class="modal" id="student-portal-edit-modal">
+  <div class="modal-box" style="max-width: 480px;">
+    <div class="modal-title" style="color:var(--gold)">Update Student Details</div>
+    
+    <div style="display:flex; flex-direction:column; gap:16px; margin: 20px 0;">
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Student Name</label>
+        <input type="text" id="spe-name" placeholder="Student Name" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+      </div>
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Parent Name</label>
+        <input type="text" id="spe-parent-name" placeholder="Parent Name" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+      </div>
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Parent Phone Number</label>
+        <input type="text" id="spe-phone" placeholder="Parent Phone Number" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+      </div>
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Parent Email</label>
+        <input type="email" id="spe-email" placeholder="Parent Email Address" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:20px;">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveStudentPortalDetails()">Save Details</button>
     </div>
   </div>
 </div>
