@@ -280,6 +280,18 @@
     <div id="page-child" class="page parent-only">
       <div id="child-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
       <div id="child-content" style="display:none">
+        <!-- Admin Preview Banner -->
+        <div id="preview-mode-banner" class="preview-banner" style="display: none; background: linear-gradient(135deg, rgba(218, 163, 62, 0.12), rgba(218, 163, 62, 0.04)); border: 1px solid var(--gold); padding: 14px 20px; border-radius: 12px; margin-bottom: 24px; justify-content: space-between; align-items: center; box-shadow: var(--shadow-amber); transition: all 0.3s ease;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 22px; filter: drop-shadow(0 2px 4px rgba(218,163,62,0.2));">👑</span>
+            <div>
+              <h4 style="color: var(--gold); margin: 0; font-size: 14px; font-weight: 700; font-family: var(--font-head); letter-spacing: 0.5px;">Admin Portal Preview</h4>
+              <p style="margin: 2px 0 0; font-size: 11.5px; color: var(--ivory-dim); opacity: 0.85;">Impersonating parent/student dashboard. Live view of analytics & learning resources.</p>
+            </div>
+          </div>
+          <button class="btn btn-gold btn-sm" onclick="setPage('stud')" style="display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-amber-sm);"><span style="font-size: 11px;">🔙</span> Back to Students</button>
+        </div>
+
         <div class="profile-hdr">
           <div class="profile-info">
             <div id="p-av-wrap"></div>
@@ -355,10 +367,60 @@
         </div>
 
         <div id="child-tab-billing" class="child-tab-content">
-          <div class="table-wrap">
+          <!-- Premium Revenue & Financial Stats -->
+          <div class="dash-grid" style="margin-bottom: 24px; margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+            <div class="card" style="border-left: 4px solid var(--emerald); background: linear-gradient(145deg, var(--bg2), rgba(16, 185, 129, 0.04)); box-shadow: var(--shadow);">
+              <div class="stat-label" style="text-transform: uppercase; font-size: 10px; letter-spacing: 1px; color: var(--ivory-dim);">Total Amount Paid</div>
+              <div class="stat-value text-success" id="cb-total-paid" style="font-size: 26px; font-weight: 800; margin: 6px 0 2px;">₹0</div>
+              <div class="stat-desc" id="cb-paid-count" style="font-size: 11px; color: var(--ivory-dim); opacity: 0.75;">0 transactions completed</div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--gold); background: linear-gradient(145deg, var(--bg2), rgba(218, 163, 62, 0.04)); box-shadow: var(--shadow);">
+              <div class="stat-label" style="text-transform: uppercase; font-size: 10px; letter-spacing: 1px; color: var(--ivory-dim);">Outstanding / Due</div>
+              <div class="stat-value text-danger" id="cb-total-due" style="font-size: 26px; font-weight: 800; margin: 6px 0 2px;">₹0</div>
+              <div class="stat-desc" id="cb-due-date" style="font-size: 11px; color: var(--ivory-dim); opacity: 0.75;">Next due date: Not set</div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--blue); background: linear-gradient(145deg, var(--bg2), rgba(59, 130, 246, 0.04)); box-shadow: var(--shadow);">
+              <div class="stat-label" style="text-transform: uppercase; font-size: 10px; letter-spacing: 1px; color: var(--ivory-dim);">Tuition Fee Plan</div>
+              <div class="stat-value" id="cb-plan-fee" style="font-size: 26px; font-weight: 800; color: var(--blue); margin: 6px 0 2px;">₹0 / mo</div>
+              <div class="stat-desc" id="cb-plan-type" style="font-size: 11px; color: var(--ivory-dim); opacity: 0.75;">Class: Group Coaching</div>
+            </div>
+          </div>
+
+          <!-- Dynamic Analytics Graphs Row -->
+          <div class="dash-charts" style="margin-bottom: 28px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            <div class="card" style="padding: 20px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);">
+              <h3 style="margin: 0 0 16px; color: var(--gold); font-size: 15px; font-family: var(--font-head); letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">📈</span> Payment Trend History
+              </h3>
+              <div style="position: relative; height: 180px; width: 100%;">
+                <canvas id="chartChildPayments" height="180"></canvas>
+              </div>
+            </div>
+            <div class="card" style="padding: 20px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);">
+              <h3 style="margin: 0 0 16px; color: var(--gold); font-size: 15px; font-family: var(--font-head); letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">📊</span> Payment Status Breakdown
+              </h3>
+              <div style="position: relative; height: 180px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                <canvas id="chartChildPaymentDistribution" height="180" style="max-width: 100%; max-height: 100%;"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction Ledger -->
+          <h3 style="color: var(--gold); margin: 0 0 14px; font-family: var(--font-head); font-size: 17px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">📋</span> Detailed Revenue Registry
+          </h3>
+          <div class="table-wrap" style="box-shadow: var(--shadow); border-radius: 10px; overflow: hidden; border: 1px solid var(--border);">
             <table>
               <thead>
-                <tr><th>Date</th><th>Period</th><th>Amount</th><th>Status</th><th>Action</th></tr>
+                <tr>
+                  <th>Date</th>
+                  <th>Period / Purpose</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Payment Method</th>
+                  <th>Action</th>
+                </tr>
               </thead>
               <tbody id="child-bill-body"></tbody>
             </table>

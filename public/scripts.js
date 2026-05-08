@@ -374,55 +374,228 @@
     const status = getStudentPaymentStatus(s);
     const fee = getStudentMonthlyFee(s) || 0;
     const dueDate = s.due_date ? new Date(s.due_date).toLocaleDateString() : 'Not set';
-    const myPayments = allPayments.filter(p => String(p.student_id) === String(s.id)).slice(0, 10);
+    const myPayments = allPayments.filter(p => String(p.student_id) === String(s.id));
+    const recentPayments = myPayments.slice(0, 10);
 
-     // Current month row
-     let rows = `
-       <tr>
-         <td>${new Date().toLocaleDateString()}</td>
-         <td>Current Month</td>
-         <td>₹${fee}</td>
-         <td class="${status === 'Paid' ? 'text-success' : 'text-danger'}" style="font-weight:600">${status}</td>
-         <td>
-           ${status === 'Due' || status === 'Pending' ?
-         `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}')">Pay Now</button>` :
-         `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', 'Online')">Receipt</button>`
-       }
-         </td>
-       </tr>
-     `;
+    // ─────────────────────────────────────────────────────────────
+    // 1. UPDATE REVENUE & BILLING STAT CARDS
+    // ─────────────────────────────────────────────────────────────
+    const paidPayments = myPayments.filter(p => p.status === 'paid' || p.status === 'completed');
+    const totalPaidSum = paidPayments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || fee), 0);
+    
+    if ($('cb-total-paid')) $('cb-total-paid').textContent = '₹' + totalPaidSum.toLocaleString();
+    if ($('cb-paid-count')) $('cb-paid-count').textContent = `${paidPayments.length} transactions completed`;
 
-     // Due date info
-     rows += `
-       <tr style="background:var(--surface2)">
-         <td colspan="2"><strong>Due Date:</strong></td>
-         <td>${dueDate}</td>
-         <td colspan="2" style="font-size:12px;color:var(--ivory-dim)">Monthly tuition fee</td>
-       </tr>
-     `;
+    const isPaid = status === 'Paid';
+    const outstandingAmount = isPaid ? 0 : fee;
+    if ($('cb-total-due')) {
+      $('cb-total-due').textContent = '₹' + outstandingAmount.toLocaleString();
+      $('cb-total-due').className = isPaid ? 'stat-value text-success' : 'stat-value text-danger';
+    }
+    if ($('cb-due-date')) $('cb-due-date').textContent = isPaid ? 'Paid for this month' : `Next due date: ${dueDate}`;
 
-     // Payment history
-     if (myPayments.length > 0) {
-       myPayments.forEach(p => {
-         const pDate = p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '-';
-         const pAmount = p.amount || fee;
-         const pStatus = p.status === 'completed' ? 'Paid' : (p.status || 'Pending');
-         rows += `
-           <tr>
-             <td>${pDate}</td>
-             <td>Payment</td>
-             <td>₹${pAmount}</td>
-             <td class="${pStatus === 'Paid' ? 'text-success' : 'text-danger'}">${pStatus}</td>
-             <td>
-               ${pStatus === 'Paid' ?
-             `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${pAmount}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">Receipt</button>` :
-             `<span style="color:var(--ivory-dim);font-size:12px">Pending</span>`
-           }
-             </td>
-           </tr>
-         `;
-       });
-     }
+    if ($('cb-plan-fee')) $('cb-plan-fee').textContent = '₹' + fee.toLocaleString() + ' / mo';
+    if ($('cb-plan-type')) {
+      const mode = s.session_mode || s.batch_type || 'Group';
+      const time = s.session_time || s.batch_time || '';
+      $('cb-plan-type').textContent = `Class: ${mode}${time ? ` (${time})` : ''}`;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 2. RENDER CHART.JS VISUAL ANALYTICS
+    // ─────────────────────────────────────────────────────────────
+    setTimeout(() => {
+      if (typeof Chart === 'undefined') {
+        console.warn('[Analytics] Chart.js library is not available.');
+        return;
+      }
+
+      const isLight = document.body.dataset.theme === 'light';
+      const textColor = isLight ? '#454545' : '#f0ede4';
+      const gridColor = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
+
+      // -- A. Payment Trend History Chart (Past 6 Months) --
+      const trendCtx = document.getElementById('chartChildPayments');
+      if (trendCtx) {
+        if (window.childPaymentChart) {
+          window.childPaymentChart.destroy();
+          window.childPaymentChart = null;
+        }
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const trendData = {};
+        const now = new Date();
+        
+        // Initialize past 6 months
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const mLabel = `${months[d.getMonth()]} ${d.getFullYear().toString().substring(2)}`;
+          trendData[mLabel] = 0;
+        }
+        
+        // Populate actual payments
+        paidPayments.forEach(p => {
+          const pDate = new Date(p.payment_date || p.created_at);
+          const mLabel = `${months[pDate.getMonth()]} ${pDate.getFullYear().toString().substring(2)}`;
+          if (trendData[mLabel] !== undefined) {
+            trendData[mLabel] += parseFloat(p.amount) || fee;
+          }
+        });
+
+        const trendLabels = Object.keys(trendData);
+        const trendAmounts = Object.values(trendData);
+
+        window.childPaymentChart = new Chart(trendCtx, {
+          type: 'bar',
+          data: {
+            labels: trendLabels,
+            datasets: [{
+              label: 'Fees Paid (₹)',
+              data: trendAmounts,
+              backgroundColor: 'rgba(218, 163, 62, 0.75)',
+              borderColor: 'var(--gold)',
+              borderWidth: 1.5,
+              borderRadius: 4,
+              hoverBackgroundColor: 'var(--gold)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return ` Paid: ₹${context.raw.toLocaleString()}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: textColor, font: { family: 'inherit', size: 10 } }
+              },
+              y: {
+                grid: { color: gridColor },
+                ticks: { color: textColor, font: { family: 'inherit', size: 10 } },
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      }
+
+      // -- B. Payment Status Breakdown Chart --
+      const distCtx = document.getElementById('chartChildPaymentDistribution');
+      if (distCtx) {
+        if (window.childDistributionChart) {
+          window.childDistributionChart.destroy();
+          window.childDistributionChart = null;
+        }
+
+        let paidCount = paidPayments.length;
+        let pendingCount = myPayments.filter(p => (p.status || '').toLowerCase() === 'pending').length;
+        let dueCount = myPayments.filter(p => (p.status || '').toLowerCase() === 'due').length;
+        let overdueCount = myPayments.filter(p => (p.status || '').toLowerCase() === 'overdue').length;
+
+        // Add current month state as active record
+        if (status === 'Paid') paidCount++;
+        else if (status === 'Pending') pendingCount++;
+        else if (status === 'Due') dueCount++;
+        else if (status === 'Overdue') overdueCount++;
+
+        const labels = [];
+        const data = [];
+        const colors = [];
+
+        if (paidCount > 0) { labels.push('Paid'); data.push(paidCount); colors.push('rgba(16, 185, 129, 0.75)'); }
+        if (pendingCount > 0) { labels.push('Pending'); data.push(pendingCount); colors.push('rgba(245, 158, 11, 0.75)'); }
+        if (dueCount > 0) { labels.push('Due'); data.push(dueCount); colors.push('rgba(239, 68, 68, 0.75)'); }
+        if (overdueCount > 0) { labels.push('Overdue'); data.push(overdueCount); colors.push('rgba(220, 38, 38, 0.9)'); }
+
+        if (data.length === 0) { labels.push('No History'); data.push(1); colors.push('rgba(156, 163, 175, 0.3)'); }
+
+        window.childDistributionChart = new Chart(distCtx, {
+          type: 'doughnut',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: data,
+              backgroundColor: colors,
+              borderColor: isLight ? '#ffffff' : 'var(--bg2)',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: { color: textColor, font: { family: 'inherit', size: 11 } }
+              }
+            },
+            cutout: '65%'
+          }
+        });
+      }
+    }, 50);
+
+    // ─────────────────────────────────────────────────────────────
+    // 3. GENERATE TABLE ROWS (DETAILED LEDGER)
+    // ─────────────────────────────────────────────────────────────
+    // Current active billing period row
+    let rows = `
+      <tr style="background: rgba(218, 163, 62, 0.02)">
+        <td style="font-weight:600">${new Date().toLocaleDateString()}</td>
+        <td><span class="badge" style="background:var(--surface);border:1px solid var(--border);color:var(--ivory)">Current Period</span></td>
+        <td style="font-weight:700;color:var(--gold)">₹${fee.toLocaleString()}</td>
+        <td><span class="badge ${status === 'Paid' ? 'badge-paid' : 'badge-due'}" style="font-weight:700">${status}</span></td>
+        <td><span style="color:var(--ivory-dim)">—</span></td>
+        <td>
+          ${status === 'Due' || status === 'Pending' ?
+            `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}')" style="box-shadow:var(--shadow-amber-sm)">Pay Now</button>` :
+            `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', 'Online')">Receipt</button>`
+          }
+        </td>
+      </tr>
+    `;
+
+    // Past invoice records
+    if (recentPayments.length > 0) {
+      recentPayments.forEach(p => {
+        const pDate = p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '-';
+        const pAmount = p.amount || fee;
+        const pStatus = p.status === 'completed' || p.status === 'paid' ? 'Paid' : (p.status || 'Pending');
+        const pMethod = p.payment_method || 'Online';
+        
+        rows += `
+          <tr>
+            <td>${pDate}</td>
+            <td><span class="badge badge-level" style="font-size:10px">Past Fee Session</span></td>
+            <td style="font-weight:600">₹${pAmount.toLocaleString()}</td>
+            <td><span class="badge ${pStatus === 'Paid' ? 'badge-paid' : 'badge-due'}">${pStatus}</span></td>
+            <td><span style="font-size:12px;color:var(--ivory-dim);font-weight:500">💳 ${pMethod}</span></td>
+            <td>
+              ${pStatus === 'Paid' ?
+                `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${pAmount}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${pMethod}')">Receipt</button>` :
+                `<span style="color:var(--ivory-dim);font-size:12px">Pending Processing</span>`
+              }
+            </td>
+          </tr>
+        `;
+      });
+    } else {
+      rows += `
+        <tr>
+          <td colspan="6" style="text-align:center;padding:24px;color:var(--ivory-dim);font-size:13px">
+            No past billing history found in registry.
+          </td>
+        </tr>
+      `;
+    }
 
     tbody.innerHTML = rows;
   }
@@ -2001,7 +2174,15 @@ function initUI() {
     document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
     const pageEl = $('page-' + p);
-    if (pageEl) pageEl.classList.add('active');
+    if (pageEl) {
+      pageEl.classList.add('active');
+      // If admin/master is viewing child page, clear parent-only visibility block
+      if (p === 'child' && (role === 'admin' || role === 'master')) {
+        pageEl.style.setProperty('display', 'block', 'important');
+      } else {
+        pageEl.style.removeProperty('display');
+      }
+    }
     const navEl = $('nav-' + p);
     if (navEl) navEl.classList.add('active');
     if ($('p-title')) $('p-title').textContent = PAGE_TITLES[p] || '';
@@ -3094,35 +3275,11 @@ function initUI() {
     const s = allStudents.find(x => String(x.id) === String(id));
     if (!s) return;
 
-    if ($('sv-name')) $('sv-name').textContent = getStudentName(s);
-    if ($('sv-level')) $('sv-level').textContent = getStudentLevel(s);
-    if ($('sv-elo')) $('sv-elo').textContent = getStudentRating(s);
-    if ($('sv-join')) $('sv-join').textContent = getStudentDate(s) || '-';
+    // Set the current student for impersonation / preview
+    setCurrentStudent(s);
 
-    if ($('sv-coach')) {
-      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
-      $('sv-coach').textContent = coach ? getCoachName(coach) : '-';
-    }
-
-    if ($('sv-batch')) {
-      const mode = s.session_mode || s.batch_type || 'Group';
-      const time = s.session_time || s.batch_time || '';
-      $('sv-batch').textContent = time ? `${mode} (${time})` : mode;
-    }
-
-    if ($('sv-fee')) $('sv-fee').textContent = '₹' + getStudentMonthlyFee(s).toLocaleString();
-
-    const statusEl = $('sv-status');
-    if (statusEl) {
-      const status = getStudentPaymentStatus(s);
-      statusEl.textContent = status;
-      statusEl.className = `badge ${status === 'Paid' ? 'badge-paid' : (status === 'Pending' ? 'text-warning' : 'badge-due')}`;
-    }
-
-    if ($('sv-phone')) $('sv-phone').textContent = getStudentPhone(s);
-    if ($('sv-av')) $('sv-av').src = makeAvSrc(s);
-
-    openModal('student-view-modal');
+    // Switch page directly to the student portal page (which renders live analytics & details)
+    setPage('child');
   }
 
    function openEdit(id) {
@@ -3589,9 +3746,16 @@ function openCoachModal(id = null) {
        $('cm-avail').value = '';
        $('cm-etc').value = '';
      }
-     window.selectedCountryCodeCoach = 'IN';
-     const selected = $('country-selected-coach');
-     if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline-block\';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
+     if (!id) {
+       window.selectedCountryCodeCoach = 'IN';
+       const selected = $('country-selected-coach');
+       if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline-block\';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
+       const phoneInput = $('cm-phone');
+       if (phoneInput) {
+         phoneInput.placeholder = '10 digits for India';
+         phoneInput.maxLength = 13;
+       }
+     }
      renderCountryDropdown('country-dropdown-coach', 'selectCountryCoach');
      openModal('coach-crud-modal');
    }
@@ -4906,6 +5070,21 @@ Best regards,
     if (!currentStudent) { if (loadingEl) loadingEl.style.display = 'flex'; return; }
 
     const s = currentStudent;
+
+    // Show or hide admin preview banner based on current role
+    const previewBanner = $('preview-mode-banner');
+    if (previewBanner) {
+      if (role === 'admin' || role === 'master') {
+        previewBanner.style.setProperty('display', 'flex', 'important');
+      } else {
+        previewBanner.style.setProperty('display', 'none', 'important');
+      }
+    }
+
+    // Set page title for Admins viewing the portal
+    if ($('p-title') && (role === 'admin' || role === 'master')) {
+      $('p-title').textContent = 'Student Portal Preview: ' + getStudentName(s);
+    }
 
     // Basic profile info
     if ($('c-name')) $('c-name').textContent = getStudentName(s);

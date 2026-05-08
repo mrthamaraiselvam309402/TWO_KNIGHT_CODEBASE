@@ -7,9 +7,11 @@ ADD COLUMN IF NOT EXISTS monthly_fee INTEGER DEFAULT 5000,
 ADD COLUMN IF NOT EXISTS session_mode TEXT,
 ADD COLUMN IF NOT EXISTS session_time TEXT;
 
--- 2. Ensure coaches table has salary column if not present
+-- 2. Ensure coaches table has salary, payment_status, and photo_url columns if not present
 ALTER TABLE coaches
-ADD COLUMN IF NOT EXISTS salary INTEGER DEFAULT 0;
+ADD COLUMN IF NOT EXISTS salary INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'Pending',
+ADD COLUMN IF NOT EXISTS photo_url TEXT;
 
 -- 3. Create Attendance Table for History
 CREATE TABLE IF NOT EXISTS attendance (
