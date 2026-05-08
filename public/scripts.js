@@ -394,12 +394,32 @@
     }
     if ($('cb-due-date')) $('cb-due-date').textContent = isPaid ? 'Paid for this month' : `Next due date: ${dueDate}`;
 
+    // Session ROI & Value calculation
+    const myAttendance = (allAttendance || []).filter(a => String(a.student_id) === String(s.id));
+    const presentClasses = myAttendance.filter(a => a.status === 'present');
+    const presentCount = presentClasses.length;
+    const standardSessions = 8;
+    const sessionVal = Math.round(fee / standardSessions);
+    const valueUnlocked = presentCount * sessionVal;
+    const roiPct = fee > 0 ? Math.min(100, Math.round((valueUnlocked / fee) * 100)) : 100;
+
+    if ($('cb-roi-value')) $('cb-roi-value').textContent = '₹' + valueUnlocked.toLocaleString() + ' Unlocked';
+    if ($('cb-roi-desc')) $('cb-roi-desc').textContent = `${presentCount}/${standardSessions} sessions attended (ROI: ${roiPct}%)`;
+
     if ($('cb-plan-fee')) $('cb-plan-fee').textContent = '₹' + fee.toLocaleString() + ' / mo';
     if ($('cb-plan-type')) {
       const mode = s.session_mode || s.batch_type || 'Group';
       const time = s.session_time || s.batch_time || '';
       $('cb-plan-type').textContent = `Class: ${mode}${time ? ` (${time})` : ''}`;
     }
+
+    // Bookkeeping statement details (CGST/SGST 18% breakout)
+    const baseSum = totalPaidSum > 0 ? totalPaidSum : fee;
+    const gstAmount = Math.round(baseSum * 0.18);
+    const netAmount = baseSum - gstAmount;
+    if ($('cb-gst-amount')) $('cb-gst-amount').textContent = '₹' + gstAmount.toLocaleString();
+    if ($('cb-net-amount')) $('cb-net-amount').textContent = '₹' + netAmount.toLocaleString();
+    if ($('cb-card-holder')) $('cb-card-holder').textContent = getStudentName(s).toUpperCase();
 
     // ─────────────────────────────────────────────────────────────
     // 2. RENDER CHART.JS VISUAL ANALYTICS
@@ -544,28 +564,44 @@
     }, 50);
 
     // ─────────────────────────────────────────────────────────────
-    // 3. GENERATE TABLE ROWS (DETAILED LEDGER)
+    // 3. GENERATE TABLE ROWS (DETAILED LEDGER WITH FILTERS)
     // ─────────────────────────────────────────────────────────────
-    // Current active billing period row
-    let rows = `
-      <tr style="background: rgba(218, 163, 62, 0.02)">
-        <td style="font-weight:600">${new Date().toLocaleDateString()}</td>
-        <td><span class="badge" style="background:var(--surface);border:1px solid var(--border);color:var(--ivory)">Current Period</span></td>
-        <td style="font-weight:700;color:var(--gold)">₹${fee.toLocaleString()}</td>
-        <td><span class="badge ${status === 'Paid' ? 'badge-paid' : 'badge-due'}" style="font-weight:700">${status}</span></td>
-        <td><span style="color:var(--ivory-dim)">—</span></td>
-        <td>
-          ${status === 'Due' || status === 'Pending' ?
-            `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}')" style="box-shadow:var(--shadow-amber-sm)">Pay Now</button>` :
-            `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', 'Online')">Receipt</button>`
-          }
-        </td>
-      </tr>
-    `;
+    const activeFilter = window.currentLedgerFilter || 'all';
+    let rows = '';
 
-    // Past invoice records
-    if (recentPayments.length > 0) {
-      recentPayments.forEach(p => {
+    // A. Current active billing period row (conditional on filter)
+    const showCurrentRow = (activeFilter === 'all') || 
+                           (activeFilter === 'Paid' && isPaid) || 
+                           (activeFilter === 'Unpaid' && !isPaid);
+
+    if (showCurrentRow) {
+      rows += `
+        <tr style="background: rgba(218, 163, 62, 0.02)">
+          <td style="font-weight:600">${new Date().toLocaleDateString()}</td>
+          <td><span class="badge" style="background:var(--surface);border:1px solid var(--border);color:var(--ivory)">Current Period</span></td>
+          <td style="font-weight:700;color:var(--gold)">₹${fee.toLocaleString()}</td>
+          <td><span class="badge ${status === 'Paid' ? 'badge-paid' : 'badge-due'}" style="font-weight:700">${status}</span></td>
+          <td><span style="color:var(--ivory-dim)">—</span></td>
+          <td>
+            ${status === 'Due' || status === 'Pending' ?
+              `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}')" style="box-shadow:var(--shadow-amber-sm)">Pay Now</button>` :
+              `<button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', 'Online')">Receipt</button>`
+            }
+          </td>
+        </tr>
+      `;
+    }
+
+    // B. Past invoice records (conditional on filter)
+    let filteredRecentPayments = recentPayments;
+    if (activeFilter === 'Paid') {
+      filteredRecentPayments = recentPayments.filter(p => p.status === 'completed' || p.status === 'paid');
+    } else if (activeFilter === 'Unpaid') {
+      filteredRecentPayments = recentPayments.filter(p => p.status !== 'completed' && p.status !== 'paid');
+    }
+
+    if (filteredRecentPayments.length > 0) {
+      filteredRecentPayments.forEach(p => {
         const pDate = p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '-';
         const pAmount = p.amount || fee;
         const pStatus = p.status === 'completed' || p.status === 'paid' ? 'Paid' : (p.status || 'Pending');
@@ -587,11 +623,14 @@
           </tr>
         `;
       });
-    } else {
-      rows += `
+    }
+
+    // C. Empty state fallback
+    if (rows === '') {
+      rows = `
         <tr>
           <td colspan="6" style="text-align:center;padding:24px;color:var(--ivory-dim);font-size:13px">
-            No past billing history found in registry.
+            No invoices found matching the "${activeFilter}" filter criteria.
           </td>
         </tr>
       `;
@@ -599,6 +638,176 @@
 
     tbody.innerHTML = rows;
   }
+
+  // ─────────────────────────────────────────────────────────────
+  // 4. ADVANCED FINANCIAL LEDGER AND STATEMENTS HANDLERS
+  // ─────────────────────────────────────────────────────────────
+  window.filterLedger = function(filter) {
+    window.currentLedgerFilter = filter;
+    
+    // Manage filter button visual state
+    document.querySelectorAll('.btn-filter-ledger').forEach(btn => {
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--ivory-dim)';
+      btn.style.fontWeight = '600';
+    });
+    
+    const filterBtnMap = {
+      'all': 'btn-ledger-all',
+      'Paid': 'btn-ledger-paid',
+      'Unpaid': 'btn-ledger-unpaid'
+    };
+    
+    const activeBtn = document.getElementById(filterBtnMap[filter]);
+    if (activeBtn) {
+      activeBtn.style.background = 'var(--gold-semi)';
+      activeBtn.style.color = 'var(--gold)';
+      activeBtn.style.fontWeight = '700';
+    }
+    
+    renderChildBilling();
+  };
+
+  window.downloadFinancialStatement = function() {
+    if (!currentStudent) { toast('No active student loaded', 'error'); return; }
+    const s = currentStudent;
+    const fee = getStudentMonthlyFee(s) || 0;
+    const myPayments = allPayments.filter(p => String(p.student_id) === String(s.id));
+    const paidPayments = myPayments.filter(p => p.status === 'paid' || p.status === 'completed');
+    
+    const baseSum = paidPayments.length > 0 ? paidPayments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || fee), 0) : fee;
+    const gstAmount = Math.round(baseSum * 0.18);
+    const netAmount = baseSum - gstAmount;
+
+    let itemizedRows = '';
+    if (paidPayments.length > 0) {
+      paidPayments.forEach((p, idx) => {
+        const amt = parseFloat(p.amount) || fee;
+        const gst = Math.round(amt * 0.18);
+        const net = amt - gst;
+        itemizedRows += `
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 12px 10px; font-size: 13px;">${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
+            <td style="padding: 12px 10px; font-size: 13px;">INV-2026-${String(100 + idx)}<br><span style="font-size:11px;color:#888;">Chess Tuition Service</span></td>
+            <td style="padding: 12px 10px; font-size: 13px; text-align: right;">₹${net.toLocaleString()}</td>
+            <td style="padding: 12px 10px; font-size: 13px; text-align: right;">₹${gst.toLocaleString()}</td>
+            <td style="padding: 12px 10px; font-size: 13px; text-align: right; font-weight: bold; color: #111;">₹${amt.toLocaleString()}</td>
+          </tr>
+        `;
+      });
+    } else {
+      const gst = Math.round(fee * 0.18);
+      const net = fee - gst;
+      itemizedRows = `
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 12px 10px; font-size: 13px;">${new Date().toLocaleDateString()}</td>
+          <td style="padding: 12px 10px; font-size: 13px;">PRO-FORMA<br><span style="font-size:11px;color:#888;">Current Class Fee Plan</span></td>
+          <td style="padding: 12px 10px; font-size: 13px; text-align: right;">₹${net.toLocaleString()}</td>
+          <td style="padding: 12px 10px; font-size: 13px; text-align: right;">₹${gst.toLocaleString()}</td>
+          <td style="padding: 12px 10px; font-size: 13px; text-align: right; font-weight: bold; color: #777;">₹${fee.toLocaleString()} (Pending)</td>
+        </tr>
+      `;
+    }
+
+    const html = `
+      <html>
+      <head>
+        <title>Tuition Financial Statement - ${getStudentName(s)}</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #2c3e50; margin: 40px; line-height: 1.6; }
+          .header { display: flex; justify-content: space-between; border-bottom: 3px solid #daa33e; padding-bottom: 20px; margin-bottom: 30px; }
+          .logo { font-size: 24px; font-weight: 800; color: #1a252f; letter-spacing: 0.5px; }
+          .logo span { color: #daa33e; }
+          .meta-box { margin-bottom: 35px; display: flex; justify-content: space-between; font-size: 14px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th { background: #f8f9fa; padding: 12px 10px; text-align: left; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #e9ecef; color: #495057; font-weight: 700; }
+          td { padding: 12px 10px; border-bottom: 1px solid #f1f3f5; }
+          .totals { float: right; width: 320px; font-size: 14px; margin-top: 20px; }
+          .total-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #e9ecef; }
+          .footer { margin-top: 120px; border-top: 1px solid #e9ecef; padding-top: 20px; text-align: center; font-size: 12px; color: #868e96; }
+          @media print { .no-print { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="no-print" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; background: #fffde7; padding: 14px 20px; border: 1px solid #ffe082; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+          <span style="font-size: 13px; color: #744210; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+            📄 Annual Tuition Investment Statement is prepared for print.
+          </span>
+          <button onclick="window.print()" style="background: #daa33e; border: none; color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; box-shadow: 0 2px 4px rgba(218,163,62,0.3);">🖨️ Print Statement / Save PDF</button>
+        </div>
+        
+        <div class="header">
+          <div>
+            <div class="logo">CHESS<span>KIDOO</span> ACADEMY</div>
+            <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px; font-weight: 500;">Premium Scholastic Chess Mentorship & Coaching</div>
+          </div>
+          <div style="text-align: right;">
+            <h2 style="margin: 0; color: #daa33e; font-size: 20px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Tuition Financial Report</h2>
+            <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px; font-weight: 500;">Date Generated: ${new Date().toLocaleDateString()}</div>
+          </div>
+        </div>
+
+        <div class="meta-box">
+          <div>
+            <strong style="color: #34495e; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Student Ledger Beneficiary</strong><br>
+            <span style="font-size: 16px; font-weight: 700; color: #2c3e50; display: inline-block; margin: 4px 0;">${getStudentName(s)}</span><br>
+            Rating: <strong>${getStudentRating(s)} ELO</strong> (${getStudentLevel(s)})<br>
+            Enrollment Date: ${getStudentDate(s) || 'N/A'}<br>
+            Student ID Reference: <strong>CKA-${s.id}</strong>
+          </div>
+          <div style="text-align: right; font-size: 13px; color: #7f8c8d;">
+            <strong style="color: #34495e; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Academy Registry Issuer</strong><br>
+            <span style="font-size: 15px; font-weight: 700; color: #2c3e50; display: inline-block; margin: 4px 0;">Chesskidoo Academy Pvt Ltd</span><br>
+            Corporate GSTIN: <strong>33AAFCK0012C1ZP</strong><br>
+            Email: billing@chesskidoo.com<br>
+            Web: www.chesskidoo.com
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Reference ID</th>
+              <th style="text-align: right;">Net Base (₹)</th>
+              <th style="text-align: right;">GST Base (18%)</th>
+              <th style="text-align: right;">Total Completed (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemizedRows}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="total-row">
+            <span style="color:#7f8c8d;">Subtotal (Net Investment):</span>
+            <span style="font-weight: 600;">₹${netAmount.toLocaleString()}</span>
+          </div>
+          <div class="total-row">
+            <span style="color:#7f8c8d;">Inclusive GST Breakdown (18%):</span>
+            <span style="font-weight: 600;">₹${gstAmount.toLocaleString()}</span>
+          </div>
+          <div class="total-row" style="border-top: 2px solid #daa33e; padding-top: 10px; margin-top: 10px; font-weight: 800; font-size: 17px; color: #1a252f;">
+            <span>Total Tuition Paid:</span>
+            <span>₹${baseSum.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div style="clear: both;"></div>
+
+        <div class="footer">
+          This is an official annual statement issued electronically by the accounting division of Chesskidoo Academy Pvt Ltd.<br>
+          We appreciate your dedication and scholastic investment in our master chess training program!
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWin = window.open('', '_blank');
+    printWin.document.write(html);
+    printWin.document.close();
+  };
 
   // ── ADMIN EXPANSION LOGIC ──
   function openAttendanceMarking() {
