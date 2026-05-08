@@ -4938,6 +4938,30 @@ Best regards,
     return c.payment_status || 'Pending';
   }
 
+  function informCoachSalaryPaid(c) {
+    if (!c) return;
+    const phone = c.phone || '';
+    if (!phone) {
+      toast('Coach phone number is missing!', 'warning');
+      return;
+    }
+    const parsed = parseStoredPhone(phone);
+    const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (c.country_code || 'IN');
+    const country = getCountryByCode(inferredCountry);
+    const dialCode = country ? country.dial.replace(/\D/g, '') : '91';
+    const name = getCoachName(c);
+    const salary = getCoachSalary(c) || 0;
+    const msg = `🌟 *SALARY CREDITED SUCCESSFULLY* 🌟\n` +
+                `Hello Coach *${name}*,\n\n` +
+                `We are pleased to inform you that your salary of *₹${salary.toLocaleString()}* for this period has been successfully processed and credited to your account! 💳💸\n\n` +
+                `Thank you so much for your incredible dedication, training expertise, and mentorship. You make Chesskidoo Academy shine! 🏆🎓\n\n` +
+                `Warm regards,\n` +
+                `– *Chesskidoo Academy Team* 👑✨`;
+    openWhatsApp(dialCode, parsed.localNumber, msg);
+  }
+
+  window.informCoachSalaryPaid = informCoachSalaryPaid;
+
   window.markCoachPaid = async function (id) {
     const btn = event.currentTarget;
     const oldText = btn.innerHTML;
@@ -4952,7 +4976,14 @@ Best regards,
       if (res.ok) {
         toast('Coach salary marked as paid', 'success');
         const coach = allCoaches.find(c => String(c.id) === String(id));
-        if (coach) coach.payment_status = 'Paid';
+        if (coach) {
+          coach.payment_status = 'Paid';
+          setTimeout(() => {
+            if (confirm(`Salary marked as Paid! Would you like to open WhatsApp to inform Coach ${getCoachName(coach)} that their salary of ₹${(getCoachSalary(coach) || 0).toLocaleString()} has been credited successfully?`)) {
+              informCoachSalaryPaid(coach);
+            }
+          }, 200);
+        }
         renderCoachBills();
       } else {
         toast('Failed to update status', 'error');
@@ -5025,7 +5056,8 @@ Best regards,
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             ${status === 'Pending' ?
           `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">✅ Mark Paid</button>` :
-          `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">❌ Mark Unpaid</button>`}
+          `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">❌ Mark Unpaid</button>
+           <button class="btn btn-outline btn-sm" onclick="informCoachSalaryPaid(allCoaches.find(x => String(x.id) === '${c.id}'))" style="border-color:var(--emerald);color:var(--emerald);" title="Notify Coach of Salary Credit">📢 Notify Credit</button>`}
           </div>
         </td>
       </tr>`;
