@@ -2380,7 +2380,10 @@ function initUI() {
       return;
     }
 
-    document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(pg => {
+      pg.classList.remove('active');
+      pg.style.removeProperty('display');
+    });
     document.querySelectorAll('.nav-item').forEach(ni => ni.classList.remove('active'));
     const pageEl = $('page-' + p);
     if (pageEl) {
