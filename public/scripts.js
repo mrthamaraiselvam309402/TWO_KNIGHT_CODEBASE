@@ -278,9 +278,9 @@
     }
     const target = document.getElementById('child-tab-' + tabId);
     if (target) target.classList.add('active');
+    if (tabId === 'overview') renderChildBilling();
     if (tabId === 'growth') renderChildGrowth();
     if (tabId === 'learning') renderChildResources();
-    if (tabId === 'billing') renderChildBilling();
     if (tabId === 'events') renderChildEvents();
   }
 
@@ -496,6 +496,12 @@
         const trendLabels = Object.keys(trendData);
         const trendAmounts = Object.values(trendData);
 
+        // Create premium gradient
+        const barCtx = trendCtx.getContext('2d');
+        const barGradient = barCtx.createLinearGradient(0, 0, 0, 180);
+        barGradient.addColorStop(0, 'rgba(218, 163, 62, 0.85)'); // Vibrant Gold
+        barGradient.addColorStop(1, 'rgba(218, 163, 62, 0.15)'); // Translucent Fade
+
         window.childPaymentChart = new Chart(trendCtx, {
           type: 'bar',
           data: {
@@ -503,11 +509,12 @@
             datasets: [{
               label: 'Fees Paid (₹)',
               data: trendAmounts,
-              backgroundColor: 'rgba(218, 163, 62, 0.75)',
+              backgroundColor: barGradient,
               borderColor: 'var(--gold)',
-              borderWidth: 1.5,
-              borderRadius: 4,
-              hoverBackgroundColor: 'var(--gold)'
+              borderWidth: 2,
+              borderRadius: 6,
+              hoverBackgroundColor: 'var(--gold)',
+              hoverBorderWidth: 3
             }]
           },
           options: {
@@ -516,6 +523,13 @@
             plugins: {
               legend: { display: false },
               tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                titleColor: '#fff',
+                bodyColor: 'var(--gold)',
+                borderColor: 'var(--gold-semi)',
+                borderWidth: 1,
+                padding: 10,
+                cornerRadius: 8,
                 callbacks: {
                   label: function(context) {
                     return ` Paid: ₹${context.raw.toLocaleString()}`;
@@ -526,10 +540,10 @@
             scales: {
               x: {
                 grid: { display: false },
-                ticks: { color: textColor, font: { family: 'inherit', size: 10 } }
+                ticks: { color: textColor, font: { family: 'inherit', size: 10, weight: '500' } }
               },
               y: {
-                grid: { color: gridColor },
+                grid: { color: gridColor, drawTicks: false },
                 ticks: { color: textColor, font: { family: 'inherit', size: 10 } },
                 beginAtZero: true
               }
@@ -561,12 +575,12 @@
         const data = [];
         const colors = [];
 
-        if (paidCount > 0) { labels.push('Paid'); data.push(paidCount); colors.push('rgba(16, 185, 129, 0.75)'); }
-        if (pendingCount > 0) { labels.push('Pending'); data.push(pendingCount); colors.push('rgba(245, 158, 11, 0.75)'); }
-        if (dueCount > 0) { labels.push('Due'); data.push(dueCount); colors.push('rgba(239, 68, 68, 0.75)'); }
-        if (overdueCount > 0) { labels.push('Overdue'); data.push(overdueCount); colors.push('rgba(220, 38, 38, 0.9)'); }
+        if (paidCount > 0) { labels.push('Paid'); data.push(paidCount); colors.push('#10b981'); } // Emerald
+        if (pendingCount > 0) { labels.push('Pending'); data.push(pendingCount); colors.push('#facc15'); } // Gold
+        if (dueCount > 0) { labels.push('Due'); data.push(dueCount); colors.push('#ef4444'); } // Red
+        if (overdueCount > 0) { labels.push('Overdue'); data.push(overdueCount); colors.push('#dc2626'); } // Crimson
 
-        if (data.length === 0) { labels.push('No History'); data.push(1); colors.push('rgba(156, 163, 175, 0.3)'); }
+        if (data.length === 0) { labels.push('No History'); data.push(1); colors.push('rgba(156, 163, 175, 0.2)'); }
 
         window.childDistributionChart = new Chart(distCtx, {
           type: 'doughnut',
@@ -576,7 +590,9 @@
               data: data,
               backgroundColor: colors,
               borderColor: isLight ? '#ffffff' : 'var(--bg2)',
-              borderWidth: 2
+              borderWidth: 3,
+              hoverOffset: 8,
+              hoverBorderColor: 'rgba(255,255,255,0.4)'
             }]
           },
           options: {
@@ -585,10 +601,21 @@
             plugins: {
               legend: {
                 position: 'right',
-                labels: { color: textColor, font: { family: 'inherit', size: 11 } }
+                labels: {
+                  color: textColor,
+                  padding: 12,
+                  font: { family: 'inherit', size: 11, weight: '600' }
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                padding: 10,
+                cornerRadius: 8,
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.1)'
               }
             },
-            cutout: '65%'
+            cutout: '70%'
           }
         });
       }
