@@ -27,10 +27,13 @@ window.generateReportPDF = async function() {
      const monthEndLimit = new Date(Date.UTC(targetYear, targetMonth + 1, 0)); // last day of month at 00:00 UTC
      const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
      
-     // Use allStudents from global scope (already loaded)
+     // Use allStudents from global scope (already loaded) - Filter out parent/test profiles
      const targetStudents = allStudents.filter(s => {
          const sStatus = (s.status || 'active').toLowerCase();
          if (sStatus === 'archived') return false;
+         
+         const sName = (getStudentName(s) || '').toUpperCase();
+         if (sName.includes('PARENT') || sName.includes('COACH') || sName.includes('TEST')) return false;
          
          const joinStr = getStudentDate(s);
          const enrollDate = joinStr ? new Date(joinStr) : baseline;
@@ -91,6 +94,7 @@ window.generateReportPDF = async function() {
     });
 
     const pending = Math.max(0, potential - collected);
+    currPendingAmount = pending; // Synchronize with actual uncollected balance for 100% mathematical consistency
     const payroll = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     const netProfit = collected - payroll;
     
@@ -209,7 +213,7 @@ window.generateReportPDF = async function() {
 
     const eloGainers = targetStudents.map(s => {
         const history = (window.allRatingHistory || []).filter(h => String(h.student_id) === String(s.id)).sort((a,b) => new Date(a.recorded_at || a.created_at) - new Date(b.recorded_at || b.created_at));
-        if (history.length < 1) return { name: getStudentName(s), gain: 0 };
+        if (history.length < 1) return null;
         
         // Find rating at start of month (last record before month start)
         const beforeMonth = history.filter(h => new Date(h.recorded_at || h.created_at) < monthStartLimit);
@@ -219,8 +223,9 @@ window.generateReportPDF = async function() {
         const duringMonth = history.filter(h => new Date(h.recorded_at || h.created_at) <= monthEndLimit);
         const endRating = duringMonth.length > 0 ? (duringMonth[duringMonth.length - 1].rating || 800) : startRating;
         
-        return { name: getStudentName(s), gain: endRating - startRating };
-    }).sort((a, b) => b.gain - a.gain).slice(0, 3);
+        const gain = endRating - startRating;
+        return { name: getStudentName(s), gain };
+    }).filter(x => x !== null && x.gain > 0).sort((a, b) => b.gain - a.gain).slice(0, 3);
 
     const attendanceStats = targetStudents.map(s => {
         const studAtt = monthAtt.filter(a => String(a.student_id) === String(s.id));
@@ -476,11 +481,11 @@ window.generateReportPDF = async function() {
             </tr>
           </thead>
           <tbody>
-            ${eloGainers.map(g => `
+            ${eloGainers.length > 0 ? eloGainers.map(g => `
             <tr>
               <td class="bold">${g.name.toUpperCase()}</td>
               <td class="text-right mono gain">+${g.gain}</td>
-            </tr>`).join('')}
+            </tr>`).join('') : `<tr><td colspan="2" style="text-align:center; color: var(--text-dim)">No rating changes logged.</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -538,13 +543,13 @@ window.generateReportPDF = async function() {
         </tr>
       </thead>
       <tbody>
-        ${attendanceStats.map(a => `
+        ${attendanceStats.length > 0 ? attendanceStats.map(a => `
         <tr>
           <td class="bold">${a.name.toUpperCase()}</td>
           <td class="text-right">${a.total}</td>
           <td class="text-right">${a.present}</td>
           <td class="text-right mono gain">${a.rate}%</td>
-        </tr>`).join('')}
+        </tr>`).join('') : `<tr><td colspan="4" style="text-align:center; color: var(--text-dim)">No attendance records logged for this period.</td></tr>`}
       </tbody>
     </table>
 -
