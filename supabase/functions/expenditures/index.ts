@@ -14,8 +14,8 @@ const VALID_CATEGORIES = [
 const VALID_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque']
 
 function validateCategory(cat: unknown): string {
-  const s = String(cat || '').trim()
-  return VALID_CATEGORIES.includes(s) ? s : 'Miscellaneous'
+  const s = sanitizeString(cat, 100)
+  return s || 'Miscellaneous'
 }
 function validateMode(mode: unknown): string {
   const s = String(mode || '').trim()
@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
         const to   = new Date(Number(y), Number(m), 0).toISOString().split('T')[0]
         query = query.gte('date', from).lte('date', to)
       }
-      if (category && VALID_CATEGORIES.includes(category)) {
+      if (category) {
         query = query.eq('category', category)
       }
       if (search) {

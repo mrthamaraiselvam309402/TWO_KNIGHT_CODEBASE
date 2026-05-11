@@ -551,16 +551,62 @@
     await loadExpenditurePage();
   };
 
+  // ─── Local In-Memory Summary Calculations (Extremely Fast) ───────
+  function calculateLocalSummary() {
+    const [targetYear, targetMonth] = expFilterMonth.split('-').map(Number);
+    
+    let totalExpense = 0;
+    const categoryTotals = {};
+    
+    if (Array.isArray(allExpenditures)) {
+      allExpenditures.forEach(e => {
+        const amt = parseFloat(e.amount || 0);
+        totalExpense += amt;
+        const cat = e.category || 'Miscellaneous';
+        categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
+      });
+    }
+
+    let totalIncome = 0;
+    const paymentsList = window.allPayments || [];
+    if (Array.isArray(paymentsList)) {
+      paymentsList.forEach(p => {
+        if (p.status !== 'paid') return;
+        
+        const dateStr = p.payment_date || p.created_at;
+        if (!dateStr) return;
+        
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return;
+        
+        // Match year and month (using UTC to align with sync modules)
+        const pYear = d.getUTCFullYear();
+        const pMonth = d.getUTCMonth() + 1;
+        
+        if (pYear === targetYear && pMonth === targetMonth) {
+          totalIncome += parseFloat(p.amount || 0);
+        }
+      });
+    }
+
+    return {
+      total_expense: totalExpense,
+      total_income: totalIncome,
+      profit_or_loss: totalIncome - totalExpense,
+      category_totals: categoryTotals
+    };
+  }
+
   // ─── Page Loader ─────────────────────────────────────────────────
   async function loadExpenditurePage() {
     const tbody = document.getElementById('exp-tbody');
     if (tbody) tbody.innerHTML = `<tr><td colspan="7"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>`;
 
-    // Fetch expenditures list and summary in parallel (concurrently) to load 2x faster!
-    const [_, summary] = await Promise.all([
-      fetchExpenditures(),
-      fetchSummary()
-    ]);
+    // Fetch the expenditures list for the month (lightweight, rapid query)
+    await fetchExpenditures();
+
+    // Calculate sum metrics, charts, and profit/loss locally (instantaneous, 0ms wait!)
+    const summary = calculateLocalSummary();
 
     renderExpTable();
     renderExpDashboardWidgetsWithData(summary);
