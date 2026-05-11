@@ -356,10 +356,91 @@
     return d.innerHTML;
   }
 
+  // ─── Custom Category Helpers ─────────────────────────────────────
+  function getCustomCategories() {
+    let custom = [];
+    try {
+      custom = JSON.parse(localStorage.getItem('custom_exp_categories') || '[]');
+    } catch(e) {}
+    if (Array.isArray(allExpenditures)) {
+      allExpenditures.forEach(e => {
+        if (e.category && !EXP_CATEGORIES.includes(e.category) && !custom.includes(e.category)) {
+          custom.push(e.category);
+        }
+      });
+    }
+    return custom;
+  }
+
+  function saveCustomCategory(cat) {
+    if (!cat) return;
+    const custom = getCustomCategories();
+    if (!custom.includes(cat) && !EXP_CATEGORIES.includes(cat)) {
+      custom.push(cat);
+      localStorage.setItem('custom_exp_categories', JSON.stringify(custom));
+    }
+  }
+
+  function populateCategoryDropdown(selectedVal = '') {
+    const select = document.getElementById('exp-cat');
+    if (!select) return;
+
+    select.innerHTML = '';
+    
+    EXP_CATEGORIES.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      select.appendChild(opt);
+    });
+
+    const custom = getCustomCategories();
+    custom.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      select.appendChild(opt);
+    });
+
+    const optNew = document.createElement('option');
+    optNew.value = '__NEW__';
+    optNew.textContent = '+ Add Custom Category...';
+    select.appendChild(optNew);
+
+    if (selectedVal) {
+      if (!EXP_CATEGORIES.includes(selectedVal) && !custom.includes(selectedVal)) {
+        const opt = document.createElement('option');
+        opt.value = selectedVal;
+        opt.textContent = selectedVal;
+        select.insertBefore(opt, optNew);
+      }
+      select.value = selectedVal;
+    } else {
+      select.value = EXP_CATEGORIES[0];
+    }
+
+    checkCustomCategory(select.value);
+  }
+
+  window.checkCustomCategory = function (val) {
+    const input = document.getElementById('exp-custom-cat');
+    if (!input) return;
+    if (val === '__NEW__') {
+      input.style.display = 'block';
+      input.required = true;
+      input.focus();
+    } else {
+      input.style.display = 'none';
+      input.required = false;
+      input.value = '';
+    }
+  };
+
   // ─── Add / Edit Expense Modal ────────────────────────────────────
   window.openAddExpense = function () {
     expEditingId = null;
     resetExpForm();
+    populateCategoryDropdown('');
     document.getElementById('exp-modal-title').textContent = 'Add Expense';
     document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
     openModal('exp-modal');
@@ -370,9 +451,9 @@
     if (!exp) { toastExp('Expense not found', 'error'); return; }
     expEditingId = id;
     resetExpForm();
+    populateCategoryDropdown(exp.category || 'Miscellaneous');
     document.getElementById('exp-modal-title').textContent = 'Edit Expense';
     document.getElementById('exp-date').value         = exp.date        || '';
-    document.getElementById('exp-cat').value          = exp.category    || 'Miscellaneous';
     document.getElementById('exp-desc').value         = exp.description || '';
     document.getElementById('exp-amount').value       = exp.amount      || '';
     document.getElementById('exp-mode').value         = exp.payment_mode|| 'Cash';
@@ -381,17 +462,19 @@
   };
 
   function resetExpForm() {
-    ['exp-date','exp-cat','exp-desc','exp-amount','exp-mode','exp-bill-url'].forEach(id => {
+    ['exp-date','exp-cat','exp-desc','exp-amount','exp-mode','exp-bill-url', 'exp-custom-cat'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = el.tagName === 'SELECT' ? el.options[0]?.value || '' : '';
     });
+    const customInput = document.getElementById('exp-custom-cat');
+    if (customInput) customInput.style.display = 'none';
     const errEl = document.getElementById('exp-form-error');
     if (errEl) errEl.textContent = '';
   }
 
   window.submitExpenseForm = async function () {
     const date   = (document.getElementById('exp-date')    || {}).value   || '';
-    const cat    = (document.getElementById('exp-cat')     || {}).value   || 'Miscellaneous';
+    let cat      = (document.getElementById('exp-cat')     || {}).value   || 'Miscellaneous';
     const desc   = ((document.getElementById('exp-desc')   || {}).value   || '').trim();
     const amount = parseFloat((document.getElementById('exp-amount') || {}).value || '0');
     const mode   = (document.getElementById('exp-mode')   || {}).value    || 'Cash';
@@ -403,6 +486,18 @@
 
     clearErr();
     if (!date)              { showErr('Date is required');               return; }
+    
+    if (cat === '__NEW__') {
+      const customInput = document.getElementById('exp-custom-cat');
+      const customVal = (customInput ? customInput.value : '').trim();
+      if (!customVal) {
+        showErr('Custom category name is required');
+        return;
+      }
+      cat = customVal;
+      saveCustomCategory(cat);
+    }
+
     if (!desc || desc.length < 2) { showErr('Description is required (min 2 chars)'); return; }
     if (isNaN(amount) || amount <= 0) { showErr('Enter a valid amount > 0');          return; }
 

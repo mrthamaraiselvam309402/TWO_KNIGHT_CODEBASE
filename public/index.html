@@ -774,7 +774,7 @@
       </div>
       <div class="form-group">
         <label class="label">Category *</label>
-        <select id="exp-cat">
+        <select id="exp-cat" onchange="checkCustomCategory(this.value)">
           <option>Rent</option>
           <option>Coach Salary</option>
           <option>Equipment</option>
@@ -786,7 +786,9 @@
           <option>Maintenance</option>
           <option>Platform &amp; Software</option>
           <option>Miscellaneous</option>
+          <option value="__NEW__">+ Add Custom Category...</option>
         </select>
+        <input type="text" id="exp-custom-cat" placeholder="Enter custom category name" style="display:none; margin-top:8px" class="input">
       </div>
     </div>
 
