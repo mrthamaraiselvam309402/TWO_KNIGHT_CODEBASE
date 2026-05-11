@@ -1369,28 +1369,29 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
 .exp-expense-card { border-left: 4px solid var(--danger)  !important; }
 .exp-pl-card      { border-left: 4px solid var(--amber)   !important; }
 
-/* ─── FLOATING CALCULATOR ─── */
 #calc-toggle-btn {
   position: fixed;
-  bottom: 110px;
-  right: 30px;
-  width: 50px;
-  height: 50px;
+  bottom: 96px;
+  right: 28px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3), var(--shadow-amber);
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  color: var(--obsidian) !important;
+  border: none;
+  box-sizing: border-box;
+  box-shadow: 0 6px 20px rgba(232,168,48,0.35);
   cursor: pointer;
-  z-index: 1090;
+  z-index: 4000;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 22px;
 }
 #calc-toggle-btn:hover {
-  transform: scale(1.1) rotate(15deg);
-  border-color: var(--gold);
-  box-shadow: 0 6px 20px rgba(232,168,48,0.25), var(--shadow-amber);
+  transform: translateY(-2px) scale(1.1) rotate(15deg);
+  box-shadow: 0 12px 30px rgba(232,168,48,0.5), 0 0 20px rgba(232,168,48,0.2);
 }
 #calc-toggle-btn .ico {
   font-size: 22px;
