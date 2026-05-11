@@ -70,7 +70,7 @@
   // ─── Data Fetching ──────────────────────────────────────────────
   async function fetchExpenditures() {
     try {
-      const res = await apiCall(`/api/expenditures?month=${expFilterMonth}&limit=500`);
+      const res = await apiCall('/api/expenditures?limit=500');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       allExpenditures = json.data || [];
@@ -256,13 +256,16 @@
     });
   }
 
-  // ─── Expense List Rendering ─────────────────────────────────────
   function getFilteredExp() {
     const cat    = (document.getElementById('exp-f-cat')    || {}).value  || '';
     const mode   = (document.getElementById('exp-f-mode')   || {}).value  || '';
     const search = ((document.getElementById('exp-f-search') || {}).value || '').toLowerCase().trim();
 
     return allExpenditures.filter(e => {
+      // 1. Must match current selected month filter (YYYY-MM)
+      if (e.date && !e.date.startsWith(expFilterMonth)) return false;
+
+      // 2. Category, payment mode, and text search filter constraints
       if (cat  && e.category    !== cat)  return false;
       if (mode && e.payment_mode !== mode) return false;
       if (search && !e.description.toLowerCase().includes(search) && !e.category.toLowerCase().includes(search)) return false;
@@ -560,6 +563,9 @@
     
     if (Array.isArray(allExpenditures)) {
       allExpenditures.forEach(e => {
+        // Double safety check: Only summarize expenditures for the currently selected month
+        if (e.date && !e.date.startsWith(expFilterMonth)) return;
+
         const amt = parseFloat(e.amount || 0);
         totalExpense += amt;
         const cat = e.category || 'Miscellaneous';
