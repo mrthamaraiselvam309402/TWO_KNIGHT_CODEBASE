@@ -1078,21 +1078,42 @@
     const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
     const status = getStudentPaymentStatus(s);
-    const statusText = (status === 'Due' || status === 'Overdue') ? 'DUE' : 'PENDING';
+    const isDueOrOverdue = (status === 'Due' || status === 'Overdue');
+    if (totalPending <= 0) {
+      totalPending = monthlyFee || 1500;
+    }
 
-    const msg = `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}\n` +
-      `\n` +
-      `Hello Sir/Madam ${EMOJI.wave},\n` +
-      `\n` +
-      `This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} ${EMOJI.card}.\n` +
-      `${EMOJI.alert} Amount Due: \u{20B9}${totalPending.toLocaleString()}\n` +
-      `\n` +
-           `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
-           `\n` +
-           `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
-           `\n` +
-           `Thank you for your understanding ${EMOJI.pray}.\n` +
-           `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
+    let msg = '';
+    if (isDueOrOverdue) {
+      msg = `🚨 FEE PAYMENT DUE 🚨\n` +
+        `\n` +
+        `Hello Sir/Madam 👋,\n` +
+        `\n` +
+        `This is to inform you that the chess class fee for ${cleanText(name)} is currently DUE 💳.\n` +
+        `❗ Amount Due: \u{20B9}${totalPending.toLocaleString()}\n` +
+        `\n` +
+        `We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation.\n` +
+        `\n` +
+        `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+        `\n` +
+        `Thank you for your understanding 🙏.\n` +
+        `– Chesskidoo Academy 🎓✨`;
+    } else {
+      msg = `🌸 UPCOMING FEE REMINDER 🌸\n` +
+        `\n` +
+        `Hello Sir/Madam 👋,\n` +
+        `\n` +
+        `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(name)} is coming up soon. 😊\n` +
+        `✨ Fee Amount: \u{20B9}${totalPending.toLocaleString()}\n` +
+        `📅 Due Date: ${dueDateStr} ⏰\n` +
+        `\n` +
+        `We kindly request you to complete the payment on or before the due date.\n` +
+        `\n` +
+        `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+        `\n` +
+        `Thank you so much for your support and cooperation! 🙏\n` +
+        `– Chesskidoo Academy 🎓✨`;
+    }
 
     const parsed = parseStoredPhone(phone);
     const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -1288,22 +1309,43 @@
        const monthName = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
        const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
-const payStatus = getStudentPaymentStatus(s);
-        const statusText = (payStatus === 'Due' || payStatus === 'Overdue') ? 'DUE' : 'PENDING';
+        const payStatus = getStudentPaymentStatus(s);
+        const isDueOrOverdue = (payStatus === 'Due' || payStatus === 'Overdue');
+        if (totalDebt <= 0) {
+          totalDebt = fee || 1500;
+        }
 
-        const msg = `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}\n` +
-          `\n` +
-          `Hello Sir/Madam ${EMOJI.wave},\n` +
-          `\n` +
-          `This is to inform you that the chess class fee for ${cleanText(name)} is still ${statusText} ${EMOJI.card}.\n` +
-          `${EMOJI.alert} Amount Due: \u{20B9}${totalDebt.toLocaleString()}\n` +
-          `\n` +
-          `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
-          `\n` +
-          `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
-          `\n` +
-          `Thank you for your understanding ${EMOJI.pray}.\n` +
-          `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
+        let msg = '';
+        if (isDueOrOverdue) {
+          msg = `🚨 FEE PAYMENT DUE 🚨\n` +
+            `\n` +
+            `Hello Sir/Madam 👋,\n` +
+            `\n` +
+            `This is to inform you that the chess class fee for ${cleanText(name)} is currently DUE 💳.\n` +
+            `❗ Amount Due: \u{20B9}${totalDebt.toLocaleString()}\n` +
+            `\n` +
+            `We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation.\n` +
+            `\n` +
+            `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+            `\n` +
+            `Thank you for your understanding 🙏.\n` +
+            `– Chesskidoo Academy 🎓✨`;
+        } else {
+          msg = `🌸 UPCOMING FEE REMINDER 🌸\n` +
+            `\n` +
+            `Hello Sir/Madam 👋,\n` +
+            `\n` +
+            `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(name)} is coming up soon. 😊\n` +
+            `✨ Fee Amount: \u{20B9}${totalDebt.toLocaleString()}\n` +
+            `📅 Due Date: ${dueDateStr} ⏰\n` +
+            `\n` +
+            `We kindly request you to complete the payment on or before the due date.\n` +
+            `\n` +
+            `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+            `\n` +
+            `Thank you so much for your support and cooperation! 🙏\n` +
+            `– Chesskidoo Academy 🎓✨`;
+        }
 
       const parsed = parseStoredPhone(phone);
       const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -4755,23 +4797,43 @@ Best regards,
        const dueDateStr = `${getOrdinal(dueCfg.day)} ${monthName} ${targetYear}`;
 
               const payStatus = getStudentPaymentStatus(s);
-        const statusText = (payStatus === 'Due' || payStatus === 'Overdue') ? 'DUE' : 'PENDING';
+        const isDueOrOverdue = (payStatus === 'Due' || payStatus === 'Overdue');
+        if (totalDue <= 0) {
+          totalDue = fee || 1500;
+        }
 
         // Build notification content
         let message = customMsg ? `${customMsg}\n\n` : '';
-        message += `${EMOJI.warning} FEE PAYMENT PENDING ${EMOJI.siren}\n` +
-          `\n` +
-          `Hello Sir/Madam ${EMOJI.wave},\n` +
-          `\n` +
-          `This is to inform you that the chess class fee for ${cleanText(studentName)} is still ${statusText} ${EMOJI.card}.\n` +
-          `${EMOJI.alert} Amount Due: \u{20B9}${totalDue.toLocaleString()}\n` +
-          `\n` +
-          `We kindly request you to complete the payment on or before ${dueDateStr} ${EMOJI.clock} to avoid any interruption in class participation ${EMOJI.prohibited}.\n` +
-          `\n` +
-          `${EMOJI.card} You may make the payment to: 9025846663 (Ranjith) ${EMOJI.phone}\n` +
-          `\n` +
-          `Thank you for your understanding ${EMOJI.pray}.\n` +
-          `– Chesskidoo Academy ${EMOJI.grad}${EMOJI.sparkle}`;
+        if (isDueOrOverdue) {
+          message += `🚨 FEE PAYMENT DUE 🚨\n` +
+            `\n` +
+            `Hello Sir/Madam 👋,\n` +
+            `\n` +
+            `This is to inform you that the chess class fee for ${cleanText(studentName)} is currently DUE 💳.\n` +
+            `❗ Amount Due: \u{20B9}${totalDue.toLocaleString()}\n` +
+            `\n` +
+            `We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation.\n` +
+            `\n` +
+            `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+            `\n` +
+            `Thank you for your understanding 🙏.\n` +
+            `– Chesskidoo Academy 🎓✨`;
+        } else {
+          message += `🌸 UPCOMING FEE REMINDER 🌸\n` +
+            `\n` +
+            `Hello Sir/Madam 👋,\n` +
+            `\n` +
+            `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(studentName)} is coming up soon. 😊\n` +
+            `✨ Fee Amount: \u{20B9}${totalDue.toLocaleString()}\n` +
+            `📅 Due Date: ${dueDateStr} ⏰\n` +
+            `\n` +
+            `We kindly request you to complete the payment on or before the due date.\n` +
+            `\n` +
+            `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+            `\n` +
+            `Thank you so much for your support and cooperation! 🙏\n` +
+            `– Chesskidoo Academy 🎓✨`;
+        }
 
       try {
         let sent = false;
