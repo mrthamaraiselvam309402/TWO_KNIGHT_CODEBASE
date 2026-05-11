@@ -3496,7 +3496,7 @@ function initUI() {
               const c = allCoaches.find(x => String(x.id) === String(s.coach_id));
               const cName = c ? getCoachName(c) : '';
               const dueCfg = getStudentDueConfig(s, cName, targetMonth, targetYear);
-              dueDateMatch = (dueCfg.day === selectedDay);
+              dueDateMatch = (dueCfg.day >= selectedDay);
             }
             
             let enrollDateMatch = true;
@@ -3508,7 +3508,21 @@ function initUI() {
             return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch && dueDateMatch && enrollDateMatch;
           });
 
-         studs.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
+          if (selectedDay !== null) {
+            studs.sort((a, b) => {
+              const cA = allCoaches.find(x => String(x.id) === String(a.coach_id));
+              const dueA = getStudentDueConfig(a, cA ? getCoachName(cA) : '', targetMonth, targetYear).day;
+              const cB = allCoaches.find(x => String(x.id) === String(b.coach_id));
+              const dueB = getStudentDueConfig(b, cB ? getCoachName(cB) : '', targetMonth, targetYear).day;
+              
+              if (dueA === dueB) {
+                return getStudentName(a).localeCompare(getStudentName(b));
+              }
+              return dueA - dueB;
+            });
+          } else {
+            studs.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
+          }
        }
 
        if (!studs || studs.length === 0) {
