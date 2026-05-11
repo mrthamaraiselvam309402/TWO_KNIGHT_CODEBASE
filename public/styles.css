@@ -455,7 +455,7 @@ input[type='month']::-webkit-calendar-picker-indicator { filter: invert(0.8) sep
 /* ── LOGIN SCREEN ── */
 #login-screen {
   position: fixed; inset: 0;
-  background: linear-gradient(rgba(5,5,10,0.7), rgba(14,14,26,0.9)), url('/images/hero.jpg') center/cover no-repeat;
+  background: linear-gradient(rgba(5,5,10,0.7), rgba(14,14,26,0.9)), url('/images/hero.png') center/cover no-repeat;
   z-index: 4000; display: flex; align-items: center; justify-content: center;
   transition: opacity 0.5s ease, visibility 0.5s;
 }
@@ -1289,3 +1289,80 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
   margin-top: 3px;
 }
 
+
+
+/* ---------------------------------------------------------------
+   EXPENDITURE MANAGEMENT MODULE
+   --------------------------------------------------------------- */
+
+/* Category badge pill */
+.exp-cat-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* Expenditure summary widget row */
+.exp-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+/* Expenditure form grid */
+.exp-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 540px) { .exp-form-grid { grid-template-columns: 1fr; } }
+
+/* Chart area inside card */
+.exp-chart-wrap {
+  position: relative;
+  height: 260px;
+}
+
+/* Form error text */
+.exp-form-error {
+  color: var(--danger);
+  font-size: 12px;
+  min-height: 18px;
+  margin-top: -8px;
+  margin-bottom: 10px;
+}
+
+/* Filter bar specific for expenditures */
+.exp-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 14px;
+  background: var(--surface2);
+  border: 1px solid rgba(232,168,48,0.08);
+  border-radius: var(--radius-sm);
+  margin-bottom: 18px;
+}
+.exp-filter-bar select,
+.exp-filter-bar input { margin-bottom: 0; padding: 8px 12px; font-size: 13px; flex: 1; min-width: 120px; }
+
+/* Month nav strip */
+.exp-month-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.exp-month-strip h3 { color: var(--gold); font-family: var(--font-head); font-size: 22px; }
+
+/* Income vs Expense colour indicators */
+.exp-income-card  { border-left: 4px solid var(--success) !important; }
+.exp-expense-card { border-left: 4px solid var(--danger)  !important; }
+.exp-pl-card      { border-left: 4px solid var(--amber)   !important; }

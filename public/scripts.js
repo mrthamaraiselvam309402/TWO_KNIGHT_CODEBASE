@@ -2427,11 +2427,12 @@ function initUI() {
   const PAGE_TITLES = {
     dash: 'Academy Overview', stud: 'Student Registry', 'coach-mgmt': 'Coach Management',
     child: 'My Child', fame: 'Wall of Fame', events: 'Events', bills: 'Payments',
+    exp: 'Expenditure Management',
     msgs: 'Messages', ai: 'AI Assistant'
   };
 
   function setPage(p) {
-    const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'msgs'];
+    const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'exp', 'msgs'];
     if (adminPages.includes(p) && role !== 'admin' && role !== 'master') {
       toast('Access denied', 'error');
       setPage(role === 'parent' ? 'child' : 'dash');
@@ -2504,6 +2505,7 @@ function initUI() {
       if (p === 'bills') renderBills();
       if (p === 'msgs') renderMsgs();
       if (p === 'child') renderChild();
+      if (p === 'exp' && window.initExpPage) window.initExpPage();
     }, 10);
   }
   window.setPage = setPage;

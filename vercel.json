@@ -85,6 +85,8 @@
     { "source": "/api/user_sessions/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/user_sessions/:match*" },
     { "source": "/api/payment_cycle", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/payment_cycle" },
     { "source": "/api/payment_cycle/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/payment_cycle/:match*" },
+    { "source": "/api/expenditures", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/expenditures" },
+    { "source": "/api/expenditures/:match*", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/expenditures/:match*" },
     { "source": "/api/upload", "destination": "https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/upload" }
   ]
 }

@@ -110,6 +110,7 @@
     <div class="nav-item" id="nav-fame" onclick="setPage('fame')"><span class="ico">🏆</span> Wall of Fame</div>
     <div class="nav-item" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Events</div>
     <div class="nav-item admin-only" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
+    <div class="nav-item admin-only" id="nav-exp" onclick="setPage('exp')"><span class="ico">💸</span> Expenditures</div>
 <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
 <div class="nav-item" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
   </div>
@@ -146,7 +147,7 @@
 
     <!-- Dashboard -->
     <div id="page-dash" class="page admin-only">
-      <img src="/images/hero.jpg" class="hero-img" alt="Chess">
+      <img src="/images/hero.png" class="hero-img" alt="Chess">
       
       <div class="dash-grid" style="margin-bottom:24px">
         <div class="card card-clickable" onclick="setPage('stud')"><div class="stat-label">Total Students</div><div class="stat-value" id="s-total">—</div></div>
@@ -598,6 +599,101 @@
       </div>
     </div>
 
+    <!-- Expenditures -->
+    <div id="page-exp" class="page admin-only">
+
+      <!-- Month strip -->
+      <div class="exp-month-strip">
+        <h3 id="exp-month-label">This Month</h3>
+        <input type="month" id="exp-month-picker" style="width:160px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--ivory);border-radius:8px;font-size:13px">
+        <button class="btn btn-outline-grey btn-sm" onclick="(function(){const now=new Date();const m=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');setExpMonth(m);document.getElementById('exp-month-picker').value=m;})()">This Month</button>
+        <div style="margin-left:auto">
+          <button class="btn btn-gold" onclick="openAddExpense()">
+            <svg style="width:16px;height:16px;vertical-align:middle;margin-right:5px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
+            Add Expense
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="exp-summary-grid">
+        <div class="card exp-expense-card">
+          <div class="stat-label">This Month Expenses</div>
+          <div class="stat-value text-danger" id="exp-widget-expense">—</div>
+        </div>
+        <div class="card exp-income-card">
+          <div class="stat-label">This Month Income</div>
+          <div class="stat-value text-success" id="exp-widget-income">—</div>
+        </div>
+        <div class="card exp-pl-card">
+          <div class="stat-label" id="exp-widget-pl-label">Profit / Loss</div>
+          <div class="stat-value" id="exp-widget-pl">—</div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="dash-charts" style="margin-bottom:24px">
+        <div class="card">
+          <h3 style="margin-bottom:16px;color:var(--gold)">Category Breakdown</h3>
+          <div class="exp-chart-wrap"><canvas id="exp-chart-pie"></canvas></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:16px;color:var(--gold)">6-Month Expense Trend</h3>
+          <div class="exp-chart-wrap"><canvas id="exp-chart-trend"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="exp-filter-bar">
+        <select id="exp-f-cat">
+          <option value="">All Categories</option>
+          <option>Rent</option>
+          <option>Coach Salary</option>
+          <option>Equipment</option>
+          <option>Snacks</option>
+          <option>Travel</option>
+          <option>Tournament</option>
+          <option>Utilities</option>
+          <option>Marketing</option>
+          <option>Maintenance</option>
+          <option>Platform &amp; Software</option>
+          <option>Miscellaneous</option>
+        </select>
+        <select id="exp-f-mode">
+          <option value="">All Payment Modes</option>
+          <option>Cash</option>
+          <option>UPI</option>
+          <option>Bank Transfer</option>
+          <option>Card</option>
+          <option>Cheque</option>
+        </select>
+        <input type="text" id="exp-f-search" placeholder="Search description…" style="max-width:240px">
+        <span id="exp-count" style="font-size:12px;color:var(--ivory3);white-space:nowrap"></span>
+        <span style="margin-left:auto;font-size:13px;color:var(--ivory3)">Total: <strong id="exp-month-total" style="color:var(--danger)">—</strong></span>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Amount</th>
+              <th>Payment Mode</th>
+              <th>Bill</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="exp-tbody">
+            <tr><td colspan="7"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="exp-pager"></div>
+    </div>
+
     <!-- Messages -->
     <div id="page-msgs" class="page admin-only">
       <div id="msgs-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
@@ -664,6 +760,71 @@
 
 <!-- Toast -->
 <div id="toast-container"></div>
+
+<!-- Expenditure Add/Edit Modal -->
+<div class="modal" id="exp-modal">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-title" id="exp-modal-title">Add Expense</div>
+    <div class="modal-sub">Enter the expense details below</div>
+
+    <div class="exp-form-grid">
+      <div class="form-group">
+        <label class="label">Date *</label>
+        <input type="date" id="exp-date" style="color-scheme:dark">
+      </div>
+      <div class="form-group">
+        <label class="label">Category *</label>
+        <select id="exp-cat">
+          <option>Rent</option>
+          <option>Coach Salary</option>
+          <option>Equipment</option>
+          <option>Snacks</option>
+          <option>Travel</option>
+          <option>Tournament</option>
+          <option>Utilities</option>
+          <option>Marketing</option>
+          <option>Maintenance</option>
+          <option>Platform &amp; Software</option>
+          <option>Miscellaneous</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="label">Description *</label>
+      <textarea id="exp-desc" rows="2" placeholder="e.g. Monthly hall rent - May 2026" style="resize:vertical"></textarea>
+    </div>
+
+    <div class="exp-form-grid">
+      <div class="form-group">
+        <label class="label">Amount (₹) *</label>
+        <input type="number" id="exp-amount" placeholder="0.00" min="0.01" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="label">Payment Mode *</label>
+        <select id="exp-mode">
+          <option>Cash</option>
+          <option>UPI</option>
+          <option>Bank Transfer</option>
+          <option>Card</option>
+          <option>Cheque</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="label">Bill / Receipt URL <span style="color:var(--ivory3);font-weight:400">(optional)</span></label>
+      <input type="url" id="exp-bill-url" placeholder="https://drive.google.com/… or imgbb link">
+    </div>
+
+    <div class="exp-form-error" id="exp-form-error"></div>
+
+    <div style="display:flex;gap:12px;margin-top:4px">
+      <button class="btn btn-outline-grey" style="flex:1" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" id="exp-submit-btn" onclick="submitExpenseForm()">Add Expense</button>
+    </div>
+  </div>
+</div>
 
 <!-- Payment History Modal -->
 <div id="payment-history-modal" class="modal">
@@ -1381,6 +1542,7 @@
    <!-- PDF libraries loaded dynamically in reporting.js -->
 
       <script src="scripts.js?v=5.9&t=20260507_065000" charset="utf-8"></script>
+      <script src="js/expenditures.js?v=1.0&t=20260511" charset="utf-8"></script>
       <script src="js/reporting.js?v=v8&t=20260507_013000" charset="utf-8"></script>
       <script src="js/ai-assistant.js?v=v3&t=20260507_013000" charset="utf-8"></script>
       <script src="js/auth.js?v=v3&t=20260507_013000" charset="utf-8"></script>
