@@ -3238,14 +3238,30 @@ function initUI() {
     if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currMonthPending.toLocaleString();
     if ($('s-total-outstanding')) $('s-total-outstanding').textContent = '₹' + totalOutstanding.toLocaleString();
 
-    // Coach expenses & Net Profit
+    // Coach expenses & Total Academy Expenditures calculation
     const totalCoachCost = allCoaches.filter(c => c.status !== 'archived').reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     if ($('s-total-cost')) $('s-total-cost').textContent = '₹' + totalCoachCost.toLocaleString();
     
-    const netProfit = paidRevenue - totalCoachCost;
     if ($('s-profit')) {
-      $('s-profit').textContent = '₹' + netProfit.toLocaleString();
-      $('s-profit').style.color = netProfit >= 0 ? 'var(--emerald)' : 'var(--ruby)';
+      const monthStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
+      apiCall(`/api/expenditures?mode=summary&month=${monthStr}`)
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error();
+        })
+        .then(summary => {
+          const otherExp = parseFloat(summary.total_expense || 0);
+          const totalExp = totalCoachCost + otherExp;
+          if ($('s-profit')) {
+            $('s-profit').textContent = '₹' + Math.round(totalExp).toLocaleString();
+          }
+        })
+        .catch(err => {
+          console.error('[Dashboard] Failed to fetch other expenditures:', err);
+          if ($('s-profit')) {
+            $('s-profit').textContent = '₹' + Math.round(totalCoachCost).toLocaleString();
+          }
+        });
     }
 
     // Session counts
