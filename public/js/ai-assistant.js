@@ -95,8 +95,18 @@ function appendMsg(bodyId, type, text, isError = false) {
     
     const div = document.createElement('div');
     div.className = `ai-msg ${type}`;
-    if (isError) div.style.color = 'var(--danger)';
-    div.textContent = text;
+    if (isError) {
+        div.style.color = 'var(--danger)';
+        div.textContent = text;
+    } else {
+        // Safe premium markdown rendering
+        let safeHtml = escapeHtml(text);
+        safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        safeHtml = safeHtml.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        safeHtml = safeHtml.replace(/• /g, '&bull; ');
+        safeHtml = safeHtml.replace(/\n/g, '<br>');
+        div.innerHTML = safeHtml;
+    }
     body.appendChild(div);
     body.scrollTop = body.scrollHeight;
 }
