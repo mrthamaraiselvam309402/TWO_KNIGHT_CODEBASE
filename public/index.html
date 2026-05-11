@@ -1539,12 +1539,55 @@
     <input type="text" id="chat-input" placeholder="Ask about revenue, coaches, or growth..." onkeypress="if(event.key==='Enter')sendChat()">
     <button class="chat-send" onclick="sendChat()">↑</button>
   </div>
+
+<!-- Floating Calculator Widget -->
+<button id="calc-toggle-btn" title="Open Calculator" onclick="toggleCalculator()"><span class="ico">🧮</span></button>
+
+<div id="floating-calc" class="calc-window" style="display:none">
+  <div class="calc-header" onmousedown="dragStart(event)">
+    <div class="calc-title">🧮 Quick Math</div>
+    <div class="calc-controls">
+      <button class="calc-ctrl-btn calc-minimize" onclick="minimizeCalculator()" title="Minimize">−</button>
+      <button class="calc-ctrl-btn calc-close" onclick="toggleCalculator()" title="Close">×</button>
+    </div>
+  </div>
+  <div id="calc-body-wrap">
+    <div class="calc-display-container">
+      <div id="calc-prev-expression"></div>
+      <div id="calc-display">0</div>
+    </div>
+    <div class="calc-keypad">
+      <button class="calc-btn calc-action" onclick="calcClear()">C</button>
+      <button class="calc-btn calc-action" onclick="calcBackspace()">⌫</button>
+      <button class="calc-btn calc-action" onclick="calcOperator('/')">÷</button>
+      <button class="calc-btn calc-action" onclick="calcOperator('*')">×</button>
+      
+      <button class="calc-btn" onclick="calcInput('7')">7</button>
+      <button class="calc-btn" onclick="calcInput('8')">8</button>
+      <button class="calc-btn" onclick="calcInput('9')">9</button>
+      <button class="calc-btn calc-action" onclick="calcOperator('-')">−</button>
+      
+      <button class="calc-btn" onclick="calcInput('4')">4</button>
+      <button class="calc-btn" onclick="calcInput('5')">5</button>
+      <button class="calc-btn" onclick="calcInput('6')">6</button>
+      <button class="calc-btn calc-action" onclick="calcOperator('+')">+</button>
+      
+      <button class="calc-btn" onclick="calcInput('1')">1</button>
+      <button class="calc-btn" onclick="calcInput('2')">2</button>
+      <button class="calc-btn" onclick="calcInput('3')">3</button>
+      <button class="calc-btn calc-equals" onclick="calcEvaluate()" style="grid-row: span 2">=</button>
+      
+      <button class="calc-btn" onclick="calcInput('0')" style="grid-column: span 2">0</button>
+      <button class="calc-btn" onclick="calcInput('.')">.</button>
+    </div>
+  </div>
 </div>
 
    <!-- PDF libraries loaded dynamically in reporting.js -->
 
       <script src="scripts.js?v=5.9&t=20260507_065000" charset="utf-8"></script>
       <script src="js/expenditures.js?v=1.0&t=20260511" charset="utf-8"></script>
+      <script src="js/calculator.js?v=1.0" charset="utf-8"></script>
       <script src="js/reporting.js?v=v8&t=20260507_013000" charset="utf-8"></script>
       <script src="js/ai-assistant.js?v=v3&t=20260507_013000" charset="utf-8"></script>
       <script src="js/auth.js?v=v3&t=20260507_013000" charset="utf-8"></script>
