@@ -607,7 +607,10 @@
         <h3 id="exp-month-label">This Month</h3>
         <input type="month" id="exp-month-picker" style="width:160px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--ivory);border-radius:8px;font-size:13px">
         <button class="btn btn-outline-grey btn-sm" onclick="(function(){const now=new Date();const m=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');setExpMonth(m);document.getElementById('exp-month-picker').value=m;})()">This Month</button>
-        <div style="margin-left:auto">
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-outline" onclick="toggleCalculator()" title="Toggle Quick Math Calculator">
+            🧮 Calculator
+          </button>
           <button class="btn btn-gold" onclick="openAddExpense()">
             <svg style="width:16px;height:16px;vertical-align:middle;margin-right:5px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
             Add Expense

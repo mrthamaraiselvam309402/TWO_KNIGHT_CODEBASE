@@ -157,6 +157,46 @@
     updateDisplay();
   };
 
+  function safeEvaluate(expr) {
+    const tokens = expr.split(/\s+/).filter(t => t.length > 0);
+    if (tokens.length === 0) return 0;
+
+    // Phase 1: Handle multiplication and division with operator precedence
+    const nextTokens = [];
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (token === '*' || token === '/') {
+        if (nextTokens.length === 0) return NaN;
+        const left = parseFloat(nextTokens.pop());
+        const right = parseFloat(tokens[++i]);
+        if (isNaN(left) || isNaN(right)) return NaN;
+        const res = token === '*' ? left * right : left / right;
+        nextTokens.push(res);
+      } else {
+        nextTokens.push(token);
+      }
+    }
+
+    // Phase 2: Handle addition and subtraction sequentially from left to right
+    if (nextTokens.length === 0) return 0;
+    let result = parseFloat(nextTokens[0]);
+    if (isNaN(result)) return NaN;
+
+    for (let i = 1; i < nextTokens.length; i += 2) {
+      const op = nextTokens[i];
+      const val = parseFloat(nextTokens[i + 1]);
+      if (isNaN(val)) return NaN;
+      if (op === '+') {
+        result += val;
+      } else if (op === '-') {
+        result -= val;
+      } else {
+        return NaN;
+      }
+    }
+    return result;
+  }
+
   window.calcEvaluate = function () {
     if (!expressionStr) return;
 
@@ -166,8 +206,8 @@
     evalExpr = evalExpr.replace(/÷/g, '/').replace(/×/g, '*').replace(/−/g, '-');
 
     try {
-      // Safe sandboxed numerical evaluation wrapper
-      const result = Function('"use strict"; return (' + evalExpr + ')')();
+      // Safe custom arithmetic parser (CSP-compliant, bypasses 'unsafe-eval' block)
+      const result = safeEvaluate(evalExpr);
       
       if (result === undefined || isNaN(result) || !isFinite(result)) {
         throw new Error();
