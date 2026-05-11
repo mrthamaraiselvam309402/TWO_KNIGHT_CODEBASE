@@ -151,7 +151,11 @@
     try {
       const res = await fetch(url, { ...options, headers });
       if (res.status === 401) {
-        console.warn(`[Auth] 401 Unauthorized for ${endpoint}. Possible token expiry.`);
+        res.clone().text().then(txt => {
+          console.warn(`[Auth] 401 Unauthorized for ${endpoint}. Body: ${txt}`);
+        }).catch(() => {
+          console.warn(`[Auth] 401 Unauthorized for ${endpoint}. Possible token expiry.`);
+        });
       }
       return res;
     } catch (e) {
