@@ -1568,6 +1568,15 @@ function initUI() {
       }
     }
     
+    // First Month Override: If this is the student's first month of enrollment, their due date is their enrollment date
+    const enrollStr = s.enrollment_date || s.join_date || s.created_at;
+    if (enrollStr) {
+      const enrollDate = new Date(enrollStr);
+      if (enrollDate.getUTCFullYear() === year && enrollDate.getUTCMonth() === month) {
+        day = enrollDate.getUTCDate();
+      }
+    }
+    
     return { day, feeOverride };
   }
   
