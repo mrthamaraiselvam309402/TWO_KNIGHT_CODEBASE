@@ -466,7 +466,7 @@ input[type='month']::-webkit-calendar-picker-indicator { filter: invert(0.8) sep
 /* ── LOGIN SCREEN ── */
 #login-screen {
   position: fixed; inset: 0;
-  background: linear-gradient(rgba(5,5,10,0.7), rgba(14,14,26,0.9)), url('/images/login-bg.png') center/cover no-repeat;
+  background: linear-gradient(rgba(5,5,10,0.7), rgba(14,14,26,0.9)), url('/images/hero.png') center/cover no-repeat;
   z-index: 4000; display: flex; align-items: center; justify-content: center;
   transition: opacity 0.5s ease, visibility 0.5s;
 }
