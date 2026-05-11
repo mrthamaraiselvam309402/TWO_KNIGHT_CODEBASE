@@ -1634,7 +1634,10 @@ function initUI() {
        const currentDate = new Date();
        const dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
        
-       return (currentDate >= dueDateObj) ? 'Due' : 'Pending';
+       // If it is the student's first month of enrollment, the fee is due immediately
+       const isFirstMonth = (effectiveEnroll.getUTCFullYear() === targetYear && effectiveEnroll.getUTCMonth() === targetMonth);
+       
+       return (isFirstMonth || currentDate >= dueDateObj) ? 'Due' : 'Pending';
     }
 
     // D. ARREARS (Past Months): If missing payments and in the past, status is 'Overdue'
