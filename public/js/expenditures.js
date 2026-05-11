@@ -94,9 +94,8 @@
   }
 
   // ─── Dashboard Widgets ──────────────────────────────────────────
-  async function renderExpDashboardWidgets() {
-    const summary = await fetchSummary();
-
+  function renderExpDashboardWidgetsWithData(summary) {
+    if (!summary) return;
     const setWidget = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
     setWidget('exp-widget-expense',  fmtCurrency(summary.total_expense));
@@ -115,6 +114,11 @@
     renderExpPieChart(summary.category_totals || {});
     // Trend line chart
     renderExpTrendChart();
+  }
+
+  async function renderExpDashboardWidgets() {
+    const summary = await fetchSummary();
+    renderExpDashboardWidgetsWithData(summary);
   }
 
   // ─── Charts ─────────────────────────────────────────────────────
@@ -457,9 +461,14 @@
     const tbody = document.getElementById('exp-tbody');
     if (tbody) tbody.innerHTML = `<tr><td colspan="7"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>`;
 
-    await fetchExpenditures();
+    // Fetch expenditures list and summary in parallel (concurrently) to load 2x faster!
+    const [_, summary] = await Promise.all([
+      fetchExpenditures(),
+      fetchSummary()
+    ]);
+
     renderExpTable();
-    await renderExpDashboardWidgets();
+    renderExpDashboardWidgetsWithData(summary);
   }
 
   // ─── Page Init (called by setPage router) ─────────────────────────
