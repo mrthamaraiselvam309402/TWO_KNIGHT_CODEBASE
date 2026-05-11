@@ -3292,8 +3292,7 @@ function initUI() {
           throw new Error();
         })
         .then(summary => {
-          const otherExp = parseFloat(summary.total_expense || 0);
-          const totalExp = totalCoachCost + otherExp;
+          const totalExp = parseFloat(summary.total_expense || 0);
           if ($('s-profit')) {
             $('s-profit').textContent = '₹' + Math.round(totalExp).toLocaleString();
           }
@@ -3301,7 +3300,7 @@ function initUI() {
         .catch(err => {
           console.error('[Dashboard] Failed to fetch other expenditures:', err);
           if ($('s-profit')) {
-            $('s-profit').textContent = '₹' + Math.round(totalCoachCost).toLocaleString();
+            $('s-profit').textContent = '₹0';
           }
         });
     }
