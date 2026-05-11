@@ -56,19 +56,11 @@ window.generateReportPDF = async function() {
       }
     });
 
-    // Precise Status Categorization (Deduplicated Transaction Accuracy)
-    const paidStudentIds = new Set();
+    // True transaction amount sum for collections in the target month (Real money)
     let collected = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
         if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
-            const sid = String(p.student_id).toLowerCase();
-            if (paidStudentIds.has(sid)) return sum; // Count 1x per month
-            
-            const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
-            if (s && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
-                paidStudentIds.add(sid);
-                return sum + (getStudentMonthlyFee(s) || 0);
-            }
+            return sum + (parseFloat(p.amount) || 0);
         }
         return sum;
     }, 0);
@@ -87,14 +79,6 @@ window.generateReportPDF = async function() {
         const s_id_key = String(s.id || '').trim().toLowerCase();
         const totalCredits = totalPaymentsMap[s_id_key] || 0;
         
-        const hasDirectPayment = (allPayments || []).some(p => {
-          const pDate = new Date(p.payment_date || p.created_at);
-          const psid = String(p.student_id || '').trim().toLowerCase();
-          return psid === s_id_key && pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid';
-        });
-        
-        const hasPaidThisSlot = (totalCredits >= monthsRequired) || hasDirectPayment;
-
         potential += fee;
         const totalMonthsUnpaid = Math.max(0, monthsRequired - totalCredits);
         if (totalMonthsUnpaid > 0) {
@@ -106,11 +90,11 @@ window.generateReportPDF = async function() {
         }
     });
 
-    const pending = potential - collected;
+    const pending = Math.max(0, potential - collected);
     const payroll = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     const netProfit = collected - payroll;
     
-    // Boardroom Metrics
+    // Simple Executive Metrics
     const arpu = activeStudents > 0 ? (collected / activeStudents).toFixed(0) : 0;
     const collectionRate = potential > 0 ? ((collected / potential) * 100).toFixed(1) : 0;
     const opMargin = collected > 0 ? ((netProfit / collected) * 100).toFixed(1) : 0;
@@ -130,27 +114,21 @@ window.generateReportPDF = async function() {
     const presentCount = monthAtt.filter(a => a.status === 'present').length;
     const attendanceHealth = monthAtt.length > 0 ? ((presentCount / monthAtt.length) * 100).toFixed(1) : 88.5; 
 
-    // Coach Performance ROI (count only students with 'Paid' status for this month)
+    // Coach Performance (based on true payments from assigned students this month)
     const coachMetrics = allCoaches.map(c => {
-      let coachRev = 0;
       const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
-      const coachPaidStuds = new Set();
-      coachStuds.forEach(s => {
-          const enrollDateStr = getStudentDate(s);
-          if (enrollDateStr) {
-              const enrollDate = new Date(enrollDateStr);
-              if (enrollDate <= monthEndLimit) {
-                  const sid = String(s.id).toLowerCase();
-                  if (coachPaidStuds.has(sid)) return;
-
-                  const status = getStudentPaymentStatus(s, targetMonth, targetYear);
-                  if (status === 'Paid') {
-                      coachPaidStuds.add(sid);
-                      coachRev += (getStudentMonthlyFee(s) || 0);
-                  }
+      const coachStudIds = new Set(coachStuds.map(s => String(s.id).toLowerCase()));
+      
+      let coachRev = (allPayments || []).reduce((sum, p) => {
+          const pDate = new Date(p.payment_date || p.created_at);
+          if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
+              const sid = String(p.student_id).toLowerCase();
+              if (coachStudIds.has(sid)) {
+                  return sum + (parseFloat(p.amount) || 0);
               }
           }
-      });
+          return sum;
+      }, 0);
       
       const coachCost = getCoachSalary(c) || 0;
       const profit = coachRev - coachCost;
@@ -175,7 +153,7 @@ window.generateReportPDF = async function() {
       .sort((a, b) => getStudentMonthlyFee(b) - getStudentMonthlyFee(a))
       .slice(0, 5);
 
-    // Monthwise Historical Analysis (Last 6 Months)
+    // Monthwise Historical Analysis (Last 6 Months) using true transaction-level values
     const monthwiseData = [];
     for (let i = 5; i >= 0; i--) {
         const d = new Date(Date.UTC(targetYear, targetMonth - i, 1));
@@ -184,27 +162,23 @@ window.generateReportPDF = async function() {
         const y = d.getUTCFullYear();
         const mEnd = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59));
         
-        let mCollected = 0;
         let mPotential = 0;
-        
-        const mPaidStuds = new Set();
         allStudents.forEach(s => {
             if ((s.status || 'active').toLowerCase() === 'archived') return;
             const enrollDateStr = getStudentDate(s);
             const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
             if (enrollDate <= mEnd) {
-                const sid = String(s.id).toLowerCase();
-                if (mPaidStuds.has(sid)) return;
-
-                const fee = getStudentMonthlyFee(s) || 0;
-                const status = getStudentPaymentStatus(s, m, y);
-                mPotential += fee;
-                if (status === 'Paid') {
-                    mPaidStuds.add(sid);
-                    mCollected += fee;
-                }
+                mPotential += (getStudentMonthlyFee(s) || 0);
             }
         });
+        
+        let mCollected = (allPayments || []).reduce((sum, p) => {
+            const pDate = new Date(p.payment_date || p.created_at);
+            if (pDate.getUTCMonth() === m && pDate.getUTCFullYear() === y && p.status === 'paid') {
+                return sum + (parseFloat(p.amount) || 0);
+            }
+            return sum;
+        }, 0);
         
         const mOutstanding = Math.max(0, mPotential - mCollected);
         const mRate = mPotential > 0 ? ((mCollected / mPotential) * 100).toFixed(0) : 0;
@@ -275,7 +249,7 @@ window.generateReportPDF = async function() {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Executive Strategic Audit - ${dateStr}</title>
+  <title>Academy Financial Report - ${dateStr}</title>
   <link href="/fonts/fonts.css" rel="stylesheet"/>
   <script src="/lib/chart.umd.min.js"></script>
   <style>
@@ -302,26 +276,26 @@ window.generateReportPDF = async function() {
     .page { width: 950px; padding: 80px; position: relative; min-height: 1300px; background: var(--card-bg); margin-bottom: 50px; box-shadow: 0 40px 100px rgba(0,0,0,0.6); border: 1px solid var(--border); overflow: hidden; }
     
     .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Cinzel', serif; font-size: 100px; font-weight: 900; color: rgba(201, 150, 12, 0.04); pointer-events: none; white-space: nowrap; z-index: 0; }
--
+
     .header { text-align: left; margin-bottom: 60px; border-bottom: 2px solid var(--gold); padding-bottom: 30px; position: relative; z-index: 1; }
     .header h1 { font-family: 'Cinzel', serif; font-size: 42px; font-weight: 900; letter-spacing: 2px; color: var(--gold); margin-bottom: 5px; text-transform: uppercase; }
     .header h2 { font-family: 'Syne', sans-serif; font-size: 14px; letter-spacing: 6px; color: var(--text-dim); font-weight: 600; margin-bottom: 25px; }
     .header-meta { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); text-transform: uppercase; }
     .confidential { color: var(--gold); font-weight: 700; letter-spacing: 2px; }
     .heartbeat { color: var(--emerald); font-weight: 600; }
--
+
     .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 50px; position: relative; z-index: 1; }
     .kpi-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px 10px; text-align: center; border-radius: 4px; position: relative; }
     .kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 10px; font-family: 'Syne', sans-serif; }
     .kpi-value { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 600; color: var(--gold); }
     .kpi-sub { font-size: 10px; color: #555; margin-top: 5px; font-style: italic; }
--
+
     .analytics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-bottom: 60px; align-items: center; position: relative; z-index: 1; }
     .chart-box { background: rgba(255,255,255,0.01); padding: 30px; border: 1px solid var(--border); border-radius: 8px; height: 350px; position: relative; }
     .data-story { font-size: 18px; color: var(--text); }
     .data-story p { margin-bottom: 20px; }
     .strategic-insight { background: rgba(201, 150, 12, 0.05); border-left: 5px solid var(--gold); padding: 20px; font-style: italic; margin-top: 30px; border-radius: 0 8px 8px 0; font-size: 16px; }
--
+
     h3 { font-family: 'Cinzel', serif; font-size: 18px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin: 50px 0 25px 0; display: flex; align-items: center; }
     h3::after { content: ''; flex: 1; height: 1px; background: var(--border); margin-left: 20px; }
     
@@ -333,7 +307,7 @@ window.generateReportPDF = async function() {
     .loss { color: var(--ruby) !important; font-weight: 600; }
     .gain { color: var(--emerald) !important; font-weight: 600; }
     .bold { font-weight: 700; color: #fff; }
--
+
     .footer { position: absolute; bottom: 50px; left: 80px; right: 80px; display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 25px; font-size: 10px; color: var(--text-dim); font-family: 'DM Mono', monospace; letter-spacing: 1px; }
     
     .print-btn { background: var(--gold); color: #000; border: none; padding: 18px 45px; font-family: 'Syne', sans-serif; font-weight: 800; cursor: pointer; margin-bottom: 40px; border-radius: 4px; letter-spacing: 3px; transition: all 0.4s; box-shadow: 0 15px 40px rgba(201, 150, 12, 0.3); text-transform: uppercase; }
@@ -342,73 +316,73 @@ window.generateReportPDF = async function() {
 </head>
 <body>
   <div class="no-print" style="position:fixed;top:20px;z-index:100;text-align:center;width:100%">
-    <button class="print-btn" onclick="window.print()">EXPORT STRATEGIC AUDIT</button>
+    <button class="print-btn" onclick="window.print()">EXPORT FINANCIAL STATEMENT</button>
   </div>
--
+
   <div class="page">
     <div class="watermark">FINANCIAL AUDIT</div>
     <div class="header">
-      <h1>STRATEGIC PERFORMANCE AUDIT</h1>
+      <h1>ACADEMY FINANCIAL REPORT</h1>
       <div class="header-meta">
-        <div>AUDIT ID: CKD-STRAT-${now.getFullYear()}-${Math.floor(Math.random()*10000)}</div>
-        <div class="confidential">EXECUTIVE AUDIT // CLASS-A PRIVILEGED</div>
+        <div>REPORT ID: CKD-FIN-${now.getFullYear()}-${Math.floor(Math.random()*10000)}</div>
+        <div class="confidential">EXECUTIVE REPORT // PRIVATE & CONFIDENTIAL</div>
         <div style="color:var(--gold);font-weight:700;letter-spacing:1px;margin-top:5px">REPORT PERIOD: ${dateStr.toUpperCase()}</div>
         <div class="heartbeat">SYNC STATUS: REAL-TIME</div>
       </div>
     </div>
--
+
     <h3>I. Strategic Key Metrics</h3>
     <div class="kpi-grid">
       <div class="kpi-card">
-        <div class="kpi-label">Active Units</div>
+        <div class="kpi-label">Active Students</div>
         <div class="kpi-value">${activeStudents}</div>
         <div class="kpi-sub">Total Students</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Last Month Due</div>
+        <div class="kpi-label">Past Unpaid Fees</div>
         <div class="kpi-value" style="color:var(--ruby)">₹${lastDueAmount.toLocaleString()}</div>
-        <div class="kpi-sub">Historical Arrears</div>
+        <div class="kpi-sub">Previous Month Arrears</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Curr Pending</div>
+        <div class="kpi-label">This Month Unpaid</div>
         <div class="kpi-value">₹${currPendingAmount.toLocaleString()}</div>
-        <div class="kpi-sub">Expected Pipeline</div>
+        <div class="kpi-sub">Current Month Balance</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Unit Revenue</div>
+        <div class="kpi-label">Avg Student Fee</div>
         <div class="kpi-value">₹${arpu}</div>
-        <div class="kpi-sub">Monthly ARPU</div>
+        <div class="kpi-sub">Avg Paid Fee</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Engagement</div>
+        <div class="kpi-label">Attendance</div>
         <div class="kpi-value">${attendanceHealth}%</div>
         <div class="kpi-sub">Avg Attendance</div>
       </div>
     </div>
--
+
     <div class="analytics-row">
       <div class="chart-box">
         <canvas id="revChart"></canvas>
       </div>
       <div class="data-story">
-        <p><strong>Revenue Verification:</strong> Gross potential for ${dateStr} is <span class="bold">₹${potential.toLocaleString()}</span>. Verified collections totaled <span class="bold">₹${collected.toLocaleString()}</span> across ${monthlyPayments.length} transactions.</p>
-        <p>Operating margin for this period is <span class="bold">${opMargin}%</span>. Total Faculty overhead is capped at <span class="bold">₹${payroll.toLocaleString()}</span>.</p>
+        <p><strong>Fees Reconciliation Summary:</strong> Total expected fees for ${dateStr} is <span class="bold">₹${potential.toLocaleString()}</span>. Verified collections totaled <span class="bold">₹${collected.toLocaleString()}</span> across ${monthlyPayments.length} transactions.</p>
+        <p>Operating profit margin for this period is <span class="bold">${opMargin}%</span>. Total Coaches salary overhead is capped at <span class="bold">₹${payroll.toLocaleString()}</span>.</p>
         <div class="strategic-insight">
-          Audit Note: System confirms ${newStudsThisMonth} new unit additions. Average Academy ELO has reached <span class="bold">${avgElo}</span>. Total outstanding (Last Due + Current) stands at <span class="bold">₹${(lastDueAmount + currPendingAmount).toLocaleString()}</span>.
+          Audit Note: System confirms ${newStudsThisMonth} new student registrations. Average Academy ELO has reached <span class="bold">${avgElo}</span>. Total outstanding (Last Due + Current) stands at <span class="bold">₹${(lastDueAmount + currPendingAmount).toLocaleString()}</span>.
         </div>
       </div>
     </div>
--
-    <h3>II. Faculty ROI Analysis (Verified Data)</h3>
+
+    <h3>II. Coaching Operations & Fee Returns</h3>
     <table>
       <thead>
         <tr>
           <th>Coach Name</th>
-          <th class="text-right">Active Units</th>
-          <th class="text-right">Realized Rev</th>
-          <th class="text-right">Cost Basis</th>
-          <th class="text-right">Net Profit</th>
-          <th class="text-right">ROI</th>
+          <th class="text-right">Assigned Students</th>
+          <th class="text-right">Collected Fees</th>
+          <th class="text-right">Monthly Salary</th>
+          <th class="text-right">Net Income</th>
+          <th class="text-right">Fee Return (ROI)</th>
         </tr>
       </thead>
       <tbody>
@@ -423,40 +397,40 @@ window.generateReportPDF = async function() {
         </tr>`).join('')}
       </tbody>
     </table>
--
+
     <div class="footer">
       <div>© CHESSKIDOO ACADEMY MANAGEMENT</div>
       <div>CLASSIFICATION: EXECUTIVE</div>
       <div>PAGE 01 / 03</div>
     </div>
   </div>
--
+
   <div class="page">
     <div class="watermark">DETAILED ANALYSIS</div>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 30px;">
       <div>
-        <h3>III. Unit Level Distribution</h3>
+        <h3>III. Student Level Distribution</h3>
         <div class="chart-box" style="height: 250px;">
           <canvas id="levelChart"></canvas>
         </div>
       </div>
       <div>
-        <h3>IV. Operational Scheduling</h3>
+        <h3>IV. Batch Timings Distribution</h3>
         <div class="chart-box" style="height: 250px;">
           <canvas id="timingChart"></canvas>
         </div>
       </div>
     </div>
--
-    <h3>V. Monthwise Revenue & Arrears Analysis</h3>
+
+    <h3>V. Monthly Fees Collections Trend</h3>
     <table>
       <thead>
         <tr>
           <th>Billing Period</th>
           <th class="text-right">Potential Revenue</th>
           <th class="text-right">Collected</th>
-          <th class="text-right">Outstanding (Due/Pending)</th>
-          <th class="text-right">Efficiency</th>
+          <th class="text-right">Uncollected Balance</th>
+          <th class="text-right">Collection Rate</th>
         </tr>
       </thead>
       <tbody>
@@ -470,10 +444,10 @@ window.generateReportPDF = async function() {
         </tr>`).join('')}
       </tbody>
     </table>
--
+
     <div style="display:grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px; margin-top: 20px;">
       <div>
-        <h3>VI. Top Accounts Receivable</h3>
+        <h3>VI. Pending Fees Leaderboard</h3>
         <table>
           <thead>
             <tr>
@@ -515,13 +489,13 @@ window.generateReportPDF = async function() {
     <h3>VIII. Strategic Recommendations</h3>
     <div class="data-story" style="margin-top:20px;">
       <div style="margin-bottom:15px; border-bottom: 1px solid var(--border); padding-bottom:10px; font-size: 15px;">
-        <strong style="color:var(--gold)">1. LIQUIDITY OPTIMIZATION:</strong> Total uncollected capital across last 6 months is <span class="bold">₹${monthwiseData.reduce((a, m) => a + m.outstanding, 0).toLocaleString()}</span>. A focused recovery drive is recommended.
+        <strong style="color:var(--gold)">1. UNCOLLECTED FEES AUDIT:</strong> Total uncollected fees across the last 6 months is <span class="bold">₹${monthwiseData.reduce((a, m) => a + m.outstanding, 0).toLocaleString()}</span>. A focused recovery drive is recommended.
       </div>
       <div style="margin-bottom:15px; border-bottom: 1px solid var(--border); padding-bottom:10px; font-size: 15px;">
-        <strong style="color:var(--gold)">2. FACULTY PERFORMANCE:</strong> <span class="bold">${coachMetrics.sort((a,b)=>b.roi-a.roi)[0]?.name || 'Top coaches'}</span> is demonstrating optimal unit management. Consider faculty-wide training based on these patterns.
+        <strong style="color:var(--gold)">2. COACH RETENTION PERFORMANCE:</strong> <span class="bold">${coachMetrics.sort((a,b)=>b.roi-a.roi)[0]?.name || 'Top coaches'}</span> is demonstrating optimal batch class management. Consider faculty-wide training based on these patterns.
       </div>
       <div style="font-size: 15px;">
-        <strong style="color:var(--gold)">3. GROWTH VECTOR:</strong> ${timings['Evening'] > timings['Morning'] ? 'Evening batches are approaching peak saturation. Expansion should focus on weekend morning slots.' : 'Current morning utilization is healthy. Potential for expansion in evening group sessions.'}
+        <strong style="color:var(--gold)">3. BATCH GROWTH POTENTIAL:</strong> ${timings['Evening'] > timings['Morning'] ? 'Evening batches are approaching peak saturation. Expansion should focus on weekend morning slots.' : 'Current morning utilization is healthy. Potential for expansion in evening group sessions.'}
       </div>
     </div>
 -
