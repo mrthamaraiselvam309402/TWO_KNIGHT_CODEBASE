@@ -422,12 +422,13 @@
     if ($('cb-paid-count')) $('cb-paid-count').textContent = `${paidPayments.length} transactions completed`;
 
     const isPaid = status === 'Paid';
-    const outstandingAmount = isPaid ? 0 : fee;
+    const isPendingStudent = getStudentStatus(s) === 'pending';
+    const outstandingAmount = (isPaid || isPendingStudent) ? 0 : fee;
     if ($('cb-total-due')) {
-      $('cb-total-due').textContent = '₹' + outstandingAmount.toLocaleString();
-      $('cb-total-due').className = isPaid ? 'stat-value text-success' : 'stat-value text-danger';
+      $('cb-total-due').textContent = isPendingStudent ? '—' : '₹' + outstandingAmount.toLocaleString();
+      $('cb-total-due').className = (isPaid || isPendingStudent) ? 'stat-value text-success' : 'stat-value text-danger';
     }
-    if ($('cb-due-date')) $('cb-due-date').textContent = isPaid ? 'Paid for this month' : `Next due date: ${dueDate}`;
+    if ($('cb-due-date')) $('cb-due-date').textContent = isPendingStudent ? 'Not Enrolled' : (isPaid ? 'Paid for this month' : `Next due date: ${dueDate}`);
 
     // Session ROI & Value calculation
     const myAttendance = (allAttendance || []).filter(a => String(a.student_id) === String(s.id));
@@ -441,11 +442,11 @@
     if ($('cb-roi-value')) $('cb-roi-value').textContent = '₹' + valueUnlocked.toLocaleString() + ' Unlocked';
     if ($('cb-roi-desc')) $('cb-roi-desc').textContent = `${presentCount}/${standardSessions} sessions attended (ROI: ${roiPct}%)`;
 
-    if ($('cb-plan-fee')) $('cb-plan-fee').textContent = '₹' + fee.toLocaleString() + ' / mo';
+    if ($('cb-plan-fee')) $('cb-plan-fee').textContent = isPendingStudent ? '—' : '₹' + fee.toLocaleString() + ' / mo';
     if ($('cb-plan-type')) {
       const mode = s.session_mode || s.batch_type || 'Group';
       const time = s.session_time || s.batch_time || '';
-      $('cb-plan-type').textContent = `Class: ${mode}${time ? ` (${time})` : ''}`;
+      $('cb-plan-type').textContent = isPendingStudent ? 'Class: Not Enrolled' : `Class: ${mode}${time ? ` (${time})` : ''}`;
     }
 
     // Bookkeeping statement details (CGST/SGST 18% breakout)
@@ -632,9 +633,9 @@
     let rows = '';
 
     // A. Current active billing period row (conditional on filter)
-    const showCurrentRow = (activeFilter === 'all') || 
+    const showCurrentRow = ((activeFilter === 'all') || 
                            (activeFilter === 'Paid' && isPaid) || 
-                           (activeFilter === 'Unpaid' && !isPaid);
+                           (activeFilter === 'Unpaid' && !isPaid)) && !isPendingStudent;
 
     if (showCurrentRow) {
       rows += `
@@ -1637,6 +1638,7 @@ function initUI() {
     const baselineDate = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st, 2026 baseline (UTC)
 
     // 1. Enrollment Check
+    if (getStudentStatus(s) === 'pending') return 'Not Enrolled';
     const enrollDateStr = getStudentDate(s);
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
     if (!enrollDate || enrollDate > targetMonthEnd) return 'Not Enrolled';
@@ -1758,7 +1760,7 @@ function initUI() {
   function parseStoredPhone(phoneStr) {
     if (!phoneStr) return { countryCode: 'IN', localNumber: '' };
     const digits = phoneStr.replace(/\D/g, '');
-    if (digits.length === 10 && (digits.startsWith('7') || digits.startsWith('8') || digits.startsWith('9'))) {
+    if (digits.length === 10 && (digits.startsWith('6') || digits.startsWith('7') || digits.startsWith('8') || digits.startsWith('9'))) {
       return { countryCode: 'IN', localNumber: digits };
     }
     const sortedCountries = [...COUNTRY_CODES].sort((a, b) => b.dial.length - a.dial.length);
@@ -3212,7 +3214,8 @@ function initUI() {
     let totalPotential = 0;
 
     targetStudents.forEach(s => {
-      if (s.status === 'archived') return;
+      const sStatus = getStudentStatus(s);
+      if (sStatus === 'archived' || sStatus === 'pending') return;
       const fee = getStudentMonthlyFee(s) || 0;
       totalPotential += fee;
 
@@ -3312,6 +3315,7 @@ function initUI() {
     // Session counts
     let groupCount = 0, singleCount = 0, activeEnroll = 0;
     targetStudents.forEach(s => {
+      if (getStudentStatus(s) === 'pending') return;
       activeEnroll++;
       const type = getStudentBatchType(s);
       if (type === 'Single') singleCount++;
@@ -3608,8 +3612,11 @@ function initUI() {
             const dueDateObj = new Date(Date.UTC(targetYear, targetMonth, dueCfg.day, 23, 59, 59));
             const isOverdue = dueDateObj < new Date() && status !== 'Paid';
             
+            const isPending = getStudentStatus(s) === 'pending';
             let dueDateHtml = '';
-            if (status === 'Paid') {
+            if (isPending) {
+              dueDateHtml = `<span style="color: var(--ivory-dim);">—</span>`;
+            } else if (status === 'Paid') {
               dueDateHtml = `<span class="text-success" style="opacity: 0.85; font-weight: 500; cursor:pointer" onclick="viewPaymentHistory('${s.id}')">${dueDateString}</span>`;
             } else if (isOverdue) {
               dueDateHtml = `<span class="text-danger" style="font-weight: 700;">⚠️ ${dueDateString}</span>`;
@@ -3651,22 +3658,52 @@ function initUI() {
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
-             } else {
+             } else if (isPending || status === 'Not Enrolled') {
+                primaryActions = `
+                  <div style="display:flex;gap:4px;flex-wrap:nowrap">
+                  <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
+                  <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
+                  <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
+                  </div>
+                `;
+                moreActions = '';
+              } else {
               primaryActions = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
               moreActions = '';
             }
 
+            const checkboxHtml = isPending 
+              ? `<input type="checkbox" class="stud-check" data-id="${s.id}" disabled title="Waiting list students cannot be selected for payments">`
+              : `<input type="checkbox" class="stud-check" data-id="${s.id}">`;
+
+            const studentNameHtml = `
+              <div style="font-weight:600">${escapeHtml(getStudentName(s))}</div>
+              <div style="margin-top: 4px;">
+                ${isPending 
+                  ? '<span class="badge" style="background: rgba(245, 158, 11, 0.12); color: var(--warning); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(245, 158, 11, 0.25);">Waiting List</span>' 
+                  : '<span class="badge" style="background: rgba(16, 185, 129, 0.12); color: var(--emerald); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.25);">Enrolled & Attending</span>'
+                }
+              </div>
+            `;
+
+            const feeHtml = isPending 
+              ? `<span style="color: var(--ivory-dim);">—</span>` 
+              : `₹${getStudentMonthlyFee(s).toLocaleString()}`;
+
+            const statusClass = status === 'Paid' ? 'text-success' : (status === 'Not Enrolled' || isPending) ? 'text-warning' : 'text-danger';
+            const statusText = isPending ? 'Not Enrolled' : status;
+
             return `<tr>
-              <td><input type="checkbox" class="stud-check" data-id="${s.id}"></td>
+              <td>${checkboxHtml}</td>
               <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
-              <td><div style="font-weight:600">${escapeHtml(getStudentName(s))}</div></td>
+              <td>${studentNameHtml}</td>
               <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
               <td>${coachName}</td>
               <td>${getStudentDate(s) || '-'}</td>
               <td>${session}</td>
               <td>${time}</td>
-              <td>₹${getStudentMonthlyFee(s).toLocaleString()}</td>
-              <td><span class="${status === 'Paid' ? 'text-success' : status === 'Pending' ? 'text-warning' : 'text-danger'}">${status}</span></td>
+              <td>${feeHtml}</td>
+              <td><span class="${statusClass}" style="font-weight: 600;">${statusText}</span></td>
               <td>${dueDateHtml}</td>
                 <td style="overflow-x:auto;white-space:nowrap">
                    <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;min-width:0" class="action-menu-container">
@@ -5272,15 +5309,19 @@ Best regards,
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
 
       // 1. Enrollment Check
-      const wasEnrolled = enrollDate && enrollDate <= targetMonthEnd;
-      if (!wasEnrolled) {
+      const isPending = getStudentStatus(s) === 'pending';
+      const wasEnrolled = enrollDate && enrollDate <= targetMonthEnd && !isPending;
+      if (!wasEnrolled || isPending) {
         return `<tr>
           <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">INV-${(s.id ? s.id.toString().slice(-6) : '000000')}</span></td>
-          <td><div style="font-weight:600;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div></td>
+          <td>
+            <div style="font-weight:600;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div>
+            <div style="font-size:11px;color:var(--ivory-dim)">Waiting List</div>
+          </td>
           <td>-</td>
           <td>-</td>
           <td>-</td>
-          <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+          <td style="font-weight:600;color:var(--gold)">—</td>
           <td><span class="badge badge-outline-grey" style="font-size:10px;padding:4px 8px">Not Enrolled</span></td>
           <td><span style="color:var(--ivory-dim);font-size:11px">—</span></td>
         </tr>`;
