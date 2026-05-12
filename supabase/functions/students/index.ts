@@ -135,8 +135,13 @@ Deno.serve(async (req) => {
    function parseStoredPhone(phoneStr: string) {
       if (!phoneStr) return { countryCode: 'IN', localNumber: '' };
       const digits = phoneStr.replace(/\D/g, '');
-      if (digits.length === 10 && (digits.startsWith('6') || digits.startsWith('7') || digits.startsWith('8') || digits.startsWith('9'))) {
-        return { countryCode: 'IN', localNumber: digits };
+      if (digits.length === 10) {
+        if (digits.startsWith('658') || digits.startsWith('659')) {
+          return { countryCode: 'SG', localNumber: digits.slice(2) };
+        }
+        if (digits.startsWith('6') || digits.startsWith('7') || digits.startsWith('8') || digits.startsWith('9')) {
+          return { countryCode: 'IN', localNumber: digits };
+        }
       }
       const sortedCountries = [...COUNTRY_CODES].sort((a, b) => b.dial.length - a.dial.length);
       for (const c of sortedCountries) {
