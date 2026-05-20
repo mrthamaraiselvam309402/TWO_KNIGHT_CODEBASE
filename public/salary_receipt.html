@@ -282,17 +282,37 @@
     const name = params.get('name') || 'Coach Name';
     const amount = parseInt(params.get('amount')) || 0;
     const dateStr = params.get('date');
-    const role = params.get('role') || 'Chess Coach';
-    const specialty = params.get('specialty') || 'Mentor';
     const method = params.get('method') || 'Online Transfer';
+
+    // Parse role and specialty
+    let rawRole = params.get('role') || 'Chess Coach';
+    let rawSpecialty = params.get('specialty') || 'Mentor';
+    
+    // Normalize values
+    const cleanRole = rawRole.trim().toLowerCase();
+    const cleanSpecialty = rawSpecialty.trim().toLowerCase();
+    
+    let displayRole = 'Chess Coach';
+    let displaySpecialty = rawSpecialty;
+    
+    if (cleanRole === 'advanced' || cleanRole === 'beginner' || cleanRole === 'intermediate') {
+      displayRole = 'Coach';
+    } else {
+      displayRole = rawRole;
+    }
+    
+    if (cleanSpecialty === 'advanced' || cleanSpecialty === 'beginner' || cleanSpecialty === 'intermediate') {
+      const cap = rawSpecialty.charAt(0).toUpperCase() + rawSpecialty.slice(1).toLowerCase();
+      displaySpecialty = `${cap} Coach`;
+    }
 
     const date = dateStr ? new Date(dateStr) : new Date();
     
     document.getElementById('disp-receipt-id').textContent = 'TXN-C' + id.slice(-5).toUpperCase();
     document.getElementById('disp-date').textContent = date.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' }).replace(/\//g, ' / ');
     document.getElementById('disp-name').textContent = name;
-    document.getElementById('disp-role').textContent = role;
-    document.getElementById('disp-specialty').textContent = specialty;
+    document.getElementById('disp-role').textContent = displayRole;
+    document.getElementById('disp-specialty').textContent = displaySpecialty;
     document.getElementById('disp-amount-row').textContent = '₹ ' + amount.toLocaleString();
     document.getElementById('disp-method').textContent = method;
     document.getElementById('disp-total').textContent = amount.toLocaleString();
