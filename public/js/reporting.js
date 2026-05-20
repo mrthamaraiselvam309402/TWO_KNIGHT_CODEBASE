@@ -78,7 +78,7 @@ window.generateReportPDF = async function() {
         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
         const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
         
-        const monthsRequired = ((targetYear - effectiveEnroll.getFullYear()) * 12) + (targetMonth - effectiveEnroll.getMonth()) + 1;
+        const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
         const s_id_key = String(s.id || '').trim().toLowerCase();
         const totalCredits = totalPaymentsMap[s_id_key] || 0;
         
@@ -104,7 +104,7 @@ window.generateReportPDF = async function() {
     const opMargin = collected > 0 ? ((netProfit / collected) * 100).toFixed(1) : 0;
     
     // Growth & Attendance Metrics
-    const monthStartLimit = new Date(targetYear, targetMonth, 1);
+    const monthStartLimit = new Date(Date.UTC(targetYear, targetMonth, 1));
     const newStudsThisMonth = allStudents.filter(s => {
         const join = new Date(s.joining_date || s.enrollment_date || s.created_at);
         return join >= monthStartLimit && join <= monthEndLimit;

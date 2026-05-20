@@ -1041,8 +1041,8 @@
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
     const enrollDateStr = getStudentDate(s);
-    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 2, 1); // Fallback to March 1, 2026
-    const baselineDate = new Date(2026, 3, 1); // Global System Baseline (April 1st, 2026)
+    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(Date.UTC(2026, 2, 1)); // Fallback to March 1, 2026
+    const baselineDate = new Date(Date.UTC(2026, 3, 1)); // Global System Baseline (April 1st, 2026)
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
 
     // FIX #5: Always rebuild — never trust a cached map for financial calculations
@@ -3530,7 +3530,7 @@ function initUI() {
        studs = studs.filter(s => {
          if ((s.status || 'active').toLowerCase() === 'archived') return false;
          const enrollDateStr = getStudentDate(s);
-         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(2026, 3, 1);
+         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(Date.UTC(2026, 3, 1));
          return enrollDate <= targetMonthEnd;
        });
 
@@ -4810,7 +4810,7 @@ Best regards,
       const targetMonth = window.reportMonth;
       const targetYear = window.reportYear;
       const enrollDateStr = getStudentDate(s);
-      const baseline = new Date(2026, 3, 1);
+      const baseline = new Date(Date.UTC(2026, 3, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
       const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
@@ -6558,7 +6558,7 @@ Best regards,
       const excelRows = allStudents
         .filter(s => {
             const enrollStr = getStudentDate(s);
-            const enrollDate = enrollStr ? new Date(enrollStr) : new Date(2026, 3, 1);
+            const enrollDate = enrollStr ? new Date(enrollStr) : new Date(Date.UTC(2026, 3, 1));
             return enrollDate <= targetMonthEnd && (s.status || 'active') !== 'archived';
         })
         .map(s => {
@@ -6631,7 +6631,7 @@ Best regards,
 
       const targetStudents = allStudents.filter(s => {
           const enrollStr = getStudentDate(s);
-          const enrollDate = enrollStr ? new Date(enrollStr) : new Date(2026, 3, 1);
+          const enrollDate = enrollStr ? new Date(enrollStr) : new Date(Date.UTC(2026, 3, 1));
           return enrollDate <= targetMonthEnd && (s.status || 'active') !== 'archived';
       });
 
