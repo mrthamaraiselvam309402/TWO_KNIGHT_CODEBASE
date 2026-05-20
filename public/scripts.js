@@ -56,6 +56,7 @@
     trophy: "\u{1F3C6}",
     star: "\u{2B50}",
     crown: "\u{1F451}",
+    knight: "\u{265E}",
     receipt: "\u{1F9FE}",
     cash: "\u{1F4B5}",
     party: "\u{1F389}",
@@ -4684,7 +4685,7 @@ ${receiptUrl}
 Thank you for your prompt payment and continued support of Chesskidoo Academy! ${EMOJI.grad}${EMOJI.trophy}
 
 Best regards,
-– Chesskidoo Academy ${EMOJI.star}${EMOJI.crown}`;
+– Chesskidoo Academy ${EMOJI.knight}`;
 
     const studentPhone = getStudentPhone(s);
     const parsed = parseStoredPhone(studentPhone);
