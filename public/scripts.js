@@ -1090,7 +1090,7 @@
 
     let msg = '';
     if (isDueOrOverdue) {
-      msg = `🚨 FEE PAYMENT DUE 🚨\n` +
+      msg = `🚨 FEE PAYMENT DUE\n` +
         `\n` +
         `Hello Sir/Madam 👋,\n` +
         `\n` +
@@ -1104,7 +1104,7 @@
         `Thank you for your understanding 🙏.\n` +
         `– Chesskidoo Academy 🎓✨`;
     } else {
-      msg = `🔔 UPCOMING FEE REMINDER 🔔\n` +
+      msg = `🔔 UPCOMING FEE REMINDER\n` +
         `\n` +
         `Hello Sir/Madam 👋,\n` +
         `\n` +
@@ -1322,7 +1322,7 @@
 
         let msg = '';
         if (isDueOrOverdue) {
-          msg = `🚨 FEE PAYMENT DUE 🚨\n` +
+          msg = `🚨 FEE PAYMENT DUE\n` +
             `\n` +
             `Hello Sir/Madam 👋,\n` +
             `\n` +
@@ -1336,7 +1336,7 @@
             `Thank you for your understanding 🙏.\n` +
             `– Chesskidoo Academy 🎓✨`;
         } else {
-          msg = `🔔 UPCOMING FEE REMINDER 🔔\n` +
+          msg = `🔔 UPCOMING FEE REMINDER\n` +
             `\n` +
             `Hello Sir/Madam 👋,\n` +
             `\n` +
@@ -4850,7 +4850,7 @@ Best regards,
         // Build notification content
         let message = customMsg ? `${customMsg}\n\n` : '';
         if (isDueOrOverdue) {
-          message += `🚨 FEE PAYMENT DUE 🚨\n` +
+          message += `🚨 FEE PAYMENT DUE\n` +
             `\n` +
             `Hello Sir/Madam 👋,\n` +
             `\n` +
@@ -4864,7 +4864,7 @@ Best regards,
             `Thank you for your understanding 🙏.\n` +
             `– Chesskidoo Academy 🎓✨`;
         } else {
-          message += `🔔 UPCOMING FEE REMINDER 🔔\n` +
+          message += `🔔 UPCOMING FEE REMINDER\n` +
             `\n` +
             `Hello Sir/Madam 👋,\n` +
             `\n` +
