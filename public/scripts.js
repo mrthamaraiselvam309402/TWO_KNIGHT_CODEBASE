@@ -1104,7 +1104,7 @@
         `Thank you for your understanding 🙏.\n` +
         `– Chesskidoo Academy 🎓✨`;
     } else {
-      msg = `🌸 UPCOMING FEE REMINDER 🌸\n` +
+      msg = `🔔 UPCOMING FEE REMINDER 🔔\n` +
         `\n` +
         `Hello Sir/Madam 👋,\n` +
         `\n` +
@@ -1336,7 +1336,7 @@
             `Thank you for your understanding 🙏.\n` +
             `– Chesskidoo Academy 🎓✨`;
         } else {
-          msg = `🌸 UPCOMING FEE REMINDER 🌸\n` +
+          msg = `🔔 UPCOMING FEE REMINDER 🔔\n` +
             `\n` +
             `Hello Sir/Madam 👋,\n` +
             `\n` +
@@ -4864,7 +4864,7 @@ Best regards,
             `Thank you for your understanding 🙏.\n` +
             `– Chesskidoo Academy 🎓✨`;
         } else {
-          message += `🌸 UPCOMING FEE REMINDER 🌸\n` +
+          message += `🔔 UPCOMING FEE REMINDER 🔔\n` +
             `\n` +
             `Hello Sir/Madam 👋,\n` +
             `\n` +
