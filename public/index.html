@@ -219,6 +219,15 @@
       <div class="filter-bar" id="student-filter-bar">
         <select id="f-coach" onchange="renderStudents()"><option value="">All Coaches</option></select>
         <select id="f-session" onchange="renderStudents()"><option value="">All Sessions</option><option value="Group">Group</option><option value="Single">Single</option></select>
+        <select id="f-enroll-status" onchange="renderStudents()">
+          <option value="">All Enrollment Status</option>
+          <option value="active">Active</option>
+          <option value="pending">Pending</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="waitlist">Waiting List</option>
+          <option value="inactive">Inactive</option>
+          <option value="archived">Archived</option>
+        </select>
         <select id="f-status" onchange="renderStudents()"><option value="">All Payment Status</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option><option value="Overdue">Overdue</option></select>
         <input type="number" id="f-min-fee" placeholder="Min Fee ₹" oninput="renderStudents()">
         <input type="number" id="f-max-fee" placeholder="Max Fee ₹" oninput="renderStudents()">
@@ -367,7 +376,7 @@
             <div class="card" style="border-left: 4px solid var(--danger); background: linear-gradient(145deg, var(--bg2), rgba(239, 68, 68, 0.04)); box-shadow: var(--shadow);">
               <div class="stat-label" style="text-transform: uppercase; font-size: 10px; letter-spacing: 1px; color: var(--ivory-dim);">Outstanding / Due</div>
               <div class="stat-value text-danger" id="cb-total-due" style="font-size: 24px; font-weight: 800; margin: 6px 0 2px;">₹0</div>
-              <div class="stat-desc" id="cb-due-date" style="font-size: 11px; color: var(--ivory-dim); opacity: 0.75;">Next due date: Not set</div>
+              <div class="stat-desc" id="cb-due-date" style="font-size: 11px; color: var(--ivory-dim); opacity: 0.75;">Due date: Not set</div>
             </div>
             <div class="card" style="border-left: 4px solid var(--gold); background: linear-gradient(145deg, var(--bg2), rgba(218, 163, 62, 0.04)); box-shadow: var(--shadow);">
               <div class="stat-label" style="text-transform: uppercase; font-size: 10px; letter-spacing: 1px; color: var(--ivory-dim);">Session ROI & Value</div>
@@ -992,6 +1001,16 @@
       </div>
     </div>
 
+    <div class="form-group" style="margin-top: 12px;">
+      <label>Enrollment Status</label>
+      <select id="m-status">
+        <option value="active">Active</option>
+        <option value="pending">Pending</option>
+        <option value="upcoming">Upcoming</option>
+        <option value="waitlist">Waiting List</option>
+      </select>
+    </div>
+
     <div style="display:flex;gap:10px;margin-top:20px; border-top: 1px solid var(--border); padding-top: 20px;">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
       <button class="btn btn-gold" style="flex:1" onclick="saveStudent()">Complete Enrollment</button>
@@ -1068,7 +1087,7 @@
         <input type="number" id="e-fee">
       </div>
       <div class="form-group">
-        <label>Next Due Date</label>
+        <label>Due Date</label>
         <input type="date" id="e-due-date">
       </div>
     </div>
@@ -1078,6 +1097,9 @@
       <select id="e-enroll-status">
         <option value="active">Active</option>
         <option value="pending">Pending</option>
+        <option value="upcoming">Upcoming</option>
+        <option value="waitlist">Waiting List</option>
+        <option value="inactive">Inactive</option>
         <option value="archived">Archived</option>
       </select>
     </div>

@@ -419,17 +419,17 @@
     const paidPayments = myPayments.filter(p => p.status === 'paid' || p.status === 'completed');
     const totalPaidSum = paidPayments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || fee), 0);
     
-    if ($('cb-total-paid')) $('cb-total-paid').textContent = '₹' + totalPaidSum.toLocaleString();
+    if ($('cb-total-paid')) $('cb-total-paid').textContent = formatStudentFee(s, totalPaidSum);
     if ($('cb-paid-count')) $('cb-paid-count').textContent = `${paidPayments.length} transactions completed`;
 
     const isPaid = status === 'Paid';
     const isPendingStudent = getStudentStatus(s) === 'pending';
     const outstandingAmount = (isPaid || isPendingStudent) ? 0 : fee;
     if ($('cb-total-due')) {
-      $('cb-total-due').textContent = isPendingStudent ? '—' : '₹' + outstandingAmount.toLocaleString();
+      $('cb-total-due').textContent = isPendingStudent ? '—' : formatStudentFee(s, outstandingAmount);
       $('cb-total-due').className = (isPaid || isPendingStudent) ? 'stat-value text-success' : 'stat-value text-danger';
     }
-    if ($('cb-due-date')) $('cb-due-date').textContent = isPendingStudent ? 'Not Enrolled' : (isPaid ? 'Paid for this month' : `Next due date: ${dueDate}`);
+    if ($('cb-due-date')) $('cb-due-date').textContent = isPendingStudent ? 'Not Enrolled' : (isPaid ? 'Paid for this month' : `Due date: ${dueDate}`);
 
     // Session ROI & Value calculation
     const myAttendance = (allAttendance || []).filter(a => String(a.student_id) === String(s.id));
@@ -440,10 +440,10 @@
     const valueUnlocked = presentCount * sessionVal;
     const roiPct = fee > 0 ? Math.min(100, Math.round((valueUnlocked / fee) * 100)) : 100;
 
-    if ($('cb-roi-value')) $('cb-roi-value').textContent = '₹' + valueUnlocked.toLocaleString() + ' Unlocked';
+    if ($('cb-roi-value')) $('cb-roi-value').textContent = formatStudentFee(s, valueUnlocked) + ' Unlocked';
     if ($('cb-roi-desc')) $('cb-roi-desc').textContent = `${presentCount}/${standardSessions} sessions attended (ROI: ${roiPct}%)`;
 
-    if ($('cb-plan-fee')) $('cb-plan-fee').textContent = isPendingStudent ? '—' : '₹' + fee.toLocaleString() + ' / mo';
+    if ($('cb-plan-fee')) $('cb-plan-fee').textContent = isPendingStudent ? '—' : formatStudentFee(s, fee) + ' / mo';
     if ($('cb-plan-type')) {
       const mode = s.session_mode || s.batch_type || 'Group';
       const time = s.session_time || s.batch_time || '';
@@ -1091,34 +1091,34 @@
 
     let msg = '';
     if (isDueOrOverdue) {
-      msg = `🚨 FEE PAYMENT DUE\n` +
+      msg = `FEE PAYMENT DUE\n` +
         `\n` +
-        `Hello Sir/Madam 👋,\n` +
+        `Hello Sir/Madam,\n` +
         `\n` +
-        `This is to inform you that the chess class fee for ${cleanText(name)} is currently DUE 💳.\n` +
-        `❗ Amount Due: \u{20B9}${totalPending.toLocaleString()}\n` +
+        `This is to inform you that the chess class fee for ${cleanText(name)} is currently due.\n` +
+        `Amount Due: \u{20B9}${totalPending.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalPending)}\n` +
         `\n` +
-        `We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation.\n` +
+        `We kindly request you to complete the payment on or before ${dueDateStr} to avoid any interruption in class participation.\n` +
         `\n` +
-        `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+        `You may make the payment to: 9025846663 (Ranjith)\n` +
         `\n` +
-        `Thank you for your understanding 🙏.\n` +
-        `– Chesskidoo Academy 🎓✨`;
+        `Thank you for your understanding.\n` +
+        `– Chesskidoo Academy`;
     } else {
-      msg = `🔔 UPCOMING FEE REMINDER\n` +
+      msg = `UPCOMING FEE REMINDER\n` +
         `\n` +
-        `Hello Sir/Madam 👋,\n` +
+        `Hello Sir/Madam,\n` +
         `\n` +
-        `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(name)} is coming up soon. 😊\n` +
-        `✨ Fee Amount: \u{20B9}${totalPending.toLocaleString()}\n` +
-        `📅 Due Date: ${dueDateStr} ⏰\n` +
+        `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(name)} is coming up soon.\n` +
+        `Fee Amount: \u{20B9}${totalPending.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalPending)}\n` +
+        `Due Date: ${dueDateStr}\n` +
         `\n` +
         `We kindly request you to complete the payment on or before the due date.\n` +
         `\n` +
-        `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+        `You may make the payment to: 9025846663 (Ranjith)\n` +
         `\n` +
-        `Thank you so much for your support and cooperation! 🙏\n` +
-        `– Chesskidoo Academy 🎓✨`;
+        `Thank you so much for your support and cooperation!\n` +
+        `– Chesskidoo Academy`;
     }
 
     const parsed = parseStoredPhone(phone);
@@ -1323,34 +1323,34 @@
 
         let msg = '';
         if (isDueOrOverdue) {
-          msg = `🚨 FEE PAYMENT DUE\n` +
+          msg = `FEE PAYMENT DUE\n` +
             `\n` +
-            `Hello Sir/Madam 👋,\n` +
+            `Hello Sir/Madam,\n` +
             `\n` +
-            `This is to inform you that the chess class fee for ${cleanText(name)} is currently DUE 💳.\n` +
-            `❗ Amount Due: \u{20B9}${totalDebt.toLocaleString()}\n` +
+            `This is to inform you that the chess class fee for ${cleanText(name)} is currently due.\n` +
+            `Amount Due: \u{20B9}${totalDebt.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalDebt)}\n` +
             `\n` +
-            `We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation.\n` +
+            `We kindly request you to complete the payment on or before ${dueDateStr} to avoid any interruption in class participation.\n` +
             `\n` +
-            `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+            `You may make the payment to: 9025846663 (Ranjith)\n` +
             `\n` +
-            `Thank you for your understanding 🙏.\n` +
-            `– Chesskidoo Academy 🎓✨`;
+            `Thank you for your understanding.\n` +
+            `– Chesskidoo Academy`;
         } else {
-          msg = `🔔 UPCOMING FEE REMINDER\n` +
+          msg = `UPCOMING FEE REMINDER\n` +
             `\n` +
-            `Hello Sir/Madam 👋,\n` +
+            `Hello Sir/Madam,\n` +
             `\n` +
-            `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(name)} is coming up soon. 😊\n` +
-            `✨ Fee Amount: \u{20B9}${totalDebt.toLocaleString()}\n` +
-            `📅 Due Date: ${dueDateStr} ⏰\n` +
+            `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(name)} is coming up soon.\n` +
+            `Fee Amount: \u{20B9}${totalDebt.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalDebt)}\n` +
+            `Due Date: ${dueDateStr}\n` +
             `\n` +
             `We kindly request you to complete the payment on or before the due date.\n` +
             `\n` +
-            `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+            `You may make the payment to: 9025846663 (Ranjith)\n` +
             `\n` +
-            `Thank you so much for your support and cooperation! 🙏\n` +
-            `– Chesskidoo Academy 🎓✨`;
+            `Thank you so much for your support and cooperation!\n` +
+            `– Chesskidoo Academy`;
         }
 
       const parsed = parseStoredPhone(phone);
@@ -1527,92 +1527,14 @@ function initUI() {
 
   function getStudentDueConfig(s, coachName, month = 4, year = 2026) {
     if (!s) return { day: 5, feeOverride: null };
-    const sName = (s.full_name || s.name || '').toUpperCase().trim();
-    const cName = (coachName || '').toUpperCase().trim();
-    
     let day = 5;
     let feeOverride = null;
-    
-    const isMay2026 = (month === 4 && year === 2026);
-    
-    if (isMay2026) {
-      // 1. Matches by student name FIRST (across all coaches or specific ones)
-      if (sName.includes('ARUNYA')) {
-        day = 24;
-      } else if (sName.includes('MANAV')) {
-        day = 10;
-      } else if (sName.includes('PRNAVAV') || sName.includes('PRANAV')) {
-        day = 10;
-      } else if (sName.includes('ATHIVIK')) {
-        day = 12;
-      } else if (sName.includes('FAITHMA') || sName.includes('FATHIMA')) {
-        day = 14;
-      } else if (sName.includes('RAYAN') || sName.includes('MOHAMMED RAYAN')) {
-        day = 18;
-      } else if (sName.includes('SURESHBABU')) {
-        day = 24;
-      } else if (sName.includes('JEEVAN')) {
-        day = 25;
-        feeOverride = 3700;
-      } else if (sName.includes('SREELAXMI')) {
-        day = 9;
-      } else if (sName.includes('MUKILAN')) {
-        day = 4;
-      } else if (sName.includes('ANUSHYA')) {
-        day = 18;
-      } else if (sName.includes('MEGAHA') || sName.includes('MEGHA')) {
-        day = 18;
-      } else if (sName.includes('MOHAMMED ATIFK') || sName.includes('ATIFK')) {
-        day = 18;
-      } else if (sName.includes('AARA')) {
-        day = 14;
-      } else if (sName.includes('ANYUSH')) {
-        day = 18;
-      } else if (sName.includes('BALAJI')) {
+
+    if (s.due_date) {
+      try {
+        day = new Date(s.due_date).getUTCDate() || 5;
+      } catch (e) {
         day = 5;
-      } else if (sName.includes('NIGUNAN')) {
-        day = 9;
-      } else if (sName.includes('RAKISTHA') || sName.includes('RAKSHITHA')) {
-        day = 20;
-      } else if (sName.includes('SHERVIN')) {
-        day = 24;
-      } else if (sName.includes('RIYAS')) {
-        day = 15;
-      } else if (sName.includes('VARUN')) {
-        day = 15;
-      } else if (sName.includes('SATHYA')) {
-        day = 13;
-        } else if (sName.includes('SAKTHI')) {
-          day = 13;
-        }
-        else if (sName.includes('VELAVA')) {
-          day = 20;
-        }
-        // 2. Coach-specific fallbacks for other students
-        else if (cName.includes('VISHNU')) {
-        day = 20; // Velava and other 5 students
-      } else if (cName.includes('ARIVUSELVAM') || cName.includes('SRIVUSELVAM')) {
-        day = 4; // Other Arivuselvam students
-      } else if (cName.includes('SUDHIN') || cName.includes('SUDIN')) {
-        day = 18; // Other Sudhin students
-      } else {
-        // Fallback to database s.due_date if present, otherwise 5
-        if (s.due_date) {
-          try {
-            day = new Date(s.due_date).getUTCDate() || 5;
-          } catch (e) {
-            day = 5;
-          }
-        }
-      }
-    } else {
-      // Non-May 2026 fallback
-      if (s.due_date) {
-        try {
-          day = new Date(s.due_date).getUTCDate() || 5;
-        } catch (e) {
-          day = 5;
-        }
       }
     }
     
@@ -1639,7 +1561,10 @@ function initUI() {
     const baselineDate = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st, 2026 baseline (UTC)
 
     // 1. Enrollment Check
-    if (getStudentStatus(s) === 'pending') return 'Not Enrolled';
+    const enrollStatus = getStudentStatus(s);
+    if (enrollStatus === 'pending' || enrollStatus === 'waitlist' || enrollStatus === 'inactive' || enrollStatus === 'archived') {
+      return 'Not Enrolled';
+    }
     const enrollDateStr = getStudentDate(s);
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
     if (!enrollDate || enrollDate > targetMonthEnd) return 'Not Enrolled';
@@ -1750,6 +1675,76 @@ function initUI() {
     { code: 'NZ', name: 'New Zealand', dial: '+64', length: 9, flag: '🇳🇿' },
     { code: 'TW', name: 'Taiwan', dial: '+886', length: 9, flag: '🇹🇼' }
   ];
+  
+  const CURRENCY_MAP = {
+    'IN': { currency: 'INR', symbol: '₹', rate: 1.0 },
+    'US': { currency: 'USD', symbol: '$', rate: 0.012 },
+    'GB': { currency: 'GBP', symbol: '£', rate: 0.0094 },
+    'CA': { currency: 'CAD', symbol: 'C$', rate: 0.016 },
+    'AU': { currency: 'AUD', symbol: 'A$', rate: 0.018 },
+    'DE': { currency: 'EUR', symbol: '€', rate: 0.011 },
+    'FR': { currency: 'EUR', symbol: '€', rate: 0.011 },
+    'JP': { currency: 'JPY', symbol: '¥', rate: 1.88 },
+    'CN': { currency: 'CNY', symbol: '¥', rate: 0.087 },
+    'BR': { currency: 'BRL', symbol: 'R$', rate: 0.062 },
+    'MX': { currency: 'MXN', symbol: '$', rate: 0.20 },
+    'IT': { currency: 'EUR', symbol: '€', rate: 0.011 },
+    'ES': { currency: 'EUR', symbol: '€', rate: 0.011 },
+    'RU': { currency: 'RUB', symbol: '₽', rate: 1.10 },
+    'KR': { currency: 'KRW', symbol: '₩', rate: 16.4 },
+    'SG': { currency: 'SGD', symbol: 'S$', rate: 0.016 },
+    'MY': { currency: 'MYR', symbol: 'RM', rate: 0.056 },
+    'TH': { currency: 'THB', symbol: '฿', rate: 0.44 },
+    'ID': { currency: 'IDR', symbol: 'Rp', rate: 193.0 },
+    'PH': { currency: 'PHP', symbol: '₱', rate: 0.70 },
+    'VN': { currency: 'VND', symbol: '₫', rate: 305.0 },
+    'AE': { currency: 'AED', symbol: 'AED', rate: 0.044 },
+    'SA': { currency: 'SAR', symbol: 'SR', rate: 0.045 },
+    'PK': { currency: 'PKR', symbol: 'Rs', rate: 3.32 },
+    'BD': { currency: 'BDT', symbol: '৳', rate: 1.41 },
+    'LK': { currency: 'LKR', symbol: 'Rs', rate: 3.59 },
+    'ZA': { currency: 'ZAR', symbol: 'R', rate: 0.22 },
+    'NG': { currency: 'NGN', symbol: '₦', rate: 18.0 },
+    'EG': { currency: 'EGP', symbol: 'E£', rate: 0.57 },
+    'NL': { currency: 'EUR', symbol: '€', rate: 0.011 },
+    'BE': { currency: 'EUR', symbol: '€', rate: 0.011 },
+    'SE': { currency: 'SEK', symbol: 'kr', rate: 0.13 },
+    'NO': { currency: 'NOK', symbol: 'kr', rate: 0.13 },
+    'DK': { currency: 'DKK', symbol: 'kr', rate: 0.083 },
+    'FI': { currency: 'EUR', symbol: '€', rate: 0.011 },
+    'PL': { currency: 'PLN', symbol: 'zł', rate: 0.048 },
+    'TR': { currency: 'TRY', symbol: '₺', rate: 0.39 },
+    'IL': { currency: 'ILS', symbol: '₪', rate: 0.044 },
+    'AR': { currency: 'ARS', symbol: '$', rate: 10.7 },
+    'CL': { currency: 'CLP', symbol: '$', rate: 11.2 },
+    'CO': { currency: 'COP', symbol: '$', rate: 47.0 },
+    'NZ': { currency: 'NZD', symbol: 'NZ$', rate: 0.020 },
+    'TW': { currency: 'TWD', symbol: 'NT$', rate: 0.39 }
+  };
+
+  function formatStudentFee(s, inrAmount) {
+    if (!s) return '₹' + (inrAmount || 0).toLocaleString();
+    if (typeof inrAmount !== 'number') inrAmount = parseFloat(inrAmount) || 0;
+    const country = (s.country_code || 'IN').toUpperCase();
+    const map = CURRENCY_MAP[country] || CURRENCY_MAP['IN'];
+    const baseStr = '₹' + inrAmount.toLocaleString();
+    if (map.currency === 'INR') {
+      return baseStr;
+    }
+    const converted = Math.round(inrAmount * map.rate);
+    const convertedStr = `${map.symbol}${converted.toLocaleString()} ${map.currency}`;
+    return `${baseStr} (${convertedStr})`;
+  }
+
+  function getStudentLocalCurrencyAmount(s, inrAmount) {
+    if (!s) return '';
+    if (typeof inrAmount !== 'number') inrAmount = parseFloat(inrAmount) || 0;
+    const country = (s.country_code || 'IN').toUpperCase();
+    const map = CURRENCY_MAP[country] || CURRENCY_MAP['IN'];
+    if (map.currency === 'INR') return '';
+    const converted = Math.round(inrAmount * map.rate);
+    return ` (${map.symbol}${converted.toLocaleString()} ${map.currency})`;
+  }
   
   window.selectedCountryCode = 'IN';
   window.selectedCountryCodeEdit = 'IN';
@@ -3186,12 +3181,12 @@ function initUI() {
       });
 
     const targetStudents = (allStudents || []).filter(s => {
-      const sStatus = (s.status || 'active').toLowerCase();
-      if (sStatus === 'archived') return false;
+      const sStatus = getStudentStatus(s);
+      if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
 
-     const enrollDateStr = getStudentDate(s);
-     const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
-     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+      const enrollDateStr = getStudentDate(s);
+      const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       return enrollDate <= targetMonthEnd;
     });
 
@@ -3221,7 +3216,7 @@ function initUI() {
 
     targetStudents.forEach(s => {
       const sStatus = getStudentStatus(s);
-      if (sStatus === 'archived' || sStatus === 'pending') return;
+      if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return;
       const fee = getStudentMonthlyFee(s) || 0;
       totalPotential += fee;
 
@@ -3529,7 +3524,9 @@ function initUI() {
 
        // Apply Base Filters (Enrollment Date & Archive Status)
        studs = studs.filter(s => {
-         if ((s.status || 'active').toLowerCase() === 'archived') return false;
+         const sStatus = getStudentStatus(s);
+         const fEnrollStatus = $('f-enroll-status')?.value;
+         if (sStatus === 'archived' && fEnrollStatus !== 'archived') return false;
          const enrollDateStr = getStudentDate(s);
          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(Date.UTC(2026, 3, 1));
          return enrollDate <= targetMonthEnd;
@@ -3540,6 +3537,7 @@ function initUI() {
           const fSearch = ($('f-search')?.value || '').toLowerCase().trim();
           const fCoach = $('f-coach')?.value;
           const fSession = $('f-session')?.value;
+          const fEnrollStatus = $('f-enroll-status')?.value;
           const fStatus = $('f-status')?.value;
           const fMin = parseInt($('f-min-fee')?.value) || 0;
           const fMax = parseInt($('f-max-fee')?.value) || 999999;          const fDueDate = $('f-due-date-stud')?.value;
@@ -3576,7 +3574,9 @@ function initUI() {
               enrollDateMatch = enrollDate === selectedEnrollDate;
             }
             
-            return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch && dueDateMatch && enrollDateMatch;
+            const enrollStatusMatch = !fEnrollStatus || getStudentStatus(s) === fEnrollStatus;
+            
+            return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch && dueDateMatch && enrollDateMatch && enrollStatusMatch;
           });
 
           if (selectedDay !== null) {
@@ -3618,10 +3618,29 @@ function initUI() {
             const dueDateObj = new Date(Date.UTC(targetYear, targetMonth, dueCfg.day, 23, 59, 59));
             const isOverdue = dueDateObj < new Date() && status !== 'Paid';
             
-            const isPending = getStudentStatus(s) === 'pending';
+            const enrollStatus = getStudentStatus(s);
+            const isNonActive = enrollStatus !== 'active';
+            
+            let badgeHtml = '';
+            if (enrollStatus === 'active') {
+              badgeHtml = '<span class="badge" style="background: rgba(16, 185, 129, 0.12); color: var(--emerald); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.25);">Enrolled & Attending</span>';
+            } else if (enrollStatus === 'pending') {
+              badgeHtml = '<span class="badge" style="background: rgba(245, 158, 11, 0.12); color: var(--warning); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(245, 158, 11, 0.25);">Pending</span>';
+            } else if (enrollStatus === 'waitlist') {
+              badgeHtml = '<span class="badge" style="background: rgba(139, 92, 246, 0.12); color: #a78bfa; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(139, 92, 246, 0.25);">Waiting List</span>';
+            } else if (enrollStatus === 'upcoming') {
+              badgeHtml = '<span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #60a5fa; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(59, 130, 246, 0.25);">Upcoming</span>';
+            } else if (enrollStatus === 'inactive') {
+              badgeHtml = '<span class="badge" style="background: rgba(107, 114, 128, 0.12); color: #9ca3af; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(107, 114, 128, 0.25);">Inactive</span>';
+            } else if (enrollStatus === 'archived') {
+              badgeHtml = '<span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #f87171; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(239, 68, 68, 0.25);">Archived</span>';
+            }
+
             let dueDateHtml = '';
-            if (isPending) {
+            if (enrollStatus === 'pending' || enrollStatus === 'waitlist' || enrollStatus === 'inactive' || enrollStatus === 'archived') {
               dueDateHtml = `<span style="color: var(--ivory-dim);">—</span>`;
+            } else if (enrollStatus === 'upcoming') {
+              dueDateHtml = `<span style="color: var(--ivory-dim); opacity: 0.8;">${dueDateString}</span>`;
             } else if (status === 'Paid') {
               dueDateHtml = `<span class="text-success" style="opacity: 0.85; font-weight: 500; cursor:pointer" onclick="viewPaymentHistory('${s.id}')">${dueDateString}</span>`;
             } else if (isOverdue) {
@@ -3664,7 +3683,7 @@ function initUI() {
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
-             } else if (isPending || status === 'Not Enrolled') {
+             } else if (isNonActive || status === 'Not Enrolled') {
                 primaryActions = `
                   <div style="display:flex;gap:4px;flex-wrap:nowrap">
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
@@ -3678,26 +3697,26 @@ function initUI() {
               moreActions = '';
             }
 
-            const checkboxHtml = isPending 
-              ? `<input type="checkbox" class="stud-check" data-id="${s.id}" disabled title="Waiting list students cannot be selected for payments">`
+            const checkboxHtml = isNonActive 
+              ? `<input type="checkbox" class="stud-check" data-id="${s.id}" disabled title="Non-active students cannot be selected for payments">`
               : `<input type="checkbox" class="stud-check" data-id="${s.id}">`;
 
             const studentNameHtml = `
               <div style="font-weight:600">${escapeHtml(getStudentName(s))}</div>
               <div style="margin-top: 4px;">
-                ${isPending 
-                  ? '<span class="badge" style="background: rgba(245, 158, 11, 0.12); color: var(--warning); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(245, 158, 11, 0.25);">Waiting List</span>' 
-                  : '<span class="badge" style="background: rgba(16, 185, 129, 0.12); color: var(--emerald); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.25);">Enrolled & Attending</span>'
-                }
+                ${badgeHtml}
               </div>
             `;
 
-            const feeHtml = isPending 
+            const feeHtml = isNonActive 
               ? `<span style="color: var(--ivory-dim);">—</span>` 
-              : `₹${getStudentMonthlyFee(s).toLocaleString()}`;
+              : formatStudentFee(s, getStudentMonthlyFee(s));
 
-            const statusClass = status === 'Paid' ? 'text-success' : (status === 'Not Enrolled' || isPending) ? 'text-warning' : 'text-danger';
-            const statusText = isPending ? 'Not Enrolled' : status;
+            let statusClass = 'text-danger';
+            if (status === 'Paid') statusClass = 'text-success';
+            else if (isNonActive || status === 'Not Enrolled') statusClass = 'text-warning';
+
+            const statusText = enrollStatus === 'waitlist' ? 'Waiting List' : (enrollStatus === 'upcoming' ? 'Upcoming' : (enrollStatus === 'inactive' ? 'Inactive' : (enrollStatus === 'archived' ? 'Archived' : (enrollStatus === 'pending' ? 'Not Enrolled' : status))));
 
             return `<tr>
               <td>${checkboxHtml}</td>
@@ -3963,6 +3982,7 @@ function initUI() {
       $('m-batch-time').value = '17:00';
       if ($('m-due-date')) $('m-due-date').value = '';
       if ($('m-coach')) $('m-coach').value = '';
+      if ($('m-status')) $('m-status').value = 'active';
       window.selectedCountryCode = 'IN';
       window.selectedCountryCodeEdit = 'IN';
       const selected = $('country-selected');
@@ -3979,22 +3999,24 @@ function initUI() {
         const countryCode = window.selectedCountryCode || 'IN';
         const validation = validatePhoneNumber(rawPhone, countryCode);
         const fullPhone = getFullInternationalPhoneDigits(rawPhone, countryCode);
+        const selectedStatus = $('m-status')?.value || 'active';
+        const defaultPaymentStatus = selectedStatus === 'active' ? 'Due' : 'Pending';
         const data = {
           full_name: $('m-name').value.trim(),
           phone: fullPhone,
           parent_phone: fullPhone,
           country_code: countryCode,
-         level: $('m-level').value,
-         rating: parseInt($('m-elo').value) || 0,
-         coach_id: $('m-coach').value,
-         enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
-         due_date: $('m-due-date')?.value || null,
-         batch_type: $('m-batch-type').value,
-         batch_time: $('m-batch-time').value,
-         monthly_fee: parseInt($('m-fee').value) || 0,
-         payment_status: 'Due',
-         status: 'active',
-         notes: ''
+          level: $('m-level').value,
+          rating: parseInt($('m-elo').value) || 0,
+          coach_id: $('m-coach').value,
+          enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
+          due_date: $('m-due-date')?.value || null,
+          batch_type: $('m-batch-type').value,
+          batch_time: $('m-batch-time').value,
+          monthly_fee: parseInt($('m-fee').value) || 0,
+          payment_status: defaultPaymentStatus,
+          status: selectedStatus,
+          notes: ''
        };
 
      if (!data.due_date) {
@@ -4782,7 +4804,7 @@ Best regards,
 
      // Populate modal
      $('inform-student-name').textContent = name;
-     $('inform-amount').textContent = `₹${totalDue.toLocaleString()}`;
+     $('inform-amount').textContent = formatStudentFee(s, totalDue);
      $('inform-custom-msg').value = '';
 
      // Store student ID in modal data attribute
@@ -4851,34 +4873,34 @@ Best regards,
         // Build notification content
         let message = customMsg ? `${customMsg}\n\n` : '';
         if (isDueOrOverdue) {
-          message += `🚨 FEE PAYMENT DUE\n` +
+          message += `FEE PAYMENT DUE\n` +
             `\n` +
-            `Hello Sir/Madam 👋,\n` +
+            `Hello Sir/Madam,\n` +
             `\n` +
-            `This is to inform you that the chess class fee for ${cleanText(studentName)} is currently DUE 💳.\n` +
-            `❗ Amount Due: \u{20B9}${totalDue.toLocaleString()}\n` +
+            `This is to inform you that the chess class fee for ${cleanText(studentName)} is currently due.\n` +
+            `Amount Due: \u{20B9}${totalDue.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalDue)}\n` +
             `\n` +
-            `We kindly request you to complete the payment on or before ${dueDateStr} ⏰ to avoid any interruption in class participation.\n` +
+            `We kindly request you to complete the payment on or before ${dueDateStr} to avoid any interruption in class participation.\n` +
             `\n` +
-            `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+            `You may make the payment to: 9025846663 (Ranjith)\n` +
             `\n` +
-            `Thank you for your understanding 🙏.\n` +
-            `– Chesskidoo Academy 🎓✨`;
+            `Thank you for your understanding.\n` +
+            `– Chesskidoo Academy`;
         } else {
-          message += `🔔 UPCOMING FEE REMINDER\n` +
+          message += `UPCOMING FEE REMINDER\n` +
             `\n` +
-            `Hello Sir/Madam 👋,\n` +
+            `Hello Sir/Madam,\n` +
             `\n` +
-            `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(studentName)} is coming up soon. 😊\n` +
-            `✨ Fee Amount: \u{20B9}${totalDue.toLocaleString()}\n` +
-            `📅 Due Date: ${dueDateStr} ⏰\n` +
+            `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(studentName)} is coming up soon.\n` +
+            `Fee Amount: \u{20B9}${totalDue.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalDue)}\n` +
+            `Due Date: ${dueDateStr}\n` +
             `\n` +
             `We kindly request you to complete the payment on or before the due date.\n` +
             `\n` +
-            `💳 You may make the payment to: 9025846663 (Ranjith) 📞\n` +
+            `You may make the payment to: 9025846663 (Ranjith)\n` +
             `\n` +
-            `Thank you so much for your support and cooperation! 🙏\n` +
-            `– Chesskidoo Academy 🎓✨`;
+            `Thank you so much for your support and cooperation!\n` +
+            `– Chesskidoo Academy`;
         }
 
       try {
@@ -5027,7 +5049,7 @@ Best regards,
     const nameEl = $('p-history-name');
     if (nameEl) nameEl.textContent = getStudentName(s);
     const metaEl = $('p-history-meta');
-    if (metaEl) metaEl.textContent = `ID: ${String(s.id).slice(0, 8)} • Monthly Fee: ₹${getStudentMonthlyFee(s).toLocaleString()}`;
+    if (metaEl) metaEl.textContent = `ID: ${String(s.id).slice(0, 8)} • Monthly Fee: ${formatStudentFee(s, getStudentMonthlyFee(s))}`;
 
     openModal('payment-history-modal');
 

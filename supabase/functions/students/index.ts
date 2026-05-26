@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
   }
 
   function validateStatus(status: unknown): string {
-    const valid = ['active', 'pending', 'inactive', 'archived']
+    const valid = ['active', 'pending', 'inactive', 'archived', 'waitlist', 'upcoming']
     return valid.includes(String(status)) ? String(status) : 'pending'
   }
 
@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
        address: s.address || '',
        country_code: (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN'),
        status: status,
-       payment_status: s.payment_status || (status === 'active' ? 'Paid' : (status === 'pending' ? 'Pending' : 'Due')),
+       payment_status: s.payment_status || (status === 'active' ? 'Paid' : (['pending', 'waitlist', 'upcoming'].includes(status) ? 'Pending' : 'Due')),
        coach_id: s.coach_id || null,
        rating: s.rating || 800,
        current_rating: s.rating || 800,
@@ -413,12 +413,17 @@ Deno.serve(async (req) => {
         const pstatus = String(rawBody.payment_status);
         updateData.payment_status = pstatus;
         
-     // Convenience: sync status for backwards compatibility if needed
-      const lowStatus = pstatus.toLowerCase();
-      if (lowStatus === 'paid') updateData.status = 'active';
-      else if (lowStatus === 'pending' && !updateData.status) updateData.status = 'pending';
-      if (!updateData.status) updateData.account_status = 'active';
-      else updateData.account_status = updateData.status;
+        // Convenience: sync status for backwards compatibility if needed (only if status is not explicitly set)
+        if (updateData.status === undefined) {
+          const lowStatus = pstatus.toLowerCase();
+          if (lowStatus === 'paid') {
+            updateData.status = 'active';
+            updateData.account_status = 'active';
+          } else if (lowStatus === 'pending') {
+            updateData.status = 'pending';
+            updateData.account_status = 'pending';
+          }
+        }
       }
       if (rawBody.coach_id !== undefined) updateData.coach_id = rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null;
       if (rawBody.rating !== undefined || rawBody.current_rating !== undefined) {
