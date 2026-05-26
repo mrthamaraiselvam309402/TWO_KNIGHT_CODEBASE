@@ -4879,18 +4879,69 @@ Best regards,
         else if (active === 'page-bills') renderBills();
       }
     };
+  async function markPaid(id, amount, method = 'Cash', desc = 'Monthly Tuition Fee') {
+    try {
+      const s = allStudents.find(x => String(x.id) === String(id));
+      const amt = amount || (s ? getStudentMonthlyFee(s) : 0);
 
-   window.markUnpaid = async function (id) {
-     if (!confirm('Revert status to Due? This will NOT delete the transaction record. You must delete the payment from History to reduce credits.')) return;
-     try {
-       await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Due' }) });
-       toast('Status reverted to Due', 'info');
-       await loadAllData(true);
-       renderDash();
-       renderBills();
-     } catch (e) { toast('Error reverting status', 'error'); }
-   };
+      // 1. Update Student Status & Roll Due Date
+      const updates = { payment_status: 'Paid' };
+      if (s && s.due_date) {
+        const nextDate = new Date(s.due_date);
+        nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
+        updates.due_date = nextDate.toISOString().split('T')[0];
+      }
 
+      await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify(updates) });
+
+      // 2. Create Transaction Record (Increments Credit Count)
+      await apiCall(`${API_BASE}/payments`, {
+        method: 'POST',
+        body: JSON.stringify({
+          id: 'pay_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9), // Required Primary Key
+          student_id: id,
+          amount: parseFloat(amt), // Ensure numeric
+          status: 'paid',
+          payment_method: method,
+          description: desc,
+          transaction_id: 'MAN-' + Math.floor(Math.random() * 1000000),
+          payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
+        })
+      });
+
+      toast('Payment logged and due date advanced!', 'success');
+      
+      // FIX #3: Invalidate payment cache before reload
+      window.totalPaymentsMap = null;
+      
+      // SYNC: Force fresh data fetch and re-render dashboard
+      await loadAllData(true);
+      renderDash();
+      renderBills();
+
+      // 3. Auto-Notify Parent with Receipt Link
+      if (window.sendPaymentReceiptNotification) {
+        sendPaymentReceiptNotification(id, amt);
+      }
+    } catch (e) {
+      console.error('markPaid failed:', e);
+      toast('Failed to process payment', 'error');
+    }
+  }
+
+  async function markUnpaid(id) {
+    if (!confirm('Revert status to Due? This will NOT delete the transaction record. You must delete the payment from History to reduce credits.')) return;
+    try {
+      await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify({ payment_status: 'Due' }) });
+      toast('Status reverted to Due', 'info');
+      await loadAllData(true);
+      renderDash();
+      renderBills();
+    } catch (e) {
+      console.error('markUnpaid failed:', e);
+      toast('Error reverting status', 'error');
+    }
+  }
    // ============================================
    // FEATURE 1: INFORM PARENT (Pending/Due)
    // ============================================
