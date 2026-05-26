@@ -1562,7 +1562,7 @@ function initUI() {
 
     // 1. Enrollment Check
     const enrollStatus = getStudentStatus(s);
-    if (enrollStatus === 'pending' || enrollStatus === 'waitlist' || enrollStatus === 'inactive' || enrollStatus === 'archived') {
+    if (enrollStatus === 'pending' || enrollStatus === 'waitlist' || enrollStatus === 'upcoming' || enrollStatus === 'inactive' || enrollStatus === 'archived') {
       return 'Not Enrolled';
     }
     const enrollDateStr = getStudentDate(s);
@@ -3053,8 +3053,12 @@ function initUI() {
           if (pDate.getUTCMonth() === m && pDate.getUTCFullYear() === y && p.status === 'paid') {
             const sid = String(p.student_id).toLowerCase();
             if (paidSet.has(sid)) return;
-            paidSet.add(sid);
             const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+            if (s) {
+              const sStatus = getStudentStatus(s);
+              if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return;
+            }
+            paidSet.add(sid);
             paidVal += s ? getStudentMonthlyFee(s) : (parseFloat(p.amount) || 0);
           }
         });
@@ -3064,7 +3068,7 @@ function initUI() {
         let outstandingVal = 0;
         allStudents.forEach(s => {
           const sStatus = getStudentStatus(s);
-          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return;
+          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return;
 
           const enrollDateStr = getStudentDate(s);
           const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0));
@@ -3123,9 +3127,13 @@ function initUI() {
         if (seenStuds.has(sid)) return sum;
         
         const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
-        if (s && (s.status || 'active').toLowerCase() !== 'archived' && getStudentPaymentStatus(s, month, year) === 'Paid') {
-          seenStuds.add(sid);
-          return sum + getStudentMonthlyFee(s);
+        if (s) {
+          const sStatus = getStudentStatus(s);
+          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return sum;
+          if (getStudentPaymentStatus(s, month, year) === 'Paid') {
+            seenStuds.add(sid);
+            return sum + getStudentMonthlyFee(s);
+          }
         }
       }
       return sum;
@@ -3207,7 +3215,7 @@ function initUI() {
 
     const targetStudents = (allStudents || []).filter(s => {
       const sStatus = getStudentStatus(s);
-      if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
+      if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return false;
 
       const enrollDateStr = getStudentDate(s);
       const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
@@ -3227,9 +3235,13 @@ function initUI() {
         if (paidStudentIds.has(sid)) return sum; // Fuzzy deduplication: 1 payment per student per month
 
         const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
-        if (s && (s.status || 'active').toLowerCase() !== 'archived' && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
-           paidStudentIds.add(sid);
-           return sum + getStudentMonthlyFee(s); // Enforce 1x monthly fee logic
+        if (s) {
+          const sStatus = getStudentStatus(s);
+          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return sum;
+          if (getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
+            paidStudentIds.add(sid);
+            return sum + getStudentMonthlyFee(s); // Enforce 1x monthly fee logic
+          }
         }
       }
       return sum;
@@ -3241,7 +3253,7 @@ function initUI() {
 
     targetStudents.forEach(s => {
       const sStatus = getStudentStatus(s);
-      if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return;
+      if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return;
       const fee = getStudentMonthlyFee(s) || 0;
       totalPotential += fee;
 
@@ -3341,7 +3353,8 @@ function initUI() {
     // Session counts
     let groupCount = 0, singleCount = 0, activeEnroll = 0;
     targetStudents.forEach(s => {
-      if (getStudentStatus(s) === 'pending') return;
+      const sessStatus = getStudentStatus(s);
+      if (sessStatus === 'pending' || sessStatus === 'upcoming' || sessStatus === 'waitlist') return;
       activeEnroll++;
       const type = getStudentBatchType(s);
       if (type === 'Single') singleCount++;
@@ -3395,6 +3408,9 @@ function initUI() {
     const unassignedData = { name: 'Unassigned / Academy', students: 0, revenue: 0, pending: 0, projected: 0, cost: 0 };
 
     allStudents.forEach(s => {
+      const sStatus = getStudentStatus(s);
+      if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return;
+
       const coachId = s.coach_id;
       const targetData = coachData[coachId] || unassignedData;
       
