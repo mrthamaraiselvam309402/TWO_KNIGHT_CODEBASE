@@ -110,6 +110,7 @@
     <div class="nav-item" id="nav-fame" onclick="setPage('fame')"><span class="ico">🏆</span> Wall of Fame</div>
     <div class="nav-item" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Events</div>
     <div class="nav-item admin-only" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
+    <div class="nav-item admin-only" id="nav-insights" onclick="setPage('insights')"><span class="ico">💡</span> AI Insights</div>
     <div class="nav-item admin-only" id="nav-exp" onclick="setPage('exp')"><span class="ico">💸</span> Expenditures</div>
 <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
 <div class="nav-item" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
@@ -149,15 +150,7 @@
     <div id="page-dash" class="page admin-only">
       <img src="/images/hero.jpg" class="hero-img" alt="Chess">
       
-      <!-- AI Academy Insights Feed -->
-      <div class="card" id="ai-insights-card" style="margin-bottom:24px; display:none; border:1px solid var(--border-amber)">
-        <div class="card-header" style="color:var(--gold); font-family:var(--font-head); font-weight:700; letter-spacing:1px; display:flex; align-items:center; gap:8px; padding-bottom: 6px; border-bottom:1px solid var(--border-light)">
-          <span>🤖 AI Academy Insights Feed</span>
-        </div>
-        <div class="card-body" id="ai-insights-body" style="padding-top:12px;">
-          <!-- Dynamically populated suggestions -->
-        </div>
-      </div>
+      <!-- AI Insights Feed has been moved to its own page -->
 
       <div class="dash-grid" style="margin-bottom:24px">
         <div class="card card-clickable" onclick="setPage('stud')"><div class="stat-label">Total Students</div><div class="stat-value" id="s-total">—</div></div>
@@ -615,6 +608,52 @@
             <thead><tr><th>Emp ID</th><th>Coach</th><th>Role</th><th>Salary</th><th>Status</th><th>Action</th></tr></thead>
             <tbody id="coach-bill-body"><tr><td colspan="6"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
           </table>
+        </div>
+      </div>
+    <!-- AI Insights -->
+    <div id="page-insights" class="page admin-only">
+      <div style="background: linear-gradient(135deg, rgba(232, 168, 48, 0.08) 0%, rgba(232, 168, 48, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
+        <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none; font-family: sans-serif;">🤖</div>
+        <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">
+          <span>🤖</span> AI Academy Insights Feed
+        </h2>
+        <p style="color:var(--ivory-dim); font-size: 14px; max-width: 600px; line-height: 1.6;">
+          Real-time AI-driven operational audits, attendance tracking, and student progression alerts to keep the academy running at maximum efficiency.
+        </p>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="dash-grid" style="margin-bottom: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+        <div class="card" style="border-left: 4px solid var(--amber); background: linear-gradient(145deg, var(--surface), rgba(232, 168, 48, 0.02));">
+          <div class="stat-label">Promotion Candidates</div>
+          <div class="stat-value text-warning" id="ins-promo-count" style="font-size: 28px;">0</div>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--danger); background: linear-gradient(145deg, var(--surface), rgba(255, 77, 79, 0.02));">
+          <div class="stat-label">Attendance Risks</div>
+          <div class="stat-value text-danger" id="ins-att-count" style="font-size: 28px;">0</div>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--danger); background: linear-gradient(145deg, var(--surface), rgba(255, 77, 79, 0.02));">
+          <div class="stat-label">Payment Arrears</div>
+          <div class="stat-value text-danger" id="ins-arrears-count" style="font-size: 28px;">0</div>
+        </div>
+      </div>
+
+      <!-- Dynamic Insights Card -->
+      <div class="card" id="ai-insights-card" style="border: 1px solid var(--border); display: block;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+          <h3 style="color:var(--gold); margin: 0; font-family:var(--font-head); font-size: 18px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+            <span>📋</span> Operational Feed
+          </h3>
+          <!-- Filter Pill Tabs -->
+          <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.25); padding: 3px; border-radius: 8px; border: 1px solid var(--border);">
+            <button class="btn-filter-ledger active-filter" id="btn-ins-all" onclick="filterInsights('all')" style="background: var(--gold-semi); border: none; color: var(--gold); font-size: 11px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 700;">All</button>
+            <button class="btn-filter-ledger" id="btn-ins-promotion" onclick="filterInsights('promotion')" style="background: transparent; border: none; color: var(--ivory-dim); font-size: 11px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 600;">Promotions</button>
+            <button class="btn-filter-ledger" id="btn-ins-attendance" onclick="filterInsights('attendance')" style="background: transparent; border: none; color: var(--ivory-dim); font-size: 11px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 600;">Attendance</button>
+            <button class="btn-filter-ledger" id="btn-ins-arrears" onclick="filterInsights('arrears')" style="background: transparent; border: none; color: var(--ivory-dim); font-size: 11px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 600;">Arrears</button>
+          </div>
+        </div>
+        <div class="card-body" id="ai-insights-body" style="padding-top:0;">
+          <div class="loading-state"><span class="spinner"></span> Analyzing database...</div>
         </div>
       </div>
     </div>

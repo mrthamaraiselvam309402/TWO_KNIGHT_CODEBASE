@@ -2236,6 +2236,9 @@ function initUI() {
            console.log('[Sync] Rendering active page for role:', role);
            const active = document.querySelector('.page.active')?.id;
            if (active === 'page-dash') renderDash();
+           else if (active === 'page-insights') {
+             if (window.generateAcademyInsights) window.generateAcademyInsights();
+           }
            else if (active === 'page-stud') renderStudents();
            else if (active === 'page-coach-mgmt') renderCoachMgmt();
            else if (active === 'page-bills') renderBills();
@@ -2499,12 +2502,13 @@ function initUI() {
   const PAGE_TITLES = {
     dash: 'Academy Overview', stud: 'Student Registry', 'coach-mgmt': 'Coach Management',
     child: 'My Child', fame: 'Wall of Fame', events: 'Events', bills: 'Payments',
+    insights: 'AI Academy Insights',
     exp: 'Expenditure Management',
     msgs: 'Messages', ai: 'AI Assistant'
   };
 
   function setPage(p) {
-    const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'exp', 'msgs'];
+    const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'insights', 'exp', 'msgs'];
     if (adminPages.includes(p) && role !== 'admin' && role !== 'master') {
       toast('Access denied', 'error');
       setPage(role === 'parent' ? 'child' : 'dash');
@@ -2558,6 +2562,7 @@ function initUI() {
           <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
         `;
         if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEventModal()">+ Create Event</button>`;
+        if (p === 'insights') btnArea.innerHTML = `<button class="btn btn-gold" onclick="window.generateAcademyInsights()">🔄 Recalculate Insights</button>`;
       }
     }
 
@@ -2575,6 +2580,7 @@ function initUI() {
       if (p === 'fame') renderFame();
       if (p === 'events') renderEvents();
       if (p === 'bills') renderBills();
+      if (p === 'insights' && window.generateAcademyInsights) window.generateAcademyInsights();
       if (p === 'msgs') renderMsgs();
       if (p === 'child') renderChild();
       if (p === 'exp' && window.initExpPage) window.initExpPage();
@@ -3351,8 +3357,7 @@ function initUI() {
     // Render coach financial table
     renderCoachFinance();
 
-    // Render AI insights
-    if (window.generateAcademyInsights) window.generateAcademyInsights();
+    // AI insights rendered on its own page
   }
 
   function renderCoachFinance() {
@@ -7227,12 +7232,15 @@ Best regards,
   window.quickSwitchPreviewStudent = quickSwitchPreviewStudent;
 
   // --- AI Insights Engine ---
+  let currentInsightsFilter = 'all';
+  let generatedInsights = [];
+
   function generateAcademyInsights() {
     const card = document.getElementById('ai-insights-card');
     const body = document.getElementById('ai-insights-body');
     if (!card || !body) return;
 
-    const insights = [];
+    generatedInsights = [];
 
     // --- 1. Promotion Suggestions ---
     const beginnerThreshold = 1000;
@@ -7248,21 +7256,21 @@ Best regards,
       const name = getStudentName(s);
 
       if (lvl === 'Beginner' && rating >= beginnerThreshold) {
-        insights.push({
+        generatedInsights.push({
           type: 'promotion',
           severity: 'amber',
           icon: '🏆',
           text: `<strong>Promotion Alert:</strong> Beginner student <strong>${name}</strong> has a high rating of <strong>${rating} ELO</strong>. Suggest promoting to <strong>Intermediate</strong>.`
         });
       } else if (lvl === 'Intermediate' && rating >= intermediateThreshold) {
-        insights.push({
+        generatedInsights.push({
           type: 'promotion',
           icon: '🏆',
           severity: 'amber',
           text: `<strong>Promotion Alert:</strong> Intermediate student <strong>${name}</strong> has reached <strong>${rating} ELO</strong>. Suggest promoting to <strong>Advanced</strong>.`
         });
       } else if (lvl === 'Advanced' && rating >= advancedThreshold) {
-        insights.push({
+        generatedInsights.push({
           type: 'promotion',
           icon: '🏆',
           severity: 'amber',
@@ -7288,7 +7296,7 @@ Best regards,
       const records = attByStudent[sid].sort((a, b) => new Date(b.date) - new Date(a.date));
       if (records.length >= 2) {
         if (records[0].status === 'absent' && records[1].status === 'absent') {
-          insights.push({
+          generatedInsights.push({
             type: 'attendance',
             icon: '⚠️',
             severity: 'danger',
@@ -7333,7 +7341,7 @@ Best regards,
       if (outstandingMonths >= 2) {
         const fee = getStudentMonthlyFee(s) || 0;
         const totalOwed = fee * outstandingMonths;
-        insights.push({
+        generatedInsights.push({
           type: 'arrears',
           icon: '💸',
           severity: 'danger',
@@ -7342,36 +7350,83 @@ Best regards,
       }
     });
 
-    if (insights.length === 0) {
-      body.innerHTML = `
-        <div style="color:var(--ivory-dim); font-size:14px; font-style:italic; text-align:center; padding:12px 0;">
-          ✨ No operational alerts or suggestions at this time. All systems optimal!
-        </div>`;
-    } else {
-      body.innerHTML = insights.map(ins => {
-        let borderClr = 'rgba(201, 150, 12, 0.2)';
-        let bgClr = 'rgba(255,255,255,0.01)';
-        let textClr = 'var(--ivory)';
-        
-        if (ins.severity === 'danger') {
-          borderClr = 'rgba(255, 77, 79, 0.3)';
-          bgClr = 'rgba(255, 77, 79, 0.03)';
-        } else if (ins.severity === 'amber') {
-          borderClr = 'rgba(201, 150, 12, 0.3)';
-          bgClr = 'rgba(201, 150, 12, 0.03)';
-        }
+    // Update Quick Metric Counts
+    const promoCount = generatedInsights.filter(x => x.type === 'promotion').length;
+    const attCount = generatedInsights.filter(x => x.type === 'attendance').length;
+    const arrearsCount = generatedInsights.filter(x => x.type === 'arrears').length;
 
-        return `
-          <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; border:1px solid ${borderClr}; background:${bgClr}; border-radius:8px; margin-bottom:10px; font-size:14px; color:${textClr};">
-            <span style="font-size:18px;">${ins.icon}</span>
-            <div style="flex:1;">${ins.text}</div>
-          </div>`;
-      }).join('');
+    if (document.getElementById('ins-promo-count')) document.getElementById('ins-promo-count').textContent = promoCount;
+    if (document.getElementById('ins-att-count')) document.getElementById('ins-att-count').textContent = attCount;
+    if (document.getElementById('ins-arrears-count')) document.getElementById('ins-arrears-count').textContent = arrearsCount;
+
+    // Render the current filter view
+    renderInsightsList();
+  }
+
+  function renderInsightsList() {
+    const body = document.getElementById('ai-insights-body');
+    if (!body) return;
+
+    const filtered = currentInsightsFilter === 'all' 
+      ? generatedInsights 
+      : generatedInsights.filter(x => x.type === currentInsightsFilter);
+
+    if (filtered.length === 0) {
+      body.innerHTML = `
+        <div style="color:var(--ivory-dim); font-size:14px; font-style:italic; text-align:center; padding:24px 0;">
+          ✨ No insights of this category at this time. All systems optimal!
+        </div>`;
+      return;
     }
 
-    card.style.display = 'block';
+    body.innerHTML = filtered.map(ins => {
+      let borderClr = 'rgba(201, 150, 12, 0.2)';
+      let bgClr = 'rgba(255,255,255,0.01)';
+      let textClr = 'var(--ivory)';
+      
+      if (ins.severity === 'danger') {
+        borderClr = 'rgba(255, 77, 79, 0.3)';
+        bgClr = 'rgba(255, 77, 79, 0.03)';
+      } else if (ins.severity === 'amber') {
+        borderClr = 'rgba(201, 150, 12, 0.3)';
+        bgClr = 'rgba(201, 150, 12, 0.03)';
+      }
+
+      return `
+        <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; border:1px solid ${borderClr}; background:${bgClr}; border-radius:8px; margin-bottom:10px; font-size:14px; color:${textClr};" class="stat-card">
+          <span style="font-size:18px;">${ins.icon}</span>
+          <div style="flex:1;">${ins.text}</div>
+        </div>`;
+    }).join('');
   }
+
+  function filterInsights(type) {
+    currentInsightsFilter = type;
+    
+    // Manage active pill classes
+    const pills = ['all', 'promotion', 'attendance', 'arrears'];
+    pills.forEach(p => {
+      const el = document.getElementById('btn-ins-' + p);
+      if (el) {
+        if (p === type) {
+          el.classList.add('active-filter');
+          el.style.background = 'var(--gold-semi)';
+          el.style.color = 'var(--gold)';
+          el.style.fontWeight = '700';
+        } else {
+          el.classList.remove('active-filter');
+          el.style.background = 'transparent';
+          el.style.color = 'var(--ivory-dim)';
+          el.style.fontWeight = '600';
+        }
+      }
+    });
+
+    renderInsightsList();
+  }
+
   window.generateAcademyInsights = generateAcademyInsights;
+  window.filterInsights = filterInsights;
 
   // --- CSV Export Engine ---
   function exportStudentsToCSV() {
