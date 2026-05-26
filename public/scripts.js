@@ -5524,9 +5524,10 @@ Best regards,
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
 
       // 1. Enrollment Check
-      const isPending = getStudentStatus(s) === 'pending';
-      const wasEnrolled = enrollDate && enrollDate <= targetMonthEnd && !isPending;
-      if (!wasEnrolled || isPending) {
+      const enrollStatus = getStudentStatus(s);
+      const isNotEnrolled = enrollStatus === 'pending' || enrollStatus === 'upcoming' || enrollStatus === 'waitlist' || enrollStatus === 'inactive';
+      const wasEnrolled = enrollDate && enrollDate <= targetMonthEnd && !isNotEnrolled;
+      if (!wasEnrolled || isNotEnrolled) {
         return `<tr>
           <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">INV-${(s.id ? s.id.toString().slice(-6) : '000000')}</span></td>
           <td>
@@ -6669,7 +6670,10 @@ Best regards,
         // ADMIN CONTEXT: Full academy data
         const studentsCount = allStudents.length;
         const coachesCount = allCoaches.length;
-        const totalRevenue = allStudents.reduce((acc, s) => acc + (getStudentMonthlyFee(s) || 0), 0);
+        const totalRevenue = allStudents.filter(s => {
+          const st = getStudentStatus(s);
+          return st !== 'archived' && st !== 'pending' && st !== 'waitlist' && st !== 'upcoming' && st !== 'inactive';
+        }).reduce((acc, s) => acc + (getStudentMonthlyFee(s) || 0), 0);
         const activeStudents = allStudents.filter(s => getStudentStatus(s) === 'active').length;
         const pendingPayments = allStudents.filter(s => {
           const st = getStudentPaymentStatus(s);
@@ -6769,7 +6773,8 @@ Best regards,
         .filter(s => {
             const enrollStr = getStudentDate(s);
             const enrollDate = enrollStr ? new Date(enrollStr) : new Date(Date.UTC(2026, 3, 1));
-            return enrollDate <= targetMonthEnd && (s.status || 'active') !== 'archived';
+            const sStatus = getStudentStatus(s);
+            return enrollDate <= targetMonthEnd && sStatus !== 'archived' && sStatus !== 'pending' && sStatus !== 'waitlist' && sStatus !== 'upcoming' && sStatus !== 'inactive';
         })
         .map(s => {
           const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
@@ -6842,7 +6847,8 @@ Best regards,
       const targetStudents = allStudents.filter(s => {
           const enrollStr = getStudentDate(s);
           const enrollDate = enrollStr ? new Date(enrollStr) : new Date(Date.UTC(2026, 3, 1));
-          return enrollDate <= targetMonthEnd && (s.status || 'active') !== 'archived';
+          const sStatus = getStudentStatus(s);
+          return enrollDate <= targetMonthEnd && sStatus !== 'archived' && sStatus !== 'pending' && sStatus !== 'waitlist' && sStatus !== 'upcoming' && sStatus !== 'inactive';
       });
 
       const collected = targetStudents.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);
@@ -7265,7 +7271,7 @@ Best regards,
 
     allStudents.forEach(s => {
       const sStatus = getStudentStatus(s);
-      if (sStatus === 'archived' || sStatus === 'inactive' || sStatus === 'pending' || sStatus === 'waitlist') return;
+      if (sStatus === 'archived' || sStatus === 'inactive' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming') return;
 
       const lvl = getStudentLevel(s);
       const rating = getStudentRating(s) || 800;
@@ -7307,7 +7313,7 @@ Best regards,
       const s = allStudents.find(x => String(x.id) === sid);
       if (!s) return;
       const sStatus = getStudentStatus(s);
-      if (sStatus === 'archived' || sStatus === 'inactive' || sStatus === 'pending' || sStatus === 'waitlist') return;
+      if (sStatus === 'archived' || sStatus === 'inactive' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming') return;
 
       const records = attByStudent[sid].sort((a, b) => new Date(b.date) - new Date(a.date));
       if (records.length >= 2) {
@@ -7343,7 +7349,7 @@ Best regards,
 
     allStudents.forEach(s => {
       const sStatus = getStudentStatus(s);
-      if (sStatus === 'archived' || sStatus === 'inactive' || sStatus === 'pending' || sStatus === 'waitlist') return;
+      if (sStatus === 'archived' || sStatus === 'inactive' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming') return;
 
       const enrollDateStr = getStudentDate(s);
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
