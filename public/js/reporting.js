@@ -27,10 +27,9 @@ window.generateReportPDF = async function() {
      const monthEndLimit = new Date(Date.UTC(targetYear, targetMonth + 1, 0)); // last day of month at 00:00 UTC
      const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
      
-     // Use allStudents from global scope (already loaded) - Filter out parent/test profiles
      const targetStudents = allStudents.filter(s => {
-         const sStatus = (s.status || 'active').toLowerCase();
-         if (sStatus === 'archived') return false;
+         const sStatus = getStudentStatus(s);
+         if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
          
          const sName = (getStudentName(s) || '').toUpperCase();
          if (sName.includes('PARENT') || sName.includes('COACH') || sName.includes('TEST')) return false;
@@ -43,27 +42,38 @@ window.generateReportPDF = async function() {
     const totalStudents = allStudents.length;
     const activeStudents = targetStudents.length;
 
-    // Map total payments per student for ALL TIME (Deduplicated by month)
+    // Map total payments per student up to target month end (Deduplicated by month)
+    const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
     const totalPaymentsMap = {};
     const seenMonthsGlobal = new Set();
     allPayments.forEach(p => {
       if (p.status === 'paid') {
-        const sid = String(p.student_id);
+        const sid = String(p.student_id || '').trim().toLowerCase();
         const pDate = new Date(p.payment_date || p.created_at);
-        const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
-        if (seenMonthsGlobal.has(mKey)) return;
-        seenMonthsGlobal.add(mKey);
-        
-        if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
-        totalPaymentsMap[sid]++;
+        if (pDate <= targetMonthEnd) {
+          const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+          if (seenMonthsGlobal.has(mKey)) return;
+          seenMonthsGlobal.add(mKey);
+          
+          if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
+          totalPaymentsMap[sid]++;
+        }
       }
     });
 
-    // True transaction amount sum for collections in the target month (Real money)
+    // Enforce 1x monthly fee logic to align with paidRevenue on dashboard
+    const paidStudentIds = new Set();
     let collected = (allPayments || []).reduce((sum, p) => {
         const pDate = new Date(p.payment_date || p.created_at);
         if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
-            return sum + (parseFloat(p.amount) || 0);
+            const sid = String(p.student_id).toLowerCase();
+            if (paidStudentIds.has(sid)) return sum;
+
+            const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+            if (s && getStudentStatus(s) !== 'archived' && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
+                paidStudentIds.add(sid);
+                return sum + getStudentMonthlyFee(s);
+            }
         }
         return sum;
     }, 0);
@@ -95,7 +105,7 @@ window.generateReportPDF = async function() {
 
     const pending = Math.max(0, potential - collected);
     currPendingAmount = pending; // Synchronize with actual uncollected balance for 100% mathematical consistency
-    const payroll = allCoaches.reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
+    const payroll = allCoaches.filter(c => c.status !== 'archived').reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     const netProfit = collected - payroll;
     
     // Simple Executive Metrics
@@ -119,7 +129,7 @@ window.generateReportPDF = async function() {
     const attendanceHealth = monthAtt.length > 0 ? ((presentCount / monthAtt.length) * 100).toFixed(1) : 88.5; 
 
     // Coach Performance (based on true payments from assigned students this month)
-    const coachMetrics = allCoaches.map(c => {
+    const coachMetrics = allCoaches.filter(c => c.status !== 'archived').map(c => {
       const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
       const coachStudIds = new Set(coachStuds.map(s => String(s.id).toLowerCase()));
       
@@ -128,7 +138,10 @@ window.generateReportPDF = async function() {
           if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
               const sid = String(p.student_id).toLowerCase();
               if (coachStudIds.has(sid)) {
-                  return sum + (parseFloat(p.amount) || 0);
+                  const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+                  if (s && getStudentStatus(s) !== 'archived' && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
+                      return sum + getStudentMonthlyFee(s);
+                  }
               }
           }
           return sum;
@@ -139,16 +152,24 @@ window.generateReportPDF = async function() {
       const roi = coachCost > 0 ? ((profit / coachCost) * 100).toFixed(0) : '0';
       return { 
         name: getCoachName(c), 
-        students: coachStuds.filter(s => new Date(getStudentDate(s)) <= monthEndLimit).length, 
+        students: coachStuds.filter(s => {
+          const sStatus = getStudentStatus(s);
+          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
+          const enrollDateStr = getStudentDate(s);
+          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+          return enrollDate <= monthEndLimit;
+        }).length, 
         revenue: coachRev, 
         cost: coachCost, 
         profit: profit, 
-        roi: roi 
+        roi: parseFloat(roi)
       };
     });
 
     const topPending = allStudents
       .filter(s => {
+          const sStatus = getStudentStatus(s);
+          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
           const enrollDate = new Date(getStudentDate(s));
           if (enrollDate > monthEndLimit) return false;
           const status = getStudentPaymentStatus(s, targetMonth, targetYear);
@@ -167,24 +188,37 @@ window.generateReportPDF = async function() {
         const mEnd = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59));
         
         let mPotential = 0;
+        let mCollected = 0;
+        let mOutstanding = 0;
+        
+        const paidSet = new Set();
+        (allPayments || []).forEach(p => {
+            const pDate = new Date(p.payment_date || p.created_at);
+            if (pDate.getUTCMonth() === m && pDate.getUTCFullYear() === y && p.status === 'paid') {
+                const sid = String(p.student_id).toLowerCase();
+                if (paidSet.has(sid)) return;
+                paidSet.add(sid);
+                const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+                mCollected += s ? getStudentMonthlyFee(s) : (parseFloat(p.amount) || 0);
+            }
+        });
+
         allStudents.forEach(s => {
-            if ((s.status || 'active').toLowerCase() === 'archived') return;
+            const sStatus = getStudentStatus(s);
+            if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return;
             const enrollDateStr = getStudentDate(s);
             const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
             if (enrollDate <= mEnd) {
-                mPotential += (getStudentMonthlyFee(s) || 0);
+                const fee = getStudentMonthlyFee(s) || 0;
+                mPotential += fee;
+                
+                const status = getStudentPaymentStatus(s, m, y);
+                if (status !== 'Paid' && status !== 'Not Enrolled') {
+                    mOutstanding += fee;
+                }
             }
         });
         
-        let mCollected = (allPayments || []).reduce((sum, p) => {
-            const pDate = new Date(p.payment_date || p.created_at);
-            if (pDate.getUTCMonth() === m && pDate.getUTCFullYear() === y && p.status === 'paid') {
-                return sum + (parseFloat(p.amount) || 0);
-            }
-            return sum;
-        }, 0);
-        
-        const mOutstanding = Math.max(0, mPotential - mCollected);
         const mRate = mPotential > 0 ? ((mCollected / mPotential) * 100).toFixed(0) : 0;
         monthwiseData.push({ month: mName, potential: mPotential, collected: mCollected, outstanding: mOutstanding, rate: mRate });
     }
@@ -236,15 +270,16 @@ window.generateReportPDF = async function() {
     }).filter(x => x.total > 0).sort((a, b) => b.rate - a.rate).slice(0, 8);
 
     // Prepare transaction rows for the ledger (Actual transactions in that specific month)
-    const monthlyPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM);
+    const monthlyPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM && p.status === 'paid');
     const transactionRows = monthlyPayments.map(p => {
         const s = allStudents.find(x => String(x.id) === String(p.student_id));
+        const localCurrStr = s && window.getStudentLocalCurrencyAmount ? window.getStudentLocalCurrencyAmount(s, p.amount) : '';
         return `
         <tr>
           <td class="mono" style="font-size:10px">${new Date(p.payment_date || p.created_at).toLocaleDateString('en-IN')}</td>
           <td class="bold">${(s ? getStudentName(s) : (p.student_name || 'Unknown Student')).toUpperCase()}</td>
           <td>${p.payment_method || 'Transfer'}</td>
-          <td class="text-right mono bold">₹${(parseFloat(p.amount) || 0).toLocaleString()}</td>
+          <td class="text-right mono bold">₹${(parseFloat(p.amount) || 0).toLocaleString()}${localCurrStr}</td>
           <td style="font-size:10px;color:var(--text-dim)">#${String(p.id).slice(-8)}</td>
         </tr>`;
     }).join('');
@@ -398,7 +433,7 @@ window.generateReportPDF = async function() {
           <td class="text-right mono">₹${m.revenue.toLocaleString()}</td>
           <td class="text-right mono">₹${m.cost.toLocaleString()}</td>
           <td class="text-right mono ${m.profit < 0 ? 'loss' : 'gain'}">₹${m.profit.toLocaleString()}</td>
-          <td class="text-right mono ${m.roi < 0 ? 'loss' : 'gain'}">${m.roi}%</td>
+          <td class="text-right mono ${m.roi < 0 ? 'loss' : 'gain'}">${m.roi.toFixed(0)}%</td>
         </tr>`).join('')}
       </tbody>
     </table>
@@ -466,7 +501,7 @@ window.generateReportPDF = async function() {
             <tr>
               <td class="bold">${getStudentName(s).toUpperCase()}</td>
               <td>${getStudentLevel(s)}</td>
-              <td class="text-right mono loss">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
+              <td class="text-right mono loss">₹${getStudentMonthlyFee(s).toLocaleString()}${window.getStudentLocalCurrencyAmount ? window.getStudentLocalCurrencyAmount(s, getStudentMonthlyFee(s)) : ''}</td>
             </tr>`).join('')}
           </tbody>
         </table>

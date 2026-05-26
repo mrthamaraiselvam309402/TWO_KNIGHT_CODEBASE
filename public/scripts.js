@@ -1746,6 +1746,10 @@ function initUI() {
     return ` (${map.symbol}${converted.toLocaleString()} ${map.currency})`;
   }
   
+  window.CURRENCY_MAP = CURRENCY_MAP;
+  window.formatStudentFee = formatStudentFee;
+  window.getStudentLocalCurrencyAmount = getStudentLocalCurrencyAmount;
+  
   window.selectedCountryCode = 'IN';
   window.selectedCountryCodeEdit = 'IN';
   window.selectedCountryCodeCoach = 'IN';  function getCountryByCode(code) {
@@ -2074,7 +2078,8 @@ function initUI() {
        isLoadingData = true;
        const now = Date.now();
        const hasValidCache = dataCache.timestamp > 0 && dataCache.coaches && dataCache.students;
-       if (!forceRefresh && hasValidCache && (now - dataCache.timestamp) < CACHE_DURATION) {
+       let isSilentSync = false;
+       if (hasValidCache) {
          allCoaches = dataCache.coaches;
          allStudents = dataCache.students;
          achievementsData = dataCache.achievements;
@@ -2104,12 +2109,18 @@ function initUI() {
            renderStudents();
          }
          else if (role === 'parent') { renderChild(); renderEvents(); }
-         isLoadingData = false;
-         return;
+
+         if (!forceRefresh && (now - dataCache.timestamp) < CACHE_DURATION) {
+           isLoadingData = false;
+           return;
+         }
+         isSilentSync = true;
        }
 
        try {
-         setLoading('data', true);
+         if (!isSilentSync) {
+           setLoading('data', true);
+         }
 
          const loadWithRetry = async (url, maxRetries = 1) => {
            for (let i = 0; i <= maxRetries; i++) {
@@ -3046,9 +3057,17 @@ function initUI() {
         // Compute outstanding revenue for this specific month
         let outstandingVal = 0;
         allStudents.forEach(s => {
-          if ((s.status || 'active').toLowerCase() === 'archived') return;
+          const sStatus = getStudentStatus(s);
+          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return;
+
+          const enrollDateStr = getStudentDate(s);
+          const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0));
+          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+          const targetMonthEnd = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59));
+          if (enrollDate > targetMonthEnd) return;
+
           const status = getStudentPaymentStatus(s, m, y);
-          if (status !== 'Paid') {
+          if (status !== 'Paid' && status !== 'Not Enrolled') {
             outstandingVal += getStudentMonthlyFee(s) || 0;
           }
         });
@@ -3331,6 +3350,9 @@ function initUI() {
 
     // Render coach financial table
     renderCoachFinance();
+
+    // Render AI insights
+    if (window.generateAcademyInsights) window.generateAcademyInsights();
   }
 
   function renderCoachFinance() {
@@ -4720,50 +4742,143 @@ Best regards,
   }
   window.sendPaymentReceiptNotification = sendPaymentReceiptNotification;
 
-  window.markPaid = async function (id, amount, method = 'Cash', desc = 'Monthly Tuition Fee') {
-    try {
+    window.togglePaymentStatus = async function(id, name, fee) {
       const s = allStudents.find(x => String(x.id) === String(id));
-      const amt = amount || (s ? getStudentMonthlyFee(s) : 0);
+      if (!s) return;
 
-      // 1. Update Student Status & Roll Due Date
-      const updates = { payment_status: 'Paid' };
-      if (s && s.due_date) {
-        const nextDate = new Date(s.due_date);
-        nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
-        updates.due_date = nextDate.toISOString().split('T')[0];
+      const currentStatus = getStudentPaymentStatus(s);
+      const isCurrentlyPaid = currentStatus === 'Paid';
+      const action = isCurrentlyPaid ? 'unpaid' : 'paid';
+      const confirmMsg = isCurrentlyPaid
+        ? `Mark ${name} as Unpaid? This will remove this month's payment record and revert status to Pending.`
+        : `Mark ${name} as Paid? This will create a payment record for this month.`;
+
+      if (!confirm(confirmMsg)) return;
+
+      const targetMonth = window.reportMonth;
+      const targetYear = window.reportYear;
+      const originalPayments = [...window.allPayments];
+
+      // --- Optimistic Local Updates ---
+      let mockPayment = null;
+      let removedPayments = [];
+      if (isCurrentlyPaid) {
+        removedPayments = window.allPayments.filter(p =>
+          String(p.student_id) === String(id) &&
+          p.status === 'paid' &&
+          new Date(p.payment_date || p.created_at).getUTCMonth() === targetMonth &&
+          new Date(p.payment_date || p.created_at).getUTCFullYear() === targetYear
+        );
+        window.allPayments = window.allPayments.filter(p => !removedPayments.includes(p));
+      } else {
+        mockPayment = {
+          id: 'pay_toggle_temp_' + Date.now(),
+          student_id: id,
+          amount: parseFloat(fee),
+          status: 'paid',
+          payment_method: 'Manual Toggle',
+          description: 'Status toggled to Paid via Dashboard',
+          transaction_id: 'TGL-' + Math.floor(Math.random() * 1000000),
+          payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
+        };
+        window.allPayments.unshift(mockPayment);
       }
 
-      await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify(updates) });
+      if (dataCache) dataCache.payments = window.allPayments;
 
-      // 2. Create Transaction Record (Increments Credit Count)
-      await apiCall(`${API_BASE}/payments`, {
-        method: 'POST',
-        body: JSON.stringify({
-          id: 'pay_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9), // Required Primary Key
-          student_id: id,
-          amount: parseFloat(amt), // Ensure numeric
-          status: 'paid',
-          payment_method: method,
-          description: desc,
-          transaction_id: 'MAN-' + Math.floor(Math.random() * 1000000),
-          payment_date: (window.reportMonth !== new Date().getUTCMonth() || window.reportYear !== new Date().getUTCFullYear()) ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString() : new Date().toISOString()
-        })
+      const pMap = {};
+      const seenMonths = new Set();
+      window.allPayments.forEach(p => {
+        if (p.status === 'paid') {
+          const sid = String(p.student_id || '').trim().toLowerCase();
+          if (!sid) return;
+          const pDate = new Date(p.payment_date || p.created_at);
+          const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+          if (seenMonths.has(mKey)) return;
+          seenMonths.add(mKey);
+          pMap[sid] = (pMap[sid] || 0) + 1;
+        }
       });
+      window.totalPaymentsMap = pMap;
 
-       toast('Payment logged and due date advanced!', 'success');
-      
-      // FIX #3: Invalidate payment cache before reload
-      window.totalPaymentsMap = null;
-      
-      // SYNC: Force fresh data fetch and re-render dashboard
-      await loadAllData(true);
-      renderDash();
-      renderBills();
+      const active = document.querySelector('.page.active')?.id;
+      if (active === 'page-dash') renderDash();
+      else if (active === 'page-stud') renderStudents();
+      else if (active === 'page-bills') renderBills();
 
-      // 3. Auto-Notify Parent with Receipt Link
-      sendPaymentReceiptNotification(id, amt);
-    } catch (e) { toast('Failed to process payment', 'error'); }
-  };
+      // --- Background Sync with Database ---
+      try {
+        if (isCurrentlyPaid) {
+          for (const p of removedPayments) {
+            if (!p.id.startsWith('pay_toggle_temp_')) {
+              await apiCall(`${API_BASE}/payments?id=${p.id}`, { method: 'DELETE' });
+            }
+          }
+
+          await apiCall(`${API_BASE}/students?id=${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ payment_status: 'Pending' })
+          });
+
+          toast(`Marked Unpaid. ${removedPayments.length} payment record(s) removed.`, 'info');
+        } else {
+          const paymentData = {
+            id: 'pay_toggle_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            student_id: id,
+            amount: parseFloat(fee),
+            status: 'paid',
+            payment_method: 'Manual Toggle',
+            description: 'Status toggled to Paid via Dashboard',
+            transaction_id: 'TGL-' + Math.floor(Math.random() * 1000000),
+            payment_date: mockPayment.payment_date
+          };
+
+          const res = await apiCall(`${API_BASE}/payments`, {
+            method: 'POST',
+            body: JSON.stringify(paymentData)
+          });
+
+          if (res.ok) {
+            await apiCall(`${API_BASE}/students?id=${id}`, {
+              method: 'PUT',
+              body: JSON.stringify({ payment_status: 'Paid' })
+            });
+            toast('Marked as Paid with transaction record', 'success');
+            if (window.sendPaymentReceiptNotification) {
+              sendPaymentReceiptNotification(id, fee);
+            }
+          } else {
+            throw new Error('POST failed');
+          }
+        }
+        
+        loadAllData(true);
+      } catch (e) {
+        console.error('Toggle status sync failed, rolling back:', e);
+        toast('Sync failed, rolling back UI...', 'error');
+        window.allPayments = originalPayments;
+        if (dataCache) dataCache.payments = window.allPayments;
+        
+        const rollMap = {};
+        const rollSeen = new Set();
+        window.allPayments.forEach(p => {
+          if (p.status === 'paid') {
+            const sid = String(p.student_id || '').trim().toLowerCase();
+            if (!sid) return;
+            const pDate = new Date(p.payment_date || p.created_at);
+            const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+            if (rollSeen.has(mKey)) return;
+            rollSeen.add(mKey);
+            rollMap[sid] = (rollMap[sid] || 0) + 1;
+          }
+        });
+        window.totalPaymentsMap = rollMap;
+
+        if (active === 'page-dash') renderDash();
+        else if (active === 'page-stud') renderStudents();
+        else if (active === 'page-bills') renderBills();
+      }
+    };
 
    window.markUnpaid = async function (id) {
      if (!confirm('Revert status to Due? This will NOT delete the transaction record. You must delete the payment from History to reduce credits.')) return;
@@ -7060,5 +7175,228 @@ Best regards,
   }
   window.quickSwitchPreviewStudent = quickSwitchPreviewStudent;
 
+  // --- AI Insights Engine ---
+  function generateAcademyInsights() {
+    const card = document.getElementById('ai-insights-card');
+    const body = document.getElementById('ai-insights-body');
+    if (!card || !body) return;
+
+    const insights = [];
+
+    // --- 1. Promotion Suggestions ---
+    const beginnerThreshold = 1000;
+    const intermediateThreshold = 1350;
+    const advancedThreshold = 1700;
+
+    allStudents.forEach(s => {
+      const sStatus = getStudentStatus(s);
+      if (sStatus === 'archived' || sStatus === 'inactive' || sStatus === 'pending' || sStatus === 'waitlist') return;
+
+      const lvl = getStudentLevel(s);
+      const rating = getStudentRating(s) || 800;
+      const name = getStudentName(s);
+
+      if (lvl === 'Beginner' && rating >= beginnerThreshold) {
+        insights.push({
+          type: 'promotion',
+          severity: 'amber',
+          icon: '🏆',
+          text: `<strong>Promotion Alert:</strong> Beginner student <strong>${name}</strong> has a high rating of <strong>${rating} ELO</strong>. Suggest promoting to <strong>Intermediate</strong>.`
+        });
+      } else if (lvl === 'Intermediate' && rating >= intermediateThreshold) {
+        insights.push({
+          type: 'promotion',
+          icon: '🏆',
+          severity: 'amber',
+          text: `<strong>Promotion Alert:</strong> Intermediate student <strong>${name}</strong> has reached <strong>${rating} ELO</strong>. Suggest promoting to <strong>Advanced</strong>.`
+        });
+      } else if (lvl === 'Advanced' && rating >= advancedThreshold) {
+        insights.push({
+          type: 'promotion',
+          icon: '🏆',
+          severity: 'amber',
+          text: `<strong>Promotion Alert:</strong> Advanced student <strong>${name}</strong> has reached <strong>${rating} ELO</strong>. Suggest promoting to <strong>Elite</strong>.`
+        });
+      }
+    });
+
+    // --- 2. Attendance Alerts (2 consecutive absences) ---
+    const attByStudent = {};
+    (allAttendance || []).forEach(a => {
+      const sid = String(a.student_id);
+      if (!attByStudent[sid]) attByStudent[sid] = [];
+      attByStudent[sid].push(a);
+    });
+
+    Object.keys(attByStudent).forEach(sid => {
+      const s = allStudents.find(x => String(x.id) === sid);
+      if (!s) return;
+      const sStatus = getStudentStatus(s);
+      if (sStatus === 'archived' || sStatus === 'inactive' || sStatus === 'pending' || sStatus === 'waitlist') return;
+
+      const records = attByStudent[sid].sort((a, b) => new Date(b.date) - new Date(a.date));
+      if (records.length >= 2) {
+        if (records[0].status === 'absent' && records[1].status === 'absent') {
+          insights.push({
+            type: 'attendance',
+            icon: '⚠️',
+            severity: 'danger',
+            text: `<strong>Attendance Warning:</strong> Student <strong>${getStudentName(s)}</strong> has missed <strong>2 consecutive classes</strong> (last absent on ${records[0].date}). Suggest coach follow-up.`
+          });
+        }
+      }
+    });
+
+    // --- 3. Arrears Alerts (> 2 months outstanding) ---
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
+    const baseline = new Date(Date.UTC(2026, 3, 1));
+
+    const creditsMap = {};
+    const seenMonths = new Set();
+    (allPayments || []).forEach(p => {
+      if (p.status === 'paid') {
+        const sid = String(p.student_id || '').trim().toLowerCase();
+        const pDate = new Date(p.payment_date || p.created_at);
+        const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+        if (seenMonths.has(mKey)) return;
+        seenMonths.add(mKey);
+        
+        creditsMap[sid] = (creditsMap[sid] || 0) + 1;
+      }
+    });
+
+    allStudents.forEach(s => {
+      const sStatus = getStudentStatus(s);
+      if (sStatus === 'archived' || sStatus === 'inactive' || sStatus === 'pending' || sStatus === 'waitlist') return;
+
+      const enrollDateStr = getStudentDate(s);
+      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+
+      const sid = String(s.id).toLowerCase();
+      const credits = creditsMap[sid] || 0;
+      const outstandingMonths = Math.max(0, monthsRequired - credits);
+
+      if (outstandingMonths >= 2) {
+        const fee = getStudentMonthlyFee(s) || 0;
+        const totalOwed = fee * outstandingMonths;
+        insights.push({
+          type: 'arrears',
+          icon: '💸',
+          severity: 'danger',
+          text: `<strong>Arrears Warning:</strong> Student <strong>${getStudentName(s)}</strong> has <strong>${outstandingMonths} unpaid months</strong> (Owes: ₹${totalOwed.toLocaleString()}). Suggest sending notification.`
+        });
+      }
+    });
+
+    if (insights.length === 0) {
+      body.innerHTML = `
+        <div style="color:var(--ivory-dim); font-size:14px; font-style:italic; text-align:center; padding:12px 0;">
+          ✨ No operational alerts or suggestions at this time. All systems optimal!
+        </div>`;
+    } else {
+      body.innerHTML = insights.map(ins => {
+        let borderClr = 'rgba(201, 150, 12, 0.2)';
+        let bgClr = 'rgba(255,255,255,0.01)';
+        let textClr = 'var(--ivory)';
+        
+        if (ins.severity === 'danger') {
+          borderClr = 'rgba(255, 77, 79, 0.3)';
+          bgClr = 'rgba(255, 77, 79, 0.03)';
+        } else if (ins.severity === 'amber') {
+          borderClr = 'rgba(201, 150, 12, 0.3)';
+          bgClr = 'rgba(201, 150, 12, 0.03)';
+        }
+
+        return `
+          <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; border:1px solid ${borderClr}; background:${bgClr}; border-radius:8px; margin-bottom:10px; font-size:14px; color:${textClr};">
+            <span style="font-size:18px;">${ins.icon}</span>
+            <div style="flex:1;">${ins.text}</div>
+          </div>`;
+      }).join('');
+    }
+
+    card.style.display = 'block';
+  }
+  window.generateAcademyInsights = generateAcademyInsights;
+
+  // --- CSV Export Engine ---
+  function exportStudentsToCSV() {
+    if (!allStudents || allStudents.length === 0) {
+      toast('No students loaded to export.', 'warning');
+      return;
+    }
+
+    const headers = [
+      'ID',
+      'Name',
+      'Phone',
+      'Email',
+      'Status',
+      'Level',
+      'Rating (ELO)',
+      'Batch Type',
+      'Session Time',
+      'Coach Name',
+      'Joining Date',
+      'Monthly Fee (INR)',
+      'Payment Status'
+    ];
+
+    const targetMonth = window.reportMonth;
+    const targetYear = window.reportYear;
+
+    const rows = allStudents.map(s => {
+      const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+      const coachName = coach ? getCoachName(coach) : 'Unassigned';
+      
+      const paymentStatus = getStudentPaymentStatus(s, targetMonth, targetYear);
+
+      return [
+        s.id || '',
+        getStudentName(s) || '',
+        getStudentPhone(s) || '',
+        getStudentEmail(s) || '',
+        getStudentStatus(s) || '',
+        getStudentLevel(s) || '',
+        getStudentRating(s) || 800,
+        getStudentBatchType(s) || '',
+        getStudentSessionTime(s) || '',
+        coachName,
+        getStudentDate(s) || '',
+        getStudentMonthlyFee(s) || 0,
+        paymentStatus
+      ];
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => 
+        row.map(val => {
+          const strVal = String(val).replace(/"/g, '""');
+          return strVal.includes(',') || strVal.includes('\n') ? `"${strVal}"` : strVal;
+        }).join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dateStr = `${months[targetMonth]}_${targetYear}`;
+    link.setAttribute('download', `chesskidoo_students_export_${dateStr}.csv`);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast('Student records exported successfully! 📤', 'success');
+  }
+  window.exportStudentsToCSV = exportStudentsToCSV;
+
   if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.8 (Clean Messages & Excel)';
-})();
+  })();

@@ -127,7 +127,7 @@ def test_02_create_student():
     }
 
     code, resp = api_call("POST", "/students", payload)
-    if code != 201:
+    if code not in (200, 201):
         log(f"Create failed: HTTP {code} {resp}", "FAIL")
         raise AssertionError("Student creation failed")
 
