@@ -2925,6 +2925,7 @@ function initUI() {
       if (p === 'fame') renderFame();
       if (p === 'events') renderEvents();
       if (p === 'bills') renderBills();
+      if (p === 'child') renderChild();
       if (p === 'insights' && window.generateAcademyInsights) window.generateAcademyInsights();
       if (p === 'msgs') renderMsgs();
       if (p === 'exp' && window.initExpPage) window.initExpPage();
