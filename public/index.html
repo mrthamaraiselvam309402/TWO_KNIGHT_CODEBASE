@@ -1434,9 +1434,11 @@
       <div id="ev-registry-section">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:5px; margin-bottom:15px;">
           <h3 style="color:var(--soft-gold); margin:0;">Student Registry</h3>
-          <div style="display:flex; gap:10px;">
-            <select id="ev-add-student-select" class="form-input" style="width:160px; padding:4px; font-size:12px;"></select>
-            <button class="btn btn-gold btn-sm" onclick="addStudentToEvent()">+ Register</button>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <select id="ev-add-student-select" class="form-input" style="width:140px; padding:4px; font-size:12px;"></select>
+            <button class="btn btn-gold btn-sm" onclick="addStudentToEvent()">+ Add</button>
+            <span style="color:var(--slate); font-size:12px;">or</span>
+            <button class="btn btn-outline btn-sm" onclick="promptRegisterGuestEvent()">+ External Student</button>
           </div>
         </div>
       <div class="table-wrap">

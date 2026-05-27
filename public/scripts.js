@@ -2183,6 +2183,51 @@ function initUI() {
     }
   };
 
+  window.promptRegisterGuestEvent = async function() {
+    const eventId = window.currentManageEventId;
+    if (!eventId) return;
+    
+    const name = prompt("Enter External Student's Name:");
+    if (!name) return;
+    const phone = prompt("Enter Contact Phone Number:");
+    if (!phone) return;
+    const level = prompt("Enter Level (e.g. Beginner, Intermediate):", "Guest");
+    
+    // Create student first
+    try {
+      const studentPayload = {
+        name: name,
+        parent_name: "External Participant",
+        phone: phone,
+        level: level || "Guest",
+        status: "pending", // Keeps them out of active roster
+        notes: "Registered explicitly for an event as an external student."
+      };
+      
+      const sRes = await apiCall('/api/students', {
+        method: 'POST',
+        body: JSON.stringify(studentPayload)
+      });
+      if (!sRes.ok) throw new Error('Failed to create guest student');
+      const newStudent = await sRes.json();
+      
+      // Now add to event
+      const eRes = await apiCall('/api/events', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'add_student', event_id: eventId, student_id: newStudent.id })
+      });
+      if (!eRes.ok) throw new Error('Failed to register to event');
+      
+      toast('External student successfully registered!', 'success');
+      loadAllData(true);
+      setTimeout(() => window.openEventManagement(eventId), 500);
+      
+    } catch(err) {
+      console.error(err);
+      toast('Error registering external student', 'error');
+    }
+  };
+
   window.exportEventReport = function() {
     const id = window.currentManageEventId;
     if (!id) return;
