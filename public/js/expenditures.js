@@ -36,10 +36,7 @@
   let expEditingId    = null;
   let expChartPie     = null;
   let expChartLine    = null;
-  let expFilterMonth  = (() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  })();
+  let expFilterMonth  = '';
 
   // ─── API Helper (re-uses global apiCall from scripts.js) ────────
   async function apiCall(endpoint, opts = {}) {

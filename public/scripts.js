@@ -2762,6 +2762,20 @@ function initUI() {
             </div>`;
         }
       }
+      if (p === 'exp' && window.initExpPage) window.initExpPage();
+      if (p === 'ai') {
+        if(window.initSmartPills) window.initSmartPills();
+        const chatBody = document.getElementById('ai-workspace-msgs');
+        if (chatBody && chatBody.children.length === 0) {
+            chatBody.innerHTML = `
+            <div class="ai-ws-msg bot">
+              <div class="ai-ws-avatar">🤖</div>
+              <div class="ai-ws-bubble">
+                Hello Admin! I'm your dedicated AI Copilot. I'm securely connected to your live academy database. How can I assist you with analytics, student insights, or performance metrics today?
+              </div>
+            </div>`;
+        }
+      }
     }, 10);
   }
   window.setPage = setPage;
@@ -3791,7 +3805,7 @@ function initUI() {
             }
             
             const enrollStatusMatch = !fEnrollStatus || getStudentStatus(s) === fEnrollStatus;
-            const learningModeMatch = !fLearningMode || (s.learning_mode || 'offline') === fLearningMode;
+            const learningModeMatch = !fLearningMode || (s.learning_mode || 'online') === fLearningMode;
             
             return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch && dueDateMatch && enrollDateMatch && enrollStatusMatch && learningModeMatch;
           });
@@ -3918,7 +3932,7 @@ function initUI() {
               ? `<input type="checkbox" class="stud-check" data-id="${s.id}" disabled title="Non-active students cannot be selected for payments">`
               : `<input type="checkbox" class="stud-check" data-id="${s.id}">`;
 
-            const learningMode = s.learning_mode === 'online' ? 'Online' : (s.learning_mode === 'offline' ? 'Offline' : 'Offline');
+            const learningMode = s.learning_mode === 'offline' ? 'Offline' : 'Online';
             const learningModeColor = learningMode === 'Online' ? '#3b82f6' : '#8b5cf6';
             const learningModeBadge = `<span class="badge" style="background: ${learningMode === 'Online' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(139, 92, 246, 0.12)'}; color: ${learningModeColor}; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid ${learningMode === 'Online' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(139, 92, 246, 0.25)'}; margin-left: 4px;">${learningMode}</span>`;
 
@@ -4026,7 +4040,7 @@ function initUI() {
      $('e-batch-type').value = getStudentBatchType(s);
      $('e-batch-time').value = getStudentBatchTime(s);
      if ($('e-due-date')) $('e-due-date').value = s.due_date || '';
-     if ($('e-learning-mode')) $('e-learning-mode').value = s.learning_mode || 'offline';
+     if ($('e-learning-mode')) $('e-learning-mode').value = s.learning_mode || 'online';
      // BUG FIX: Pre-fill notes so updateStudent never silently blanks them
      if ($('e-notes')) $('e-notes').value = getStudentCoachNotes(s);
      syncCoachDropdowns();
@@ -4074,8 +4088,8 @@ function initUI() {
         fee: newFee,
         fees: newFee,
         tuition_fee: newFee,
-        learning_mode: $('e-learning-mode')?.value || s.learning_mode || 'offline',
-        notes: `[LM:${$('e-learning-mode')?.value || s.learning_mode || 'offline'}] ` + ($('e-notes')?.value || s.notes || '').replace(/\[LM:(online|offline)\]/g, '').trim()
+        learning_mode: $('e-learning-mode')?.value || s.learning_mode || 'online',
+        notes: `[LM:${$('e-learning-mode')?.value || s.learning_mode || 'online'}] ` + ($('e-notes')?.value || s.notes || '').replace(/\[LM:(online|offline)\]/g, '').trim()
       };
 
     try {
@@ -4241,8 +4255,8 @@ function initUI() {
           monthly_fee: parseInt($('m-fee').value) || 0,
           payment_status: defaultPaymentStatus,
           status: selectedStatus,
-          learning_mode: $('m-learning-mode')?.value || 'offline',
-          notes: `[LM:${$('m-learning-mode')?.value || 'offline'}]`
+          learning_mode: $('m-learning-mode')?.value || 'online',
+          notes: `[LM:${$('m-learning-mode')?.value || 'online'}]`
        };
 
      if (!data.due_date) {
