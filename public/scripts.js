@@ -5606,9 +5606,15 @@ Best regards,
          }
 
          // Update student to Pending (they paid previous months but not current)
+         const updates = { payment_status: 'Pending' };
+         if (s && s.due_date) {
+           const prevDate = new Date(s.due_date);
+           prevDate.setUTCMonth(prevDate.getUTCMonth() - 1);
+           updates.due_date = prevDate.toISOString().split('T')[0];
+         }
          await apiCall(`${API_BASE}/students?id=${id}`, {
            method: 'PUT',
-           body: JSON.stringify({ payment_status: 'Pending' })
+           body: JSON.stringify(updates)
          });
 
          toast(`Marked Unpaid. ${monthPayments.length} payment record(s) removed.`, 'info');
@@ -5632,9 +5638,15 @@ Best regards,
          });
 
          if (res.ok) {
+           const updates = { payment_status: 'Paid' };
+           if (s && s.due_date) {
+             const nextDate = new Date(s.due_date);
+             nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
+             updates.due_date = nextDate.toISOString().split('T')[0];
+           }
            await apiCall(`${API_BASE}/students?id=${id}`, {
              method: 'PUT',
-             body: JSON.stringify({ payment_status: 'Paid' })
+             body: JSON.stringify(updates)
            });
            toast('Marked as Paid with transaction record', 'success'); sendPaymentReceiptNotification(id, fee);
          }
@@ -6041,9 +6053,8 @@ Best regards,
 
       // Update student status and advance due date - Fix #26
       const updates = { payment_status: 'Paid' };
-      if (s) {
-        const baseDate = s.due_date ? new Date(s.due_date) : new Date();
-        const nextDate = new Date(baseDate);
+      if (s && s.due_date) {
+        const nextDate = new Date(s.due_date);
         nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
         updates.due_date = nextDate.toISOString().split('T')[0];
       }
