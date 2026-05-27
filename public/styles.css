@@ -817,6 +817,10 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
 /* ═══════════════════════════════════════════════════════════════
    MASTER ADAPTIVE ENGINE — Responsive Breakpoints
    ═══════════════════════════════════════════════════════════════ */
+/* ── RESPONSIVE GRID UTILITIES ── */
+.grid-2-col { display: grid; grid-template-columns: 1fr 1fr; }
+.grid-3-col { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+.grid-sidebar-layout { display: grid; grid-template-columns: 1fr 2.5fr; }
 
 @media (max-width: 1024px) {
   .menu-toggle { display: flex; }
@@ -829,6 +833,13 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
 }
 
 @media (max-width: 768px) {
+  /* ── RESPONSIVE GRID OVERRIDES ── */
+  .grid-2-col, .grid-3-col, .grid-sidebar-layout { grid-template-columns: 1fr !important; }
+  .content { padding: 16px !important; }
+  .login-box { padding: 32px 24px !important; }
+  .modal-box { width: 95vw !important; max-height: 85vh !important; padding: 24px !important; }
+  .profile-hdr { flex-direction: column; align-items: flex-start; gap: 16px; }
+  
   /* ── PREMIUM MOBILE TOP-BAR FLEX WRAPPING ── */
   .top-bar {
     flex-wrap: wrap !important;
