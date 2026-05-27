@@ -2210,12 +2210,23 @@ function initUI() {
   window.promptRegisterGuestEvent = async function() {
     const eventId = window.currentManageEventId;
     if (!eventId) return;
+    $('ext-student-name').value = '';
+    $('ext-student-phone').value = '';
+    $('ext-student-level').value = 'Guest';
+    openModal('external-student-modal');
+  };
+
+  window.submitExternalStudent = async function() {
+    const eventId = window.currentManageEventId;
+    if (!eventId) return;
     
-    const name = prompt("Enter External Student's Name:");
-    if (!name) return;
-    const phone = prompt("Enter Contact Phone Number:");
-    if (!phone) return;
-    const level = prompt("Enter Level (e.g. Beginner, Intermediate):", "Guest");
+    const name = $('ext-student-name').value.trim();
+    if (!name) { toast('Please enter the student name', 'error'); return; }
+    
+    const phone = $('ext-student-phone').value.trim();
+    if (!phone) { toast('Please enter a phone number', 'error'); return; }
+    
+    const level = $('ext-student-level').value.trim() || 'Guest';
     
     // Create student first
     try {
@@ -2223,7 +2234,7 @@ function initUI() {
         name: name,
         parent_name: "External Participant",
         phone: phone,
-        level: level || "Guest",
+        level: level,
         status: "pending", // Keeps them out of active roster
         notes: "Registered explicitly for an event as an external student."
       };
@@ -2248,6 +2259,7 @@ function initUI() {
       if (!eRes.ok) throw new Error('Failed to register to event');
       
       toast('External student successfully registered!', 'success');
+      closeModal('external-student-modal');
       loadAllData(true);
       setTimeout(() => window.openEventManagement(eventId), 500);
       

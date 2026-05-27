@@ -615,7 +615,7 @@
           </div>
         </div>
         
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+        <div style="display:grid; grid-template-columns: 1fr; gap: 40px; margin-top: 30px;">
           <!-- Student Registry Section -->
           <div id="ev-registry-section">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ffffff10; padding-bottom:10px; margin-bottom:15px;">
@@ -1457,6 +1457,58 @@
     </div>
   </div>
 </div>
+
+    <!-- External Student Modal -->
+    <div class="modal" id="external-student-modal">
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <div class="modal-title">Register External Student</div>
+          <button class="close-btn" onclick="closeModal('external-student-modal')">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Student Name</label>
+            <input type="text" id="ext-student-name" class="form-input" placeholder="Enter full name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact Phone</label>
+            <input type="text" id="ext-student-phone" class="form-input" placeholder="e.g. +91 9876543210">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Level / Category</label>
+            <input type="text" id="ext-student-level" class="form-input" placeholder="e.g. Guest, Beginner" value="Guest">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('external-student-modal')">Cancel</button>
+          <button class="btn btn-gold" onclick="submitExternalStudent()">Register Student</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Expenditure Modal -->
+    <div class="modal" id="event-expenditure-modal">
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <div class="modal-title">Add Event Expenditure</div>
+          <button class="close-btn" onclick="closeModal('event-expenditure-modal')">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <input type="text" id="ev-exp-desc" class="form-input" placeholder="e.g. Trophies / Venue">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <input type="number" id="ev-exp-amount" class="form-input" placeholder="e.g. 500">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('event-expenditure-modal')">Cancel</button>
+          <button class="btn btn-gold" onclick="submitEventExpenditure()">Add Expense</button>
+        </div>
+      </div>
+    </div>
 
 <!-- Achievement Modal -->
 <div class="modal" id="award-modal">
