@@ -2176,10 +2176,16 @@ function initUI() {
     const studentId = $('ev-add-student-select').value;
     if (!eventId || !studentId) { toast('Please select a student', 'error'); return; }
     
+    const student = allStudents.find(s => String(s.id) === String(studentId));
     try {
       const res = await apiCall('/api/events', {
           method: 'POST',
-          body: JSON.stringify({ action: 'add_student', event_id: eventId, student_id: studentId })
+          body: JSON.stringify({ 
+            action: 'register', 
+            event_id: eventId, 
+            student_id: studentId, 
+            student_name: student ? getStudentName(student) : 'Unknown' 
+          })
       });
       if (!res.ok) throw new Error('Failed');
       toast('Student registered successfully!', 'success');
@@ -2221,7 +2227,12 @@ function initUI() {
       // Now add to event
       const eRes = await apiCall('/api/events', {
           method: 'POST',
-          body: JSON.stringify({ action: 'add_student', event_id: eventId, student_id: newStudent.id })
+          body: JSON.stringify({ 
+            action: 'register', 
+            event_id: eventId, 
+            student_id: newStudent.id, 
+            student_name: newStudent.name || newStudent.full_name || 'Guest' 
+          })
       });
       if (!eRes.ok) throw new Error('Failed to register to event');
       
