@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
       fee: e.fee || 0,
       registrations_count: e.current_participants || 0,
       registered_students: e.registered_students || [],
+      registrations_data: e.registrations_data || [],
       max_participants: e.max_participants,
       status: e.status || 'upcoming',
       created_at: e.created_at,
@@ -132,6 +133,7 @@ console.log('Query result:', events, eventError);
         }
 
         const registeredStudents = currentEvent.registered_students || [];
+        const registrationsData = currentEvent.registrations_data || [];
         
         // Check if already registered
         if (registeredStudents.includes(studentId)) {
@@ -143,10 +145,18 @@ console.log('Query result:', events, eventError);
         
         // Add student to registered list
         registeredStudents.push(studentId);
+        registrationsData.push({
+          student_id: studentId,
+          name: studentName,
+          registered_at: new Date().toISOString(),
+          payment_status: 'pending',
+          attendance: 'absent'
+        });
         
         // Update event with new registration
         const updateData = {
           registered_students: registeredStudents,
+          registrations_data: registrationsData,
           current_participants: registeredStudents.length,
           updated_at: new Date().toISOString()
         };
@@ -173,6 +183,41 @@ console.log('Query result:', events, eventError);
           status: 201,
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
+      }
+
+      // Handle updating registration status (e.g. marking as paid)
+      if (action === 'update_registration' && eventId && studentId) {
+        const paymentStatus = body.payment_status;
+        const attendance = body.attendance;
+        
+        const { data: eventToUpdate } = await supabase.from('events').select('registrations_data, title, fee').eq('id', eventId).single();
+        if (!eventToUpdate) return new Response(JSON.stringify({error:'Event not found'}), {status:404});
+
+        let regsData = eventToUpdate.registrations_data || [];
+        let updated = false;
+
+        regsData = regsData.map((r: any) => {
+          if (r.student_id === studentId) {
+            updated = true;
+            if (paymentStatus) r.payment_status = paymentStatus;
+            if (attendance) r.attendance = attendance;
+          }
+          return r;
+        });
+
+        if (!updated) return new Response(JSON.stringify({error:'Student not registered for this event'}), {status:400});
+
+        const { data: finalEvent, error: uErr } = await supabase.from('events').update({
+          registrations_data: regsData,
+          updated_at: new Date().toISOString()
+        }).eq('id', eventId).select().single();
+
+        if (uErr) return new Response(JSON.stringify({error: uErr.message}), {status:400});
+
+        // If marked paid, optionally create payment entry via frontend or here
+        // (We will let the frontend call /payments endpoint to keep it decoupled and log accurately)
+
+        return new Response(JSON.stringify({success:true, event: transformEvent(finalEvent)}), {headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
       }
       
       // If action is not 'register', check for title and create new event

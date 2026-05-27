@@ -727,3 +727,171 @@ window.getAcademySnapshot = function() {
         systemHealth: 'Optimal'
     };
 };
+
+
+window.generateEventReportPDF = async function() {
+    const eventId = window.currentManageEventId;
+    if (!eventId) return;
+    
+    const e = eventsData.find(x => String(x.id) === String(eventId));
+    if (!e) return;
+
+    const regStudents = e.registered_students || [];
+    const regsData = e.registrations_data || [];
+    
+    let reportHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Event Report - ${e.title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&family=Cormorant+Garamond:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --midnight: #0a0e27; --deep-navy: #151b3d; --royal-blue: #1e2a5e; --soft-gold: #f4c430; --light-gold: #ffd966; --white: #ffffff; --slate: #64748b; }
+    body { font-family: "DM Sans", sans-serif; padding: 40px; background: #f9fafb; color: var(--midnight); }
+    @media print { body { background: white; padding: 0; } .no-print { display: none !important; } }
+    .header { background: linear-gradient(135deg, var(--midnight), var(--deep-navy)); color: white; padding: 40px; border-radius: 12px; margin-bottom: 30px; position: relative; overflow: hidden; }
+    .header h1 { font-family: "Syne", sans-serif; font-size: 36px; margin-bottom: 10px; color: var(--soft-gold); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+    .kpi-card { background: white; border: 2px solid rgba(0,0,0,0.05); padding: 20px; border-radius: 12px; border-bottom: 4px solid var(--soft-gold); }
+    .kpi-val { font-size: 28px; font-weight: bold; font-family: "Syne"; }
+    .kpi-label { font-size: 12px; text-transform: uppercase; color: var(--slate); font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    th { background: var(--royal-blue); color: white; padding: 15px; text-align: left; font-size: 13px; text-transform: uppercase; }
+    td { padding: 15px; border-bottom: 1px solid #eee; }
+    .print-btn { background: var(--soft-gold); color: #000; border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; border-radius: 4px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="text-align:right;">
+    <button class="print-btn" onclick="window.print()">PRINT EVENT REPORT</button>
+  </div>
+  <div class="header">
+    <h1>${e.title.toUpperCase()}</h1>
+    <p>Event Date: ${new Date(e.date || e.event_date).toLocaleDateString()} | Type: ${e.type || "Event"}</p>
+  </div>
+  
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Participants</div>
+      <div class="kpi-val">${regStudents.length} / ${e.max_participants || 50}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Expected Revenue</div>
+      <div class="kpi-val">?${regStudents.length * (e.fee || 0)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Base Fee</div>
+      <div class="kpi-val">?${e.fee || 0}</div>
+    </div>
+  </div>
+
+  <h3 style="font-family:Syne; margin-bottom:15px;">Registered Students Roster</h3>
+  <table>
+    <thead><tr><th>Name</th><th>Level</th><th>Payment Status</th></tr></thead>
+    <tbody>`;
+
+    if(regStudents.length === 0) {
+       reportHTML += `<tr><td colspan="3" style="text-align:center;">No students registered.</td></tr>`;
+    } else {
+       regStudents.forEach(sid => {
+           const student = window.allStudents.find(s => s.id === sid);
+           const name = student ? (student.name || student.student_name) : "Unknown";
+           const level = student ? (student.level || "Beginner") : "-";
+           
+           const rData = regsData.find(r => r.student_id === sid);
+           let status = rData ? rData.payment_status : "pending";
+           
+           reportHTML += `<tr>
+             <td><strong>${name}</strong></td>
+             <td>${level}</td>
+             <td>${status === "paid" ? "<span style=\"color:green;font-weight:bold;\">PAID</span>" : "<span style=\"color:orange;font-weight:bold;\">PENDING</span>"}</td>
+           </tr>`;
+       });
+    }
+
+    reportHTML += `</tbody></table></body></html>`;
+
+    const reportWindow = window.open("", "_blank");
+    if (!reportWindow) { toast("Popup blocked!", "error"); return; }
+    reportWindow.document.write(reportHTML);
+    reportWindow.document.close();
+};
+
+window.generateEventCertificates = async function() {
+    const eventId = window.currentManageEventId;
+    if (!eventId) return;
+    
+    const e = eventsData.find(x => String(x.id) === String(eventId));
+    if (!e) return;
+    const regStudents = e.registered_students || [];
+
+    if(regStudents.length === 0) {
+      toast("No students registered for this event.", "error");
+      return;
+    }
+
+    let certHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Certificates - ${e.title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Great+Vibes&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { background: #555; margin: 0; display: flex; flex-direction: column; align-items: center; }
+    @media print { 
+      body { background: white; } 
+      .no-print { display: none !important; } 
+      .cert-page { page-break-after: always; box-shadow: none !important; margin: 0 !important; }
+    }
+    .cert-page {
+      width: 1123px; height: 794px; /* A4 Landscape */
+      background: white;
+      margin: 20px 0;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border: 15px solid #1e2a5e;
+      box-sizing: border-box;
+      padding: 40px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+    }
+    .cert-page::after {
+      content: ""; position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px;
+      border: 2px solid #f4c430; pointer-events: none;
+    }
+    .c-title { font-family: "Cinzel", serif; font-size: 50px; color: #1e2a5e; margin-bottom: 20px; }
+    .c-sub { font-family: "Montserrat", sans-serif; font-size: 20px; color: #666; margin-bottom: 40px; letter-spacing: 4px; text-transform: uppercase; }
+    .c-name { font-family: "Great Vibes", cursive; font-size: 80px; color: #f4c430; margin-bottom: 40px; line-height: 1; }
+    .c-body { font-family: "Montserrat", sans-serif; font-size: 18px; color: #333; max-width: 800px; line-height: 1.6; margin-bottom: 60px; }
+    .c-footer { display: flex; justify-content: space-between; width: 800px; margin-top: auto; padding-bottom: 20px; }
+    .c-sig { border-top: 1px solid #333; padding-top: 10px; width: 250px; font-family: "Montserrat", sans-serif; font-size: 14px; font-weight: bold; }
+    .print-btn { background: #f4c430; padding: 15px 30px; font-weight: bold; border: none; font-size: 18px; cursor: pointer; margin: 20px; position: sticky; top: 20px; z-index: 100; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+  </style>
+</head>
+<body>
+  <div class="no-print"><button class="print-btn" onclick="window.print()">PRINT CERTIFICATES</button></div>`;
+
+    regStudents.forEach(sid => {
+       const student = window.allStudents.find(s => s.id === sid);
+       const name = student ? (student.name || student.student_name) : "Unknown Participant";
+       
+       certHTML += `<div class="cert-page">
+         <div class="c-title">CERTIFICATE OF PARTICIPATION</div>
+         <div class="c-sub">CHESSKIDOO ACADEMY</div>
+         <div style="font-family: Montserrat; font-size: 16px; margin-bottom: 20px;">This is to proudly certify that</div>
+         <div class="c-name">${name}</div>
+         <div class="c-body">has successfully participated and demonstrated excellent sportsmanship in the <strong>${e.title}</strong> held on ${new Date(e.date || e.event_date).toLocaleDateString()}.</div>
+         <div class="c-footer">
+           <div class="c-sig">${new Date().toLocaleDateString()}<br><span style="font-weight:normal; font-size:12px;">Date</span></div>
+           <div class="c-sig" style="font-family: Great Vibes; font-size: 30px; padding-top:0; border:none; line-height:0.8;">ChessKidoo<br><span style="font-family: Montserrat; font-size:12px; font-weight:normal; border-top: 1px solid #333; display:block; padding-top:10px; margin-top:10px;">Academy Director</span></div>
+         </div>
+       </div>`;
+    });
+
+    certHTML += `</body></html>`;
+    const certWindow = window.open("", "_blank");
+    if (!certWindow) { toast("Popup blocked!", "error"); return; }
+    certWindow.document.write(certHTML);
+    certWindow.document.close();
+};
+

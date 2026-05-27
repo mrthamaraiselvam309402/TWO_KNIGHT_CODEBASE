@@ -108,7 +108,7 @@
     <div class="nav-item admin-only" id="nav-coach-mgmt" onclick="setPage('coach-mgmt')"><span class="ico">👨‍🏫</span> Coaches</div>
     <div class="nav-item parent-only" id="nav-child" onclick="setPage('child')"><span class="ico">📈</span> My Child</div>
     <div class="nav-item" id="nav-fame" onclick="setPage('fame')"><span class="ico">🏆</span> Wall of Fame</div>
-    <div class="nav-item admin-only" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Events</div>
+    <div class="nav-item admin-only" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Event Manager</div>
     <div class="nav-item admin-only" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
     <div class="nav-item admin-only" id="nav-insights" onclick="setPage('insights')"><span class="ico">💡</span> AI Insights</div>
     <div class="nav-item admin-only" id="nav-exp" onclick="setPage('exp')"><span class="ico">💸</span> Expenditures</div>
@@ -1407,7 +1407,11 @@
         <div class="modal-title" id="ev-manage-title" style="margin-bottom: 4px;">Manage Event</div>
         <div class="modal-sub" id="ev-manage-subtitle" style="color:var(--ivory-dim); font-size:13px;">—</div>
       </div>
-      <button class="btn btn-outline" onclick="exportEventReport()" style="font-size:12px;">📥 Export CSV</button>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-gold" onclick="generateEventCertificates()" style="font-size:12px;">🎓 Certificates</button>
+        <button class="btn btn-gold" onclick="generateEventReportPDF()" style="font-size:12px;">📄 Report</button>
+        <button class="btn btn-outline" onclick="exportEventReport()" style="font-size:12px;">📥 Export CSV</button>
+      </div>
     </div>
     
     <div class="dash-grid" style="margin: 20px 0;">
