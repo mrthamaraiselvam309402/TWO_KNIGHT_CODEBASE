@@ -409,12 +409,7 @@
     const s = currentStudent;
     const status = getStudentPaymentStatus(s);
     const fee = getStudentMonthlyFee(s) || 0;
-    let dueDate = 'Not set';
-    if (s.due_date) {
-      const d = new Date(s.due_date);
-      const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      dueDate = `${String(d.getUTCDate()).padStart(2, '0')}-${m[d.getUTCMonth()]}-${d.getUTCFullYear()}`;
-    }
+    const dueDate = s.due_date ? new Date(s.due_date).toLocaleDateString() : 'Not set';
     const myPayments = allPayments.filter(p => String(p.student_id) === String(s.id));
     const recentPayments = myPayments.slice(0, 10);
 
@@ -4012,21 +4007,12 @@ function initUI() {
            const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
            const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
            const uniqueId = 'more-' + (s.id || 'err').replace(/[^a-zA-Z0-9]/g, '');            const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
+            const dueDay = String(dueCfg.day).padStart(2, '0');
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const dueMonthName = months[targetMonth];
+            const dueDateString = `${dueDay}-${dueMonthName}-${targetYear}`;
             
-            let dueDateString = '';
-            let dueDateObj = null;
-            
-            if (s.due_date) {
-              const d = new Date(s.due_date);
-              dueDateString = `${String(d.getUTCDate()).padStart(2, '0')}-${months[d.getUTCMonth()]}-${d.getUTCFullYear()}`;
-              dueDateObj = d;
-            } else {
-              const dueDay = String(dueCfg.day).padStart(2, '0');
-              dueDateString = `${dueDay}-${months[targetMonth]}-${targetYear}`;
-              dueDateObj = new Date(Date.UTC(targetYear, targetMonth, dueCfg.day, 23, 59, 59));
-            }
-            
+            const dueDateObj = new Date(Date.UTC(targetYear, targetMonth, dueCfg.day, 23, 59, 59));
             const isOverdue = dueDateObj < new Date() && status !== 'Paid';
             
             const enrollStatus = getStudentStatus(s);
