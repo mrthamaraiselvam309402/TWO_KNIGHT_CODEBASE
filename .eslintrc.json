@@ -46,6 +46,14 @@
     "logAudit": "readonly",
     "initRealtimeNotifications": "readonly",
     "userRole": "readonly",
-    "fetchLocal": "readonly"
+    "fetchLocal": "readonly",
+    "openEventManagement": "readonly",
+    "checkCustomCategory": "readonly",
+    "setExpMonth": "readonly",
+    "setExpPage": "readonly",
+    "sendChat": "readonly",
+    "sendLoginChat": "readonly",
+    "toggleChat": "readonly",
+    "toggleLoginChat": "readonly"
   }
 }

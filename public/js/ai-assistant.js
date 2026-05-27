@@ -38,7 +38,7 @@ function initSmartPills() {
                 const input = document.getElementById('chat-input');
                 if (input) {
                     input.value = text;
-                    sendChat();
+                    window.sendChat();
                 }
             };
             container.appendChild(pill);

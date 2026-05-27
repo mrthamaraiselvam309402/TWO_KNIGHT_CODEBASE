@@ -419,7 +419,7 @@
       select.value = EXP_CATEGORIES[0];
     }
 
-    checkCustomCategory(select.value);
+    window.checkCustomCategory(select.value);
   }
 
   window.checkCustomCategory = function (val) {
@@ -621,7 +621,7 @@
     const picker = document.getElementById('exp-month-picker');
     if (picker) {
       picker.value = expFilterMonth;
-      picker.onchange = () => setExpMonth(picker.value);
+      picker.onchange = () => window.setExpMonth(picker.value);
     }
     const lbl = document.getElementById('exp-month-label');
     if (lbl) lbl.textContent = fmtMonth(expFilterMonth);

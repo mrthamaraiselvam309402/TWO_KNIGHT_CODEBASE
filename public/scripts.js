@@ -2083,7 +2083,7 @@ function initUI() {
       toast('Payment recorded successfully!', 'success');
       loadAllData(true);
       // Refresh modal
-      setTimeout(() => openEventManagement(eventId), 500);
+      setTimeout(() => window.openEventManagement(eventId), 500);
     } catch (err) {
       toast('Error recording payment', 'error');
     }
