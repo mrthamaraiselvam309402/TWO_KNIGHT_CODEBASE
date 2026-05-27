@@ -105,23 +105,19 @@ Deno.serve(async (req) => {
         // Get current event data - try without .single() to debug
         const { data: events, error: eventError } = await supabase
           .from('events')
-          .select('registered_students, current_participants, title')
+          .select('registered_students, current_participants, title, registrations_data')
           .eq('id', eventId);
         
-console.log('Query result:', events, eventError);
-
-        if (eventError) {
-          console.log('Query error:', eventError);
-          return new Response(JSON.stringify({ error: eventError.message }), { status: 500 });
-        }
+        console.log('Query result:', events, eventError);
 
         let currentEvent = null;
-        if (!events || events.length === 0) {
-          // Try fuzzy search
+        if (eventError || !events || events.length === 0) {
+          // Try fuzzy search - safely cast to string first
+          const safeSearch = String(eventId).substring(0, 8);
           const { data: events2 } = await supabase
             .from('events')
-            .select('registered_students, current_participants, title')
-            .ilike('id', '%' + eventId.substring(0, 8) + '%');
+            .select('registered_students, current_participants, title, registrations_data')
+            .ilike('id', '%' + safeSearch + '%');
           console.log('Fuzzy search result:', events2);
 
           if (!events2 || events2.length === 0) {
