@@ -2017,6 +2017,12 @@ function initUI() {
     const tbody = $('ev-m-tbody');
     tbody.innerHTML = '<tr><td colspan="4"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>';
     
+    const expTbody = $('ev-exp-tbody');
+    expTbody.innerHTML = '<tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>';
+    
+    // Reset tabs
+    if(window.switchEvTab) window.switchEvTab('registry');
+
     openModal('ev-manage-modal');
     
     try {
@@ -2054,9 +2060,67 @@ function initUI() {
       $('ev-m-rev').textContent = `₹${collectedRev}`;
       $('ev-m-due').textContent = `₹${expectedRev - collectedRev}`;
       
+      // Load Event Expenditures
+      const expRes = await apiCall('/api/expenditures');
+      const allExp = await expRes.json();
+      const eventExps = allExp.filter(ex => ex.details && ex.details.event_id === id);
+      
+      let expHtml = '';
+      if (eventExps.length === 0) {
+        expHtml = '<tr><td colspan="3"><div class="empty-state"><span class="empty-icon">💸</span><p>No expenditures logged</p></div></td></tr>';
+      } else {
+        eventExps.forEach(ex => {
+          expHtml += `<tr>
+            <td>${new Date(ex.date || ex.created_at).toLocaleDateString()}</td>
+            <td>${escapeHtml(ex.description || 'Event Expense')}</td>
+            <td class="text-danger">₹${ex.amount}</td>
+          </tr>`;
+        });
+      }
+      expTbody.innerHTML = expHtml;
+      
     } catch (err) {
        console.error(err);
        tbody.innerHTML = '<tr><td colspan="4">Error loading data.</td></tr>';
+    }
+  };
+
+  window.switchEvTab = function(tab) {
+    $('ev-registry-section').style.display = tab === 'registry' ? 'block' : 'none';
+    $('ev-expenditures-section').style.display = tab === 'exp' ? 'block' : 'none';
+    
+    $('ev-tab-registry').style.color = tab === 'registry' ? 'var(--soft-gold)' : 'var(--ivory-dim)';
+    $('ev-tab-exp').style.color = tab === 'exp' ? 'var(--soft-gold)' : 'var(--ivory-dim)';
+  };
+
+  window.promptAddEventExpenditure = async function() {
+    const eventId = window.currentManageEventId;
+    if (!eventId) return;
+    const e = eventsData.find(x => String(x.id) === String(eventId));
+    
+    const desc = prompt(`Enter expenditure description for ${e.title}:`, 'Trophies / Venue');
+    if (!desc) return;
+    const amountStr = prompt('Enter amount (₹):', '500');
+    if (!amountStr) return;
+    const amount = parseFloat(amountStr);
+    if (isNaN(amount) || amount <= 0) { toast('Invalid amount', 'error'); return; }
+    
+    const payload = {
+       amount: amount,
+       description: `${e.title} - ${desc}`,
+       date: new Date().toISOString().split('T')[0],
+       type: 'Event Expense',
+       details: { event_id: eventId }
+    };
+    
+    try {
+      const res = await apiCall('/api/expenditures', { method: 'POST', body: JSON.stringify(payload) });
+      if (!res.ok) throw new Error('Failed');
+      toast('Expenditure added!', 'success');
+      loadAllData(true);
+      setTimeout(() => window.openEventManagement(eventId), 500);
+    } catch(err) {
+      toast('Error adding expenditure', 'error');
     }
   };
 

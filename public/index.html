@@ -1429,20 +1429,49 @@
       </div>
     </div>
     
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Student</th>
-            <th>Level</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="ev-m-tbody">
-          <tr><td colspan="4"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>
-        </tbody>
-      </table>
+    <div style="display:flex; gap:20px; border-bottom:1px solid var(--border); margin-bottom:15px; padding-bottom:5px;">
+      <h3 id="ev-tab-registry" style="cursor:pointer; color:var(--soft-gold); margin:0;" onclick="switchEvTab('registry')">Student Registry</h3>
+      <h3 id="ev-tab-exp" style="cursor:pointer; color:var(--ivory-dim); margin:0;" onclick="switchEvTab('exp')">Expenditures</h3>
+    </div>
+
+    <!-- Student Registry Section -->
+    <div id="ev-registry-section">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Level</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="ev-m-tbody">
+            <tr><td colspan="4"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Expenditures Section -->
+    <div id="ev-expenditures-section" style="display:none;">
+      <div style="text-align:right; margin-bottom:10px;">
+        <button class="btn btn-gold btn-sm" onclick="promptAddEventExpenditure()">+ Add Expenditure</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="ev-exp-tbody">
+            <tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
     
     <div style="margin-top:16px; text-align:right;">
