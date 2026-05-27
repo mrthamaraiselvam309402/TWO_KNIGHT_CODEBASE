@@ -2747,21 +2747,6 @@ function initUI() {
       if (p === 'bills') renderBills();
       if (p === 'insights' && window.generateAcademyInsights) window.generateAcademyInsights();
       if (p === 'msgs') renderMsgs();
-      if (p === 'child') renderChild();
-      if (p === 'exp' && window.initExpPage) window.initExpPage();
-      if (p === 'ai') {
-        if(window.initSmartPills) window.initSmartPills();
-        const chatBody = document.getElementById('ai-workspace-msgs');
-        if (chatBody && chatBody.children.length === 0) {
-            chatBody.innerHTML = `
-            <div class="ai-ws-msg bot">
-              <div class="ai-ws-avatar">🤖</div>
-              <div class="ai-ws-bubble">
-                Hello Admin! I'm your dedicated AI Copilot. I'm securely connected to your live academy database. How can I assist you with analytics, student insights, or performance metrics today?
-              </div>
-            </div>`;
-        }
-      }
       if (p === 'exp' && window.initExpPage) window.initExpPage();
       if (p === 'ai') {
         if(window.initSmartPills) window.initSmartPills();
@@ -6398,6 +6383,7 @@ Best regards,
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
   }
+  window.setAIModule = setAIModule;
 
   function setAISuggestion(q) {
     const input = $('ai-query');
@@ -6406,6 +6392,7 @@ Best regards,
       input.focus();
     }
   }
+  window.setAISuggestion = setAISuggestion;
 
   // ═══════════════════════════════════════════════════════════════
   // REAL-TIME INTELLIGENCE ENGINE (RAG + AGENTIC AI)
@@ -6929,6 +6916,7 @@ Best regards,
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
   }
+  window.sendAIQuery = sendAIQuery;
 
   // Initialize RAG on load
   VECTOR_RAG.indexData();

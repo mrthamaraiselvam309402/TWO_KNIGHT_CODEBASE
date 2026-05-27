@@ -46,6 +46,7 @@ function initSmartPills() {
         window.pillsInitialized = true;
     }
 }
+window.initSmartPills = initSmartPills;
 
 window.sendChat = async function() {
     await handleAITask('chat-input', 'ai-chat-body');
