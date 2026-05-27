@@ -1426,11 +1426,19 @@
       <div class="card" style="padding:16px;">
         <div class="stat-label">Pending Dues</div>
         <div class="stat-value text-danger" id="ev-m-due">₹0</div>
-    <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+    </div>
+    
+    <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px;">
       
       <!-- Student Registry Section -->
       <div id="ev-registry-section">
-        <h3 style="color:var(--soft-gold); margin-top:0; border-bottom:1px solid var(--border); padding-bottom:5px;">Student Registry</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:5px; margin-bottom:15px;">
+          <h3 style="color:var(--soft-gold); margin:0;">Student Registry</h3>
+          <div style="display:flex; gap:10px;">
+            <select id="ev-add-student-select" class="form-input" style="width:160px; padding:4px; font-size:12px;"></select>
+            <button class="btn btn-gold btn-sm" onclick="addStudentToEvent()">+ Register</button>
+          </div>
+        </div>
       <div class="table-wrap">
         <table>
           <thead>

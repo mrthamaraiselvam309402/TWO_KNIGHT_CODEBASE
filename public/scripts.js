@@ -2028,6 +2028,15 @@ function initUI() {
       const res = await apiCall('/api/payments');
       const allPaymentsLocal = await res.json();
       
+      // Populate student select dropdown
+      const selectEl = $('ev-add-student-select');
+      selectEl.innerHTML = '<option value="">-- Select Student --</option>';
+      allStudents.forEach(s => {
+        if (!regStudents.includes(s.id)) {
+          selectEl.innerHTML += `<option value="${s.id}">${getStudentName(s)}</option>`;
+        }
+      });
+      
       let html = '';
       if (regStudents.length === 0) {
          html = '<tr><td colspan="4"><div class="empty-state"><span class="empty-icon">👥</span><p>No students registered yet</p></div></td></tr>';
@@ -2152,6 +2161,25 @@ function initUI() {
       setTimeout(() => window.openEventManagement(eventId), 500);
     } catch (err) {
       toast('Error recording payment', 'error');
+    }
+  };
+  
+  window.addStudentToEvent = async function() {
+    const eventId = window.currentManageEventId;
+    const studentId = $('ev-add-student-select').value;
+    if (!eventId || !studentId) { toast('Please select a student', 'error'); return; }
+    
+    try {
+      const res = await apiCall('/api/events', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'add_student', event_id: eventId, student_id: studentId })
+      });
+      if (!res.ok) throw new Error('Failed');
+      toast('Student registered successfully!', 'success');
+      loadAllData(true);
+      setTimeout(() => window.openEventManagement(eventId), 500);
+    } catch(err) {
+      toast('Error registering student', 'error');
     }
   };
 
