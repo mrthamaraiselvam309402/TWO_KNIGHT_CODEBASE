@@ -2673,7 +2673,7 @@ function initUI() {
   };
 
   function setPage(p) {
-    const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'insights', 'exp', 'msgs'];
+    const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'insights', 'exp', 'msgs', 'events', 'ai'];
     if (adminPages.includes(p) && role !== 'admin' && role !== 'master') {
       toast('Access denied', 'error');
       setPage(role === 'parent' ? 'child' : 'dash');
@@ -5979,8 +5979,8 @@ Best regards,
          <div class="msg-card-subject">${escapeHtml(m.subject || 'No Subject')}</div>
          <div class="msg-card-body">${escapeHtml(m.message || '')}</div>
          <div class="msg-card-actions">
-           ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')">✓ Mark Read</button>` : ''}
-           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${m.id}')">🗑️ Delete</button>
+           ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${escapeHtml(String(m.id))}')">✓ Mark Read</button>` : ''}
+           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${escapeHtml(String(m.id))}')">🗑️ Delete</button>
          </div>
        </div>
      `).join('');
@@ -7457,6 +7457,20 @@ Best regards,
     if (!card || !body) return;
 
     generatedInsights = [];
+
+    // --- 0. General Overview Baseline Insight ---
+    const activeStudentCount = allStudents.filter(s => {
+      const st = getStudentStatus(s);
+      return st !== 'archived' && st !== 'inactive';
+    }).length;
+    const activeCoachCount = allCoaches.filter(c => c.status !== 'inactive').length;
+    
+    generatedInsights.push({
+      type: 'baseline',
+      severity: 'success',
+      icon: '📊',
+      text: `<strong>Academy Overview:</strong> You currently have <strong>${activeStudentCount} active students</strong> and <strong>${activeCoachCount} active coaches</strong>. Your academy is operating smoothly.`
+    });
 
     // --- 1. Promotion Suggestions ---
     const beginnerThreshold = 1000;

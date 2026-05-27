@@ -53,23 +53,25 @@ Deno.serve(async (req) => {
       const message = String(body.message || '').trim()
       const role = String(body.role || 'guest')
       const context = body.context || {}
-      
+      const clientSystemPrompt = body.systemPrompt ? String(body.systemPrompt) : ''
+
       if (!message) {
         return new Response(JSON.stringify({ error: 'Message is required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       let response = ""
       const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-      
+
       if (geminiApiKey) {
         try {
-          const sysInstruction = `You are Chesskidoo Grandmaster, the highly intelligent AI Assistant for Chesskidoo Academy.
+          const defaultInstruction = `You are Chesskidoo Grandmaster, the highly intelligent AI Assistant for Chesskidoo Academy.
 Role of user: ${role}.
 Academy State Context: ${JSON.stringify(context)}.
 Provide clear, premium, concise, and professional responses. Use rich markdown tables or bullet points where appropriate. Keep responses strategic and helpful. Encourage professional chess management.`
+          const sysInstruction = clientSystemPrompt || defaultInstruction
 
           const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`
           const geminiRes = await fetch(geminiUrl, {

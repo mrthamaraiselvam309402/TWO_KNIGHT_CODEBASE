@@ -36,7 +36,7 @@
   let expEditingId    = null;
   let expChartPie     = null;
   let expChartLine    = null;
-  let expFilterMonth  = '';
+  let expFilterMonth  = ''; // Default to all-time instead of strict current month
 
   // ─── API Helper (re-uses global apiCall from scripts.js) ────────
   async function apiCall(endpoint, opts = {}) {
@@ -59,7 +59,7 @@
   function fmtCurrency(n) { return '₹' + parseFloat(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
   function fmtDate(d)      { return d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'; }
   function fmtMonth(m)     {
-    if (!m) return '';
+    if (!m) return 'All Time';
     const [y, mo] = m.split('-');
     return new Date(Number(y), Number(mo) - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
   }
@@ -309,8 +309,8 @@
           </td>
           <td>
             <div style="display:flex;gap:6px">
-              <button class="btn btn-outline btn-sm" onclick="openEditExpense('${e.id}')" title="Edit">✏️</button>
-              <button class="btn btn-danger btn-sm"  onclick="deleteExpense('${e.id}', '${escHtml(e.description.slice(0,40))}')" title="Delete">🗑️</button>
+              <button class="btn btn-outline btn-sm" onclick="openEditExpense('${escHtml(String(e.id))}')" title="Edit">✏️</button>
+              <button class="btn btn-danger btn-sm"  onclick="deleteExpense('${escHtml(String(e.id))}', '${escHtml(e.description.slice(0,40))}')" title="Delete">🗑️</button>
             </div>
           </td>
         </tr>`;
@@ -553,6 +553,9 @@
 
   // ─── Local In-Memory Summary Calculations (Extremely Fast) ───────
   function calculateLocalSummary() {
+    if (!expFilterMonth || !expFilterMonth.includes('-')) {
+      return { total_expense: 0, total_income: 0, profit_or_loss: 0, category_totals: {} };
+    }
     const [targetYear, targetMonth] = expFilterMonth.split('-').map(Number);
     
     let totalExpense = 0;

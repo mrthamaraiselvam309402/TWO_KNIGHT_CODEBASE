@@ -108,12 +108,12 @@
     <div class="nav-item admin-only" id="nav-coach-mgmt" onclick="setPage('coach-mgmt')"><span class="ico">👨‍🏫</span> Coaches</div>
     <div class="nav-item parent-only" id="nav-child" onclick="setPage('child')"><span class="ico">📈</span> My Child</div>
     <div class="nav-item" id="nav-fame" onclick="setPage('fame')"><span class="ico">🏆</span> Wall of Fame</div>
-    <div class="nav-item" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Events</div>
+    <div class="nav-item admin-only" id="nav-events" onclick="setPage('events')"><span class="ico">📅</span> Events</div>
     <div class="nav-item admin-only" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
     <div class="nav-item admin-only" id="nav-insights" onclick="setPage('insights')"><span class="ico">💡</span> AI Insights</div>
     <div class="nav-item admin-only" id="nav-exp" onclick="setPage('exp')"><span class="ico">💸</span> Expenditures</div>
 <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
-<div class="nav-item" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
+<div class="nav-item admin-only" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
   </div>
   <div style="padding:16px;border-top:1px solid var(--border)">
     <div class="nav-item" onclick="toggleTheme()"><span class="ico">🌗</span> Switch Theme</div>
@@ -615,6 +615,8 @@
           </table>
         </div>
       </div>
+    </div>
+
     <!-- AI Insights -->
     <div id="page-insights" class="page admin-only">
       <div style="background: linear-gradient(135deg, rgba(232, 168, 48, 0.08) 0%, rgba(232, 168, 48, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
