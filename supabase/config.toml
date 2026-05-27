@@ -31,3 +31,27 @@ verify_jwt = false
 
 [functions.achievements]
 verify_jwt = false
+
+[functions.ai]
+verify_jwt = false
+
+[functions.expenditures]
+verify_jwt = false
+
+[functions.security]
+verify_jwt = false
+
+[functions.sessions]
+verify_jwt = false
+
+[functions.user_sessions]
+verify_jwt = false
+
+[functions.upload]
+verify_jwt = false
+
+[functions.payment_cycle]
+verify_jwt = false
+
+[functions.games]
+verify_jwt = false
