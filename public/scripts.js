@@ -1547,14 +1547,14 @@ function initUI() {
       } catch (e) {
         day = 5;
       }
-    }
-    
-    // First Month Override: If this is the student's first month of enrollment, their due date is their enrollment date
-    const enrollStr = s.enrollment_date || s.join_date || s.created_at;
-    if (enrollStr) {
-      const enrollDate = new Date(enrollStr);
-      if (enrollDate.getUTCFullYear() === year && enrollDate.getUTCMonth() === month) {
-        day = enrollDate.getUTCDate();
+    } else {
+      // First Month Override: ONLY if due_date is not explicitly set
+      const enrollStr = s.enrollment_date || s.join_date || s.created_at;
+      if (enrollStr) {
+        const enrollDate = new Date(enrollStr);
+        if (enrollDate.getUTCFullYear() === year && enrollDate.getUTCMonth() === month) {
+          day = enrollDate.getUTCDate();
+        }
       }
     }
     
@@ -1627,10 +1627,16 @@ function initUI() {
        const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
        
        const currentDate = new Date();
-       const dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
+       let dueDateObj;
        
-       // We omit isFirstMonth || here because dueDateObj is correctly set to their enrollment date for their first month.
-       // They will automatically transition from 'Pending' to 'Due' precisely on their join date.
+       if (s.due_date) {
+         dueDateObj = new Date(s.due_date);
+         dueDateObj.setUTCHours(23, 59, 59, 999);
+       } else {
+         dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
+       }
+       
+       // They will automatically transition from 'Pending' to 'Due' precisely on their join date or custom due date.
        return (currentDate >= dueDateObj) ? 'Due' : 'Pending';
     }
 
@@ -4439,11 +4445,7 @@ function initUI() {
           notes: `[LM:${$('m-learning-mode')?.value || 'online'}]`
        };
 
-     if (!data.due_date) {
-       const nextMonth = new Date();
-       nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1, 5);
-       data.due_date = nextMonth.toISOString().split('T')[0];
-     }
+     // If due_date is left empty, it will be null, allowing the First Month Override to work.
 
      if (!data.full_name) { toast('Student name is required', 'error'); return; }
      if (!rawPhone) { toast('Parent phone is required', 'error'); return; }
