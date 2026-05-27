@@ -107,13 +107,14 @@ Deno.serve(async (req) => {
           .select('registered_students, current_participants, title')
           .eq('id', eventId);
         
-        console.log('Query result:', events, eventError);
-        
+console.log('Query result:', events, eventError);
+
         if (eventError) {
           console.log('Query error:', eventError);
           return new Response(JSON.stringify({ error: eventError.message }), { status: 500 });
         }
-        
+
+        let currentEvent = null;
         if (!events || events.length === 0) {
           // Try fuzzy search
           const { data: events2 } = await supabase
@@ -121,15 +122,15 @@ Deno.serve(async (req) => {
             .select('registered_students, current_participants, title')
             .ilike('id', '%' + eventId.substring(0, 8) + '%');
           console.log('Fuzzy search result:', events2);
-          
-         if (!events2 || events2.length === 0) {
-           return new Response(JSON.stringify({ error: 'Event not found', debug: eventId }), { status: 404 });
-         }
-         let currentEvent = events2[0];
-         } else {
-         let currentEvent = events[0];
-         }
-        
+
+          if (!events2 || events2.length === 0) {
+            return new Response(JSON.stringify({ error: 'Event not found', debug: eventId }), { status: 404 });
+          }
+          currentEvent = events2[0];
+        } else {
+          currentEvent = events[0];
+        }
+
         const registeredStudents = currentEvent.registered_students || [];
         
         // Check if already registered
