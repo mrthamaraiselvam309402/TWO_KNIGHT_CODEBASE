@@ -1426,16 +1426,11 @@
       <div class="card" style="padding:16px;">
         <div class="stat-label">Pending Dues</div>
         <div class="stat-value text-danger" id="ev-m-due">₹0</div>
-      </div>
-    </div>
-    
-    <div style="display:flex; gap:20px; border-bottom:1px solid var(--border); margin-bottom:15px; padding-bottom:5px;">
-      <h3 id="ev-tab-registry" style="cursor:pointer; color:var(--soft-gold); margin:0;" onclick="switchEvTab('registry')">Student Registry</h3>
-      <h3 id="ev-tab-exp" style="cursor:pointer; color:var(--ivory-dim); margin:0;" onclick="switchEvTab('exp')">Expenditures</h3>
-    </div>
-
-    <!-- Student Registry Section -->
-    <div id="ev-registry-section">
+    <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+      
+      <!-- Student Registry Section -->
+      <div id="ev-registry-section">
+        <h3 style="color:var(--soft-gold); margin-top:0; border-bottom:1px solid var(--border); padding-bottom:5px;">Student Registry</h3>
       <div class="table-wrap">
         <table>
           <thead>
@@ -1454,12 +1449,13 @@
     </div>
 
     <!-- Expenditures Section -->
-    <div id="ev-expenditures-section" style="display:none;">
-      <div style="text-align:right; margin-bottom:10px;">
-        <button class="btn btn-gold btn-sm" onclick="promptAddEventExpenditure()">+ Add Expenditure</button>
+    <div id="ev-expenditures-section">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:5px; margin-bottom:15px;">
+        <h3 style="color:var(--ivory-dim); margin:0;">Expenditures</h3>
+        <button class="btn btn-gold btn-sm" onclick="promptAddEventExpenditure()">+ Add Expense</button>
       </div>
       <div class="table-wrap">
-        <table>
+        <table style="font-size:12px;">
           <thead>
             <tr>
               <th>Date</th>
@@ -1473,10 +1469,11 @@
         </table>
       </div>
     </div>
-    
-    <div style="margin-top:16px; text-align:right;">
-      <button class="btn btn-outline" onclick="closeModals()">Close</button>
-    </div>
+  </div>
+  
+  <div style="margin-top:16px; text-align:right;">
+    <button class="btn btn-outline" onclick="closeModals()">Close</button>
+  </div>
   </div>
 </div>
 

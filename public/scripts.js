@@ -2019,9 +2019,6 @@ function initUI() {
     
     const expTbody = $('ev-exp-tbody');
     expTbody.innerHTML = '<tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>';
-    
-    // Reset tabs
-    if(window.switchEvTab) window.switchEvTab('registry');
 
     openModal('ev-manage-modal');
     
@@ -2084,14 +2081,6 @@ function initUI() {
        console.error(err);
        tbody.innerHTML = '<tr><td colspan="4">Error loading data.</td></tr>';
     }
-  };
-
-  window.switchEvTab = function(tab) {
-    $('ev-registry-section').style.display = tab === 'registry' ? 'block' : 'none';
-    $('ev-expenditures-section').style.display = tab === 'exp' ? 'block' : 'none';
-    
-    $('ev-tab-registry').style.color = tab === 'registry' ? 'var(--soft-gold)' : 'var(--ivory-dim)';
-    $('ev-tab-exp').style.color = tab === 'exp' ? 'var(--soft-gold)' : 'var(--ivory-dim)';
   };
 
   window.promptAddEventExpenditure = async function() {
