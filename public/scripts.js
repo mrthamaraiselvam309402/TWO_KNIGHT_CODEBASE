@@ -1998,6 +1998,12 @@ function initUI() {
   function getCoachRating(c) { return c.rating || 0; }
 
   function getEventDate(e) { return e.date || e.event_date || ''; }
+  window.closeEventManagement = function() {
+    $('ev-manage-view').style.display = 'none';
+    $('ev-list-view').style.display = 'block';
+    window.currentManageEventId = null;
+  };
+
   window.openEventManagement = async function(id) {
     const e = eventsData.find(x => String(x.id) === String(id));
     if (!e) { toast('Event not found', 'error'); return; }
@@ -2020,7 +2026,8 @@ function initUI() {
     const expTbody = $('ev-exp-tbody');
     expTbody.innerHTML = '<tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>';
 
-    openModal('ev-manage-modal');
+    $('ev-list-view').style.display = 'none';
+    $('ev-manage-view').style.display = 'block';
     
     try {
       // Find payments related to this event
