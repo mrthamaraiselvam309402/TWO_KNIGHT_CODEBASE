@@ -366,7 +366,7 @@
     const ctx = document.getElementById('chartChildElo');
     if (ctx && typeof Chart !== 'undefined') {
       if (chartInstances.childElo) chartInstances.childElo.destroy();
-      const history = allRatingHistory.filter(h => String(h.student_id) === String(s.id)).sort((a, b) => new Date(h.recorded_at) - new Date(b.recorded_at));
+      const history = allRatingHistory.filter(h => String(h.student_id) === String(s.id)).sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
       const labels = history.length ? history.map(h => new Date(h.recorded_at).toLocaleDateString()) : ['Initial'];
       const data = history.length ? history.map(h => h.rating) : [getStudentRating(s)];
       chartInstances.childElo = new Chart(ctx, {
@@ -680,7 +680,7 @@
             <td><span style="font-size:12px;color:var(--ivory-dim);font-weight:500">💳 ${pMethod}</span></td>
             <td>
               ${pStatus === 'Paid' ?
-                `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${pAmount}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${pMethod}')">Receipt</button>` :
+                `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${pAmount}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${pMethod}', '${p.payment_date || p.created_at || ''}')">Receipt</button>` :
                 `<span style="color:var(--ivory-dim);font-size:12px">Pending Processing</span>`
               }
             </td>
@@ -739,36 +739,38 @@
     const myPayments = allPayments.filter(p => String(p.student_id) === String(s.id));
     const paidPayments = myPayments.filter(p => p.status === 'paid' || p.status === 'completed');
     
-    const baseSum = paidPayments.length > 0 ? paidPayments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || fee), 0) : fee;
-    const gstAmount = Math.round(baseSum * 0.18);
-    const netAmount = baseSum - gstAmount;
+    // Sort payments oldest to newest for chronological statement
+    paidPayments.sort((a, b) => new Date(a.payment_date || a.created_at) - new Date(b.payment_date || b.created_at));
+    
+    let baseSum = 0;
 
     let itemizedRows = '';
     if (paidPayments.length > 0) {
       paidPayments.forEach((p, idx) => {
         const amt = parseFloat(p.amount) || fee;
-        const gst = Math.round(amt * 0.18);
-        const net = amt - gst;
+        baseSum += amt;
+        
+        const pDate = new Date(p.payment_date || p.created_at);
+        const txId = String(p.transaction_id || p.id || String(100 + idx)).slice(-6).toUpperCase();
+
         itemizedRows += `
           <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 12px 10px; font-size: 13px;">${new Date(p.payment_date || p.created_at).toLocaleDateString()}</td>
-            <td style="padding: 12px 10px; font-size: 13px;">INV-2026-${String(100 + idx)}<br><span style="font-size:11px;color:#888;">Chess Tuition Service</span></td>
-            <td style="padding: 12px 10px; font-size: 13px; text-align: right;">₹${net.toLocaleString()}</td>
-            <td style="padding: 12px 10px; font-size: 13px; text-align: right;">₹${gst.toLocaleString()}</td>
+            <td style="padding: 12px 10px; font-size: 13px;">${pDate.toLocaleDateString('en-GB')}</td>
+            <td style="padding: 12px 10px; font-size: 13px;">INV-${pDate.getFullYear()}-${txId}<br><span style="font-size:11px;color:#888;">Chess Tuition Service</span></td>
+            <td style="padding: 12px 10px; font-size: 13px; text-align: right;">${p.payment_method || 'Online'}</td>
             <td style="padding: 12px 10px; font-size: 13px; text-align: right; font-weight: bold; color: #111;">₹${amt.toLocaleString()}</td>
           </tr>
         `;
       });
     } else {
-      const gst = Math.round(fee * 0.18);
-      const net = fee - gst;
+      baseSum = fee;
+      
       itemizedRows = `
         <tr style="border-bottom: 1px solid #eee;">
-          <td style="padding: 12px 10px; font-size: 13px;">${new Date().toLocaleDateString()}</td>
+          <td style="padding: 12px 10px; font-size: 13px;">${new Date().toLocaleDateString('en-GB')}</td>
           <td style="padding: 12px 10px; font-size: 13px;">PRO-FORMA<br><span style="font-size:11px;color:#888;">Current Class Fee Plan</span></td>
-          <td style="padding: 12px 10px; font-size: 13px; text-align: right;">₹${net.toLocaleString()}</td>
-          <td style="padding: 12px 10px; font-size: 13px; text-align: right;">₹${gst.toLocaleString()}</td>
-          <td style="padding: 12px 10px; font-size: 13px; text-align: right; font-weight: bold; color: #777;">₹${fee.toLocaleString()} (Pending)</td>
+          <td style="padding: 12px 10px; font-size: 13px; text-align: right;">Pending</td>
+          <td style="padding: 12px 10px; font-size: 13px; text-align: right; font-weight: bold; color: #777;">₹${fee.toLocaleString()} (Due)</td>
         </tr>
       `;
     }
@@ -833,9 +835,8 @@
             <tr>
               <th>Date</th>
               <th>Reference ID</th>
-              <th style="text-align: right;">Net Base (₹)</th>
-              <th style="text-align: right;">GST Base (18%)</th>
-              <th style="text-align: right;">Total Completed (₹)</th>
+              <th style="text-align: right;">Payment Mode</th>
+              <th style="text-align: right;">Amount (₹)</th>
             </tr>
           </thead>
           <tbody>
@@ -844,14 +845,6 @@
         </table>
 
         <div class="totals">
-          <div class="total-row">
-            <span style="color:#7f8c8d;">Subtotal (Net Investment):</span>
-            <span style="font-weight: 600;">₹${netAmount.toLocaleString()}</span>
-          </div>
-          <div class="total-row">
-            <span style="color:#7f8c8d;">Inclusive GST Breakdown (18%):</span>
-            <span style="font-weight: 600;">₹${gstAmount.toLocaleString()}</span>
-          </div>
           <div class="total-row" style="border-top: 2px solid #daa33e; padding-top: 10px; margin-top: 10px; font-weight: 800; font-size: 17px; color: #1a252f;">
             <span>Total Tuition Paid:</span>
             <span>₹${baseSum.toLocaleString()}</span>
@@ -1360,7 +1353,7 @@
       setTimeout(() => {
         openWhatsApp(dialCode, parsed.localNumber, msg);
         sent++;
-        if (sent === dueStudents.length) toast(`📱 Sent ${sent} payment reminders`, 'success');
+        if (sent === dueStudents.length) toast(`💬 Sent ${sent} payment reminders`, 'success');
       }, idx * 800);
     });
   };
@@ -1494,7 +1487,20 @@ function initUI() {
   }
   function getStudentPhone(s) { return s.parent_phone || s.phone || ''; }
   function getStudentEmail(s) { return s.email || ''; }
-  function getStudentStatus(s) { return (s.status || s.account_status || 'active').toLowerCase(); }
+  function getStudentStatus(s) {
+    const raw = (s.status || s.account_status || 'active').toLowerCase();
+    // Auto-promote: If status is 'upcoming' but enrollment date has arrived, treat as 'active'
+    if (raw === 'upcoming') {
+      const enrollStr = s.enrollment_date || s.join_date || s.created_at;
+      if (enrollStr) {
+        const enrollDate = new Date(enrollStr);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (enrollDate <= today) return 'active';
+      }
+    }
+    return raw;
+  }
   function getStudentBatchType(s) { return s.session_mode || s.batch_type || 'Group'; }
   function getStudentBatchTime(s) { return s.session_time || s.batch_time || ''; }
   function getStudentSessionTime(s) { return s.session_time || s.batch_time || 'TBD'; }
@@ -1560,18 +1566,7 @@ function initUI() {
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
     const baselineDate = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st, 2026 baseline (UTC)
 
-    // 1. Enrollment Check
-    const enrollStatus = getStudentStatus(s);
-    if (enrollStatus === 'pending' || enrollStatus === 'waitlist' || enrollStatus === 'upcoming' || enrollStatus === 'inactive' || enrollStatus === 'archived') {
-      return 'Not Enrolled';
-    }
-    const enrollDateStr = getStudentDate(s);
-    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
-    if (!enrollDate || enrollDate > targetMonthEnd) return 'Not Enrolled';
-
-    const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
-
-    // 2. Cumulative Audit (All-Time Payment Count)
+    // 0. Cumulative Audit (All-Time Payment Count)
     const s_id_key = String(s.id || '').trim().toLowerCase();
     
     let paidMonths = new Set();
@@ -1594,14 +1589,26 @@ function initUI() {
 
     const totalPaidInvoices = paidMonths.size;
 
+    // Did they explicitly pay for this month? (Overrides inactive/archived states)
+    if (hasPaymentThisMonth) return 'Paid';
+
+    // 1. Enrollment Check
+    const enrollStatus = getStudentStatus(s);
+    if (enrollStatus === 'pending' || enrollStatus === 'waitlist' || enrollStatus === 'upcoming' || enrollStatus === 'inactive' || enrollStatus === 'archived') {
+      return 'Not Enrolled';
+    }
+    const enrollDateStr = getStudentDate(s);
+    const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
+    if (!enrollDate || enrollDate > targetMonthEnd) return 'Not Enrolled';
+
+    const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
     const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
     // 3. Status Determination Logic:
 
-    // A. PAID AUDIT: Primary source of truth. If audit confirms payment, they are Paid.
-    if (totalPaidInvoices >= monthsRequired && hasPaymentThisMonth) return 'Paid';
-
-
+    // A. PAID AUDIT: Primary source of truth.
+    // (Note: hasPaymentThisMonth already caught above, this catches cumulative overpayments or pre-payments)
+    if (totalPaidInvoices >= monthsRequired) return 'Paid';
 
     // C. DATE-BASED TRANSITION (Current Month): Transition automatically based on student-specific due date
     if (isCurrentMonth) {
@@ -1617,10 +1624,9 @@ function initUI() {
        const currentDate = new Date();
        const dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
        
-       // If it is the student's first month of enrollment, the fee is due immediately
-       const isFirstMonth = (effectiveEnroll.getUTCFullYear() === targetYear && effectiveEnroll.getUTCMonth() === targetMonth);
-       
-       return (isFirstMonth || currentDate >= dueDateObj) ? 'Due' : 'Pending';
+       // We omit isFirstMonth || here because dueDateObj is correctly set to their enrollment date for their first month.
+       // They will automatically transition from 'Pending' to 'Due' precisely on their join date.
+       return (currentDate >= dueDateObj) ? 'Due' : 'Pending';
     }
 
     // D. ARREARS (Past Months): If missing payments and in the past, status is 'Overdue'
@@ -2179,6 +2185,29 @@ function initUI() {
            return true;
          });
 
+         // Auto-promote 'upcoming' students to 'active' if their enrollment date has arrived
+         const todayNoTime = new Date();
+         todayNoTime.setHours(0, 0, 0, 0);
+         allStudents.forEach(s => {
+           if ((s.status || s.account_status) === 'upcoming') {
+             const enrollStr = s.enrollment_date || s.join_date || s.created_at;
+             if (enrollStr) {
+               const enrollDate = new Date(enrollStr);
+               if (enrollDate <= todayNoTime) {
+                 s.status = 'active';
+                 s.account_status = 'active';
+                 if (role === 'admin' || role === 'master') {
+                   // Trigger background DB update
+                   apiCall(`/api/students?id=${s.id}`, {
+                     method: 'PUT',
+                     body: JSON.stringify({ status: 'active', account_status: 'active' })
+                   }).catch(err => console.warn('[AutoPromote] Failed to promote student:', s.id, err));
+                 }
+               }
+             }
+           }
+         });
+
          achievementsData = dedupeArray(extractData(achievements), 'id');
          eventsData = dedupeArray(extractData(events), 'id');
          allMessages = dedupeArray(extractData(messages), 'id');
@@ -2431,7 +2460,7 @@ function initUI() {
             const latest = failedLogins[0];
             if (latest && shouldShowNotification('fail_' + (latest.id || latest.timestamp || latest.created_at))) {
               const time = new Date(latest.created_at || latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`🚫 Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
+              toast(`🛡️ Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
             }
           }
         } catch (e) {
@@ -2442,7 +2471,7 @@ function initUI() {
             const latest = localLogs[localLogs.length - 1];
             if (latest && shouldShowNotification('fail_local_' + latest.timestamp)) {
               const time = new Date(latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`🚫 Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
+              toast(`🛡️ Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
             }
           }
         }
@@ -2456,7 +2485,7 @@ function initUI() {
 
         if (due.length > lastDueCount && lastDueCount > 0) {
           const newDue = due.length - lastDueCount;
-          toast(`💰 ${newDue} new payment${newDue > 1 ? 's' : ''} now Due!`, 'warning');
+          toast(`💳 ${newDue} new payment${newDue > 1 ? 's' : ''} now Due!`, 'warning');
         }
         lastDueCount = due.length;
 
@@ -2547,7 +2576,7 @@ function initUI() {
       btnArea.innerHTML = '';
       if (role === 'admin' || role === 'master') {
         if (p === 'dash') {
-          const periodValue = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}`;
+          const periodValue = `${window.reportYear}-${String(window.reportMonth + 1).padStart(2, '0')}`;
           btnArea.innerHTML = `
           <div style="display:flex;gap:6px;align-items:center;background:var(--surface2);padding:3px 8px;border-radius:8px;border:1px solid var(--border);box-shadow:var(--shadow-amber)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -2643,7 +2672,7 @@ function initUI() {
       initRealtimeNotifications();
     }
     if (userRole === 'parent') {
-      toast(`👤 ${displayName} logged in`, 'info');
+      toast(`${displayName} logged in`, 'info');
     }
     const loginScreen = $('login-screen');
     if (loginScreen) loginScreen.style.display = 'none';
@@ -3055,8 +3084,8 @@ function initUI() {
             if (paidSet.has(sid)) return;
             const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
             if (s) {
-              const sStatus = getStudentStatus(s);
-              if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return;
+              // Ensure we don't count pending/waitlist deposits accidentally if they shouldn't count? 
+              // Wait, actual paid deposits SHOULD count as revenue. We remove the destructive status filter.
             }
             paidSet.add(sid);
             paidVal += s ? getStudentMonthlyFee(s) : (parseFloat(p.amount) || 0);
@@ -3128,8 +3157,6 @@ function initUI() {
         
         const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
         if (s) {
-          const sStatus = getStudentStatus(s);
-          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return sum;
           if (getStudentPaymentStatus(s, month, year) === 'Paid') {
             seenStuds.add(sid);
             return sum + getStudentMonthlyFee(s);
@@ -3236,8 +3263,6 @@ function initUI() {
 
         const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
         if (s) {
-          const sStatus = getStudentStatus(s);
-          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return sum;
           if (getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
             paidStudentIds.add(sid);
             return sum + getStudentMonthlyFee(s); // Enforce 1x monthly fee logic
@@ -3252,8 +3277,6 @@ function initUI() {
     let totalPotential = 0;
 
     targetStudents.forEach(s => {
-      const sStatus = getStudentStatus(s);
-      if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return;
       const fee = getStudentMonthlyFee(s) || 0;
       totalPotential += fee;
 
@@ -5265,7 +5288,7 @@ Best regards,
          <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || 'N/A'}</td>
          <td>
            <div style="display:flex;gap:5px">
-             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}')">📄</button>
+             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}', '${p.payment_date || p.created_at || ''}')">📄</button>
              <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
            </div>
          </td>
@@ -5290,8 +5313,8 @@ Best regards,
     }
   };
 
-  window.downloadReceipt = function (studentId, name, amount, level, elo, coach, method) {
-    downloadReceipt(studentId, name, amount, level, elo, coach, method);
+  window.downloadReceipt = function (studentId, name, amount, level, elo, coach, method, dateStr = '') {
+    downloadReceipt(studentId, name, amount, level, elo, coach, method, dateStr);
   };
 
   // --- End of Students & Payments Section ---
@@ -5718,8 +5741,8 @@ Best regards,
     }, 2000);
   }
 
-  function downloadReceipt(id, name, fee, level = 'Beginner', rating = 800, coach = 'N/A', paymentMode = 'Online Transfer') {
-    const url = `receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&level=${encodeURIComponent(level)}&rating=${rating}&coach=${encodeURIComponent(coach)}&method=${encodeURIComponent(paymentMode)}&print=true`;
+  function downloadReceipt(id, name, fee, level = 'Beginner', rating = 800, coach = 'N/A', paymentMode = 'Online Transfer', dateStr = '') {
+    const url = `receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&level=${encodeURIComponent(level)}&rating=${rating}&coach=${encodeURIComponent(coach)}&method=${encodeURIComponent(paymentMode)}&date=${encodeURIComponent(dateStr)}&print=true`;
     window.open(url, '_blank');
     toast('Opening receipt for printing...', 'success');
   }
@@ -6319,12 +6342,13 @@ Best regards,
         name: 'get_academy_stats',
         description: 'Get academy statistics including students, coaches, revenue',
         execute: async () => {
-          const totalStudents = allStudents.filter(s => s.status !== 'archived').length;
+          const totalStudents = allStudents.filter(s => !['archived', 'pending', 'waitlist', 'upcoming', 'inactive'].includes(s.status)).length;
           const totalCoaches = allCoaches.filter(c => c.status !== 'archived').length;
-          const revenue = allStudents.filter(s => s.status !== 'archived').reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
-          const paid = allStudents.filter(s => s.status !== 'archived' && getStudentPaymentStatus(s) === 'Paid').length;
-          const due = allStudents.filter(s => s.status !== 'archived' && (getStudentPaymentStatus(s) === 'Due' || getStudentPaymentStatus(s) === 'Overdue')).length;
-          const pending = allStudents.filter(s => s.status !== 'archived' && getStudentPaymentStatus(s) === 'Pending').length;
+          // Calculate financials for EVERY student regardless of status (handles archived students who paid this month)
+          const revenue = allStudents.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+          const paid = allStudents.filter(s => getStudentPaymentStatus(s) === 'Paid').length;
+          const due = allStudents.filter(s => getStudentPaymentStatus(s) === 'Due' || getStudentPaymentStatus(s) === 'Overdue').length;
+          const pending = allStudents.filter(s => getStudentPaymentStatus(s) === 'Pending').length;
           return { totalStudents, totalCoaches, revenue, paid, due, pending, collectionRate: ((paid / totalStudents) * 100 || 0).toFixed(1) };
         }
       },
@@ -6670,10 +6694,7 @@ Best regards,
         // ADMIN CONTEXT: Full academy data
         const studentsCount = allStudents.length;
         const coachesCount = allCoaches.length;
-        const totalRevenue = allStudents.filter(s => {
-          const st = getStudentStatus(s);
-          return st !== 'archived' && st !== 'pending' && st !== 'waitlist' && st !== 'upcoming' && st !== 'inactive';
-        }).reduce((acc, s) => acc + (getStudentMonthlyFee(s) || 0), 0);
+        const totalRevenue = allStudents.reduce((acc, s) => acc + (getStudentMonthlyFee(s) || 0), 0);
         const activeStudents = allStudents.filter(s => getStudentStatus(s) === 'active').length;
         const pendingPayments = allStudents.filter(s => {
           const st = getStudentPaymentStatus(s);
@@ -6773,8 +6794,12 @@ Best regards,
         .filter(s => {
             const enrollStr = getStudentDate(s);
             const enrollDate = enrollStr ? new Date(enrollStr) : new Date(Date.UTC(2026, 3, 1));
-            const sStatus = getStudentStatus(s);
-            return enrollDate <= targetMonthEnd && sStatus !== 'archived' && sStatus !== 'pending' && sStatus !== 'waitlist' && sStatus !== 'upcoming' && sStatus !== 'inactive';
+          const sStatus = getStudentStatus(s);
+          const payStatus = getStudentPaymentStatus(s, targetMonth, targetYear);
+          // Only drop students who weren't enrolled yet, or who are completely pending and inactive
+          if (enrollDate > targetMonthEnd) return false;
+          if (['archived', 'pending', 'waitlist', 'upcoming', 'inactive'].includes(sStatus) && payStatus === 'Pending') return false;
+          return true;
         })
         .map(s => {
           const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
@@ -6848,7 +6873,10 @@ Best regards,
           const enrollStr = getStudentDate(s);
           const enrollDate = enrollStr ? new Date(enrollStr) : new Date(Date.UTC(2026, 3, 1));
           const sStatus = getStudentStatus(s);
-          return enrollDate <= targetMonthEnd && sStatus !== 'archived' && sStatus !== 'pending' && sStatus !== 'waitlist' && sStatus !== 'upcoming' && sStatus !== 'inactive';
+          const payStatus = getStudentPaymentStatus(s, targetMonth, targetYear);
+          if (enrollDate > targetMonthEnd) return false;
+          if (['archived', 'pending', 'waitlist', 'upcoming', 'inactive'].includes(sStatus) && payStatus === 'Pending') return false;
+          return true;
       });
 
       const collected = targetStudents.filter(s => getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid').reduce((a, s) => a + getStudentMonthlyFee(s), 0);

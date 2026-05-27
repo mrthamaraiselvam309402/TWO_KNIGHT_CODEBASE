@@ -6,8 +6,9 @@
     "dev-local": "vercel dev",
     "build": "node scripts/build.cjs",
     "start": "npx vercel dev",
-    "test": "echo 'No tests configured'",
-    "lint": "echo 'No linting configured'"
+    "test": "jest",
+    "lint": "eslint public/scripts.js",
+    "test:e2e": "playwright test"
   },
   "keywords": [
     "chess",
@@ -31,6 +32,10 @@
     "razorpay": "^2.9.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.60.0",
+    "eslint": "^10.4.0",
+    "jest": "^30.4.2",
     "vercel": "^32.4.1"
   },
   "engines": {
