@@ -545,14 +545,33 @@
       </div>
     </div>
 
-    <!-- Wall of Fame -->
+    <!-- Champions Gallery -->
     <div id="page-fame" class="page">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <p style="color:var(--ivory-dim);font-size:15px">Celebrating the proudest victories of Chesskidoo students.</p>
+        <div>
+          <h2 style="color:var(--gold); margin:0; font-size:24px; font-weight:700;">Champions Gallery</h2>
+          <p style="color:var(--ivory-dim);font-size:14px; margin-top:5px;">Celebrating the proudest victories and top-rated players of Chesskidoo.</p>
+        </div>
         <button class="btn btn-gold admin-only" onclick="openAwardModal()">+ Add Achievement</button>
       </div>
-      <div id="fame-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
-      <div class="ach-grid" id="fame-grid" style="display:none"></div>
+      
+      <div id="fame-loading" class="loading-state"><span class="spinner"></span> Loading Gallery…</div>
+      
+      <div id="fame-content" style="display:none; grid-template-columns: 1fr 2.5fr; gap: 30px; align-items: start;">
+        
+        <!-- Live Leaderboard Sidebar -->
+        <div class="card" style="padding: 0; overflow: hidden; position: sticky; top: 20px;">
+          <div style="background: linear-gradient(90deg, #b9935a 0%, #d4af37 100%); padding: 15px; text-align: center;">
+            <h3 style="margin: 0; color: #1a1a1a; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Top Rated Players</h3>
+          </div>
+          <div id="fame-leaderboard" style="padding: 10px;">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Achievements Gallery -->
+        <div class="ach-grid" id="fame-grid"></div>
+      </div>
     </div>
 
     <!-- Events -->

@@ -4909,12 +4909,51 @@ function openCoachModal(id = null) {
 
   function renderFame() {
     const gridEl = $('fame-grid');
+    const contentEl = $('fame-content');
     const loadingEl = $('fame-loading');
-    if (!gridEl) return;
+    if (!gridEl || !contentEl) return;
 
     if (loadingEl) loadingEl.style.display = 'none';
-    gridEl.style.display = 'grid';
+    contentEl.style.display = 'grid';
 
+    // 1. Render Leaderboard
+    const leaderboardEl = $('fame-leaderboard');
+    if (leaderboardEl) {
+      // Filter out guests/pending, sort by rating descending, get top 10
+      const topPlayers = [...allStudents]
+        .filter(s => s.status === 'active' && s.rating > 800)
+        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        .slice(0, 10);
+      
+      if (topPlayers.length === 0) {
+        leaderboardEl.innerHTML = '<div style="text-align:center; padding: 20px; color:var(--slate);">No rated players yet</div>';
+      } else {
+        leaderboardEl.innerHTML = topPlayers.map((s, index) => {
+          let rankColor = 'var(--ivory-dim)';
+          let rankBadge = `${index + 1}`;
+          if (index === 0) { rankColor = '#d4af37'; rankBadge = '🥇'; } // Gold
+          else if (index === 1) { rankColor = '#c0c0c0'; rankBadge = '🥈'; } // Silver
+          else if (index === 2) { rankColor = '#cd7f32'; rankBadge = '🥉'; } // Bronze
+
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 10px; border-bottom: 1px solid var(--border);">
+              <div style="display:flex; align-items:center; gap: 12px;">
+                <span style="font-size:18px; font-weight:bold; color:${rankColor}; width:24px; text-align:center;">${rankBadge}</span>
+                <div>
+                  <div style="color:var(--ivory); font-weight:600; font-size:14px;">${escapeHtml(getStudentName(s))}</div>
+                  <div style="color:var(--slate); font-size:11px;">Level: ${escapeHtml(s.level || 'Beginner')}</div>
+                </div>
+              </div>
+              <div style="background:var(--bg3); padding:4px 8px; border-radius:6px; font-weight:700; color:var(--gold); border: 1px solid var(--border);">
+                ${s.rating || 0}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // 2. Render Achievements Gallery
     if (!achievementsData || achievementsData.length === 0) {
       gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">🏆</span><p>No achievements recorded yet</p></div>';
       return;
