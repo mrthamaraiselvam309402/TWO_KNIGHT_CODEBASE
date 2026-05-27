@@ -2063,7 +2063,8 @@ function initUI() {
       // Load Event Expenditures
       const expRes = await apiCall('/api/expenditures');
       const allExp = await expRes.json();
-      const eventExps = allExp.filter(ex => ex.details && ex.details.event_id === id);
+      const expData = allExp.data || [];
+      const eventExps = expData.filter(ex => ex.description && ex.description.startsWith(e.title + ' -'));
       
       let expHtml = '';
       if (eventExps.length === 0) {
