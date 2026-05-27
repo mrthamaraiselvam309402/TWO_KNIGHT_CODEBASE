@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
       location: e.location || '',
       prize: e.prize || e.prize_pool || '',
       prize_pool: e.prize || e.prize_pool || '',
+      fee: e.fee || 0,
       registrations_count: e.current_participants || 0,
       registered_students: e.registered_students || [],
       max_participants: e.max_participants,
@@ -177,7 +178,7 @@ Deno.serve(async (req) => {
       // (only for admin creating events)
       console.log('Not a registration action, checking for event creation');
       
-      const { title, date, type, location, increment_registrations, id, event_date, event_time, event_type, prize_pool, max_participants, description } = body;
+      const { title, date, type, location, increment_registrations, id, event_date, event_time, event_type, prize_pool, max_participants, description, fee } = body;
       
       console.log('Creating event with body:', JSON.stringify(body));
       
@@ -215,6 +216,7 @@ Deno.serve(async (req) => {
       if (eventDesc) newEvent.description = eventDesc;
       if (maxParticipants) newEvent.max_participants = maxParticipants;
       if (eventPrize) newEvent.prize = eventPrize;
+      if (fee) newEvent.fee = fee;
       newEvent.status = 'upcoming';
       newEvent.current_participants = 0;
       newEvent.created_at = new Date().toISOString();

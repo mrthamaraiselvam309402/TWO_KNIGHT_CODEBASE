@@ -1998,6 +1998,129 @@ function initUI() {
   function getCoachRating(c) { return c.rating || 0; }
 
   function getEventDate(e) { return e.date || e.event_date || ''; }
+  window.openEventManagement = async function(id) {
+    const e = eventsData.find(x => String(x.id) === String(id));
+    if (!e) { toast('Event not found', 'error'); return; }
+    
+    $('ev-manage-title').textContent = e.title;
+    $('ev-manage-subtitle').textContent = `${getEventType(e)} • ${new Date(e.date || e.event_date).toLocaleDateString()} • Fee: ₹${e.fee || 0}`;
+    
+    // Set global for export context
+    window.currentManageEventId = id;
+    
+    const regStudents = e.registered_students || [];
+    $('ev-m-reg').textContent = regStudents.length;
+    
+    const expectedRev = regStudents.length * (e.fee || 0);
+    let collectedRev = 0;
+    
+    const tbody = $('ev-m-tbody');
+    tbody.innerHTML = '<tr><td colspan="4"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>';
+    
+    openModal('ev-manage-modal');
+    
+    try {
+      // Find payments related to this event
+      const eventDescString = `Event: ${e.title}`;
+      const res = await apiCall('/api/payments');
+      const allPaymentsLocal = await res.json();
+      
+      let html = '';
+      if (regStudents.length === 0) {
+         html = '<tr><td colspan="4"><div class="empty-state"><span class="empty-icon">👥</span><p>No students registered yet</p></div></td></tr>';
+      } else {
+         regStudents.forEach(sid => {
+            const student = allStudents.find(s => s.id === sid);
+            const name = student ? getStudentName(student) : 'Unknown';
+            const level = student ? getStudentLevel(student) : '-';
+            
+            // check payment
+            const payment = allPaymentsLocal.find(p => p.student_id === sid && (p.description === eventDescString || (p.details && p.details.event_id === id)));
+            const isPaid = !!payment;
+            if (isPaid) collectedRev += (e.fee || 0);
+            
+            html += `<tr>
+              <td>${escapeHtml(name)}</td>
+              <td>${escapeHtml(level)}</td>
+              <td>${isPaid ? '<span class="badge badge-success">Paid</span>' : '<span class="badge badge-warning">Pending</span>'}</td>
+              <td>
+                 ${!isPaid && (e.fee || 0) > 0 ? `<button class="btn btn-gold btn-sm" onclick="markEventPaid('${id}', '${sid}')">Mark Paid</button>` : '-'}
+              </td>
+            </tr>`;
+         });
+      }
+      
+      tbody.innerHTML = html;
+      $('ev-m-rev').textContent = `₹${collectedRev}`;
+      $('ev-m-due').textContent = `₹${expectedRev - collectedRev}`;
+      
+    } catch (err) {
+       console.error(err);
+       tbody.innerHTML = '<tr><td colspan="4">Error loading data.</td></tr>';
+    }
+  };
+
+  window.markEventPaid = async function(eventId, studentId) {
+    const e = eventsData.find(x => String(x.id) === String(eventId));
+    const s = allStudents.find(x => x.id === studentId);
+    if (!e || !s) return;
+    
+    if (!confirm(`Mark ${getStudentName(s)} as PAID for ${e.title} (₹${e.fee || 0})?`)) return;
+    
+    const payload = {
+       id: generateClientId(),
+       student_id: studentId,
+       amount: e.fee || 0,
+       status: 'paid',
+       payment_date: new Date().toISOString().split('T')[0],
+       description: `Event: ${e.title}`,
+       details: { event_id: eventId, type: 'event_fee' }
+    };
+    
+    try {
+      const res = await apiCall('/api/payments', { method: 'POST', body: JSON.stringify(payload) });
+      if (!res.ok) throw new Error('Failed to record payment');
+      toast('Payment recorded successfully!', 'success');
+      loadAllData(true);
+      // Refresh modal
+      setTimeout(() => openEventManagement(eventId), 500);
+    } catch (err) {
+      toast('Error recording payment', 'error');
+    }
+  };
+
+  window.exportEventReport = function() {
+    const id = window.currentManageEventId;
+    if (!id) return;
+    const e = eventsData.find(x => String(x.id) === String(id));
+    if (!e) return;
+    
+    const regStudents = e.registered_students || [];
+    const eventDescString = `Event: ${e.title}`;
+    
+    let csv = 'Student Name,Parent Phone,Level,Payment Status,Registration Date\n';
+    
+    regStudents.forEach(sid => {
+      const student = allStudents.find(s => s.id === sid);
+      const payment = allPayments.find(p => p.student_id === sid && (p.description === eventDescString || (p.details && p.details.event_id === id)));
+      
+      const name = student ? getStudentName(student) : 'Unknown';
+      const phone = student ? getStudentPhone(student) : '';
+      const level = student ? getStudentLevel(student) : '';
+      const pStatus = payment ? 'Paid' : ((e.fee || 0) > 0 ? 'Pending' : 'N/A');
+      
+      csv += `"${name}","${phone}","${level}","${pStatus}",""\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${e.title.replace(/\s+/g, '_')}_Report.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   function getEventType(e) { return e.type || e.event_type || 'Tournament'; }
   function getEventLocation(e) { return e.location || ''; }
   function getEventTime(e) {
@@ -2626,6 +2749,19 @@ function initUI() {
       if (p === 'msgs') renderMsgs();
       if (p === 'child') renderChild();
       if (p === 'exp' && window.initExpPage) window.initExpPage();
+      if (p === 'ai') {
+        if(window.initSmartPills) window.initSmartPills();
+        const chatBody = document.getElementById('ai-workspace-msgs');
+        if (chatBody && chatBody.children.length === 0) {
+            chatBody.innerHTML = `
+            <div class="ai-ws-msg bot">
+              <div class="ai-ws-avatar">🤖</div>
+              <div class="ai-ws-bubble">
+                Hello Admin! I'm your dedicated AI Copilot. I'm securely connected to your live academy database. How can I assist you with analytics, student insights, or performance metrics today?
+              </div>
+            </div>`;
+        }
+      }
     }, 10);
   }
   window.setPage = setPage;
@@ -4489,6 +4625,7 @@ function openCoachModal(id = null) {
            ${isAdmin ? `
              <div style="display:flex;gap:8px;margin-left:auto">
                <button class="btn btn-outline-grey btn-sm" onclick="editEvent('${e.id}')">Edit</button>
+               <button class="btn btn-gold btn-sm" onclick="openEventManagement('${e.id}')">Manage</button>
                <button class="btn btn-outline btn-sm" onclick="archiveEvent('${e.id}')">${isArchived ? 'Unarchive' : 'Archive'}</button>
                <button class="btn btn-danger btn-sm" onclick="confirmDeleteEvent('${e.id}', '${escapeHtml(e.title).replace(/'/g, "\\'")}')">Delete</button>
              </div>
@@ -4506,6 +4643,7 @@ function openCoachModal(id = null) {
     $('ev-type').value = 'Tournament';
     $('ev-max').value = '50';
     $('ev-prize').value = '';
+    $('ev-fee').value = '0';
     $('ev-loc').value = '';
     $('ev-desc').value = '';
     $('ev-img-url').value = '';
@@ -4526,6 +4664,7 @@ function openCoachModal(id = null) {
     $('ev-type').value = e.type || 'Tournament';
     $('ev-max').value = e.max_participants || 0;
     $('ev-prize').value = e.prize_pool || '';
+    $('ev-fee').value = e.fee || 0;
     $('ev-loc').value = e.location || '';
     $('ev-desc').value = e.description || '';
     $('ev-img-url').value = e.img_url || '';
@@ -4587,6 +4726,7 @@ function openCoachModal(id = null) {
       type: $('ev-type').value,
       max_participants: parseInt($('ev-max').value) || 0,
       prize_pool: $('ev-prize').value,
+      fee: parseFloat($('ev-fee').value) || 0,
       location: $('ev-loc').value,
       map_url: $('ev-map-url').value,
       description: $('ev-desc').value,
@@ -7422,6 +7562,14 @@ Best regards,
           text: `<strong>Arrears Warning:</strong> Student <strong>${getStudentName(s)}</strong> has <strong>${outstandingMonths} unpaid months</strong> (Owes: ₹${totalOwed.toLocaleString()}). Suggest sending notification.`
         });
       }
+    });
+
+    // --- 4. General Overview Insight (Baseline) ---
+    generatedInsights.push({
+      type: 'all',
+      icon: '📊',
+      severity: 'info',
+      text: `<strong>Academy Overview:</strong> You currently have <strong>${allStudents.length}</strong> registered students and <strong>${allCoaches.length}</strong> active coaches. The system is operating normally.`
     });
 
     // Update Quick Metric Counts

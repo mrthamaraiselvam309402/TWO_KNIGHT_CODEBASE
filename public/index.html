@@ -763,6 +763,10 @@
 
     <!-- Messages -->
     <div id="page-msgs" class="page admin-only">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+        <h2 style="color:var(--gold); margin:0;">📬 Messages Hub</h2>
+        <button class="btn btn-gold" onclick="alert('Message composition is coming in the next update!')">+ Compose Message</button>
+      </div>
       <div id="msgs-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
       <div class="msgs-list" id="msgs-list" style="display:none;grid-template-columns:1fr;gap:16px"></div>
     </div>
@@ -1375,7 +1379,10 @@
       <input type="time" id="ev-time" value="10:00">
       <input type="number" id="ev-max" placeholder="Max Spots" value="0">
     </div>
-    <input type="text" id="ev-prize" placeholder="Prize Pool (e.g. ₹2000)">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <input type="text" id="ev-prize" placeholder="Prize Pool (e.g. ₹2000)">
+      <input type="number" id="ev-fee" placeholder="Event Fee (₹)" value="0">
+    </div>
     <input type="text" id="ev-loc" placeholder="Location">
     <textarea id="ev-desc" placeholder="Event Description..." rows="3"></textarea>
     <label class="upload-zone" for="ev-img-file">🖼️ Upload Event Poster<input type="file" id="ev-img-file" accept="image/*" onchange="previewFile(this,'ev-img-preview')"></label>
@@ -1386,6 +1393,54 @@
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
       <button class="btn btn-gold" style="flex:1" onclick="saveEvent()">Publish</button>
+    </div>
+  </div>
+</div>
+
+<!-- Event Management Modal -->
+<div class="modal" id="ev-manage-modal">
+  <div class="modal-box" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div class="modal-title" id="ev-manage-title" style="margin-bottom: 4px;">Manage Event</div>
+        <div class="modal-sub" id="ev-manage-subtitle" style="color:var(--ivory-dim); font-size:13px;">—</div>
+      </div>
+      <button class="btn btn-outline" onclick="exportEventReport()" style="font-size:12px;">📥 Export CSV</button>
+    </div>
+    
+    <div class="dash-grid" style="margin: 20px 0;">
+      <div class="card" style="padding:16px;">
+        <div class="stat-label">Registered Students</div>
+        <div class="stat-value text-gold" id="ev-m-reg">0</div>
+      </div>
+      <div class="card" style="padding:16px;">
+        <div class="stat-label">Total Revenue Collected</div>
+        <div class="stat-value text-success" id="ev-m-rev">₹0</div>
+      </div>
+      <div class="card" style="padding:16px;">
+        <div class="stat-label">Pending Dues</div>
+        <div class="stat-value text-danger" id="ev-m-due">₹0</div>
+      </div>
+    </div>
+    
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Level</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="ev-m-tbody">
+          <tr><td colspan="4"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div style="margin-top:16px; text-align:right;">
+      <button class="btn btn-outline" onclick="closeModals()">Close</button>
     </div>
   </div>
 </div>
