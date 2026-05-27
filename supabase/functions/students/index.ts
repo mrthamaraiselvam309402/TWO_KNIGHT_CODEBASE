@@ -183,6 +183,7 @@ Deno.serve(async (req) => {
        rating: s.rating || 800,
        current_rating: s.rating || 800,
        notes: s.notes || '',
+       learning_mode: s.learning_mode || 'offline',
        session_mode: s.session_mode || null,
        session_time: s.session_time || null,
        batch_type: s.session_mode || null,
@@ -310,6 +311,7 @@ Deno.serve(async (req) => {
          session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
          monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
          due_date: rawBody.due_date ? String(rawBody.due_date) : null,
+         learning_mode: sanitizeString(rawBody.learning_mode, 50) || 'offline',
          notes: sanitizeString(rawBody.notes, 2000),
          account_status: 'active',
          created_at: new Date().toISOString()
@@ -322,10 +324,11 @@ Deno.serve(async (req) => {
         .single()
       
       if (insertError) {
-        if (insertError.message.includes('country_code') || insertError.code === 'PGRST204') {
-          console.warn('country_code column not found, retrying insert without country_code')
+        if (insertError.message.includes('country_code') || insertError.message.includes('learning_mode') || insertError.code === 'PGRST204') {
+          console.warn('country_code or learning_mode column not found, retrying insert without them')
           const fallbackStudent = { ...newStudent }
           delete fallbackStudent.country_code
+          delete fallbackStudent.learning_mode
           
           const retryRes = await supabase
             .from('students')
@@ -443,6 +446,9 @@ Deno.serve(async (req) => {
        if (rawBody.due_date !== undefined) {
          updateData.due_date = rawBody.due_date ? String(rawBody.due_date) : null;
        }
+       if (rawBody.learning_mode !== undefined) {
+         updateData.learning_mode = sanitizeString(String(rawBody.learning_mode), 50);
+       }
        if (rawBody.country_code !== undefined) {
          updateData.country_code = validateCountryCode(rawBody.country_code);
        }
@@ -457,10 +463,11 @@ Deno.serve(async (req) => {
         .single()
       
       if (updateError) {
-        if (updateError.message.includes('country_code') || updateError.code === 'PGRST204') {
-          console.warn('country_code column not found, retrying update without country_code')
+        if (updateError.message.includes('country_code') || updateError.message.includes('learning_mode') || updateError.code === 'PGRST204') {
+          console.warn('country_code or learning_mode column not found, retrying update without them')
           const fallbackData = { ...updateData }
           delete fallbackData.country_code
+          delete fallbackData.learning_mode
           
           const retryRes = await supabase
             .from('students')

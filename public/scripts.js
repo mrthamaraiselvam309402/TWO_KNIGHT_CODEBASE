@@ -3767,10 +3767,15 @@ function initUI() {
               ? `<input type="checkbox" class="stud-check" data-id="${s.id}" disabled title="Non-active students cannot be selected for payments">`
               : `<input type="checkbox" class="stud-check" data-id="${s.id}">`;
 
+            const learningMode = s.learning_mode === 'online' ? 'Online' : (s.learning_mode === 'offline' ? 'Offline' : 'Offline');
+            const learningModeColor = learningMode === 'Online' ? '#3b82f6' : '#8b5cf6';
+            const learningModeBadge = `<span class="badge" style="background: ${learningMode === 'Online' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(139, 92, 246, 0.12)'}; color: ${learningModeColor}; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid ${learningMode === 'Online' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(139, 92, 246, 0.25)'}; margin-left: 4px;">${learningMode}</span>`;
+
             const studentNameHtml = `
               <div style="font-weight:600">${escapeHtml(getStudentName(s))}</div>
-              <div style="margin-top: 4px;">
+              <div style="margin-top: 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
                 ${badgeHtml}
+                ${learningModeBadge}
               </div>
             `;
 
@@ -3870,6 +3875,7 @@ function initUI() {
      $('e-batch-type').value = getStudentBatchType(s);
      $('e-batch-time').value = getStudentBatchTime(s);
      if ($('e-due-date')) $('e-due-date').value = s.due_date || '';
+     if ($('e-learning-mode')) $('e-learning-mode').value = s.learning_mode || 'offline';
      // BUG FIX: Pre-fill notes so updateStudent never silently blanks them
      if ($('e-notes')) $('e-notes').value = getStudentCoachNotes(s);
      syncCoachDropdowns();
@@ -3917,6 +3923,7 @@ function initUI() {
         fee: newFee,
         fees: newFee,
         tuition_fee: newFee,
+        learning_mode: $('e-learning-mode')?.value || s.learning_mode || 'offline',
         notes: $('e-notes')?.value || s.notes || ''
       };
 
@@ -4049,6 +4056,7 @@ function initUI() {
       if ($('m-due-date')) $('m-due-date').value = '';
       if ($('m-coach')) $('m-coach').value = '';
       if ($('m-status')) $('m-status').value = 'active';
+      if ($('m-learning-mode')) $('m-learning-mode').value = 'offline';
       window.selectedCountryCode = 'IN';
       window.selectedCountryCodeEdit = 'IN';
       const selected = $('country-selected');
@@ -4082,6 +4090,7 @@ function initUI() {
           monthly_fee: parseInt($('m-fee').value) || 0,
           payment_status: defaultPaymentStatus,
           status: selectedStatus,
+          learning_mode: $('m-learning-mode')?.value || 'offline',
           notes: ''
        };
 
