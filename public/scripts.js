@@ -2080,6 +2080,18 @@ function initUI() {
     try {
       const res = await apiCall('/api/payments', { method: 'POST', body: JSON.stringify(payload) });
       if (!res.ok) throw new Error('Failed to record payment');
+      
+      // Also update the event registrations_data
+      await apiCall('/api/events', {
+          method: 'POST',
+          body: JSON.stringify({
+              action: 'update_registration',
+              event_id: eventId,
+              student_id: studentId,
+              payment_status: 'paid'
+          })
+      });
+
       toast('Payment recorded successfully!', 'success');
       loadAllData(true);
       // Refresh modal
