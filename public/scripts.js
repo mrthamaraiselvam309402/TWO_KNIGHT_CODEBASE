@@ -1547,14 +1547,14 @@ function initUI() {
       } catch (e) {
         day = 5;
       }
-    } else {
-      // First Month Override: ONLY if due_date is not explicitly set
-      const enrollStr = s.enrollment_date || s.join_date || s.created_at;
-      if (enrollStr) {
-        const enrollDate = new Date(enrollStr);
-        if (enrollDate.getUTCFullYear() === year && enrollDate.getUTCMonth() === month) {
-          day = enrollDate.getUTCDate();
-        }
+    }
+    
+    // First Month Override: If this is the student's first month of enrollment, their due date is their enrollment date
+    const enrollStr = s.enrollment_date || s.join_date || s.created_at;
+    if (enrollStr) {
+      const enrollDate = new Date(enrollStr);
+      if (enrollDate.getUTCFullYear() === year && enrollDate.getUTCMonth() === month) {
+        day = enrollDate.getUTCDate();
       }
     }
     
@@ -1627,16 +1627,10 @@ function initUI() {
        const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
        
        const currentDate = new Date();
-       let dueDateObj;
+       const dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
        
-       if (s.due_date) {
-         dueDateObj = new Date(s.due_date);
-         dueDateObj.setUTCHours(23, 59, 59, 999);
-       } else {
-         dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
-       }
-       
-       // They will automatically transition from 'Pending' to 'Due' precisely on their join date or custom due date.
+       // We omit isFirstMonth || here because dueDateObj is correctly set to their enrollment date for their first month.
+       // They will automatically transition from 'Pending' to 'Due' precisely on their join date.
        return (currentDate >= dueDateObj) ? 'Due' : 'Pending';
     }
 
@@ -4445,7 +4439,11 @@ function initUI() {
           notes: `[LM:${$('m-learning-mode')?.value || 'online'}]`
        };
 
-     // If due_date is left empty, it will be null, allowing the First Month Override to work.
+     if (!data.due_date) {
+       const nextMonth = new Date();
+       nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1, 5);
+       data.due_date = nextMonth.toISOString().split('T')[0];
+     }
 
      if (!data.full_name) { toast('Student name is required', 'error'); return; }
      if (!rawPhone) { toast('Parent phone is required', 'error'); return; }
@@ -5606,15 +5604,9 @@ Best regards,
          }
 
          // Update student to Pending (they paid previous months but not current)
-         const updates = { payment_status: 'Pending' };
-         if (s && s.due_date) {
-           const prevDate = new Date(s.due_date);
-           prevDate.setUTCMonth(prevDate.getUTCMonth() - 1);
-           updates.due_date = prevDate.toISOString().split('T')[0];
-         }
          await apiCall(`${API_BASE}/students?id=${id}`, {
            method: 'PUT',
-           body: JSON.stringify(updates)
+           body: JSON.stringify({ payment_status: 'Pending' })
          });
 
          toast(`Marked Unpaid. ${monthPayments.length} payment record(s) removed.`, 'info');
@@ -5638,15 +5630,9 @@ Best regards,
          });
 
          if (res.ok) {
-           const updates = { payment_status: 'Paid' };
-           if (s && s.due_date) {
-             const nextDate = new Date(s.due_date);
-             nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
-             updates.due_date = nextDate.toISOString().split('T')[0];
-           }
            await apiCall(`${API_BASE}/students?id=${id}`, {
              method: 'PUT',
-             body: JSON.stringify(updates)
+             body: JSON.stringify({ payment_status: 'Paid' })
            });
            toast('Marked as Paid with transaction record', 'success'); sendPaymentReceiptNotification(id, fee);
          }
@@ -6053,8 +6039,9 @@ Best regards,
 
       // Update student status and advance due date - Fix #26
       const updates = { payment_status: 'Paid' };
-      if (s && s.due_date) {
-        const nextDate = new Date(s.due_date);
+      if (s) {
+        const baseDate = s.due_date ? new Date(s.due_date) : new Date();
+        const nextDate = new Date(baseDate);
         nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
         updates.due_date = nextDate.toISOString().split('T')[0];
       }
