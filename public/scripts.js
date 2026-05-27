@@ -2102,12 +2102,22 @@ function initUI() {
   window.promptAddEventExpenditure = async function() {
     const eventId = window.currentManageEventId;
     if (!eventId) return;
+    $('ev-exp-desc').value = '';
+    $('ev-exp-amount').value = '';
+    openModal('event-expenditure-modal');
+  };
+
+  window.submitEventExpenditure = async function() {
+    const eventId = window.currentManageEventId;
+    if (!eventId) return;
     const e = eventsData.find(x => String(x.id) === String(eventId));
     
-    const desc = prompt(`Enter expenditure description for ${e.title}:`, 'Trophies / Venue');
-    if (!desc) return;
-    const amountStr = prompt('Enter amount (₹):', '500');
-    if (!amountStr) return;
+    const desc = $('ev-exp-desc').value.trim();
+    if (!desc) { toast('Please enter a description', 'error'); return; }
+    
+    const amountStr = $('ev-exp-amount').value.trim();
+    if (!amountStr) { toast('Please enter an amount', 'error'); return; }
+    
     const amount = parseFloat(amountStr);
     if (isNaN(amount) || amount <= 0) { toast('Invalid amount', 'error'); return; }
     
@@ -2123,6 +2133,7 @@ function initUI() {
       const res = await apiCall('/api/expenditures', { method: 'POST', body: JSON.stringify(payload) });
       if (!res.ok) throw new Error('Failed');
       toast('Expenditure added!', 'success');
+      closeModal('event-expenditure-modal');
       loadAllData(true);
       setTimeout(() => window.openEventManagement(eventId), 500);
     } catch(err) {
