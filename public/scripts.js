@@ -2182,6 +2182,19 @@ function initUI() {
            if (!s || !s.id) return false;
            if (seenId.has(s.id)) return false;
            seenId.add(s.id);
+           
+           // Parse learning mode from notes if backend hasn't done it yet
+           let notes = s.notes || '';
+           if (typeof notes === 'string') {
+               if (notes.includes('[LM:offline]')) {
+                   s.learning_mode = 'offline';
+                   s.notes = notes.replace(/\[LM:(online|offline)\]/g, '').trim();
+               } else if (notes.includes('[LM:online]')) {
+                   s.learning_mode = 'online';
+                   s.notes = notes.replace(/\[LM:(online|offline)\]/g, '').trim();
+               }
+           }
+           
            return true;
          });
 
@@ -3926,7 +3939,7 @@ function initUI() {
         fees: newFee,
         tuition_fee: newFee,
         learning_mode: $('e-learning-mode')?.value || s.learning_mode || 'offline',
-        notes: $('e-notes')?.value || s.notes || ''
+        notes: `[LM:${$('e-learning-mode')?.value || s.learning_mode || 'offline'}] ` + ($('e-notes')?.value || s.notes || '').replace(/\[LM:(online|offline)\]/g, '').trim()
       };
 
     try {
@@ -4093,7 +4106,7 @@ function initUI() {
           payment_status: defaultPaymentStatus,
           status: selectedStatus,
           learning_mode: $('m-learning-mode')?.value || 'offline',
-          notes: ''
+          notes: `[LM:${$('m-learning-mode')?.value || 'offline'}]`
        };
 
      if (!data.due_date) {
