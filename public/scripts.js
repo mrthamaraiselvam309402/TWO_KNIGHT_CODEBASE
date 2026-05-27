@@ -3604,6 +3604,7 @@ function initUI() {
           const fCoach = $('f-coach')?.value;
           const fSession = $('f-session')?.value;
           const fEnrollStatus = $('f-enroll-status')?.value;
+          const fLearningMode = $('f-learning-mode')?.value;
           const fStatus = $('f-status')?.value;
           const fMin = parseInt($('f-min-fee')?.value) || 0;
           const fMax = parseInt($('f-max-fee')?.value) || 999999;          const fDueDate = $('f-due-date-stud')?.value;
@@ -3641,8 +3642,9 @@ function initUI() {
             }
             
             const enrollStatusMatch = !fEnrollStatus || getStudentStatus(s) === fEnrollStatus;
+            const learningModeMatch = !fLearningMode || (s.learning_mode || 'offline') === fLearningMode;
             
-            return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch && dueDateMatch && enrollDateMatch && enrollStatusMatch;
+            return nameMatch && coachMatch && sessionMatch && statusMatch && feeMatch && dueDateMatch && enrollDateMatch && enrollStatusMatch && learningModeMatch;
           });
 
           if (selectedDay !== null) {

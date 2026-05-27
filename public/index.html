@@ -231,6 +231,11 @@
           <option value="inactive">Inactive</option>
           <option value="archived">Archived</option>
         </select>
+        <select id="f-learning-mode" onchange="renderStudents()">
+          <option value="">All Modes</option>
+          <option value="online">Online</option>
+          <option value="offline">Offline</option>
+        </select>
         <select id="f-status" onchange="renderStudents()"><option value="">All Payment Status</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option><option value="Overdue">Overdue</option></select>
         <input type="number" id="f-min-fee" placeholder="Min Fee ₹" oninput="renderStudents()">
         <input type="number" id="f-max-fee" placeholder="Max Fee ₹" oninput="renderStudents()">
