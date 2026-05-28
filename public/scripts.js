@@ -2099,7 +2099,7 @@ function initUI() {
                     <option value="paid" ${isPaid ? 'selected' : ''}>Paid</option>
                   </select>
                   ${isPaid ? `<button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="downloadReceipt('${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}', '${e.fee || 0}', '${escapeHtml(level).replace(/'/g, "\\'")}', '800', 'N/A', 'Event Fee', '')" title="Download Receipt">📄</button>
-                  <button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="sendPaymentReceiptNotification('${sid}', '${e.fee || 0}')" title="Send via WhatsApp">ðŸ“¢</button>` : ''}
+                  <button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="sendPaymentReceiptNotification('${sid}', '${e.fee || 0}')" title="Send via WhatsApp">📢</button>` : ''}
                 </div>
               </td>
               <td>
@@ -3106,7 +3106,7 @@ function initUI() {
           <p style="color:var(--ivory-dim); margin-bottom:25px; font-size:14px">It's a new month. The system has automatically updated student statuses. Would you like to inform all coaches about their student due lists now?</p>
           <div style="display:flex; gap:10px">
             <button class="btn btn-outline" style="flex:1" onclick="localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">Later</button>
-            <button class="btn btn-gold" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">ðŸ“¢ Inform Coaches</button>
+            <button class="btn btn-gold" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">📢 Inform Coaches</button>
           </div>
         </div>
       `;
@@ -4297,7 +4297,7 @@ function initUI() {
         <td class="${profitClass}">₹${netProfit.toLocaleString()}</td>
         <td class="${potentialProfitClass}">₹${potentialNetProfit.toLocaleString()}</td>
         <td>${roi}% / <span class="text-gold">${potentialRoi}%</span></td>
-        <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">ðŸ“¢ Inform</button></td>
+        <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">📢 Inform</button></td>
       </tr>`;
     }).join('');
   }
@@ -4529,7 +4529,7 @@ function initUI() {
              if (status === 'Paid') {
                 primaryActions = `
                   <div style="display:flex;gap:4px;flex-wrap:nowrap">
-                  <button class="btn btn-gold btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="sendPaymentReceiptNotification('${s.id}', '${getStudentMonthlyFee(s)}')">ðŸ“¢ Inform</button>
+                  <button class="btn btn-gold btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="sendPaymentReceiptNotification('${s.id}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                   <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
@@ -4548,7 +4548,7 @@ function initUI() {
                    <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                    <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                    <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
-                   <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">ðŸ“¢ Inform</button>
+                   <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
                    </div>
                  `;
                moreActions = `
@@ -4984,7 +4984,7 @@ function initUI() {
            <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr; gap: 8px;">
              <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">ðŸ‘ï¸ View</button>
              <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">âœï¸ Edit</button>
-             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">ðŸ“¢ Inform</button>
+             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
              <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${escapeHtml(getCoachName(c)).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
            </div>
            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
@@ -5438,9 +5438,9 @@ function openCoachModal(id = null) {
         leaderboardEl.innerHTML = topPlayers.map((s, index) => {
           let rankColor = 'var(--ivory-dim)';
           let rankBadge = `${index + 1}`;
-          if (index === 0) { rankColor = '#d4af37'; rankBadge = 'ðŸ¥‡'; } // Gold
-          else if (index === 1) { rankColor = '#c0c0c0'; rankBadge = 'ðŸ¥ˆ'; } // Silver
-          else if (index === 2) { rankColor = '#cd7f32'; rankBadge = 'ðŸ¥‰'; } // Bronze
+          if (index === 0) { rankColor = '#d4af37'; rankBadge = '🥇'; } // Gold
+          else if (index === 1) { rankColor = '#c0c0c0'; rankBadge = '🥈'; } // Silver
+          else if (index === 2) { rankColor = '#cd7f32'; rankBadge = '🥉'; } // Bronze
 
           return `
             <div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 10px; border-bottom: 1px solid var(--border);">
@@ -6324,7 +6324,7 @@ Best regards,
             ${status === 'Pending' ?
           `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">✅ Mark Paid</button>` :
           `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">âŒ Mark Unpaid</button>
-           <button class="btn btn-outline btn-sm" onclick="informCoachSalaryPaid(allCoaches.find(x => String(x.id) === '${c.id}'))" style="border-color:var(--emerald);color:var(--emerald);" title="Notify Coach of Salary Credit">ðŸ“¢ Notify Credit</button>`}
+           <button class="btn btn-outline btn-sm" onclick="informCoachSalaryPaid(allCoaches.find(x => String(x.id) === '${c.id}'))" style="border-color:var(--emerald);color:var(--emerald);" title="Notify Coach of Salary Credit">📢 Notify Credit</button>`}
           </div>
         </td>
       </tr>`;
@@ -6473,7 +6473,7 @@ Best regards,
           actionButtons = `
             <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
             <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">â³ History</button>
-            <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">ðŸ“¢ Inform</button>
+            <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
             <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
           `;
         } else {
@@ -8449,7 +8449,7 @@ Best regards,
     link.click();
     document.body.removeChild(link);
     
-    toast('Student records exported successfully! ðŸ“¤', 'success');
+    toast('Student records exported successfully! 📤', 'success');
   }
   window.exportStudentsToCSV = exportStudentsToCSV;
 
