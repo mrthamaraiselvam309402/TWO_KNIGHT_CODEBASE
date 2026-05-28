@@ -75,8 +75,8 @@
     return {
       value: '', textContent: '', innerHTML: '', style: {}, checked: false, disabled: false,
       classList: { add: ()=>{}, remove: ()=>{}, toggle: ()=>{}, contains: ()=>false },
-      focus: ()=>{}, appendChild: ()=>{}, addEventListener: ()=>{}, setAttribute: ()=>{},
-      removeAttribute: ()=>{}
+      focus: ()=>{}, appendChild: ()=>{}, removeChild: ()=>{}, addEventListener: ()=>{}, setAttribute: ()=>{},
+      removeAttribute: ()=>{}, querySelector: ()=>null, querySelectorAll: ()=>[], closest: ()=>null
     };
   };
 
