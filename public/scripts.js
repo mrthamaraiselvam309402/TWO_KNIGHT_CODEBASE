@@ -5082,7 +5082,9 @@ function openCoachModal(id = null) {
       });
       const data = await response.json();
       if (data.success) return data.data.url;
-      throw new Error('Upload failed');
+      
+      console.error('Imgbb API Error Data:', data);
+      throw new Error(data.error?.message || data.error || 'Upload failed');
     } catch (e) {
       console.error('Imgbb upload error:', e);
       return null;

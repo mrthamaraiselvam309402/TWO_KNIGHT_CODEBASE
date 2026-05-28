@@ -15,12 +15,12 @@ Deno.serve(async (req) => {
     if (!IMGBB_API_KEY) throw new Error('Server key configuration missing');
 
     // Forward to IMGBB
-    const formData = new FormData();
-    formData.append('image', image);
+    const params = new URLSearchParams();
+    params.append('image', image);
 
     const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
       method: 'POST',
-      body: formData
+      body: params
     });
 
     const data = await res.json();
