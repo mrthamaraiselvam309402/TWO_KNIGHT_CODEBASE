@@ -4517,7 +4517,7 @@ function initUI() {
             } else if (status === 'Paid') {
               dueDateHtml = `<span class="text-success" style="opacity: 0.85; font-weight: 500; cursor:pointer" onclick="viewPaymentHistory('${s.id}')">${dueDateString}</span>`;
             } else if (isOverdue) {
-              dueDateHtml = `<span class="text-danger" style="font-weight: 700;">⚠️¸ ${dueDateString}</span>`;
+              dueDateHtml = `<span class="text-danger" style="font-weight: 700;">⚠️ ${dueDateString}</span>`;
             } else {
               dueDateHtml = `<span style="color: var(--warning); font-weight: 600;">${dueDateString}</span>`;
             }
@@ -4983,7 +4983,7 @@ function initUI() {
            </div>
            <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr; gap: 8px;">
              <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
-             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️¸ Edit</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️ Edit</button>
              <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
              <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${escapeHtml(getCoachName(c)).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
            </div>
@@ -5505,7 +5505,7 @@ function openCoachModal(id = null) {
            <!-- Action Buttons overlay (top right) -->
            ${isAdmin ? `
              <div style="position: absolute; top: 12px; right: 12px; display:flex; gap: 8px; background: rgba(15, 23, 42, 0.75); padding: 6px 8px; border-radius: 10px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); z-index:10;">
-               <button onclick="editAchievement('${a.id}')" style="background:transparent; border:none; color:var(--gold); cursor:pointer; font-size:14px; padding:0 4px;" title="Edit">✏️¸</button>
+               <button onclick="editAchievement('${a.id}')" style="background:transparent; border:none; color:var(--gold); cursor:pointer; font-size:14px; padding:0 4px;" title="Edit">✏️</button>
                <div style="width:1px; background:rgba(255,255,255,0.2); height:16px; align-self:center;"></div>
                <button onclick="confirmDeleteAchievement('${a.id}', '${escapeHtml(a.title).replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:0 4px;" title="Delete">🗑️</button>
              </div>
@@ -7622,7 +7622,7 @@ Best regards,
       console.error('AI Query Error:', e);
        const errorMsg = document.createElement('div');
        errorMsg.className = 'ai-ws-msg bot';
-       errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️¸ Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
+       errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️ Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
        chatContainer.appendChild(errorMsg);
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -8239,7 +8239,7 @@ Best regards,
         if (records[0].status === 'absent' && records[1].status === 'absent') {
           generatedInsights.push({
             type: 'attendance',
-            icon: '⚠️¸',
+            icon: '⚠️',
             severity: 'danger',
             text: `<strong>Attendance Warning:</strong> Student <strong>${getStudentName(s)}</strong> has missed <strong>2 consecutive classes</strong> (last absent on ${records[0].date}). Suggest coach follow-up.`
           });
