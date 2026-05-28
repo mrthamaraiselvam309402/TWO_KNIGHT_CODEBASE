@@ -8329,5 +8329,149 @@ Best regards,
   }
   window.exportStudentsToCSV = exportStudentsToCSV;
 
+  // --- QR Poster Generator ---
+  window.openQrPosterModal = function() {
+    $('qr-poster-file').value = '';
+    $('qr-poster-url').value = '';
+    $('qr-poster-canvas').style.display = 'none';
+    $('qr-poster-placeholder').style.display = 'block';
+    $('qr-poster-actions').style.display = 'none';
+    
+    // Check if the event already has a poster url
+    const eventId = window.currentManageEventId;
+    if (eventId) {
+        const ev = eventsData.find(e => String(e.id) === String(eventId));
+        if (ev && ev.qr_poster_url) {
+            $('qr-poster-placeholder').innerHTML = `Current poster exists. <a href="${ev.qr_poster_url}" target="_blank" style="color:var(--gold);">View Here</a><br><br>Upload a new image below to replace it.`;
+        } else {
+            $('qr-poster-placeholder').innerHTML = 'Upload an image to preview';
+        }
+    }
+    
+    openModal('qr-poster-modal');
+  };
+
+  window.previewQrPoster = async function() {
+    const fileInput = $('qr-poster-file');
+    const urlInput = $('qr-poster-url');
+    const position = $('qr-poster-position').value;
+    const canvas = $('qr-poster-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!fileInput.files || fileInput.files.length === 0) return;
+    
+    $('qr-poster-placeholder').innerHTML = '<span class="spinner"></span> Loading preview...';
+    
+    const file = fileInput.files[0];
+    const bgImage = new Image();
+    bgImage.src = URL.createObjectURL(file);
+    
+    bgImage.onload = async () => {
+        canvas.width = bgImage.width;
+        canvas.height = bgImage.height;
+        ctx.drawImage(bgImage, 0, 0);
+        
+        const link = urlInput.value.trim();
+        if (link) {
+            // Generate QR code using external API
+            // Using a standard 300x300 size or dynamic based on poster size
+            const qrSize = Math.max(150, Math.min(bgImage.width, bgImage.height) * 0.2); // 20% of min dimension
+            
+            try {
+                const qrImage = new Image();
+                qrImage.crossOrigin = 'Anonymous';
+                qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=${Math.round(qrSize)}x${Math.round(qrSize)}&data=${encodeURIComponent(link)}&margin=10`;
+                
+                await new Promise((resolve, reject) => {
+                    qrImage.onload = resolve;
+                    qrImage.onerror = reject;
+                });
+                
+                // Calculate position
+                let qrX = 0, qrY = 0;
+                const margin = qrSize * 0.2; // 20% margin from edges
+                
+                if (position === 'bottom-right') {
+                    qrX = canvas.width - qrSize - margin;
+                    qrY = canvas.height - qrSize - margin;
+                } else if (position === 'bottom-left') {
+                    qrX = margin;
+                    qrY = canvas.height - qrSize - margin;
+                } else if (position === 'top-right') {
+                    qrX = canvas.width - qrSize - margin;
+                    qrY = margin;
+                } else if (position === 'top-left') {
+                    qrX = margin;
+                    qrY = margin;
+                } else if (position === 'center') {
+                    qrX = (canvas.width - qrSize) / 2;
+                    qrY = (canvas.height - qrSize) / 2;
+                }
+                
+                // Draw white background box with shadow for QR code (for visibility)
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = 'white';
+                ctx.fillRect(qrX, qrY, qrSize, qrSize);
+                
+                // Draw QR Code
+                ctx.shadowBlur = 0; // reset shadow
+                ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+                
+            } catch (err) {
+                console.error("Error generating QR:", err);
+                toast("Could not load QR code.", "error");
+            }
+        }
+        
+        $('qr-poster-placeholder').style.display = 'none';
+        canvas.style.display = 'block';
+        $('qr-poster-actions').style.display = 'flex';
+    };
+  };
+
+  window.saveQrPoster = async function() {
+    const canvas = $('qr-poster-canvas');
+    const eventId = window.currentManageEventId;
+    
+    if (!eventId) return toast("No active event selected", "error");
+    
+    const btn = $('btn-save-qr-poster');
+    btn.innerHTML = '<span class="spinner"></span> Uploading...';
+    btn.disabled = true;
+    
+    try {
+        // Convert canvas to Blob
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+        
+        // 1. Upload to ImgBB
+        const uploadedUrl = await uploadToImgbb(blob);
+        
+        // 2. Save to Events DB
+        const res = await apiCall('/api/events', {
+            method: 'PUT',
+            body: JSON.stringify({
+                id: eventId,
+                qr_poster_url: uploadedUrl
+            })
+        });
+        
+        if (!res.ok) throw new Error("Failed to save to database");
+        
+        toast("QR Poster generated and saved successfully! 🎉", "success");
+        closeModal('qr-poster-modal');
+        await loadAllData(true);
+        window.openEventManagement(eventId);
+    } catch (e) {
+        console.error(e);
+        toast(e.message || "Error saving poster", "error");
+    } finally {
+        btn.innerHTML = 'Upload & Save to ImgBB';
+        btn.disabled = false;
+    }
+  };
+
   if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.8 (Clean Messages & Excel)';
   })();
+ 
+ 
