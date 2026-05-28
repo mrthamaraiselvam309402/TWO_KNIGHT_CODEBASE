@@ -162,6 +162,69 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
+
+      // --- AUTO-ROLLOVER LOGIC ---
+      try {
+        // 1. Fetch the student's current due_date
+        const { data: student, error: studentErr } = await supabase
+          .from('students')
+          .select('due_date')
+          .eq('id', studentId)
+          .single()
+
+        if (!studentErr && student) {
+          // 2. Calculate the new due date (add exactly 1 month to their specific anchor date)
+          let nextDate: Date;
+          
+          if (student.due_date) {
+            nextDate = new Date(student.due_date);
+          } else {
+             // Fallback if they forgot to set an initial date: set to the 5th of next month
+            const now = new Date();
+            let y = now.getUTCFullYear();
+            let m = now.getUTCMonth() + 1;
+            if (m > 11) { m = 0; y++; }
+            nextDate = new Date(Date.UTC(y, m, 5));
+          }
+          
+          if (student.due_date) {
+            let year = nextDate.getUTCFullYear();
+            let month = nextDate.getUTCMonth() + 1; // increment month
+            let day = nextDate.getUTCDate();
+            
+            if (month > 11) {
+               month = 0;
+               year++;
+            }
+            
+            // Clamp the day to the last valid day of the new month (prevents June 31 -> July 1 overflow)
+            const daysInNewMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+            if (day > daysInNewMonth) {
+               day = daysInNewMonth; 
+            }
+            
+            nextDate = new Date(Date.UTC(year, month, day));
+          }
+          
+          const newDueDate = nextDate.toISOString().split('T')[0];
+
+          // 3. Update the student record
+          await supabase
+            .from('students')
+            .update({ 
+              due_date: newDueDate,
+              payment_status: 'paid',
+              status: 'active',
+              account_status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', studentId);
+        }
+      } catch (rolloverErr) {
+        console.error('Auto-rollover failed:', rolloverErr);
+        // We don't fail the payment request if the rollover fails, 
+        // but it's logged for debugging.
+      }
       
       return new Response(JSON.stringify(insertedPayment ? transformPayment(insertedPayment) : { success: true }), {
         status: 201,

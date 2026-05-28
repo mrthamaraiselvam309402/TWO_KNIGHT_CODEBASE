@@ -310,7 +310,14 @@ Deno.serve(async (req) => {
          session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
          session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
          monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
-         due_date: rawBody.due_date ? String(rawBody.due_date) : null,
+         // If due_date is missing, default to the 5th of the next month
+         due_date: rawBody.due_date ? String(rawBody.due_date) : (() => {
+            const now = new Date();
+            let y = now.getUTCFullYear();
+            let m = now.getUTCMonth() + 1; // next month
+            if (m > 11) { m = 0; y++; }
+            return new Date(Date.UTC(y, m, 5)).toISOString().split('T')[0];
+         })(),
          notes: `[LM:${sanitizeString(rawBody.learning_mode, 50) || 'online'}] ${sanitizeString(rawBody.notes, 2000)}`.trim(),
          account_status: 'active',
          created_at: new Date().toISOString()

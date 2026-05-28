@@ -1563,3 +1563,5 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
   bottom: 110px;
 }
 
+
+.ach-card:hover .ach-poster-bg { transform: scale(1.05) !important; }

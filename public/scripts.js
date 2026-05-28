@@ -2015,13 +2015,26 @@ function initUI() {
     window.currentManageEventId = id;
     
     const regStudents = e.registered_students || [];
-    $('ev-m-reg').textContent = regStudents.length;
+    const regsData = e.registrations_data || [];
     
-    const expectedRev = regStudents.length * (e.fee || 0);
+    // Separate waitlisted and confirmed students
+    const confirmedStudents = regsData.filter(r => r.registration_status !== 'waitlisted').map(r => r.student_id);
+    const waitlistedStudents = regsData.filter(r => r.registration_status === 'waitlisted').map(r => r.student_id);
+    
+    const maxParticipants = e.max_participants || 50;
+    const fillRateStr = `${confirmedStudents.length} / ${maxParticipants}`;
+    const fillPercent = Math.min(100, Math.round((confirmedStudents.length / maxParticipants) * 100));
+    
+    if($('ev-m-fill')) $('ev-m-fill').textContent = fillRateStr;
+    if($('ev-m-fill-bar')) $('ev-m-fill-bar').style.width = `${fillPercent}%`;
+    if($('ev-m-waitlist')) $('ev-m-waitlist').textContent = waitlistedStudents.length > 0 ? `${waitlistedStudents.length} Waitlisted` : 'No Waitlist';
+    
+    const expectedRev = confirmedStudents.length * (e.fee || 0);
     let collectedRev = 0;
+    let presentCount = 0;
     
     const tbody = $('ev-m-tbody');
-    tbody.innerHTML = '<tr><td colspan="4"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>';
     
     const expTbody = $('ev-exp-tbody');
     expTbody.innerHTML = '<tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>';
@@ -2047,7 +2060,7 @@ function initUI() {
       
       let html = '';
       if (regStudents.length === 0) {
-         html = '<tr><td colspan="4"><div class="empty-state"><span class="empty-icon">👥</span><p>No students registered yet</p></div></td></tr>';
+         html = '<tr><td colspan="5"><div class="empty-state"><span class="empty-icon">👥</span><p>No students registered yet</p></div></td></tr>';
       } else {
          regStudents.forEach(sid => {
             const student = allStudents.find(s => s.id === sid);
@@ -2058,17 +2071,26 @@ function initUI() {
             const payment = allPaymentsLocal.find(p => p.student_id === sid && (p.description === eventDescString || (p.details && p.details.event_id === id)));
             const isPaid = (regData.payment_status === 'paid' || !!payment);
             const currentAttendance = regData.attendance || 'absent';
+            const isWaitlisted = regData.registration_status === 'waitlisted';
             
             if (isPaid) collectedRev += (e.fee || 0);
+            if (currentAttendance === 'present') presentCount++;
             
-            html += `<tr>
-              <td>${escapeHtml(name)}</td>
+            const rowStyle = isWaitlisted ? 'opacity: 0.7; background: #ffffff05;' : '';
+            const statusBadge = isWaitlisted ? ' <span class="badge badge-warning" style="font-size:9px; margin-left:4px;">Waitlist</span>' : '';
+            
+            html += `<tr style="${rowStyle}">
+              <td>${escapeHtml(name)}${statusBadge}</td>
               <td>${escapeHtml(level)}</td>
               <td>
-                <select style="padding:4px 8px; font-size:11px; width:90px; background:var(--bg3); color:var(--ivory); border:1px solid var(--border); border-radius:4px;" onchange="updateEventRegistration('${id}', '${sid}', 'payment_status', this.value)">
-                  <option value="pending" ${!isPaid ? 'selected' : ''}>Pending</option>
-                  <option value="paid" ${isPaid ? 'selected' : ''}>Paid</option>
-                </select>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <select style="padding:4px 8px; font-size:11px; width:90px; background:var(--bg3); color:var(--ivory); border:1px solid var(--border); border-radius:4px;" onchange="updateEventRegistration('${id}', '${sid}', 'payment_status', this.value)">
+                    <option value="pending" ${!isPaid ? 'selected' : ''}>Pending</option>
+                    <option value="paid" ${isPaid ? 'selected' : ''}>Paid</option>
+                  </select>
+                  ${isPaid ? `<button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="downloadReceipt('${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}', '${e.fee || 0}', '${escapeHtml(level).replace(/'/g, "\\'")}', '800', 'N/A', 'Event Fee', '')" title="Download Receipt">📄</button>
+                  <button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="sendPaymentReceiptNotification('${sid}', '${e.fee || 0}')" title="Send via WhatsApp">📢</button>` : ''}
+                </div>
               </td>
               <td>
                 <select style="padding:4px 8px; font-size:11px; width:90px; background:var(--bg3); color:var(--ivory); border:1px solid var(--border); border-radius:4px;" onchange="updateEventRegistration('${id}', '${sid}', 'attendance', this.value)">
@@ -2076,13 +2098,15 @@ function initUI() {
                   <option value="present" ${currentAttendance === 'present' ? 'selected' : ''}>Present</option>
                 </select>
               </td>
+              <td style="text-align:center;">
+                <button class="btn btn-outline-grey btn-sm" style="padding: 4px; font-size:12px; border:none; color:var(--danger);" onclick="unregisterStudentFromEvent('${id}', '${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}')" title="Remove Student">🗑️</button>
+              </td>
             </tr>`;
          });
       }
       
       tbody.innerHTML = html;
-      $('ev-m-rev').textContent = `₹${collectedRev}`;
-      $('ev-m-due').textContent = `₹${expectedRev - collectedRev}`;
+      if($('ev-m-due')) $('ev-m-due').textContent = `₹${Math.max(0, expectedRev - collectedRev)}`;
       
       // Load Event Expenditures
       const expRes = await apiCall('/api/expenditures');
@@ -2091,10 +2115,12 @@ function initUI() {
       const eventExps = expData.filter(ex => ex.description && ex.description.startsWith(e.title + ' -'));
       
       let expHtml = '';
+      let totalExp = 0;
       if (eventExps.length === 0) {
         expHtml = '<tr><td colspan="3"><div class="empty-state"><span class="empty-icon">💸</span><p>No expenditures logged</p></div></td></tr>';
       } else {
         eventExps.forEach(ex => {
+          totalExp += Number(ex.amount || 0);
           expHtml += `<tr>
             <td>${new Date(ex.date || ex.created_at).toLocaleDateString()}</td>
             <td>${escapeHtml(ex.description || 'Event Expense')}</td>
@@ -2104,9 +2130,19 @@ function initUI() {
       }
       expTbody.innerHTML = expHtml;
       
+      const netProfit = collectedRev - totalExp;
+      if($('ev-m-profit')) {
+          $('ev-m-profit').textContent = `₹${netProfit}`;
+          $('ev-m-profit').style.color = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+      }
+      if($('ev-m-rev-exp')) $('ev-m-rev-exp').textContent = `Rev: ₹${collectedRev} | Exp: ₹${totalExp}`;
+      
+      const attendanceRate = confirmedStudents.length > 0 ? Math.round((presentCount / confirmedStudents.length) * 100) : 0;
+      if($('ev-m-att')) $('ev-m-att').textContent = `${attendanceRate}%`;
+      
     } catch (err) {
        console.error(err);
-       tbody.innerHTML = '<tr><td colspan="4">Error loading data.</td></tr>';
+       tbody.innerHTML = '<tr><td colspan="5">Error loading data.</td></tr>';
     }
   };
 
@@ -2149,6 +2185,30 @@ function initUI() {
       window.openEventManagement(eventId);
     } catch(err) {
       toast('Error adding expenditure', 'error');
+    }
+  };
+
+  window.unregisterStudentFromEvent = async function(eventId, studentId, studentName) {
+    if (!confirm(`Are you sure you want to remove ${studentName} from this event?`)) return;
+    
+    try {
+      const res = await apiCall('/api/events', {
+          method: 'POST',
+          body: JSON.stringify({
+              action: 'unregister',
+              event_id: eventId,
+              student_id: studentId
+          })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to remove student');
+      
+      toast(data.message || `Removed ${studentName}`, 'success');
+      
+      await loadAllData(true);
+      window.openEventManagement(eventId);
+    } catch(e) {
+      toast(e.message, 'error');
     }
   };
 
@@ -2322,36 +2382,271 @@ function initUI() {
     }
   };
 
-  window.exportEventReport = function() {
-    const id = window.currentManageEventId;
-    if (!id) return;
-    const e = eventsData.find(x => String(x.id) === String(id));
+  window.exportEventCSV = function() {
+    const eventId = window.currentManageEventId;
+    if (!eventId) return;
+    const e = eventsData.find(ev => String(ev.id) === String(eventId));
     if (!e) return;
     
-    const regStudents = e.registered_students || [];
-    const eventDescString = `Event: ${e.title}`;
+    let csv = 'Student Name,Level,Payment Status,Attendance,Registration Status\n';
+    const regs = e.registrations_data || [];
     
-    let csv = 'Student Name,Parent Phone,Level,Payment Status,Registration Date\n';
-    
-    regStudents.forEach(sid => {
-      const student = allStudents.find(s => s.id === sid);
-      const payment = allPayments.find(p => p.student_id === sid && (p.description === eventDescString || (p.details && p.details.event_id === id)));
-      
-      const name = student ? getStudentName(student) : 'Unknown';
-      const phone = student ? getStudentPhone(student) : '';
-      const level = student ? getStudentLevel(student) : '';
-      const pStatus = payment ? 'Paid' : ((e.fee || 0) > 0 ? 'Pending' : 'N/A');
-      
-      csv += `"${name}","${phone}","${level}","${pStatus}",""\n`;
+    regs.forEach(r => {
+        const student = allStudents.find(s => s.id === r.student_id);
+        const name = student ? getStudentName(student) : (r.name || 'Unknown');
+        const level = student ? getStudentLevel(student) : '-';
+        const payment = r.payment_status || 'pending';
+        const att = r.attendance || 'absent';
+        const status = r.registration_status || 'confirmed';
+        csv += `"${name}","${level}","${payment}","${att}","${status}"\n`;
     });
     
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${e.title.replace(/\s+/g, '_')}_Report.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${e.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_roster.csv`;
+    a.click();
+  };
+  
+  let html5QrcodeScanner = null;
+  window.openScannerModal = function() {
+      const eventId = window.currentManageEventId;
+      if (!eventId) return toast('No active event selected', 'error');
+      
+      openModal('qr-scanner-modal');
+      
+      if (!html5QrcodeScanner) {
+          html5QrcodeScanner = new window.Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 }, false);
+          html5QrcodeScanner.render(async (decodedText, decodedResult) => {
+              $('qr-reader-results').textContent = `Scanned ID: ${decodedText}... Marking Present!`;
+              $('qr-reader-results').style.color = "var(--success)";
+              try {
+                  const payload = { action: 'update_registration', event_id: window.currentManageEventId, student_id: decodedText.trim(), attendance: 'present' };
+                  const res = await apiCall('/api/events', { method: 'POST', body: JSON.stringify(payload) });
+                  if (res.ok) {
+                      toast('Student marked Present!', 'success');
+                      $('qr-reader-results').textContent = `✅ Successfully marked Present!`;
+                      await loadAllData(true);
+                      window.openEventManagement(window.currentManageEventId);
+                      setTimeout(() => { $('qr-reader-results').textContent = `Ready to scan next...`; $('qr-reader-results').style.color = "var(--gold)"; }, 2000);
+                  } else {
+                      const data = await res.json();
+                      toast(data.error || 'Failed to update', 'error');
+                      $('qr-reader-results').textContent = `❌ ${data.error || 'Failed'}`;
+                      $('qr-reader-results').style.color = "var(--danger)";
+                  }
+              } catch (e) { toast('Error updating attendance', 'error'); }
+          }, (err) => {});
+      }
+  };
+  
+  window.closeScannerModal = function() {
+      if (html5QrcodeScanner) { html5QrcodeScanner.clear().catch(e => console.error(e)); html5QrcodeScanner = null; }
+      closeModal('qr-scanner-modal');
+  };
+  
+  window.generateEventCertificates = async function() {
+      const eventId = window.currentManageEventId;
+      if (!eventId) return;
+      const ev = eventsData.find(e => String(e.id) === String(eventId));
+      if (!ev) return;
+      
+      const regs = ev.registrations_data || [];
+      const attendees = regs.filter(r => r.attendance === 'present' && r.registration_status !== 'waitlisted');
+      if (attendees.length === 0) return toast('No confirmed attendees marked as present!', 'warning');
+      
+      toast('Generating certificates... Please wait.', 'info');
+      try {
+          const doc = new window.jspdf.jsPDF({ orientation: "landscape" });
+          for (let i = 0; i < attendees.length; i++) {
+              const r = attendees[i];
+              const student = allStudents.find(s => s.id === r.student_id);
+              const name = student ? getStudentName(student) : r.name;
+              const level = student ? getStudentLevel(student) : 'General';
+              
+              if (i > 0) doc.addPage();
+              
+              // Background: Ivory
+              doc.setFillColor(248, 246, 240);
+              doc.rect(0, 0, 297, 210, 'F');
+              
+              // Top Text: CERTIFICATE
+              doc.setTextColor(30, 30, 30);
+              doc.setFont("times", "bold");
+              doc.setFontSize(55);
+              doc.text("CERTIFICATE", 148.5, 35, { align: "center" });
+              
+              // Sub text: OF COMPLETION
+              doc.setTextColor(186, 145, 48); // Gold
+              doc.setFontSize(14);
+              doc.setFont("times", "normal");
+              doc.text("\u2726  O F   C O M P L E T I O N  \u2726", 148.5, 47, { align: "center" });
+              
+              // Gold Ribbon
+              doc.setFillColor(186, 145, 48);
+              doc.rect(0, 55, 297, 14, 'F');
+              doc.setTextColor(30, 30, 30);
+              doc.setFont("times", "bold");
+              doc.setFontSize(13);
+              doc.text("T H I S   I S   T O   C E R T I F Y   T H A T", 148.5, 64.5, { align: "center" });
+              
+              // Name Block
+              doc.setFont("times", "italic");
+              doc.setFontSize(14);
+              doc.text("Mr. / Ms.", 75, 87);
+              
+              // Name Underline
+              doc.setDrawColor(30, 30, 30);
+              doc.setLineWidth(0.5);
+              doc.line(95, 88, 235, 88);
+              
+              // Name Insert
+              doc.setFont("times", "italic");
+              doc.setFontSize(22);
+              doc.text(name || 'Unknown', 165, 86, { align: "center" });
+              
+              // Secured Grade Block
+              doc.setFontSize(13);
+              doc.text("has secured the grade", 55, 102);
+              doc.line(100, 103, 140, 103);
+              doc.text("A+", 120, 101, { align: "center" }); // Dynamic Grade injection
+              doc.text("and has successfully completed the", 145, 102);
+              
+              // Event Name
+              doc.setFont("times", "bold");
+              doc.setFontSize(36);
+              doc.text(ev.title.toUpperCase(), 148.5, 120, { align: "center" });
+              
+              // Event Dates
+              doc.setTextColor(100, 100, 100);
+              doc.setFontSize(12);
+              doc.setFont("times", "normal");
+              const dt = new Date(ev.date || ev.event_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+              doc.text(`\u25A0  EVENT DATE: ${dt}  \u25A0`, 148.5, 130, { align: "center" });
+              
+              // Black Box Level
+              doc.setFillColor(25, 25, 25);
+              doc.setDrawColor(186, 145, 48);
+              doc.setLineWidth(1.5);
+              doc.rect(73.5, 138, 150, 14, 'FD'); // Fill and Draw border
+              doc.setTextColor(255, 255, 255);
+              doc.setFont("times", "bold");
+              doc.setFontSize(12);
+              doc.text(`${level.toUpperCase()} LEVEL`, 148.5, 147, { align: "center" });
+              
+              // Congrats Text
+              doc.setTextColor(80, 80, 80);
+              doc.setFont("times", "italic");
+              doc.setFontSize(12);
+              doc.text("with dedication and enthusiasm.", 148.5, 160, { align: "center" });
+              doc.text("Keep learning, keep improving,", 148.5, 166, { align: "center" });
+              doc.text("and keep moving forward!", 148.5, 172, { align: "center" });
+              
+              doc.setTextColor(186, 145, 48); // Gold
+              doc.setFont("times", "bolditalic");
+              doc.setFontSize(14);
+              doc.text("Well done!", 148.5, 180, { align: "center" });
+              
+              // Signatures
+              doc.setDrawColor(30, 30, 30);
+              doc.setLineWidth(0.5);
+              
+              // Coach Signature
+              doc.line(30, 195, 90, 195);
+              doc.setTextColor(30, 30, 30);
+              doc.setFont("times", "bold");
+              doc.setFontSize(11);
+              doc.text("C O A C H", 60, 202, { align: "center" });
+              
+              // Secretary Signature
+              doc.line(207, 195, 267, 195);
+              doc.text("S E C R E T A R Y", 237, 202, { align: "center" });
+              
+              // Optional: Add a simple gold medal shape at bottom center
+              doc.setFillColor(218, 165, 32); // Medallion gold
+              doc.circle(148.5, 195, 8, 'F');
+              doc.setFillColor(30, 144, 255); // Blue ribbon left
+              doc.triangle(148.5, 190, 142.5, 180, 146.5, 180, 'F');
+              doc.triangle(148.5, 190, 154.5, 180, 150.5, 180, 'F');
+          }
+          doc.save(`Certificates_${ev.title.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+          toast('Certificates downloaded successfully!', 'success');
+      } catch (err) { console.error(err); toast('Error generating certificates', 'error'); }
+  };
+
+  window.generateEventReportPDF = function() {
+      const id = window.currentManageEventId;
+      if (!id) return;
+      const e = eventsData.find(ev => String(ev.id) === String(id));
+      if (!e) return;
+      
+      try {
+          const doc = new window.jspdf.jsPDF();
+          doc.setFontSize(20); doc.text(`Event Report: ${e.title}`, 14, 20);
+          doc.setFontSize(12); doc.text(`Date: ${new Date(e.date || e.event_date).toLocaleDateString()}`, 14, 30);
+          
+          const regs = e.registrations_data || [];
+          const studentsBody = regs.map(r => {
+              const student = allStudents.find(s => s.id === r.student_id);
+              const name = student ? getStudentName(student) : (r.name || 'Unknown');
+              const level = student ? getStudentLevel(student) : '-';
+              return [name, level, r.payment_status || 'pending', r.attendance || 'absent', r.registration_status || 'confirmed'];
+          });
+          
+          doc.text('Registered Students', 14, 45);
+          doc.autoTable({ startY: 50, head: [['Name', 'Level', 'Payment', 'Attendance', 'Status']], body: studentsBody, theme: 'grid', headStyles: { fillColor: [212, 175, 55] } });
+          
+          const finalY = doc.lastAutoTable.finalY || 50;
+          const expResLocal = allExpenditures || [];
+          const eventExps = expResLocal.filter(ex => ex.description && ex.description.startsWith(e.title + ' -'));
+          
+          if (eventExps.length > 0) {
+              doc.text('Event Expenditures', 14, finalY + 15);
+              const expBody = eventExps.map(ex => [new Date(ex.date || ex.created_at).toLocaleDateString(), ex.description || 'Event Expense', `INR ${ex.amount}`]);
+              doc.autoTable({ startY: finalY + 20, head: [['Date', 'Description', 'Amount']], body: expBody, theme: 'grid', headStyles: { fillColor: [220, 53, 69] } });
+          }
+          
+          doc.save(`Event_Report_${e.title.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+          toast('PDF Exported!', 'success');
+      } catch (err) { console.error(err); toast('Error generating PDF', 'error'); }
+  };
+
+  window.exportEventWord = function() {
+      const id = window.currentManageEventId;
+      if (!id) return;
+      const e = eventsData.find(ev => String(ev.id) === String(id));
+      if (!e) return;
+      
+      const regs = e.registrations_data || [];
+      const expResLocal = allExpenditures || [];
+      const eventExps = expResLocal.filter(ex => ex.description && ex.description.startsWith(e.title + ' -'));
+      
+      let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>Event Report</title></head><body>`;
+      
+      html += `<h1>Event Report: ${escapeHtml(e.title)}</h1><p><strong>Date:</strong> ${new Date(e.date || e.event_date).toLocaleDateString()}</p>`;
+      html += `<h2>Registered Students</h2><table border="1" cellspacing="0" cellpadding="5" style="border-collapse:collapse;width:100%;">`;
+      html += `<tr style="background:#d4af37;color:#fff;"><th>Name</th><th>Level</th><th>Payment</th><th>Attendance</th><th>Status</th></tr>`;
+      
+      regs.forEach(r => {
+          const student = allStudents.find(s => s.id === r.student_id);
+          const name = student ? getStudentName(student) : (r.name || 'Unknown');
+          html += `<tr><td>${escapeHtml(name)}</td><td>${escapeHtml(student ? getStudentLevel(student) : '-')}</td><td>${r.payment_status || 'pending'}</td><td>${r.attendance || 'absent'}</td><td>${r.registration_status || 'confirmed'}</td></tr>`;
+      });
+      html += `</table>`;
+      
+      if (eventExps.length > 0) {
+          html += `<h2>Event Expenditures</h2><table border="1" cellspacing="0" cellpadding="5" style="border-collapse:collapse;width:100%;">`;
+          html += `<tr style="background:#dc3545;color:#fff;"><th>Date</th><th>Description</th><th>Amount</th></tr>`;
+          eventExps.forEach(ex => { html += `<tr><td>${new Date(ex.date || ex.created_at).toLocaleDateString()}</td><td>${escapeHtml(ex.description || 'Expense')}</td><td>${ex.amount}</td></tr>`; });
+          html += `</table>`;
+      }
+      html += `</body></html>`;
+      const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+      const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob);
+      a.download = `Event_Report_${e.title.replace(/[^a-z0-9]/gi, '_')}.doc`; a.click();
+      toast('Word Document Exported!', 'success');
   };
 
   function getEventType(e) { return e.type || e.event_type || 'Tournament'; }
@@ -4482,11 +4777,7 @@ function initUI() {
           notes: `[LM:${$('m-learning-mode')?.value || 'online'}]`
        };
 
-     if (!data.due_date) {
-       const nextMonth = new Date();
-       nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1, 5);
-       data.due_date = nextMonth.toISOString().split('T')[0];
-     }
+     // Due date is handled by the backend if not provided.
 
      if (!data.full_name) { toast('Student name is required', 'error'); return; }
      if (!rawPhone) { toast('Parent phone is required', 'error'); return; }
@@ -5055,18 +5346,44 @@ function openCoachModal(id = null) {
      gridEl.innerHTML = achievementsData.sort((a, b) => new Date(b.date_achieved || b.created_at) - new Date(a.date_achieved || a.created_at)).map(a => {
        const student = allStudents.find(s => String(s.id) === String(a.student_id));
        const studentName = student ? getStudentName(student) : 'Unknown Student';
+       
+       const bgImg = a.img_url ? a.img_url : 'https://i.ibb.co/R2W7kZY/placeholder-trophy.jpg';
+       
        return `
-         <div class="ach-card">
-           ${a.img_url ? `<img src="${a.img_url}" class="ach-img" alt="Achievement">` : '<div class="ach-img-placeholder">🏆</div>'}
-           <div class="ach-body">
-             <div class="ach-title">${escapeHtml(a.title)}</div>
-             <div class="ach-student">${escapeHtml(studentName)}</div>
-             <div class="ach-date">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
+         <div class="ach-card" style="position:relative; height: 360px; border-radius: 16px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.6); transition: transform 0.3s ease; border: 1px solid rgba(212, 175, 55, 0.3);">
+           <!-- Background Image -->
+           <div style="position:absolute; inset:0; background: url('${bgImg}') center/cover no-repeat; transition: transform 0.5s ease;" class="ach-poster-bg"></div>
+           
+           <!-- Gradient Overlay -->
+           <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.8) 60%, rgba(15, 23, 42, 0.95) 100%); display:flex; flex-direction:column; justify-content:flex-end; padding: 24px;">
+             
+             <!-- Content -->
+             <div style="text-transform: uppercase; font-size: 10px; letter-spacing: 2.5px; color: var(--gold); margin-bottom: 8px; font-weight: 800; display:flex; align-items:center; gap:6px;">
+               <span style="font-size:14px;">🏆</span> Achievement
+             </div>
+             
+             <div style="font-family: var(--font-head), 'Playfair Display', serif; font-size: 26px; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: 12px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+               ${escapeHtml(a.title)}
+             </div>
+             
+             <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top: 1px solid rgba(212, 175, 55, 0.3); padding-top: 14px; margin-top: 6px;">
+                <div>
+                  <div style="font-size:11px; color:var(--ivory-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Champion</div>
+                  <div style="font-size:18px; font-weight:bold; color: var(--gold);">${escapeHtml(studentName)}</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:10px; color:var(--ivory-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Date</div>
+                  <div style="font-size:14px; color: #fff; font-weight: 600;">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
+                </div>
+             </div>
            </div>
+
+           <!-- Action Buttons overlay (top right) -->
            ${isAdmin ? `
-             <div class="ach-actions">
-               <button class="btn btn-outline-grey btn-sm" onclick="editAchievement('${a.id}')">Edit</button>
-               <button class="btn btn-danger btn-sm" onclick="confirmDeleteAchievement('${a.id}', '${escapeHtml(a.title).replace(/'/g, "\\'")}')">Delete</button>
+             <div style="position: absolute; top: 12px; right: 12px; display:flex; gap: 8px; background: rgba(15, 23, 42, 0.75); padding: 6px 8px; border-radius: 10px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); z-index:10;">
+               <button onclick="editAchievement('${a.id}')" style="background:transparent; border:none; color:var(--gold); cursor:pointer; font-size:14px; padding:0 4px;" title="Edit">✏️</button>
+               <div style="width:1px; background:rgba(255,255,255,0.2); height:16px; align-self:center;"></div>
+               <button onclick="confirmDeleteAchievement('${a.id}', '${escapeHtml(a.title).replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:0 4px;" title="Delete">🗑️</button>
              </div>
            ` : ''}
          </div>
@@ -5372,11 +5689,7 @@ Best regards,
 
       // 1. Update Student Status & Roll Due Date
       const updates = { payment_status: 'Paid' };
-      if (s && s.due_date) {
-        const nextDate = new Date(s.due_date);
-        nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
-        updates.due_date = nextDate.toISOString().split('T')[0];
-      }
+      // Due date is now automatically rolled over by the backend when the payment is created.
 
       await apiCall(`${API_BASE}/students?id=${id}`, { method: 'PUT', body: JSON.stringify(updates) });
 
@@ -6084,12 +6397,7 @@ Best regards,
 
       // Update student status and advance due date - Fix #26
       const updates = { payment_status: 'Paid' };
-      if (s) {
-        const baseDate = s.due_date ? new Date(s.due_date) : new Date();
-        const nextDate = new Date(baseDate);
-        nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
-        updates.due_date = nextDate.toISOString().split('T')[0];
-      }
+      // Due date is now automatically rolled over by the backend when the payment is created.
 
       try {
         await apiCall(`${API_BASE}/students?id=${studentId}`, {
