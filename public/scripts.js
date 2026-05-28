@@ -4066,7 +4066,7 @@ function initUI() {
         const sid = String(p.student_id).toLowerCase();
         if (paidStudentIds.has(sid)) return sum; // Fuzzy deduplication: 1 payment per student per month
 
-        const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+        const s = targetStudents.find(x => String(x.id).toLowerCase() === sid);
         if (s) {
           if (getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
             paidStudentIds.add(sid);

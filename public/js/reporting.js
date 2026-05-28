@@ -69,7 +69,7 @@ window.generateReportPDF = async function() {
             const sid = String(p.student_id).toLowerCase();
             if (paidStudentIds.has(sid)) return sum;
 
-            const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+            const s = targetStudents.find(x => String(x.id).toLowerCase() === sid);
             if (s && getStudentStatus(s) !== 'archived' && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
                 paidStudentIds.add(sid);
                 return sum + getStudentMonthlyFee(s);
