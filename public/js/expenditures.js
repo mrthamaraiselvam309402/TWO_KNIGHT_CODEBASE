@@ -259,6 +259,8 @@
     const search = ((document.getElementById('exp-f-search') || {}).value || '').toLowerCase().trim();
 
     return allExpenditures.filter(e => {
+      // Filter out Event Expenses so they don't clutter global expenditures
+      if (e.type === 'Event Expense') return false;
       // 1. Must match current selected month filter (YYYY-MM)
       if (e.date && !e.date.startsWith(expFilterMonth)) return false;
 
@@ -565,6 +567,7 @@
       allExpenditures.forEach(e => {
         // Double safety check: Only summarize expenditures for the currently selected month
         if (e.date && !e.date.startsWith(expFilterMonth)) return;
+        if (e.type === 'Event Expense') return;
 
         const amt = parseFloat(e.amount || 0);
         totalExpense += amt;

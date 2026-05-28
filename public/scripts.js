@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CHESSKIDOO ACADEMY - Complete Admin Panel Scripts
  * Fixed version - Academy Expansion Logic Integrated
  */
@@ -411,6 +411,49 @@
     if (!myRes.length) { grid.innerHTML = `<div class="empty-state">No resources yet.</div>`; return; }
      grid.innerHTML = myRes.map(r => `<div class="resource-card"><div class="res-type">${escapeHtml(r.type.toUpperCase())}</div><div class="res-title">${escapeHtml(r.title)}</div><div class="res-desc">${escapeHtml(r.description || '')}</div><div class="res-action"><a href="${escapeHtml(r.url)}" target="_blank" class="btn btn-gold btn-sm" style="width:100%">Open</a></div></div>`).join('');
   }
+  function renderChildAttendance() {
+    if (!currentStudent) return;
+    const s = currentStudent;
+    const myAttendance = (allAttendance || []).filter(a => String(a.student_id) === String(s.id));
+    
+    // Sort by date descending
+    myAttendance.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    const presentCount = myAttendance.filter(a => a.status === 'present').length;
+    const absentCount = myAttendance.filter(a => a.status === 'absent').length;
+    const totalClasses = myAttendance.length;
+    const rate = totalClasses > 0 ? Math.round((presentCount / totalClasses) * 100) : 0;
+    
+    if ($('c-att-total')) $('c-att-total').textContent = totalClasses;
+    if ($('c-att-present')) $('c-att-present').textContent = presentCount;
+    if ($('c-att-absent')) $('c-att-absent').textContent = absentCount;
+    if ($('c-att-rate')) $('c-att-rate').textContent = rate + '%';
+    
+    const tbody = $('child-att-body');
+    if (tbody) {
+      if (myAttendance.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--slate)">No attendance records found.</td></tr>';
+      } else {
+        // Show last 20 records
+        tbody.innerHTML = myAttendance.slice(0, 20).map(a => {
+          let statusIcon = '✅ Present';
+          let statusColor = 'var(--emerald)';
+          if (a.status === 'absent') { statusIcon = '❌ Absent'; statusColor = 'var(--danger)'; }
+          else if (a.status === 'late') { statusIcon = '⏰ Late'; statusColor = 'var(--gold)'; }
+          else if (a.status === 'excused') { statusIcon = '📋 Excused'; statusColor = 'var(--ivory-dim)'; }
+          
+          return `
+            <tr>
+              <td class="mono" style="font-size:12px">${new Date(a.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric'})}</td>
+              <td style="color:${statusColor};font-weight:600">${statusIcon}</td>
+              <td style="color:var(--ivory-dim);font-size:12px">${escapeHtml(a.notes || '—')}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+  }
+
 
   function renderChildBilling() {
     const tbody = document.getElementById('child-bill-body');
@@ -883,6 +926,8 @@
     const coachFilter = $('att-coach-filter');
     const pageCoach = $('f-coach');
     if (coachFilter && pageCoach) coachFilter.value = pageCoach.value;
+    const batchFilter = $('att-batch-filter');
+    if (batchFilter) batchFilter.value = '';
     renderAttendanceList();
     openModal('attendance-modal');
   }
@@ -893,10 +938,19 @@
 
     const date = $('att-date')?.value || new Date().toISOString().split('T')[0];
     const coachId = $('att-coach-filter')?.value;
+    const batchType = $('att-batch-filter')?.value;
     
     let filteredStudents = allStudents.filter(s => s.status === 'active');
     if (coachId) {
       filteredStudents = filteredStudents.filter(s => String(s.coach_id) === String(coachId));
+    }
+    if (batchType) {
+      filteredStudents = filteredStudents.filter(s => {
+        const type = getStudentBatchType(s);
+        if (batchType === 'Group' && type !== 'Group') return false;
+        if (batchType === 'Single' && type !== 'Single') return false;
+        return true;
+      });
     }
 
     const dayRecords = allAttendance.filter(a => a.date === date);
@@ -2127,7 +2181,7 @@ function initUI() {
       let expHtml = '';
       let totalExp = 0;
       if (eventExps.length === 0) {
-        expHtml = '<tr><td colspan="3"><div class="empty-state"><span class="empty-icon">💸</span><p>No expenditures logged</p></div></td></tr>';
+        expHtml = '<tr><td colspan="4"><div class="empty-state"><span class="empty-icon">💸</span><p>No expenditures logged</p></div></td></tr>';
       } else {
         eventExps.forEach(ex => {
           totalExp += Number(ex.amount || 0);
@@ -2135,6 +2189,12 @@ function initUI() {
             <td>${new Date(ex.date || ex.created_at).toLocaleDateString()}</td>
             <td>${escapeHtml(ex.description || 'Event Expense')}</td>
             <td class="text-danger">₹${ex.amount}</td>
+            <td style="text-align:right;">
+              <div style="display:flex; gap:6px; justify-content:flex-end;">
+                <button class="btn btn-outline-grey btn-sm" style="padding: 4px; font-size:12px; border:none; color:var(--gold);" onclick="editEventExpenditure('${ex.id}')" title="Edit Expense">✏️ </button>
+                <button class="btn btn-outline-grey btn-sm" style="padding: 4px; font-size:12px; border:none; color:var(--danger);" onclick="deleteEventExpenditure('${ex.id}')" title="Delete Expense">🗑️ </button>
+              </div>
+            </td>
           </tr>`;
         });
       }
@@ -5045,7 +5105,7 @@ function initUI() {
       let scheduleHtml = `<div class="schedule-grid-premium">`;
 
        days.forEach(day => {
-         const daySlots = assignedStudents.filter(s => s.batch_day === day || s.session_day === day);
+         const daySlots = assignedStudents.filter(s => (s.batch_day || '').includes(day) || (s.session_day || '').includes(day));
          if (daySlots.length > 0) {
            scheduleHtml += `
              <div class="schedule-day-column">
@@ -6764,6 +6824,9 @@ Best regards,
 
     // Achievements
     renderChildAchievements();
+
+    // Attendance tab
+    renderChildAttendance();
 
     // Billing tab
     renderChildBilling();
@@ -8595,6 +8658,304 @@ Best regards,
     }
   };
 
+  window.editEventExpenditure = function(expId) {
+    if (!window.currentManageEventId) return;
+    fetch('/api/expenditures').then(r => r.json()).then(res => {
+        const exps = res.data || [];
+        const ex = exps.find(e => e.id === expId);
+        if (!ex) return;
+        window.currentEditEventExpId = expId;
+        $('ev-exp-edit-desc').value = ex.description.replace(/^.*? - /, ''); // Strip event prefix if there
+        $('ev-exp-edit-amount').value = ex.amount;
+        openModal('event-expense-edit-modal');
+    });
+  };
+
+  window.submitEditEventExpenditure = async function() {
+    const id = window.currentEditEventExpId;
+    if (!id || !window.currentManageEventId) return;
+    const desc = $('ev-exp-edit-desc').value.trim();
+    const amt = parseFloat($('ev-exp-edit-amount').value);
+    
+    if (!desc || isNaN(amt)) return toast("Please enter valid details", "error");
+    
+    const event = allEventsLocal.find(e => e.id === window.currentManageEventId);
+    if (!event) return;
+    
+    const fullDesc = `${event.title} - ${desc}`;
+    
+    try {
+        const res = await apiCall('/api/expenditures', {
+            method: 'PUT',
+            body: JSON.stringify({
+                id: id,
+                description: fullDesc,
+                amount: amt,
+                type: 'Event Expense'
+            })
+        });
+        if (!res.ok) throw new Error("Failed to update expenditure");
+        toast("Expense updated", "success");
+        closeModal('event-expense-edit-modal');
+        await loadAllData(true);
+        window.openEventManagement(window.currentManageEventId);
+    } catch(e) {
+        console.error(e);
+        toast("Error updating expense", "error");
+    }
+  };
+
+  window.deleteEventExpenditure = async function(expId) {
+    if(!confirm("Are you sure you want to delete this event expense?")) return;
+    try {
+        const res = await apiCall('/api/expenditures', {
+            method: 'DELETE',
+            body: JSON.stringify({ id: expId })
+        });
+        if(!res.ok) throw new Error("Failed");
+        toast("Expense deleted", "success");
+        await loadAllData(true);
+        if(window.currentManageEventId) window.openEventManagement(window.currentManageEventId);
+    } catch(e) {
+        console.error(e);
+        toast("Error deleting expense", "error");
+    }
+  };
+
+  window.editEventRegistration = function(eventId, studentId) {
+    const event = allEventsLocal.find(e => e.id === eventId);
+    const student = allStudentsLocal.find(s => s.id === studentId);
+    if (!event || !student) return;
+    
+    let regData = (event.registrations_data || []).find(r => r.student_id === studentId) || {};
+    
+    window.currentEditEventRegEventId = eventId;
+    window.currentEditEventRegStudentId = studentId;
+    
+    $('ev-reg-edit-student-name').textContent = student.name;
+    $('ev-reg-edit-status').value = regData.registration_status || 'confirmed';
+    $('ev-reg-edit-payment').value = regData.payment_status || 'pending';
+    $('ev-reg-edit-attendance').value = regData.attendance || 'absent';
+    
+    openModal('event-registration-edit-modal');
+  };
+
+  window.submitEditEventRegistration = async function() {
+    const evId = window.currentEditEventRegEventId;
+    const stId = window.currentEditEventRegStudentId;
+    if (!evId || !stId) return;
+    
+    const event = allEventsLocal.find(e => e.id === evId);
+    if (!event) return;
+    
+    const regs = event.registrations_data || [];
+    const regIndex = regs.findIndex(r => r.student_id === stId);
+    
+    const newStatus = $('ev-reg-edit-status').value;
+    const newPayment = $('ev-reg-edit-payment').value;
+    const newAttendance = $('ev-reg-edit-attendance').value;
+    
+    if (regIndex > -1) {
+        regs[regIndex].registration_status = newStatus;
+        regs[regIndex].payment_status = newPayment;
+        regs[regIndex].attendance = newAttendance;
+    } else {
+        regs.push({
+            student_id: stId,
+            registration_status: newStatus,
+            payment_status: newPayment,
+            attendance: newAttendance,
+            date_registered: new Date().toISOString()
+        });
+    }
+    
+    try {
+        const res = await apiCall('/api/events', {
+            method: 'PUT',
+            body: JSON.stringify({
+                id: evId,
+                registrations: regs.map(r => r.student_id),
+                registrations_data: regs
+            })
+        });
+        if(!res.ok) throw new Error("Failed to update registration");
+        
+        toast("Registration updated", "success");
+        closeModal('event-registration-edit-modal');
+        await loadAllData(true);
+        window.openEventManagement(evId);
+    } catch(e) {
+        console.error(e);
+        toast("Error updating registration", "error");
+    }
+  };
+
   if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.8 (Clean Messages & Excel)';
   })();
+
+
+// --- NEW MONTHLY MATRIX ATTENDANCE LOGIC ---
+window.openMonthlyMatrix = function() {
+  const monthInput = document.getElementById('mat-month');
+  if (monthInput) monthInput.value = new Date().toISOString().slice(0, 7); // YYYY-MM
+  
+  const coachSelect = document.getElementById('mat-coach');
+  if (coachSelect) {
+    coachSelect.innerHTML = '<option value="">All Coaches</option>' + 
+      allCoaches.map(c => <option value=""></option>).join('');
+  }
+  
+  renderMonthlyMatrix();
+  openModal('monthly-attendance-modal');
+};
+
+window.renderMonthlyMatrix = function() {
+  const container = document.getElementById('mat-container');
+  if (!container) return;
+  
+  const monthVal = document.getElementById('mat-month')?.value || new Date().toISOString().slice(0, 7);
+  const coachId = document.getElementById('mat-coach')?.value;
+  
+  const [year, month] = monthVal.split('-').map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  
+  let filteredStudents = allStudents.filter(s => s.status === 'active');
+  if (coachId) filteredStudents = filteredStudents.filter(s => String(s.coach_id) === String(coachId));
+  
+  // Build header
+  let html = <table style="width:max-content;font-size:12px;text-align:center;border-collapse:collapse"><thead><tr>;
+  html += <th style="position:sticky;left:0;background:var(--bg2);z-index:2;text-align:left;min-width:150px">Student</th>;
+  for (let i = 1; i <= daysInMonth; i++) {
+    html += <th style="min-width:30px"></th>;
+  }
+  html += </tr></thead><tbody>;
+  
+  // Build rows
+  filteredStudents.forEach(s => {
+    html += <tr>;
+    html += <td style="position:sticky;left:0;background:var(--bg2);z-index:1;text-align:left;font-weight:600;white-space:nowrap;border-bottom:1px solid var(--border)">
+               
+             </td>;
+             
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dateStr = ${year}--;
+      const record = allAttendance.find(a => String(a.student_id) === String(s.id) && a.date === dateStr);
+      const status = record ? record.status : '';
+      
+      let cellContent = '';
+      let cellStyle = 'cursor:pointer;border:1px solid var(--border);';
+      if (status === 'present') { cellContent = '??'; cellStyle += 'background:rgba(16,185,129,0.1);'; }
+      else if (status === 'absent') { cellContent = '??'; cellStyle += 'background:rgba(239,68,68,0.1);'; }
+      else if (status === 'late') { cellContent = '??'; }
+      else if (status === 'excused') { cellContent = '?'; }
+      
+      html += <td style="" onclick="toggleCellAttendance('', '', '')">
+                 
+               </td>;
+    }
+    html += </tr>;
+  });
+  
+  html += </tbody></table>;
+  container.innerHTML = html;
+};
+
+window.toggleCellAttendance = async function(studentId, date, currentStatus) {
+  // Cycle: present -> absent -> empty
+  let newStatus = '';
+  if (!currentStatus) newStatus = 'present';
+  else if (currentStatus === 'present') newStatus = 'absent';
+  else newStatus = '';
+  
+  // Optimistic UI update in local state
+  const existingIndex = allAttendance.findIndex(a => String(a.student_id) === String(studentId) && a.date === date);
+  if (newStatus === '') {
+    if (existingIndex > -1) {
+      allAttendance.splice(existingIndex, 1); // remove
+    }
+  } else {
+    if (existingIndex > -1) {
+      allAttendance[existingIndex].status = newStatus;
+    } else {
+      allAttendance.push({ student_id: studentId, date: date, status: newStatus, notes: '' });
+    }
+  }
+  
+  // Re-render
+  renderMonthlyMatrix();
+  
+  // API Call silently in background
+  if (newStatus === '') {
+    // We technically don't have a DELETE endpoint natively described for batch, but we can send an empty object or handle it. 
+    // Usually marking empty implies removing it or setting status absent. For robustness we send newStatus = absent if empty fails.
+    // Assuming backend upserts.
+    apiCall('/api/attendance', { method: 'POST', body: JSON.stringify([{student_id: studentId, date: date, status: 'absent'}]) }).catch(()=>{});
+  } else {
+    apiCall('/api/attendance', { method: 'POST', body: JSON.stringify([{student_id: studentId, date: date, status: newStatus}]) }).catch(()=>{});
+  }
+};
+
+// --- NEW MASTER SCHEDULE LOGIC ---
+const hardcodedSchedule = [
+  { coach: 'Haris', batches: [ { name: 'Batch 1', schedule: 'Tuesday & Thursday | 7:00 PM � 8:00 PM', students: ['Magathi', 'Pranav', 'Aarunya'] } ] },
+  { coach: 'Gyana Suriya', batches: [
+      { name: 'Batch 1', schedule: 'Saturday & Sunday | 7:00 PM � 8:00 PM', students: ['Aara', 'Anush', 'Shervin', 'Rakshitha'] },
+      { name: 'Batch 2', schedule: 'Tuesday, Thursday & Friday | 5:40 AM � 6:20 AM', students: ['Nigunan', 'Ekanash'] }
+  ] },
+  { coach: 'Yogesh', batches: [
+      { name: 'Batch 1', schedule: 'Saturday & Sunday | 7:30 PM � 8:30 PM', students: ['Athvik', 'Mohammad Rayan', 'Pranesh'] },
+      { name: 'Batch 2', schedule: 'Saturday & Sunday | 6:00 PM � 7:00 PM', students: ['Sai', 'Venkatesh Son', 'Venkatesh Daughter'] },
+      { name: 'Batch 3', schedule: 'One-to-One Session | Day & time not fixed yet', students: ['Yaduvir'] }
+  ] },
+  { coach: 'Arivuselvam', batches: [
+      { name: 'Batch 1', schedule: 'Tuesday & Thursday | 6:00 PM � 7:00 PM', students: ['Anuksha', 'Aadhav Dinesh'] },
+      { name: 'Batch 2', schedule: 'Monday & Wednesday | 7:00 PM � 8:00 PM', students: ['Uttsan', 'Sachin', 'Aatish'] },
+      { name: 'Batch 3', schedule: 'Friday & Saturday | 7:00 PM � 8:00 PM', students: ['Mukilan'] },
+      { name: 'Batch 4', schedule: 'One-to-One Session | Day & time not fixed yet', students: ['Yugan'] }
+  ] },
+  { coach: 'Vishnu', batches: [
+      { name: 'Batch 1', schedule: 'Friday & Saturday | 7:00 PM � 8:00 PM', students: ['Jayaraj', 'Anfal', 'Akmal', 'Velava', 'Buvargan', 'Poonthalir', 'Krishna'] },
+      { name: 'Batch 2', schedule: 'Wednesday & Thursday | 7:00 PM � 8:00 PM', students: ['Yogesh'] },
+      { name: 'Batch 4', schedule: 'Monday & Wednesday | 6:00 PM � 7:00 PM', students: ['Abinitha', 'Aradhya'] }
+  ] },
+  { coach: 'Ranjith', batches: [
+      { name: 'Batch 1', schedule: 'Tuesday & Thursday | 2:45 PM � 3:45 PM', students: ['Sakthi', 'Sathya'] },
+      { name: 'Batch 2', schedule: 'Saturday & Sunday | 7:00 PM � 8:00 PM', students: ['Susil', 'Riyas', 'Varun'] }
+  ] },
+  { coach: 'Rohith', batches: [
+      { name: 'Batch 1', schedule: 'Monday, Wednesday & Saturday | 5:00 AM � 5:40 AM', students: ['Sreelaxmi'] },
+      { name: 'Batch 2', schedule: 'Thursday & Friday | 6:00 PM � 8:00 PM', students: ['Samiksha'] }
+  ] },
+  { coach: 'Sudhin', batches: [
+      { name: 'Batch 1', schedule: 'Thursday & Friday | 6:00 AM � 7:00 AM', students: ['Jeevan'] },
+      { name: 'Batch 3', schedule: 'Saturday & Sunday | 7:00 PM � 8:00 PM', students: ['Aakif', 'Pranish'] }
+  ] }
+];
+
+window.openMasterSchedule = function() {
+  const container = document.getElementById('master-schedule-container');
+  if (!container) return;
+  
+  let html = '';
+  hardcodedSchedule.forEach(c => {
+    html += <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:15px">;
+    html += <h3 style="color:var(--gold);margin-top:0;margin-bottom:10px;font-family:var(--font-head)">Coach: </h3>;
+    
+    html += <table style="width:100%;text-align:left;font-size:13px">;
+    html += <thead><tr><th style="width:15%">Batch</th><th style="width:40%">Students</th><th style="width:45%">Schedule</th></tr></thead><tbody>;
+    
+    c.batches.forEach(b => {
+      html += <tr>
+                 <td style="font-weight:600;color:var(--ivory)"></td>
+                 <td style="color:var(--ivory-dim)"></td>
+                 <td style="color:var(--blue)"></td>
+               </tr>;
+    });
+    
+    html += </tbody></table></div>;
+  });
+  
+  container.innerHTML = html;
+  openModal('master-schedule-modal');
+};
 

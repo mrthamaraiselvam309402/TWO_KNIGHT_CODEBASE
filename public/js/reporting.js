@@ -106,7 +106,21 @@ window.generateReportPDF = async function() {
     const pending = Math.max(0, potential - collected);
     currPendingAmount = pending; // Synchronize with actual uncollected balance for 100% mathematical consistency
     const payroll = allCoaches.filter(c => c.status !== 'archived').reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
-    const netProfit = collected - payroll;
+    
+    // Fetch real-time expenditures for the reporting month
+    const monthStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
+    let totalExp = 0;
+    try {
+        const res = await (window.apiCall || fetch)(`/api/expenditures?mode=summary&month=${monthStr}`);
+        if (res.ok) {
+            const summary = await res.json();
+            totalExp = parseFloat(summary.total_expense || 0);
+        }
+    } catch (e) {
+        console.error("Failed to fetch expenditures for report", e);
+    }
+    
+    const netProfit = collected - payroll - totalExp;
     
     // Simple Executive Metrics
     const arpu = activeStudents > 0 ? (collected / activeStudents).toFixed(0) : 0;
@@ -406,7 +420,7 @@ window.generateReportPDF = async function() {
       </div>
       <div class="data-story">
         <p><strong>Fees Reconciliation Summary:</strong> Total expected fees for ${dateStr} is <span class="bold">₹${potential.toLocaleString()}</span>. Verified collections totaled <span class="bold">₹${collected.toLocaleString()}</span> across ${monthlyPayments.length} transactions.</p>
-        <p>Operating profit margin for this period is <span class="bold">${opMargin}%</span>. Total Coaches salary overhead is capped at <span class="bold">₹${payroll.toLocaleString()}</span>.</p>
+        <p>Operating profit margin for this period is <span class="bold">${opMargin}%</span>. Total Coaches salary overhead is <span class="bold">₹${payroll.toLocaleString()}</span> and Total Academy Expenditures are <span class="bold">₹${totalExp.toLocaleString()}</span>, yielding a net profit of <span class="bold">₹${netProfit.toLocaleString()}</span>.</p>
         <div class="strategic-insight">
           Audit Note: System confirms ${newStudsThisMonth} new student registrations. Average Academy ELO has reached <span class="bold">${avgElo}</span>. Total outstanding (Last Due + Current) stands at <span class="bold">₹${(lastDueAmount + currPendingAmount).toLocaleString()}</span>.
         </div>

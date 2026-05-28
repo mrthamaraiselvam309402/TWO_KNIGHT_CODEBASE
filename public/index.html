@@ -350,6 +350,7 @@
         <!-- Parent Portal Tabs -->
         <div class="tabs-nav">
           <button class="tab-link active" onclick="setChildTab('overview', this)">Overview</button>
+          <button class="tab-link" onclick="setChildTab('attendance', this)">Attendance</button>
           <button class="tab-link" onclick="setChildTab('growth', this)">Growth</button>
           <button class="tab-link" onclick="setChildTab('learning', this)">Resources</button>
           <button class="tab-link" onclick="setChildTab('events', this)">Events</button>
@@ -512,6 +513,45 @@
                 </tr>
               </thead>
               <tbody id="child-bill-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="child-tab-attendance" class="child-tab-content">
+          <div class="dash-grid" style="margin-bottom: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div class="card" style="border-left: 4px solid var(--blue); background: linear-gradient(145deg, var(--bg2), rgba(59, 130, 246, 0.04));">
+              <div class="stat-label">Total Classes</div>
+              <div class="stat-value" id="c-att-total" style="color:var(--blue)">0</div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--emerald); background: linear-gradient(145deg, var(--bg2), rgba(16, 185, 129, 0.04));">
+              <div class="stat-label">Present</div>
+              <div class="stat-value text-success" id="c-att-present">0</div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--danger); background: linear-gradient(145deg, var(--bg2), rgba(239, 68, 68, 0.04));">
+              <div class="stat-label">Absent</div>
+              <div class="stat-value text-danger" id="c-att-absent">0</div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--gold); background: linear-gradient(145deg, var(--bg2), rgba(218, 163, 62, 0.04));">
+              <div class="stat-label">Attendance Rate</div>
+              <div class="stat-value" id="c-att-rate" style="color:var(--gold)">0%</div>
+            </div>
+          </div>
+          
+          <h2 style="font-family:var(--font-head);margin-bottom:18px;font-size:22px;color:var(--gold);display:flex;align-items:center;gap:10px;">
+            <span style="font-size:24px">📅</span> Attendance History
+          </h2>
+          <div class="table-wrap" style="box-shadow: var(--shadow); border-radius: 10px; overflow: hidden; border: 1px solid var(--border);">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="child-att-body">
+                <!-- Populated by JS -->
+              </tbody>
             </table>
           </div>
         </div>
@@ -1332,11 +1372,17 @@
   <div class="modal-box" style="max-width:700px">
     <div class="modal-title">📅 Mark Attendance</div>
     <div class="modal-sub">
-      <span style="margin-right:12px">Session Date:</span>
+      <span style="margin-right:8px">Date:</span>
       <input type="date" id="att-date" style="display:inline;width:auto;padding:6px 10px" onchange="renderAttendanceList()">
-      <span style="margin:0 12px">Coach:</span>
+      <span style="margin:0 8px">Coach:</span>
       <select id="att-coach-filter" style="display:inline;width:auto;padding:6px 10px" onchange="renderAttendanceList()">
         <option value="">All Coaches</option>
+      </select>
+      <span style="margin:0 8px">Batch:</span>
+      <select id="att-batch-filter" style="display:inline;width:auto;padding:6px 10px" onchange="renderAttendanceList()">
+        <option value="">All Batches</option>
+        <option value="Group">Group Session</option>
+        <option value="Single">1-on-1 Session</option>
       </select>
     </div>
     
@@ -1718,6 +1764,59 @@
   </div>
 </div>
 
+<!-- Event Expense Edit Modal -->
+<div class="modal" id="event-expense-edit-modal">
+  <div class="modal-box">
+    <div class="modal-title">Edit Event Expense</div>
+    <div style="margin-bottom:12px">
+      <label>Description</label>
+      <input type="text" id="ev-exp-edit-desc" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);color:var(--ivory);border-radius:4px">
+    </div>
+    <div style="margin-bottom:12px">
+      <label>Amount (₹)</label>
+      <input type="number" id="ev-exp-edit-amount" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);color:var(--ivory);border-radius:4px">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal('event-expense-edit-modal')">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="submitEditEventExpenditure()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Event Registration Edit Modal -->
+<div class="modal" id="event-registration-edit-modal">
+  <div class="modal-box">
+    <div class="modal-title">Edit Registration</div>
+    <div class="modal-sub" id="ev-reg-edit-student-name" style="margin-bottom:16px;color:var(--ivory)"></div>
+    
+    <div style="margin-bottom:12px">
+      <label>Registration Status</label>
+      <select id="ev-reg-edit-status" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);color:var(--ivory);border-radius:4px">
+        <option value="confirmed">Confirmed</option>
+        <option value="waitlisted">Waitlisted</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px">
+      <label>Payment Status</label>
+      <select id="ev-reg-edit-payment" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);color:var(--ivory);border-radius:4px">
+        <option value="pending">Pending</option>
+        <option value="paid">Paid</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px">
+      <label>Attendance</label>
+      <select id="ev-reg-edit-attendance" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);color:var(--ivory);border-radius:4px">
+        <option value="absent">Absent</option>
+        <option value="present">Present</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal('event-registration-edit-modal')">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="submitEditEventRegistration()">Update Registration</button>
+    </div>
+  </div>
+</div>
+
 <!-- Inform Parent Modal -->
 <div class="modal" id="inform-modal">
   <div class="modal-box" style="max-width:520px">
@@ -1902,3 +2001,43 @@
       <script src="js/automation.js?v=3.9&t=20260529" charset="utf-8"></script>
  </body>
 </html>
+<!-- Monthly Attendance Modal -->
+<div class="modal" id="monthly-attendance-modal">
+  <div class="modal-box" style="max-width:900px; width:95%">
+    <div class="modal-title">?? Monthly Attendance Matrix</div>
+    <div class="modal-sub" style="display:flex;gap:15px;align-items:center;flex-wrap:wrap;margin-bottom:15px">
+      <div>
+        <span style="margin-right:8px">Month:</span>
+        <input type="month" id="mat-month" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--ivory)" onchange="renderMonthlyMatrix()">
+      </div>
+      <div>
+        <span style="margin-right:8px">Coach:</span>
+        <select id="mat-coach" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--ivory)" onchange="renderMonthlyMatrix()">
+          <option value="">Select Coach...</option>
+        </select>
+      </div>
+      <div style="margin-left:auto;font-size:12px;color:var(--ivory-dim)">
+        Tip: Click a cell to instantly toggle ?? Present, ?? Absent, ? Clear.
+      </div>
+    </div>
+    <div class="table-wrap" id="mat-container" style="max-height:500px;overflow:auto;border:1px solid var(--border);border-radius:8px">
+      <!-- Grid rendered by JS -->
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:15px">
+      <button class="btn btn-outline" onclick="closeModals()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Master Schedule Modal -->
+<div class="modal" id="master-schedule-modal">
+  <div class="modal-box" style="max-width:800px; width:95%">
+    <div class="modal-title">?? Coach Master Schedule</div>
+    <div style="max-height:500px;overflow-y:auto;padding-right:10px" id="master-schedule-container">
+      <!-- Populated by JS -->
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:15px">
+      <button class="btn btn-outline" onclick="closeModals()">Close</button>
+    </div>
+  </div>
+</div>

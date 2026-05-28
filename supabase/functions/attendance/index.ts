@@ -131,10 +131,27 @@ Deno.serve(async (req) => {
         })
       }
       
+      const studentIds = [...new Set(records.map(r => r.student_id))]
+      const dates = [...new Set(records.map(r => r.date))]
+      
+      const { data: existing } = await supabase
+        .from('attendance')
+        .select('id, student_id, date')
+        .in('student_id', studentIds)
+        .in('date', dates)
+        
+      const recordsToUpsert = records.map(r => {
+        const found = existing?.find(e => String(e.student_id) === String(r.student_id) && e.date === r.date)
+        if (found) {
+          r.id = found.id
+        }
+        return r
+      })
+
       // Upsert records
       const { data: upserted, error: upsertError } = await supabase
         .from('attendance')
-        .upsert(records, { onConflict: ['student_id', 'date'] })
+        .upsert(recordsToUpsert)
         .select()
       
       if (upsertError) {
