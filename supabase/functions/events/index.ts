@@ -114,13 +114,14 @@ Deno.serve(async (req) => {
         const isWaitlisted = registeredCount >= maxParts;
         const regStatus = isWaitlisted ? 'waitlisted' : 'confirmed';
         
-        // Insert into relational table (ignoring status if not exist yet, we will use JSONB for status mostly for now)
+        // Insert into relational table
         await supabase.from('event_registrations').insert({
           event_id: currentEvent.id,
           student_id: studentId,
           student_name: studentName,
           payment_status: 'pending',
-          attendance: 'absent'
+          attendance: 'absent',
+          status: regStatus
         }).select().single().catch(()=>null);
         
         // For backwards compatibility, we also update JSONB
@@ -213,7 +214,7 @@ Deno.serve(async (req) => {
                 waitlistedStudent.registration_status = 'confirmed';
                 
                 // Promote them in the relational table
-                await supabase.from('event_registrations').update({ registration_status: 'confirmed' })
+                await supabase.from('event_registrations').update({ status: 'confirmed' })
                   .match({ event_id: eventId, student_id: waitlistedStudent.student_id });
 
                 promotedStudentName = waitlistedStudent.name;
