@@ -2134,8 +2134,8 @@ function initUI() {
       if (!res.ok) throw new Error('Failed');
       toast('Expenditure added!', 'success');
       closeModal('event-expenditure-modal');
-      loadAllData(true);
-      setTimeout(() => window.openEventManagement(eventId), 500);
+      await loadAllData(true);
+      window.openEventManagement(eventId);
     } catch(err) {
       toast('Error adding expenditure', 'error');
     }
@@ -2174,9 +2174,9 @@ function initUI() {
       });
 
       toast('Payment recorded successfully!', 'success');
-      loadAllData(true);
+      await loadAllData(true);
       // Refresh modal
-      setTimeout(() => window.openEventManagement(eventId), 500);
+      window.openEventManagement(eventId);
     } catch (err) {
       toast('Error recording payment', 'error');
     }
@@ -2200,8 +2200,8 @@ function initUI() {
       });
       if (!res.ok) throw new Error('Failed');
       toast('Student registered successfully!', 'success');
-      loadAllData(true);
-      setTimeout(() => window.openEventManagement(eventId), 500);
+      await loadAllData(true);
+      window.openEventManagement(eventId);
     } catch(err) {
       toast('Error registering student', 'error');
     }
@@ -2260,8 +2260,8 @@ function initUI() {
       
       toast('External student successfully registered!', 'success');
       closeModal('external-student-modal');
-      loadAllData(true);
-      setTimeout(() => window.openEventManagement(eventId), 500);
+      await loadAllData(true);
+      window.openEventManagement(eventId);
       
     } catch(err) {
       console.error(err);
