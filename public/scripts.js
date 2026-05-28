@@ -2054,17 +2054,27 @@ function initUI() {
             const name = student ? getStudentName(student) : 'Unknown';
             const level = student ? getStudentLevel(student) : '-';
             
-            // check payment
+            let regData = (e.registrations_data || []).find(r => r.student_id === sid) || {};
             const payment = allPaymentsLocal.find(p => p.student_id === sid && (p.description === eventDescString || (p.details && p.details.event_id === id)));
-            const isPaid = !!payment;
+            const isPaid = (regData.payment_status === 'paid' || !!payment);
+            const currentAttendance = regData.attendance || 'absent';
+            
             if (isPaid) collectedRev += (e.fee || 0);
             
             html += `<tr>
               <td>${escapeHtml(name)}</td>
               <td>${escapeHtml(level)}</td>
-              <td>${isPaid ? '<span class="badge badge-success">Paid</span>' : '<span class="badge badge-warning">Pending</span>'}</td>
               <td>
-                 ${!isPaid && (e.fee || 0) > 0 ? `<button class="btn btn-gold btn-sm" onclick="markEventPaid('${id}', '${sid}')">Mark Paid</button>` : '-'}
+                <select style="padding:4px 8px; font-size:11px; width:90px; background:var(--bg3); color:var(--ivory); border:1px solid var(--border); border-radius:4px;" onchange="updateEventRegistration('${id}', '${sid}', 'payment_status', this.value)">
+                  <option value="pending" ${!isPaid ? 'selected' : ''}>Pending</option>
+                  <option value="paid" ${isPaid ? 'selected' : ''}>Paid</option>
+                </select>
+              </td>
+              <td>
+                <select style="padding:4px 8px; font-size:11px; width:90px; background:var(--bg3); color:var(--ivory); border:1px solid var(--border); border-radius:4px;" onchange="updateEventRegistration('${id}', '${sid}', 'attendance', this.value)">
+                  <option value="absent" ${currentAttendance === 'absent' ? 'selected' : ''}>Absent</option>
+                  <option value="present" ${currentAttendance === 'present' ? 'selected' : ''}>Present</option>
+                </select>
               </td>
             </tr>`;
          });
@@ -2205,6 +2215,48 @@ function initUI() {
       window.openEventManagement(eventId);
     } catch(err) {
       toast('Error registering student', 'error');
+    }
+  };
+
+  window.updateEventRegistration = async function(eventId, studentId, field, value) {
+    try {
+      const payload = {
+        action: 'update_registration',
+        event_id: eventId,
+        student_id: studentId
+      };
+      payload[field] = value;
+      
+      const res = await apiCall('/api/events', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) throw new Error('Failed to update');
+      
+      if (field === 'payment_status' && value === 'paid') {
+        const e = eventsData.find(x => String(x.id) === String(eventId));
+        if (e && (e.fee || 0) > 0) {
+          await apiCall('/api/payments', {
+             method: 'POST',
+             body: JSON.stringify({
+               id: generateClientId(),
+               student_id: studentId,
+               amount: e.fee || 0,
+               status: 'paid',
+               payment_date: new Date().toISOString().split('T')[0],
+               description: `Event: ${e.title}`,
+               details: { event_id: eventId, type: 'event_fee' }
+             })
+          });
+        }
+      }
+      
+      toast('Updated successfully!', 'success');
+      await loadAllData(true);
+      window.openEventManagement(eventId);
+    } catch(err) {
+      toast('Error updating', 'error');
     }
   };
 
