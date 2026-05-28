@@ -19,6 +19,7 @@
    <script src="lib/html5-qrcode.min.js"></script>
    <script src="lib/jspdf.umd.min.js"></script>
    <script src="lib/jspdf.plugin.autotable.min.js"></script>
+   <script src="lib/qrious.min.js"></script>
 
    <!-- Security Hardening - Fully offline-first, only Supabase external -->
    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.supabase.co https://i.ibb.co https://*.ibb.co https://api.imgbb.com https://flagcdn.com https://*.flagcdn.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.imgbb.com;"/>
@@ -634,13 +635,13 @@
             <div id="ev-manage-subtitle" style="color:var(--ivory-dim); font-size:12px; font-weight:600; letter-spacing:0.5px;">—</div>
           </div>
           <div style="display:flex; gap:12px; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
-            <button class="btn btn-gold" onclick="openQrPosterModal()" style="font-size:12px; border-radius:8px; background:var(--gold); border-color:var(--gold); flex: 1 1 auto; justify-content:center;">🎨 QR Poster</button>
-            <button class="btn btn-gold" onclick="openScannerModal()" style="font-size:12px; border-radius:8px; background:var(--success); border-color:var(--success);">📷 Scan QR</button>
-            <button class="btn btn-gold" onclick="generateEventTickets()" style="font-size:12px; border-radius:8px; background:var(--bg3); flex: 1 1 auto; justify-content:center;">🎟️ Tickets</button>
+            <button class="btn btn-gold" onclick="generateEventTickets()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">🎟️ Tickets</button>
             <button class="btn btn-gold" onclick="generateEventCertificates()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">🎓 Certificates</button>
-            <button class="btn btn-gold" onclick="generateEventReportPDF()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">📄 Report</button>
-            <button class="btn btn-gold" onclick="exportEventWord()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">📝 Word</button>
-            <button onclick="exportEventCSV()" style="font-size:12px; background:transparent; border:1px solid var(--gold); color:var(--gold); padding:8px 16px; border-radius:8px; cursor:pointer; transition:0.2s; flex: 1 1 auto; text-align:center;">📥 CSV</button>
+            <button class="btn" onclick="openScannerModal()" style="font-size:12px; border-radius:8px; background:var(--success); border:1px solid var(--success); color:#fff; flex: 1 1 auto; justify-content:center;">📷 Scan QR</button>
+            <button class="btn btn-outline" onclick="openQrPosterModal()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">🎨 QR Poster</button>
+            <button class="btn btn-outline" onclick="generateEventReportPDF()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">📄 Report</button>
+            <button class="btn btn-outline" onclick="exportEventWord()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">📝 Word</button>
+            <button class="btn btn-outline" onclick="exportEventCSV()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">📥 CSV</button>
           </div>
         </div>
         

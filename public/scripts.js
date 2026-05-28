@@ -2665,9 +2665,13 @@ function initUI() {
               const qrY = 175;
               
               try {
-                  const qrImage = new Image();
-                  qrImage.crossOrigin = 'Anonymous';
-                  qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize * 3}x${qrSize * 3}&data=${encodeURIComponent(r.student_id)}&margin=0`;
+                  const qr = new window.QRious({
+                      value: String(r.student_id),
+                      size: 250,
+                      level: 'M'
+                  });
+                  const qrImage = new window.Image();
+                  qrImage.src = qr.toDataURL('image/png');
                   
                   await new Promise((resolve, reject) => {
                       qrImage.onload = resolve;
@@ -8491,7 +8495,7 @@ Best regards,
     $('qr-poster-placeholder').innerHTML = '<span class="spinner"></span> Loading preview...';
     
     const file = fileInput.files[0];
-    const bgImage = new Image();
+    const bgImage = new window.Image();
     bgImage.src = URL.createObjectURL(file);
     
     bgImage.onload = async () => {
@@ -8506,9 +8510,14 @@ Best regards,
             const qrSize = Math.max(150, Math.min(bgImage.width, bgImage.height) * 0.2); // 20% of min dimension
             
             try {
-                const qrImage = new Image();
-                qrImage.crossOrigin = 'Anonymous';
-                qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=${Math.round(qrSize)}x${Math.round(qrSize)}&data=${encodeURIComponent(link)}&margin=10`;
+                const qr = new window.QRious({
+                    value: link,
+                    size: Math.round(qrSize),
+                    level: 'H',
+                    padding: 10
+                });
+                const qrImage = new window.Image();
+                qrImage.src = qr.toDataURL('image/png');
                 
                 await new Promise((resolve, reject) => {
                     qrImage.onload = resolve;
@@ -8576,10 +8585,9 @@ Best regards,
         const uploadedUrl = await uploadToImgbb(blob);
         
         // 2. Save to Events DB
-        const res = await apiCall('/api/events', {
+        const res = await apiCall(`/api/events?id=${eventId}`, {
             method: 'PUT',
             body: JSON.stringify({
-                id: eventId,
                 qr_poster_url: uploadedUrl
             })
         });
