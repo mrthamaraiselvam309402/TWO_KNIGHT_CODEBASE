@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CHESSKIDOO ACADEMY - Complete Admin Panel Scripts
  * Fixed version - Academy Expansion Logic Integrated
  */
