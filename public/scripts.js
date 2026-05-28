@@ -2575,6 +2575,120 @@ function initUI() {
       } catch (err) { console.error(err); toast('Error generating certificates', 'error'); }
   };
 
+  window.generateEventTickets = async function() {
+      const eventId = window.currentManageEventId;
+      if (!eventId) return;
+      const ev = eventsData.find(e => String(e.id) === String(eventId));
+      if (!ev) return;
+      
+      const regs = ev.registrations_data || [];
+      const attendees = regs.filter(r => r.registration_status !== 'waitlisted');
+      if (attendees.length === 0) return toast('No confirmed attendees found!', 'warning');
+      
+      toast('Generating VIP Tickets... Please wait.', 'info');
+      try {
+          // Standard portrait A4: 210 x 297 mm
+          const doc = new window.jspdf.jsPDF({ orientation: "portrait" });
+          
+          for (let i = 0; i < attendees.length; i++) {
+              const r = attendees[i];
+              const student = allStudents.find(s => s.id === r.student_id);
+              const name = student ? getStudentName(student) : r.name;
+              const level = student ? getStudentLevel(student) : 'General';
+              
+              if (i > 0) doc.addPage();
+              
+              // 1. Dark Background
+              doc.setFillColor(15, 18, 25);
+              doc.rect(0, 0, 210, 297, 'F');
+              
+              // 2. Gold Border
+              doc.setDrawColor(186, 145, 48); // Gold
+              doc.setLineWidth(1.5);
+              doc.rect(15, 15, 180, 267, 'S');
+              doc.setLineWidth(0.5);
+              doc.rect(17, 17, 176, 263, 'S');
+              
+              // 3. VIP HEADER
+              doc.setTextColor(186, 145, 48);
+              doc.setFontSize(28);
+              doc.setFont("times", "bold");
+              doc.text("V I P   A C C E S S", 105, 40, { align: "center" });
+              
+              doc.setDrawColor(186, 145, 48);
+              doc.line(50, 48, 160, 48);
+              
+              // 4. EVENT DETAILS
+              doc.setTextColor(255, 255, 255);
+              doc.setFontSize(36);
+              doc.text(ev.title.toUpperCase(), 105, 75, { align: "center" });
+              
+              const dt = new Date(ev.date || ev.event_date).toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'});
+              const time = ev.time || ev.event_time || '10:00 AM';
+              
+              doc.setFontSize(14);
+              doc.setTextColor(200, 200, 200);
+              doc.setFont("helvetica", "normal");
+              doc.text(`${dt}  •  ${time}`, 105, 95, { align: "center" });
+              
+              // 5. STUDENT BLOCK
+              doc.setFillColor(25, 30, 40);
+              doc.rect(30, 115, 150, 40, 'F');
+              
+              doc.setTextColor(186, 145, 48);
+              doc.setFontSize(10);
+              doc.text("TICKET HOLDER", 105, 125, { align: "center" });
+              
+              doc.setTextColor(255, 255, 255);
+              doc.setFontSize(24);
+              doc.setFont("times", "bolditalic");
+              doc.text(name, 105, 138, { align: "center" });
+              
+              doc.setTextColor(150, 150, 150);
+              doc.setFontSize(12);
+              doc.setFont("helvetica", "normal");
+              doc.text(`ID: ${r.student_id}`, 105, 148, { align: "center" });
+              
+              // 6. QR CODE
+              const qrSize = 70;
+              const qrX = 105 - (qrSize/2);
+              const qrY = 175;
+              
+              try {
+                  const qrImage = new Image();
+                  qrImage.crossOrigin = 'Anonymous';
+                  qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize * 3}x${qrSize * 3}&data=${encodeURIComponent(r.student_id)}&margin=0`;
+                  
+                  await new Promise((resolve, reject) => {
+                      qrImage.onload = resolve;
+                      qrImage.onerror = reject;
+                  });
+                  
+                  // White box for QR code (for scanner visibility)
+                  doc.setFillColor(255, 255, 255);
+                  doc.rect(qrX - 5, qrY - 5, qrSize + 10, qrSize + 10, 'F');
+                  doc.addImage(qrImage, 'PNG', qrX, qrY, qrSize, qrSize);
+              } catch (e) {
+                  console.error("QR Code Error:", e);
+                  doc.setTextColor(255, 0, 0);
+                  doc.text("QR Load Failed", 105, qrY + (qrSize/2), { align: "center" });
+              }
+              
+              // 7. FOOTER
+              doc.setTextColor(186, 145, 48);
+              doc.setFontSize(14);
+              doc.setFont("times", "bold");
+              doc.text("PLEASE PRESENT THIS TICKET AT THE ENTRANCE", 105, 270, { align: "center" });
+          }
+          
+          doc.save(`Tickets_${ev.title.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+          toast('Tickets generated successfully!', 'success');
+      } catch (err) {
+          console.error(err);
+          toast('Error generating tickets', 'error');
+      }
+  };
+
   window.generateEventReportPDF = function() {
       const id = window.currentManageEventId;
       if (!id) return;
