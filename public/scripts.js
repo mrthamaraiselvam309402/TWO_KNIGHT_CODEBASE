@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CHESSKIDOO ACADEMY - Complete Admin Panel Scripts
  * Fixed version - Academy Expansion Logic Integrated
  */
@@ -75,8 +75,8 @@
     return {
       value: '', textContent: '', innerHTML: '', style: {}, checked: false, disabled: false,
       classList: { add: ()=>{}, remove: ()=>{}, toggle: ()=>{}, contains: ()=>false },
-      focus: ()=>{}, appendChild: ()=>{}, removeChild: ()=>{}, addEventListener: ()=>{}, setAttribute: ()=>{},
-      removeAttribute: ()=>{}, querySelector: ()=>null, querySelectorAll: ()=>[], closest: ()=>null
+      focus: ()=>{}, appendChild: ()=>{}, addEventListener: ()=>{}, setAttribute: ()=>{},
+      removeAttribute: ()=>{}
     };
   };
 
@@ -107,9 +107,9 @@
     }
   }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
    // STATE
-   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   // ═══════════════════════════════════════════════════════════════
    let allCoaches = [];
    let allStudents = [];
    let allPayments = [];
@@ -141,7 +141,7 @@
    let loadingStates = {};
    // Optimized cache for faster dashboard loading
    const CACHE_DURATION = 30000; // 30 seconds cache for better performance
-  // â”€â”€ CORE UTILITIES â”€â”€
+  // ── CORE UTILITIES ──
   window.apiCall = async function(endpoint, options = {}) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       const err = new TypeError('Failed to fetch (offline)');
@@ -181,7 +181,7 @@
     el.className = `toast toast-${type}`;
     el.innerHTML = `
       <div class="toast-content">
-        <span class="toast-icon">${type === 'success' ? 'âœ…' : (type === 'error' ? 'âŒ' : 'â„¹ï¸')}</span>
+        <span class="toast-icon">${type === 'success' ? '✅' : (type === 'error' ? 'âŒ' : 'ℹ️')}</span>
         <span class="toast-msg">${msg}</span>
       </div>
     `;
@@ -237,7 +237,7 @@
     window.currentStudent = student;
   }
 
-  // â”€â”€ Notification Management â”€â”€
+  // ── Notification Management ──
   let shownNotificationIds = JSON.parse(localStorage.getItem('shown_notifications') || '[]');
   let dismissedNotifications = JSON.parse(localStorage.getItem('dismissed_notifications') || '{"messages":[], "payments":[]}');
 
@@ -281,7 +281,7 @@
   }
 
 
-  // â”€â”€ NEW ADVANCED LOGIC â”€â”€
+  // ── NEW ADVANCED LOGIC ──
   function setChildTab(tabId, btn) {
     document.querySelectorAll('.child-tab-content').forEach(c => c.classList.remove('active'));
     if (btn) {
@@ -334,7 +334,7 @@
     const myRegistrations = eventsData.filter(e => e.registered_students?.includes(currentStudent?.id));
 
     if (upcoming.length === 0) {
-      grid.innerHTML = '<div class="empty-state"><span class="empty-icon">ðŸ“…</span><p>No upcoming events scheduled</p></div>';
+      grid.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No upcoming events scheduled</p></div>';
       return;
     }
 
@@ -361,7 +361,7 @@
            </div>
            <div class="ev-footer">
              ${isRegistered ?
-           `<span class="badge badge-success" style="padding:6px 12px">âœ… Registered</span>` :
+           `<span class="badge badge-success" style="padding:6px 12px">✅ Registered</span>` :
            `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`
          }
            </div>
@@ -423,9 +423,9 @@
     const myPayments = allPayments.filter(p => String(p.student_id) === String(s.id));
     const recentPayments = myPayments.slice(0, 10);
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────────────────────
     // 1. UPDATE REVENUE & BILLING STAT CARDS
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────────────────────
     const paidPayments = myPayments.filter(p => p.status === 'paid' || p.status === 'completed');
     const totalPaidSum = paidPayments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || fee), 0);
     
@@ -436,7 +436,7 @@
     const isPendingStudent = getStudentStatus(s) === 'pending';
     const outstandingAmount = (isPaid || isPendingStudent) ? 0 : fee;
     if ($('cb-total-due')) {
-      $('cb-total-due').textContent = isPendingStudent ? 'â€”' : formatStudentFee(s, outstandingAmount);
+      $('cb-total-due').textContent = isPendingStudent ? '—' : formatStudentFee(s, outstandingAmount);
       $('cb-total-due').className = (isPaid || isPendingStudent) ? 'stat-value text-success' : 'stat-value text-danger';
     }
     if ($('cb-due-date')) $('cb-due-date').textContent = isPendingStudent ? 'Not Enrolled' : (isPaid ? 'Paid for this month' : `Due date: ${dueDate}`);
@@ -453,7 +453,7 @@
     if ($('cb-roi-value')) $('cb-roi-value').textContent = formatStudentFee(s, valueUnlocked) + ' Unlocked';
     if ($('cb-roi-desc')) $('cb-roi-desc').textContent = `${presentCount}/${standardSessions} sessions attended (ROI: ${roiPct}%)`;
 
-    if ($('cb-plan-fee')) $('cb-plan-fee').textContent = isPendingStudent ? 'â€”' : formatStudentFee(s, fee) + ' / mo';
+    if ($('cb-plan-fee')) $('cb-plan-fee').textContent = isPendingStudent ? '—' : formatStudentFee(s, fee) + ' / mo';
     if ($('cb-plan-type')) {
       const mode = s.session_mode || s.batch_type || 'Group';
       const time = s.session_time || s.batch_time || '';
@@ -464,13 +464,13 @@
     const baseSum = totalPaidSum > 0 ? totalPaidSum : fee;
     const gstAmount = Math.round(baseSum * 0.18);
     const netAmount = baseSum - gstAmount;
-    if ($('cb-gst-amount')) $('cb-gst-amount').textContent = 'â‚¹' + gstAmount.toLocaleString();
-    if ($('cb-net-amount')) $('cb-net-amount').textContent = 'â‚¹' + netAmount.toLocaleString();
+    if ($('cb-gst-amount')) $('cb-gst-amount').textContent = '₹' + gstAmount.toLocaleString();
+    if ($('cb-net-amount')) $('cb-net-amount').textContent = '₹' + netAmount.toLocaleString();
     if ($('cb-card-holder')) $('cb-card-holder').textContent = getStudentName(s).toUpperCase();
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────────────────────
     // 2. RENDER CHART.JS VISUAL ANALYTICS
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────────────────────
     setTimeout(() => {
       if (typeof Chart === 'undefined') {
         console.warn('[Analytics] Chart.js library is not available.');
@@ -523,7 +523,7 @@
           data: {
             labels: trendLabels,
             datasets: [{
-              label: 'Fees Paid (â‚¹)',
+              label: 'Fees Paid (₹)',
               data: trendAmounts,
               backgroundColor: barGradient,
               borderColor: 'var(--gold)',
@@ -548,7 +548,7 @@
                 cornerRadius: 8,
                 callbacks: {
                   label: function(context) {
-                    return ` Paid: â‚¹${context.raw.toLocaleString()}`;
+                    return ` Paid: ₹${context.raw.toLocaleString()}`;
                   }
                 }
               }
@@ -637,9 +637,9 @@
       }
     }, 50);
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────────────────────
     // 3. GENERATE TABLE ROWS (DETAILED LEDGER WITH FILTERS)
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────────────────────
     const activeFilter = window.currentLedgerFilter || 'all';
     let rows = '';
 
@@ -653,9 +653,9 @@
         <tr style="background: rgba(218, 163, 62, 0.02)">
           <td style="font-weight:600">${new Date().toLocaleDateString()}</td>
           <td><span class="badge" style="background:var(--surface);border:1px solid var(--border);color:var(--ivory)">Current Period</span></td>
-          <td style="font-weight:700;color:var(--gold)">â‚¹${fee.toLocaleString()}</td>
+          <td style="font-weight:700;color:var(--gold)">₹${fee.toLocaleString()}</td>
           <td><span class="badge ${status === 'Paid' ? 'badge-paid' : 'badge-due'}" style="font-weight:700">${status}</span></td>
-          <td><span style="color:var(--ivory-dim)">â€”</span></td>
+          <td><span style="color:var(--ivory-dim)">—</span></td>
           <td>
             ${status === 'Due' || status === 'Pending' ?
               `<button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${fee}')" style="box-shadow:var(--shadow-amber-sm)">Pay Now</button>` :
@@ -685,9 +685,9 @@
           <tr>
             <td>${pDate}</td>
             <td><span class="badge badge-level" style="font-size:10px">Past Fee Session</span></td>
-            <td style="font-weight:600">â‚¹${pAmount.toLocaleString()}</td>
+            <td style="font-weight:600">₹${pAmount.toLocaleString()}</td>
             <td><span class="badge ${pStatus === 'Paid' ? 'badge-paid' : 'badge-due'}">${pStatus}</span></td>
-            <td><span style="font-size:12px;color:var(--ivory-dim);font-weight:500">ðŸ’³ ${pMethod}</span></td>
+            <td><span style="font-size:12px;color:var(--ivory-dim);font-weight:500">💳 ${pMethod}</span></td>
             <td>
               ${pStatus === 'Paid' ?
                 `<button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${pAmount}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${pMethod}', '${p.payment_date || p.created_at || ''}')">Receipt</button>` :
@@ -713,9 +713,9 @@
     tbody.innerHTML = rows;
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
   // 4. ADVANCED FINANCIAL LEDGER AND STATEMENTS HANDLERS
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
   window.filterLedger = function(filter) {
     window.currentLedgerFilter = filter;
     
@@ -768,7 +768,7 @@
             <td style="padding: 12px 10px; font-size: 13px;">${pDate.toLocaleDateString('en-GB')}</td>
             <td style="padding: 12px 10px; font-size: 13px;">INV-${pDate.getFullYear()}-${txId}<br><span style="font-size:11px;color:#888;">Chess Tuition Service</span></td>
             <td style="padding: 12px 10px; font-size: 13px; text-align: right;">${p.payment_method || 'Online'}</td>
-            <td style="padding: 12px 10px; font-size: 13px; text-align: right; font-weight: bold; color: #111;">â‚¹${amt.toLocaleString()}</td>
+            <td style="padding: 12px 10px; font-size: 13px; text-align: right; font-weight: bold; color: #111;">₹${amt.toLocaleString()}</td>
           </tr>
         `;
       });
@@ -780,7 +780,7 @@
           <td style="padding: 12px 10px; font-size: 13px;">${new Date().toLocaleDateString('en-GB')}</td>
           <td style="padding: 12px 10px; font-size: 13px;">PRO-FORMA<br><span style="font-size:11px;color:#888;">Current Class Fee Plan</span></td>
           <td style="padding: 12px 10px; font-size: 13px; text-align: right;">Pending</td>
-          <td style="padding: 12px 10px; font-size: 13px; text-align: right; font-weight: bold; color: #777;">â‚¹${fee.toLocaleString()} (Due)</td>
+          <td style="padding: 12px 10px; font-size: 13px; text-align: right; font-weight: bold; color: #777;">₹${fee.toLocaleString()} (Due)</td>
         </tr>
       `;
     }
@@ -807,9 +807,9 @@
       <body>
         <div class="no-print" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; background: #fffde7; padding: 14px 20px; border: 1px solid #ffe082; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
           <span style="font-size: 13px; color: #744210; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-            ðŸ“„ Annual Tuition Investment Statement is prepared for print.
+            📄 Annual Tuition Investment Statement is prepared for print.
           </span>
-          <button onclick="window.print()" style="background: #daa33e; border: none; color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; box-shadow: 0 2px 4px rgba(218,163,62,0.3);">ðŸ–¨ï¸ Print Statement / Save PDF</button>
+          <button onclick="window.print()" style="background: #daa33e; border: none; color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; box-shadow: 0 2px 4px rgba(218,163,62,0.3);">🖨️ Print Statement / Save PDF</button>
         </div>
         
         <div class="header">
@@ -846,7 +846,7 @@
               <th>Date</th>
               <th>Reference ID</th>
               <th style="text-align: right;">Payment Mode</th>
-              <th style="text-align: right;">Amount (â‚¹)</th>
+              <th style="text-align: right;">Amount (₹)</th>
             </tr>
           </thead>
           <tbody>
@@ -857,7 +857,7 @@
         <div class="totals">
           <div class="total-row" style="border-top: 2px solid #daa33e; padding-top: 10px; margin-top: 10px; font-weight: 800; font-size: 17px; color: #1a252f;">
             <span>Total Tuition Paid:</span>
-            <span>â‚¹${baseSum.toLocaleString()}</span>
+            <span>₹${baseSum.toLocaleString()}</span>
           </div>
         </div>
 
@@ -876,7 +876,7 @@
     printWin.document.close();
   };
 
-  // â”€â”€ ADMIN EXPANSION LOGIC â”€â”€
+  // ── ADMIN EXPANSION LOGIC ──
   function openAttendanceMarking() {
     const dateEl = $('att-date');
     if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
@@ -919,10 +919,10 @@
           <td>
             <select class="att-status" data-sid="${s.id}" onchange="updateAttStats()">
               <option value="" ${!status ? 'selected' : ''}>-- Select --</option>
-              <option value="present" ${status === 'present' ? 'selected' : ''}>âœ… Present</option>
+              <option value="present" ${status === 'present' ? 'selected' : ''}>✅ Present</option>
               <option value="absent" ${status === 'absent' ? 'selected' : ''}>âŒ Absent</option>
               <option value="late" ${status === 'late' ? 'selected' : ''}>â° Late</option>
-              <option value="excused" ${status === 'excused' ? 'selected' : ''}>ðŸ“‹ Excused</option>
+              <option value="excused" ${status === 'excused' ? 'selected' : ''}>📋 Excused</option>
             </select>
           </td>
           <td><input type="text" class="att-notes" data-sid="${s.id}" placeholder="Add note..." value="${notes}"></td>
@@ -947,10 +947,10 @@
     const statsEl = document.getElementById('att-stats');
     if (statsEl) {
       statsEl.innerHTML = `
-        <span style="color:var(--success)">âœ… ${present}</span> |
+        <span style="color:var(--success)">✅ ${present}</span> |
         <span style="color:var(--danger)">âŒ ${absent}</span> |
         <span style="color:var(--gold)">â° ${late}</span> |
-        <span style="color:var(--ivory3)">ðŸ“‹ ${excused}</span> |
+        <span style="color:var(--ivory3)">📋 ${excused}</span> |
         <span style="color:var(--ivory3)"> unmarked: ${unmarked}</span>
       `;
     }
@@ -1049,7 +1049,7 @@
     const baselineDate = new Date(Date.UTC(2026, 3, 1)); // Global System Baseline (April 1st, 2026)
     const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
 
-    // FIX #5: Always rebuild â€” never trust a cached map for financial calculations
+    // FIX #5: Always rebuild — never trust a cached map for financial calculations
     const freshPaymentsMap = {};
     const seenStudentMonths = new Set();
     (allPayments || []).forEach(p => {
@@ -1106,7 +1106,7 @@
         `You may make the payment to: 9025846663 (Ranjith)\n` +
         `\n` +
         `Thank you for your understanding.\n` +
-        `â€“ Chesskidoo Academy`;
+        `– Chesskidoo Academy`;
     } else {
       msg = `UPCOMING FEE REMINDER\n` +
         `\n` +
@@ -1121,7 +1121,7 @@
         `You may make the payment to: 9025846663 (Ranjith)\n` +
         `\n` +
         `Thank you so much for your support and cooperation!\n` +
-        `â€“ Chesskidoo Academy`;
+        `– Chesskidoo Academy`;
     }
 
     const parsed = parseStoredPhone(phone);
@@ -1204,10 +1204,10 @@
       const cName = coach ? (coach.name || '') : '';
       const monthName2 = new Date(targetYear, targetMonth).toLocaleString('en-IN', { month: 'long' });
       const dueDateStr = `${getOrdinal(dueDay)} ${monthName2} ${targetYear}`;
-      return `${EMOJI.alert} ${sName} â€” ${label} (Due: ${dueDateStr})`;
+      return `${EMOJI.alert} ${sName} — ${label} (Due: ${dueDateStr})`;
     });
 
-    let msg = `${EMOJI.warning} CHESSKIDOO ACADEMY â€“ FEE AUDIT REPORT ${EMOJI.chart}\n\n` +
+    let msg = `${EMOJI.warning} CHESSKIDOO ACADEMY – FEE AUDIT REPORT ${EMOJI.chart}\n\n` +
         `Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} ${EMOJI.teacher},\n\n` +
         `The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle ${EMOJI.calendar}:\n\n` +
         studentLines.join('\n') +
@@ -1338,7 +1338,7 @@
             `You may make the payment to: 9025846663 (Ranjith)\n` +
             `\n` +
             `Thank you for your understanding.\n` +
-            `â€“ Chesskidoo Academy`;
+            `– Chesskidoo Academy`;
         } else {
           msg = `UPCOMING FEE REMINDER\n` +
             `\n` +
@@ -1353,7 +1353,7 @@
             `You may make the payment to: 9025846663 (Ranjith)\n` +
             `\n` +
             `Thank you so much for your support and cooperation!\n` +
-            `â€“ Chesskidoo Academy`;
+            `– Chesskidoo Academy`;
         }
 
       const parsed = parseStoredPhone(phone);
@@ -1363,7 +1363,7 @@
       setTimeout(() => {
         openWhatsApp(dialCode, parsed.localNumber, msg);
         sent++;
-        if (sent === dueStudents.length) toast(`ðŸ’¬ Sent ${sent} payment reminders`, 'success');
+        if (sent === dueStudents.length) toast(`💬 Sent ${sent} payment reminders`, 'success');
       }, idx * 800);
     });
   };
@@ -1645,67 +1645,67 @@ function initUI() {
     return 'Due';
   }
 
-  // â”€â”€ COUNTRY PHONE VALIDATION â”€â”€
+  // ── COUNTRY PHONE VALIDATION ──
   const COUNTRY_CODES = [
-    { code: 'IN', name: 'India', dial: '+91', length: 10, flag: 'ðŸ‡®ðŸ‡³' },
-    { code: 'US', name: 'United States', dial: '+1', length: 10, flag: 'ðŸ‡ºðŸ‡¸' },
-    { code: 'GB', name: 'United Kingdom', dial: '+44', length: 10, flag: 'ðŸ‡¬ðŸ‡§' },
-    { code: 'CA', name: 'Canada', dial: '+1', length: 10, flag: 'ðŸ‡¨ðŸ‡¦' },
-    { code: 'AU', name: 'Australia', dial: '+61', length: 9, flag: 'ðŸ‡¦ðŸ‡º' },
-    { code: 'DE', name: 'Germany', dial: '+49', length: 10, flag: 'ðŸ‡©ðŸ‡ª' },
-    { code: 'FR', name: 'France', dial: '+33', length: 9, flag: 'ðŸ‡«ðŸ‡·' },
-    { code: 'JP', name: 'Japan', dial: '+81', length: 10, flag: 'ðŸ‡¯ðŸ‡µ' },
-    { code: 'CN', name: 'China', dial: '+86', length: 11, flag: 'ðŸ‡¨ðŸ‡³' },
-    { code: 'BR', name: 'Brazil', dial: '+55', length: 10, flag: 'ðŸ‡§ðŸ‡·' },
-    { code: 'MX', name: 'Mexico', dial: '+52', length: 10, flag: 'ðŸ‡²ðŸ‡½' },
-    { code: 'IT', name: 'Italy', dial: '+39', length: 10, flag: 'ðŸ‡®ðŸ‡¹' },
-    { code: 'ES', name: 'Spain', dial: '+34', length: 9, flag: 'ðŸ‡ªðŸ‡¸' },
-    { code: 'RU', name: 'Russia', dial: '+7', length: 10, flag: 'ðŸ‡·ðŸ‡º' },
-    { code: 'KR', name: 'South Korea', dial: '+82', length: 9, flag: 'ðŸ‡°ðŸ‡·' },
-    { code: 'SG', name: 'Singapore', dial: '+65', length: 8, flag: 'ðŸ‡¸ðŸ‡¬' },
-    { code: 'MY', name: 'Malaysia', dial: '+60', length: 9, flag: 'ðŸ‡²ðŸ‡¾' },
-    { code: 'TH', name: 'Thailand', dial: '+66', length: 9, flag: 'ðŸ‡¹ðŸ‡­' },
-    { code: 'ID', name: 'Indonesia', dial: '+62', length: 10, flag: 'ðŸ‡®ðŸ‡©' },
-    { code: 'PH', name: 'Philippines', dial: '+63', length: 10, flag: 'ðŸ‡µðŸ‡­' },
-    { code: 'VN', name: 'Vietnam', dial: '+84', length: 9, flag: 'ðŸ‡»ðŸ‡³' },
-    { code: 'AE', name: 'UAE', dial: '+971', length: 9, flag: 'ðŸ‡¦ðŸ‡ª' },
-    { code: 'SA', name: 'Saudi Arabia', dial: '+966', length: 9, flag: 'ðŸ‡¸ðŸ‡¦' },
-    { code: 'PK', name: 'Pakistan', dial: '+92', length: 10, flag: 'ðŸ‡µðŸ‡°' },
-    { code: 'BD', name: 'Bangladesh', dial: '+880', length: 10, flag: 'ðŸ‡§ðŸ‡©' },
-    { code: 'LK', name: 'Sri Lanka', dial: '+94', length: 9, flag: 'ðŸ‡±ðŸ‡°' },
-    { code: 'ZA', name: 'South Africa', dial: '+27', length: 9, flag: 'ðŸ‡¿ðŸ‡¦' },
-    { code: 'NG', name: 'Nigeria', dial: '+234', length: 10, flag: 'ðŸ‡³ðŸ‡¬' },
-    { code: 'EG', name: 'Egypt', dial: '+20', length: 10, flag: 'ðŸ‡ªðŸ‡¬' },
-    { code: 'NL', name: 'Netherlands', dial: '+31', length: 9, flag: 'ðŸ‡³ðŸ‡±' },
-    { code: 'BE', name: 'Belgium', dial: '+32', length: 9, flag: 'ðŸ‡§ðŸ‡ª' },
-    { code: 'SE', name: 'Sweden', dial: '+46', length: 9, flag: 'ðŸ‡¸ðŸ‡ª' },
-    { code: 'NO', name: 'Norway', dial: '+47', length: 8, flag: 'ðŸ‡³ðŸ‡´' },
-    { code: 'DK', name: 'Denmark', dial: '+45', length: 8, flag: 'ðŸ‡©ðŸ‡°' },
-    { code: 'FI', name: 'Finland', dial: '+358', length: 9, flag: 'ðŸ‡«ðŸ‡®' },
-    { code: 'PL', name: 'Poland', dial: '+48', length: 9, flag: 'ðŸ‡µðŸ‡±' },
-    { code: 'TR', name: 'Turkey', dial: '+90', length: 10, flag: 'ðŸ‡¹ðŸ‡·' },
-    { code: 'IL', name: 'Israel', dial: '+972', length: 9, flag: 'ðŸ‡®ðŸ‡±' },
-    { code: 'AR', name: 'Argentina', dial: '+54', length: 10, flag: 'ðŸ‡¦ðŸ‡·' },
-    { code: 'CL', name: 'Chile', dial: '+56', length: 9, flag: 'ðŸ‡¨ðŸ‡±' },
-    { code: 'CO', name: 'Colombia', dial: '+57', length: 10, flag: 'ðŸ‡¨ðŸ‡´' },
-    { code: 'NZ', name: 'New Zealand', dial: '+64', length: 9, flag: 'ðŸ‡³ðŸ‡¿' },
-    { code: 'TW', name: 'Taiwan', dial: '+886', length: 9, flag: 'ðŸ‡¹ðŸ‡¼' }
+    { code: 'IN', name: 'India', dial: '+91', length: 10, flag: '🇮🇳' },
+    { code: 'US', name: 'United States', dial: '+1', length: 10, flag: '🇺🇸' },
+    { code: 'GB', name: 'United Kingdom', dial: '+44', length: 10, flag: '🇬🇧' },
+    { code: 'CA', name: 'Canada', dial: '+1', length: 10, flag: '🇨🇦' },
+    { code: 'AU', name: 'Australia', dial: '+61', length: 9, flag: '🇦🇺' },
+    { code: 'DE', name: 'Germany', dial: '+49', length: 10, flag: '🇩🇪' },
+    { code: 'FR', name: 'France', dial: '+33', length: 9, flag: '🇫🇷' },
+    { code: 'JP', name: 'Japan', dial: '+81', length: 10, flag: '🇯🇵' },
+    { code: 'CN', name: 'China', dial: '+86', length: 11, flag: '🇨🇳' },
+    { code: 'BR', name: 'Brazil', dial: '+55', length: 10, flag: '🇧🇷' },
+    { code: 'MX', name: 'Mexico', dial: '+52', length: 10, flag: '🇲🇽' },
+    { code: 'IT', name: 'Italy', dial: '+39', length: 10, flag: '🇮🇹' },
+    { code: 'ES', name: 'Spain', dial: '+34', length: 9, flag: '🇪🇸' },
+    { code: 'RU', name: 'Russia', dial: '+7', length: 10, flag: '🇷🇺' },
+    { code: 'KR', name: 'South Korea', dial: '+82', length: 9, flag: '🇰🇷' },
+    { code: 'SG', name: 'Singapore', dial: '+65', length: 8, flag: '🇸🇬' },
+    { code: 'MY', name: 'Malaysia', dial: '+60', length: 9, flag: '🇲🇾' },
+    { code: 'TH', name: 'Thailand', dial: '+66', length: 9, flag: '🇹🇭' },
+    { code: 'ID', name: 'Indonesia', dial: '+62', length: 10, flag: '🇮🇩' },
+    { code: 'PH', name: 'Philippines', dial: '+63', length: 10, flag: '🇵🇭' },
+    { code: 'VN', name: 'Vietnam', dial: '+84', length: 9, flag: '🇻🇳' },
+    { code: 'AE', name: 'UAE', dial: '+971', length: 9, flag: '🇦🇪' },
+    { code: 'SA', name: 'Saudi Arabia', dial: '+966', length: 9, flag: '🇸🇦' },
+    { code: 'PK', name: 'Pakistan', dial: '+92', length: 10, flag: '🇵🇰' },
+    { code: 'BD', name: 'Bangladesh', dial: '+880', length: 10, flag: '🇧🇩' },
+    { code: 'LK', name: 'Sri Lanka', dial: '+94', length: 9, flag: '🇱🇰' },
+    { code: 'ZA', name: 'South Africa', dial: '+27', length: 9, flag: '🇿🇦' },
+    { code: 'NG', name: 'Nigeria', dial: '+234', length: 10, flag: '🇳🇬' },
+    { code: 'EG', name: 'Egypt', dial: '+20', length: 10, flag: '🇪🇬' },
+    { code: 'NL', name: 'Netherlands', dial: '+31', length: 9, flag: '🇳🇱' },
+    { code: 'BE', name: 'Belgium', dial: '+32', length: 9, flag: '🇧🇪' },
+    { code: 'SE', name: 'Sweden', dial: '+46', length: 9, flag: '🇸🇪' },
+    { code: 'NO', name: 'Norway', dial: '+47', length: 8, flag: '🇳🇴´' },
+    { code: 'DK', name: 'Denmark', dial: '+45', length: 8, flag: '🇩🇰' },
+    { code: 'FI', name: 'Finland', dial: '+358', length: 9, flag: '🇫🇮' },
+    { code: 'PL', name: 'Poland', dial: '+48', length: 9, flag: '🇵🇱' },
+    { code: 'TR', name: 'Turkey', dial: '+90', length: 10, flag: '🇹🇷' },
+    { code: 'IL', name: 'Israel', dial: '+972', length: 9, flag: '🇮🇱' },
+    { code: 'AR', name: 'Argentina', dial: '+54', length: 10, flag: '🇦🇷' },
+    { code: 'CL', name: 'Chile', dial: '+56', length: 9, flag: '🇨🇱' },
+    { code: 'CO', name: 'Colombia', dial: '+57', length: 10, flag: '🇨🇴' },
+    { code: 'NZ', name: 'New Zealand', dial: '+64', length: 9, flag: '🇳🇴¿' },
+    { code: 'TW', name: 'Taiwan', dial: '+886', length: 9, flag: '🇹🇼' }
   ];
   
   const CURRENCY_MAP = {
-    'IN': { currency: 'INR', symbol: 'â‚¹', rate: 1.0 },
+    'IN': { currency: 'INR', symbol: '₹', rate: 1.0 },
     'US': { currency: 'USD', symbol: '$', rate: 0.012 },
     'GB': { currency: 'GBP', symbol: 'Â£', rate: 0.0094 },
     'CA': { currency: 'CAD', symbol: 'C$', rate: 0.016 },
     'AU': { currency: 'AUD', symbol: 'A$', rate: 0.018 },
-    'DE': { currency: 'EUR', symbol: 'â‚¬', rate: 0.011 },
-    'FR': { currency: 'EUR', symbol: 'â‚¬', rate: 0.011 },
+    'DE': { currency: 'EUR', symbol: '€', rate: 0.011 },
+    'FR': { currency: 'EUR', symbol: '€', rate: 0.011 },
     'JP': { currency: 'JPY', symbol: 'Â¥', rate: 1.88 },
     'CN': { currency: 'CNY', symbol: 'Â¥', rate: 0.087 },
     'BR': { currency: 'BRL', symbol: 'R$', rate: 0.062 },
     'MX': { currency: 'MXN', symbol: '$', rate: 0.20 },
-    'IT': { currency: 'EUR', symbol: 'â‚¬', rate: 0.011 },
-    'ES': { currency: 'EUR', symbol: 'â‚¬', rate: 0.011 },
+    'IT': { currency: 'EUR', symbol: '€', rate: 0.011 },
+    'ES': { currency: 'EUR', symbol: '€', rate: 0.011 },
     'RU': { currency: 'RUB', symbol: 'â‚½', rate: 1.10 },
     'KR': { currency: 'KRW', symbol: 'â‚©', rate: 16.4 },
     'SG': { currency: 'SGD', symbol: 'S$', rate: 0.016 },
@@ -1722,12 +1722,12 @@ function initUI() {
     'ZA': { currency: 'ZAR', symbol: 'R', rate: 0.22 },
     'NG': { currency: 'NGN', symbol: 'â‚¦', rate: 18.0 },
     'EG': { currency: 'EGP', symbol: 'EÂ£', rate: 0.57 },
-    'NL': { currency: 'EUR', symbol: 'â‚¬', rate: 0.011 },
-    'BE': { currency: 'EUR', symbol: 'â‚¬', rate: 0.011 },
+    'NL': { currency: 'EUR', symbol: '€', rate: 0.011 },
+    'BE': { currency: 'EUR', symbol: '€', rate: 0.011 },
     'SE': { currency: 'SEK', symbol: 'kr', rate: 0.13 },
     'NO': { currency: 'NOK', symbol: 'kr', rate: 0.13 },
     'DK': { currency: 'DKK', symbol: 'kr', rate: 0.083 },
-    'FI': { currency: 'EUR', symbol: 'â‚¬', rate: 0.011 },
+    'FI': { currency: 'EUR', symbol: '€', rate: 0.011 },
     'PL': { currency: 'PLN', symbol: 'zÅ‚', rate: 0.048 },
     'TR': { currency: 'TRY', symbol: 'â‚º', rate: 0.39 },
     'IL': { currency: 'ILS', symbol: 'â‚ª', rate: 0.044 },
@@ -1739,11 +1739,11 @@ function initUI() {
   };
 
   function formatStudentFee(s, inrAmount) {
-    if (!s) return 'â‚¹' + (inrAmount || 0).toLocaleString();
+    if (!s) return '₹' + (inrAmount || 0).toLocaleString();
     if (typeof inrAmount !== 'number') inrAmount = parseFloat(inrAmount) || 0;
     const country = (s.country_code || 'IN').toUpperCase();
     const map = CURRENCY_MAP[country] || CURRENCY_MAP['IN'];
-    const baseStr = 'â‚¹' + inrAmount.toLocaleString();
+    const baseStr = '₹' + inrAmount.toLocaleString();
     if (map.currency === 'INR') {
       return baseStr;
     }
@@ -2019,7 +2019,7 @@ function initUI() {
     if (!e) { toast('Event not found', 'error'); return; }
     
     $('ev-manage-title').textContent = e.title;
-    $('ev-manage-subtitle').textContent = `${getEventType(e)} â€¢ ${new Date(e.date || e.event_date).toLocaleDateString()} â€¢ Fee: â‚¹${e.fee || 0}`;
+    $('ev-manage-subtitle').textContent = `${getEventType(e)} • ${new Date(e.date || e.event_date).toLocaleDateString()} • Fee: ₹${e.fee || 0}`;
     
     // Set global for export context
     window.currentManageEventId = id;
@@ -2098,7 +2098,7 @@ function initUI() {
                     <option value="pending" ${!isPaid ? 'selected' : ''}>Pending</option>
                     <option value="paid" ${isPaid ? 'selected' : ''}>Paid</option>
                   </select>
-                  ${isPaid ? `<button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="downloadReceipt('${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}', '${e.fee || 0}', '${escapeHtml(level).replace(/'/g, "\\'")}', '800', 'N/A', 'Event Fee', '')" title="Download Receipt">ðŸ“„</button>
+                  ${isPaid ? `<button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="downloadReceipt('${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}', '${e.fee || 0}', '${escapeHtml(level).replace(/'/g, "\\'")}', '800', 'N/A', 'Event Fee', '')" title="Download Receipt">📄</button>
                   <button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="sendPaymentReceiptNotification('${sid}', '${e.fee || 0}')" title="Send via WhatsApp">ðŸ“¢</button>` : ''}
                 </div>
               </td>
@@ -2109,14 +2109,14 @@ function initUI() {
                 </select>
               </td>
               <td style="text-align:center;">
-                <button class="btn btn-outline-grey btn-sm" style="padding: 4px; font-size:12px; border:none; color:var(--danger);" onclick="unregisterStudentFromEvent('${id}', '${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}')" title="Remove Student">ðŸ—‘ï¸</button>
+                <button class="btn btn-outline-grey btn-sm" style="padding: 4px; font-size:12px; border:none; color:var(--danger);" onclick="unregisterStudentFromEvent('${id}', '${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}')" title="Remove Student">🗑️</button>
               </td>
             </tr>`;
          });
       }
       
       tbody.innerHTML = html;
-      if($('ev-m-due')) $('ev-m-due').textContent = `â‚¹${Math.max(0, expectedRev - collectedRev)}`;
+      if($('ev-m-due')) $('ev-m-due').textContent = `₹${Math.max(0, expectedRev - collectedRev)}`;
       
       // Load Event Expenditures
       const expRes = await apiCall('/api/expenditures');
@@ -2134,7 +2134,7 @@ function initUI() {
           expHtml += `<tr>
             <td>${new Date(ex.date || ex.created_at).toLocaleDateString()}</td>
             <td>${escapeHtml(ex.description || 'Event Expense')}</td>
-            <td class="text-danger">â‚¹${ex.amount}</td>
+            <td class="text-danger">₹${ex.amount}</td>
           </tr>`;
         });
       }
@@ -2142,10 +2142,10 @@ function initUI() {
       
       const netProfit = collectedRev - totalExp;
       if($('ev-m-profit')) {
-          $('ev-m-profit').textContent = `â‚¹${netProfit}`;
+          $('ev-m-profit').textContent = `₹${netProfit}`;
           $('ev-m-profit').style.color = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
       }
-      if($('ev-m-rev-exp')) $('ev-m-rev-exp').textContent = `Rev: â‚¹${collectedRev} | Exp: â‚¹${totalExp}`;
+      if($('ev-m-rev-exp')) $('ev-m-rev-exp').textContent = `Rev: ₹${collectedRev} | Exp: ₹${totalExp}`;
       
       const attendanceRate = confirmedStudents.length > 0 ? Math.round((presentCount / confirmedStudents.length) * 100) : 0;
       if($('ev-m-att')) $('ev-m-att').textContent = `${attendanceRate}%`;
@@ -2227,7 +2227,7 @@ function initUI() {
     const s = allStudents.find(x => x.id === studentId);
     if (!e || !s) return;
     
-    if (!confirm(`Mark ${getStudentName(s)} as PAID for ${e.title} (â‚¹${e.fee || 0})?`)) return;
+    if (!confirm(`Mark ${getStudentName(s)} as PAID for ${e.title} (₹${e.fee || 0})?`)) return;
     
     const payload = {
        id: generateClientId(),
@@ -2436,7 +2436,7 @@ function initUI() {
                   const res = await apiCall('/api/events', { method: 'POST', body: JSON.stringify(payload) });
                   if (res.ok) {
                       toast('Student marked Present!', 'success');
-                      $('qr-reader-results').textContent = `âœ… Successfully marked Present!`;
+                      $('qr-reader-results').textContent = `✅ Successfully marked Present!`;
                       await loadAllData(true);
                       window.openEventManagement(window.currentManageEventId);
                       setTimeout(() => { $('qr-reader-results').textContent = `Ready to scan next...`; $('qr-reader-results').style.color = "var(--gold)"; }, 2000);
@@ -2639,7 +2639,7 @@ function initUI() {
               doc.setFontSize(14);
               doc.setTextColor(200, 200, 200);
               doc.setFont("helvetica", "normal");
-              doc.text(`${dt}  â€¢  ${time}`, 105, 95, { align: "center" });
+              doc.text(`${dt}  •  ${time}`, 105, 95, { align: "center" });
               
               // 5. STUDENT BLOCK
               doc.setFillColor(25, 30, 40);
@@ -2846,9 +2846,9 @@ function initUI() {
      return generateAvatarURL(name || 'Student', 80, 'dca33e', '000000');
    }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // DATA LOADING
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
    let isLoadingData = false;
    async function loadAllData(forceRefresh = false) {
      if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
@@ -3273,7 +3273,7 @@ function initUI() {
 
         if (due.length > lastDueCount && lastDueCount > 0) {
           const newDue = due.length - lastDueCount;
-          toast(`ðŸ’³ ${newDue} new payment${newDue > 1 ? 's' : ''} now Due!`, 'warning');
+          toast(`💳 ${newDue} new payment${newDue > 1 ? 's' : ''} now Due!`, 'warning');
         }
         lastDueCount = due.length;
 
@@ -3299,9 +3299,9 @@ function initUI() {
     updateNotificationBadge();
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // NAVIGATION
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   function toggleSidebar() {
     const sidebar = $('sidebar');
     const overlay = $('sidebar-overlay');
@@ -3370,7 +3370,7 @@ function initUI() {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             <input type="month" id="report-period" class="selector-minimal" onchange="updateReportContext()" value="${periodValue}">
           </div>
-          <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">ðŸ“„ Financial Report</button>
+          <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">📄 Financial Report</button>
           <button class="btn btn-gold" onclick="exportAcademyData()">ðŸ“¥ Export Academy Data</button>
         `;
         }
@@ -3444,9 +3444,9 @@ function initUI() {
     window.setReportPeriod(parts[0], parseInt(parts[1]) - 1);
   };
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // AUTHENTICATION
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   function toggleEye() {
     const p = $('li-pass');
     const btn = $('eye-btn');
@@ -3714,9 +3714,9 @@ function initUI() {
     }
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // CHARTS & DASHBOARD
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   function formatTimeAgo(dateStr) {
     const now = new Date();
     const date = new Date(dateStr);
@@ -3939,7 +3939,7 @@ function initUI() {
           scales: {
             y: {
               beginAtZero: true,
-              ticks: { callback: value => 'â‚¹' + value.toLocaleString() }
+              ticks: { callback: value => '₹' + value.toLocaleString() }
             }
           }
         }
@@ -4014,7 +4014,7 @@ function initUI() {
     const targetYear = window.reportYear;
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
 
-      // 1. Target Dataset Preparation â€” cumulative paid months (deduplicated)
+      // 1. Target Dataset Preparation — cumulative paid months (deduplicated)
       const s_id_map = {};
       const seenMonthsAudit = new Set();
       (allPayments || []).forEach(p => {
@@ -4118,7 +4118,7 @@ function initUI() {
       $('s-rate').textContent = collectionRate + '%';
       if (rawRate > 100) {
         $('s-rate').style.color = 'var(--gold)';
-        $('s-rate').title = `Actual collected: â‚¹${paidRevenue.toLocaleString()} (includes arrears)`;
+        $('s-rate').title = `Actual collected: ₹${paidRevenue.toLocaleString()} (includes arrears)`;
       } else {
         $('s-rate').style.color = 'var(--blue)';
         $('s-rate').title = '';
@@ -4131,27 +4131,27 @@ function initUI() {
       : (paidRevenue > 0 ? '100' : '0');
 
     // Update UI
-    if ($('s-rev')) $('s-rev').textContent = 'â‚¹' + paidRevenue.toLocaleString();
-    if ($('s-total-revenue')) $('s-total-revenue').textContent = 'â‚¹' + totalPotential.toLocaleString();
+    if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
+    if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
 
     const growthEl = $('s-due');
     if (growthEl) {
       if (prevRevenue > 0) {
-        growthEl.innerHTML = `â‚¹${revenueGrowth.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)</span>`;
+        growthEl.innerHTML = `₹${revenueGrowth.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(${revenueGrowth >= 0 ? '+' : ''}${growthPercent}%)</span>`;
         growthEl.style.color = revenueGrowth > 0 ? 'var(--emerald)' : (revenueGrowth < 0 ? 'var(--ruby)' : 'var(--ivory-dim)');
       } else {
-        growthEl.innerHTML = `â‚¹${paidRevenue.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(vs prev: â‚¹0)</span>`;
+        growthEl.innerHTML = `₹${paidRevenue.toLocaleString()} <span style="font-size:0.8em;opacity:0.8">(vs prev: ₹0)</span>`;
         growthEl.style.color = 'var(--ivory-dim)';
       }
     }
 
-    if ($('s-last-due')) $('s-last-due').textContent = 'â‚¹' + totalArrears.toLocaleString();
-    if ($('s-curr-pending')) $('s-curr-pending').textContent = 'â‚¹' + currMonthPending.toLocaleString();
-    if ($('s-total-outstanding')) $('s-total-outstanding').textContent = 'â‚¹' + totalOutstanding.toLocaleString();
+    if ($('s-last-due')) $('s-last-due').textContent = '₹' + totalArrears.toLocaleString();
+    if ($('s-curr-pending')) $('s-curr-pending').textContent = '₹' + currMonthPending.toLocaleString();
+    if ($('s-total-outstanding')) $('s-total-outstanding').textContent = '₹' + totalOutstanding.toLocaleString();
 
     // Coach expenses & Total Academy Expenditures calculation
     const totalCoachCost = allCoaches.filter(c => c.status !== 'archived').reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
-    if ($('s-total-cost')) $('s-total-cost').textContent = 'â‚¹' + totalCoachCost.toLocaleString();
+    if ($('s-total-cost')) $('s-total-cost').textContent = '₹' + totalCoachCost.toLocaleString();
     
     if ($('s-profit')) {
       const monthStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
@@ -4163,13 +4163,13 @@ function initUI() {
         .then(summary => {
           const totalExp = parseFloat(summary.total_expense || 0);
           if ($('s-profit')) {
-            $('s-profit').textContent = 'â‚¹' + Math.round(totalExp).toLocaleString();
+            $('s-profit').textContent = '₹' + Math.round(totalExp).toLocaleString();
           }
         })
         .catch(err => {
           console.error('[Dashboard] Failed to fetch other expenditures:', err);
           if ($('s-profit')) {
-            $('s-profit').textContent = 'â‚¹0';
+            $('s-profit').textContent = '₹0';
           }
         });
     }
@@ -4291,20 +4291,20 @@ function initUI() {
       return `<tr>
         <td><b>${d.name}</b></td>
         <td>${d.students}</td>
-        <td>â‚¹${d.revenue.toLocaleString()}</td>
-        <td>â‚¹${d.pending.toLocaleString()}</td>
-        <td>â‚¹${d.cost.toLocaleString()}</td>
-        <td class="${profitClass}">â‚¹${netProfit.toLocaleString()}</td>
-        <td class="${potentialProfitClass}">â‚¹${potentialNetProfit.toLocaleString()}</td>
+        <td>₹${d.revenue.toLocaleString()}</td>
+        <td>₹${d.pending.toLocaleString()}</td>
+        <td>₹${d.cost.toLocaleString()}</td>
+        <td class="${profitClass}">₹${netProfit.toLocaleString()}</td>
+        <td class="${potentialProfitClass}">₹${potentialNetProfit.toLocaleString()}</td>
         <td>${roi}% / <span class="text-gold">${potentialRoi}%</span></td>
         <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">ðŸ“¢ Inform</button></td>
       </tr>`;
     }).join('');
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // STUDENTS, COACHES, EVENTS, ACHIEVEMENTS
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
    function clearFilters() {
      ['f-coach', 'f-session', 'f-status', 'f-min-fee', 'f-max-fee', 'f-search', 'f-bill-month-stud', 'f-due-date-stud', 'f-enroll-date-stud'].forEach(id => { const el = $(id); if (el) el.value = ''; });
      resetStudMonth();
@@ -4511,7 +4511,7 @@ function initUI() {
 
             let dueDateHtml = '';
             if (enrollStatus === 'pending' || enrollStatus === 'waitlist' || enrollStatus === 'inactive' || enrollStatus === 'archived') {
-              dueDateHtml = `<span style="color: var(--ivory-dim);">â€”</span>`;
+              dueDateHtml = `<span style="color: var(--ivory-dim);">—</span>`;
             } else if (enrollStatus === 'upcoming') {
               dueDateHtml = `<span style="color: var(--ivory-dim); opacity: 0.8;">${dueDateString}</span>`;
             } else if (status === 'Paid') {
@@ -4538,13 +4538,13 @@ function initUI() {
                 `;
                moreActions = `
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">â³ History</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">ðŸ“„ Receipt</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">ðŸ’¬ WhatsApp</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
               } else if (status === 'Pending' || status === 'Due' || status === 'Overdue') {
                  primaryActions = `
                    <div style="display:flex;gap:4px;flex-wrap:nowrap">
-                   <button class="btn btn-gold btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">âœ… Mark as Paid</button>
+                   <button class="btn btn-gold btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">✅ Mark as Paid</button>
                    <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                    <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                    <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
@@ -4552,9 +4552,9 @@ function initUI() {
                    </div>
                  `;
                moreActions = `
-                 <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">ðŸ’³ Pay Now</button>
+                 <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">â³ History</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">ðŸ’¬ WhatsApp</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
              } else if (isNonActive || status === 'Not Enrolled') {
                 primaryActions = `
@@ -4566,7 +4566,7 @@ function initUI() {
                 `;
                 moreActions = '';
               } else {
-              primaryActions = `<span style="color:var(--ivory-dim);font-size:11px">â€”</span>`;
+              primaryActions = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
               moreActions = '';
             }
 
@@ -4587,7 +4587,7 @@ function initUI() {
             `;
 
             const feeHtml = isNonActive 
-              ? `<span style="color: var(--ivory-dim);">â€”</span>` 
+              ? `<span style="color: var(--ivory-dim);">—</span>` 
               : formatStudentFee(s, getStudentMonthlyFee(s));
 
             let statusClass = 'text-danger';
@@ -4867,7 +4867,7 @@ function initUI() {
       window.selectedCountryCode = 'IN';
       window.selectedCountryCodeEdit = 'IN';
       const selected = $('country-selected');
-      if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline-block\';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">ðŸ‡®ðŸ‡³</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
+      if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline-block\';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
       const phoneInput = $('m-phone');
       if (phoneInput) phoneInput.placeholder = '10 digits';
      syncCoachDropdowns();
@@ -4974,7 +4974,7 @@ function initUI() {
              </div>
              <div class="coach-stat">
                <span class="coach-stat-label">Salary</span>
-               <span class="coach-stat-val">â‚¹${(getCoachSalary(c) || 0).toLocaleString()}</span>
+               <span class="coach-stat-val">₹${(getCoachSalary(c) || 0).toLocaleString()}</span>
              </div>
              <div class="coach-stat">
                <span class="coach-stat-label">Status</span>
@@ -4987,7 +4987,7 @@ function initUI() {
              <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">ðŸ“¢ Inform</button>
              <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${escapeHtml(getCoachName(c)).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
            </div>
-           <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">ðŸ“… View Schedule</button>
+           <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
          </div>
        `;
     }).join('');
@@ -5038,7 +5038,7 @@ function initUI() {
     if (!container) { openModal('coach-schedule-modal'); return; }
 
     if (assignedStudents.length === 0) {
-      container.innerHTML = '<div class="empty-state"><span class="empty-icon">ðŸ“…</span><p>No students assigned to this coach</p></div>';
+      container.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No students assigned to this coach</p></div>';
     } else {
       // Group by Day
       const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -5126,7 +5126,7 @@ function openCoachModal(id = null) {
      if (!id) {
        window.selectedCountryCodeCoach = 'IN';
        const selected = $('country-selected-coach');
-       if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline-block\';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">ðŸ‡®ðŸ‡³</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
+       if (selected) selected.innerHTML = '<span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline-block\';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>';
        const phoneInput = $('cm-phone');
        if (phoneInput) {
          phoneInput.placeholder = '10 digits for India';
@@ -5233,7 +5233,7 @@ function openCoachModal(id = null) {
 
     if (!visibleEvents || visibleEvents.length === 0) {
       gridEl.style.display = 'grid';
-      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">ðŸ“…</span><p>No events scheduled</p></div>';
+      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">📅</span><p>No events scheduled</p></div>';
       return;
     }
 
@@ -5507,7 +5507,7 @@ function openCoachModal(id = null) {
              <div style="position: absolute; top: 12px; right: 12px; display:flex; gap: 8px; background: rgba(15, 23, 42, 0.75); padding: 6px 8px; border-radius: 10px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); z-index:10;">
                <button onclick="editAchievement('${a.id}')" style="background:transparent; border:none; color:var(--gold); cursor:pointer; font-size:14px; padding:0 4px;" title="Edit">âœï¸</button>
                <div style="width:1px; background:rgba(255,255,255,0.2); height:16px; align-self:center;"></div>
-               <button onclick="confirmDeleteAchievement('${a.id}', '${escapeHtml(a.title).replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:0 4px;" title="Delete">ðŸ—‘ï¸</button>
+               <button onclick="confirmDeleteAchievement('${a.id}', '${escapeHtml(a.title).replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:0 4px;" title="Delete">🗑️</button>
              </div>
            ` : ''}
          </div>
@@ -5656,7 +5656,7 @@ ${receiptUrl}
 Thank you for your prompt payment and continued support of Chesskidoo Academy! ${EMOJI.grad}${EMOJI.trophy}
 
 Best regards,
-â€“ Chesskidoo Academy ${EMOJI.knight}`;
+– Chesskidoo Academy ${EMOJI.knight}`;
 
     const studentPhone = getStudentPhone(s);
     const parsed = parseStoredPhone(studentPhone);
@@ -5974,7 +5974,7 @@ Best regards,
             `You may make the payment to: 9025846663 (Ranjith)\n` +
             `\n` +
             `Thank you for your understanding.\n` +
-            `â€“ Chesskidoo Academy`;
+            `– Chesskidoo Academy`;
         } else {
           message += `UPCOMING FEE REMINDER\n` +
             `\n` +
@@ -5989,7 +5989,7 @@ Best regards,
             `You may make the payment to: 9025846663 (Ranjith)\n` +
             `\n` +
             `Thank you so much for your support and cooperation!\n` +
-            `â€“ Chesskidoo Academy`;
+            `– Chesskidoo Academy`;
         }
 
       try {
@@ -6138,7 +6138,7 @@ Best regards,
     const nameEl = $('p-history-name');
     if (nameEl) nameEl.textContent = getStudentName(s);
     const metaEl = $('p-history-meta');
-    if (metaEl) metaEl.textContent = `ID: ${String(s.id).slice(0, 8)} â€¢ Monthly Fee: ${formatStudentFee(s, getStudentMonthlyFee(s))}`;
+    if (metaEl) metaEl.textContent = `ID: ${String(s.id).slice(0, 8)} • Monthly Fee: ${formatStudentFee(s, getStudentMonthlyFee(s))}`;
 
     openModal('payment-history-modal');
 
@@ -6162,13 +6162,13 @@ Best regards,
        <tr>
          <td>${transDate}</td>
          <td style="color:var(--gold);font-weight:600">${billingMonth}</td>
-         <td style="color:var(--success);font-weight:600">â‚¹${(p.amount || 0).toLocaleString()}</td>
+         <td style="color:var(--success);font-weight:600">₹${(p.amount || 0).toLocaleString()}</td>
          <td>${escapeHtml(p.payment_method || 'Cash')}</td>
          <td style="font-family:var(--font-mono);font-size:11px">${p.transaction_id || 'N/A'}</td>
          <td>
            <div style="display:flex;gap:5px">
-             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}', '${p.payment_date || p.created_at || ''}')">ðŸ“„</button>
-             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">ðŸ—‘ï¸</button>
+             <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || 'Online'}', '${p.payment_date || p.created_at || ''}')">📄</button>
+             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
            </div>
          </td>
        </tr>`;
@@ -6218,12 +6218,12 @@ Best regards,
 
     const msg = `ðŸŒŸ SALARY CREDITED SUCCESSFULLY ðŸŒŸ\n` +
                 `Hello Coach ${name},\n\n` +
-                `We are pleased to inform you that your salary of â‚¹${salary.toLocaleString()} for this period has been successfully processed and credited to your account! ðŸ’³ðŸ’¸\n\n` +
-                `ðŸ“„ View/Download your Official Salary Slip here:\n` +
+                `We are pleased to inform you that your salary of ₹${salary.toLocaleString()} for this period has been successfully processed and credited to your account! 💳💸\n\n` +
+                `📄 View/Download your Official Salary Slip here:\n` +
                 `${receiptUrl}\n\n` +
                 `Thank you so much for your incredible dedication, training expertise, and mentorship. You make Chesskidoo Academy shine! ðŸ†ðŸŽ“\n\n` +
                 `Warm regards,\n` +
-                `â€“ Chesskidoo Academy Team ðŸ‘‘âœ¨`;
+                `– Chesskidoo Academy Team ðŸ‘‘âœ¨`;
     openWhatsApp(dialCode, parsed.localNumber, msg);
   }
 
@@ -6246,7 +6246,7 @@ Best regards,
         if (coach) {
           coach.payment_status = 'Paid';
           setTimeout(() => {
-            if (confirm(`Salary marked as Paid! Would you like to open WhatsApp to inform Coach ${getCoachName(coach)} that their salary of â‚¹${(getCoachSalary(coach) || 0).toLocaleString()} has been credited successfully?`)) {
+            if (confirm(`Salary marked as Paid! Would you like to open WhatsApp to inform Coach ${getCoachName(coach)} that their salary of ₹${(getCoachSalary(coach) || 0).toLocaleString()} has been credited successfully?`)) {
               informCoachSalaryPaid(coach);
             }
           }, 200);
@@ -6317,12 +6317,12 @@ Best regards,
           <div style="font-weight:600;color:var(--ivory)">${escapeHtml(getCoachName(c))}</div>
         </td>
         <td><div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(getCoachSpecialty(c))}</div></td>
-        <td style="font-weight:600;color:var(--gold)">â‚¹${salary.toLocaleString()}</td>
+        <td style="font-weight:600;color:var(--gold)">₹${salary.toLocaleString()}</td>
         <td><span class="badge ${status === 'Paid' ? 'badge-success' : 'badge-warning'}" style="font-size:10px;padding:4px 8px">${status}</span></td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             ${status === 'Pending' ?
-          `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">âœ… Mark Paid</button>` :
+          `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">✅ Mark Paid</button>` :
           `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">âŒ Mark Unpaid</button>
            <button class="btn btn-outline btn-sm" onclick="informCoachSalaryPaid(allCoaches.find(x => String(x.id) === '${c.id}'))" style="border-color:var(--emerald);color:var(--emerald);" title="Notify Coach of Salary Credit">ðŸ“¢ Notify Credit</button>`}
           </div>
@@ -6336,7 +6336,7 @@ Best regards,
      // FIX #15: Only trigger renderBills if the bills page DOM is present
      const billBody = document.getElementById('bill-body');
      if (!billBody) {
-       // Page not active â€” just update the global context
+       // Page not active — just update the global context
        const parts = val.split('-');
        if (parts.length >= 2) {
          window.reportYear = parseInt(parts[0]);
@@ -6439,9 +6439,9 @@ Best regards,
           <td>-</td>
           <td>-</td>
           <td>-</td>
-          <td style="font-weight:600;color:var(--gold)">â€”</td>
+          <td style="font-weight:600;color:var(--gold)">—</td>
           <td><span class="badge badge-outline-grey" style="font-size:10px;padding:4px 8px">Not Enrolled</span></td>
-          <td><span style="color:var(--ivory-dim);font-size:11px">â€”</span></td>
+          <td><span style="color:var(--ivory-dim);font-size:11px">—</span></td>
         </tr>`;
       }
 
@@ -6465,19 +6465,19 @@ Best regards,
         let actionButtons = '';
         if (status === 'Paid') {
           actionButtons = `
-            <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">ðŸ“„ Receipt</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
             <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">â³ History</button>
             <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">ðŸ” Mark Unpaid</button>
           `;
         } else if (status === 'Pending' || status === 'Due' || status === 'Overdue') {
           actionButtons = `
-            <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">ðŸ’³ Pay Now</button>
+            <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
             <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">â³ History</button>
             <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">ðŸ“¢ Inform</button>
-            <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">âœ… Mark Paid</button>
+            <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
           `;
         } else {
-         actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">â€”</span>`;
+         actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
        }
 
       return `<tr>
@@ -6489,7 +6489,7 @@ Best regards,
         <td><div style="font-size:12px;color:var(--ivory)">${escapeHtml(coachName)}</div></td>
         <td><div style="font-size:12px;color:var(--ivory-dim)">${escapeHtml(sessionType)}</div></td>
         <td><div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(scheduleTime)}</div></td>
-        <td style="font-weight:600;color:var(--gold)">â‚¹${getStudentMonthlyFee(s).toLocaleString()}</td>
+        <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
         <td><span class="badge ${statusClass}" style="font-size:10px;padding:4px 8px">${status}</span></td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
@@ -6594,7 +6594,7 @@ Best regards,
     currentPayAmt = finalFee;
 
     if (nameEl) nameEl.textContent = name;
-    if (feeEl) feeEl.textContent = `â‚¹${finalFee.toLocaleString()}`;
+    if (feeEl) feeEl.textContent = `₹${finalFee.toLocaleString()}`;
 
     // Reset payment modal view
     if ($('pay-options')) $('pay-options').style.display = 'block';
@@ -6661,9 +6661,9 @@ Best regards,
   function showReceiptPreview() { openModal('receipt-preview-modal'); }
   function printReceipt() { window.print(); }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // MESSAGES
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   async function renderMsgs() {
     const listEl = $('msgs-list');
     const loadingEl = $('msgs-loading');
@@ -6673,7 +6673,7 @@ Best regards,
 
     if (!allMessages || allMessages.length === 0) {
       listEl.style.display = 'grid';
-      listEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">ðŸ’¬</span><p>No messages yet</p></div>';
+      listEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">💬</span><p>No messages yet</p></div>';
       return;
     }
 
@@ -6691,7 +6691,7 @@ Best regards,
          <div class="msg-card-body">${escapeHtml(m.message || '')}</div>
          <div class="msg-card-actions">
            ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${escapeHtml(String(m.id))}')">âœ“ Mark Read</button>` : ''}
-           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${escapeHtml(String(m.id))}')">ðŸ—‘ï¸ Delete</button>
+           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${escapeHtml(String(m.id))}')">🗑️ Delete</button>
          </div>
        </div>
      `).join('');
@@ -6705,9 +6705,9 @@ Best regards,
     loadAllData(true);
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // PARENT VIEW
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   function renderChild() {
     const loadingEl = $('child-loading');
     const contentEl = $('child-content');
@@ -6923,12 +6923,12 @@ Best regards,
     }
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // AI & CHAT
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   let currentAIModule = 'global';
 
-  // â”€â”€ PRIVACY GUARDRAILS FOR PARENT AI â”€â”€
+  // ── PRIVACY GUARDRAILS FOR PARENT AI ──
   const BLOCKED_PATTERNS = [
     /total revenue/i, /academy revenue/i, /monthly revenue/i, /salary/i, /total profit/i, /academy income/i,
     /other student/i, /other parent/i, /coach.*salary/i,
@@ -7047,7 +7047,7 @@ Best regards,
 
     const moduleConfig = {
       global: { title: 'Global Insights', icon: 'âš¡', btnIndex: 0, roles: ['admin', 'master'] },
-      finance: { title: 'Financial Analysis', icon: 'ðŸ’°', btnIndex: 1, roles: ['admin', 'master'] },
+      finance: { title: 'Financial Analysis', icon: '💰', btnIndex: 1, roles: ['admin', 'master'] },
       coach: { title: 'Coach Performance', icon: 'ðŸ§‘â€ðŸ«', btnIndex: 2, roles: ['admin', 'master'] },
       parent: { title: 'My Child Progress', icon: 'ðŸ‘¶', btnIndex: 3, roles: ['parent'] }
     };
@@ -7105,11 +7105,11 @@ Best regards,
   }
   window.setAISuggestion = setAISuggestion;
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // REAL-TIME INTELLIGENCE ENGINE (RAG + AGENTIC AI)
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
 
-  // â”€â”€ API ORCHESTRATION LAYER â”€â”€
+  // ── API ORCHESTRATION LAYER ──
   const API_ORCHESTRATION = {
     endpoints: {
       news: 'https://newsapi.org/v2/top-headlines',
@@ -7175,7 +7175,7 @@ Best regards,
     }
   };
 
-  // â”€â”€ VECTOR DATABASE SIMULATION (RAG) â”€â”€
+  // ── VECTOR DATABASE SIMULATION (RAG) ──
   const VECTOR_RAG = {
     chunks: [],
 
@@ -7211,7 +7211,7 @@ Best regards,
     }
   };
 
-  // â”€â”€ TOOL CALLING ENGINE â”€â”€
+  // ── TOOL CALLING ENGINE ──
   const TOOL_CALLER = {
     tools: {
       get_academy_stats: {
@@ -7317,7 +7317,7 @@ Best regards,
     }
   };
 
-  // â”€â”€ TEMPORAL REASONING ENGINE â”€â”€
+  // ── TEMPORAL REASONING ENGINE ──
   const TEMPORAL_ENGINE = {
     getCurrentContext() {
       const now = new Date();
@@ -7351,7 +7351,7 @@ Best regards,
     }
   };
 
-  // â”€â”€ RESPONSE SYNTHESIZER â”€â”€
+  // ── RESPONSE SYNTHESIZER ──
   const RESPONSE_SYNTHESIZER = {
     synthesize(query, toolResults, temporalContext) {
       let response = '';
@@ -7364,32 +7364,32 @@ Best regards,
       if (queryLower.includes('how many') || queryLower.includes('total') || queryLower.includes('count')) {
         const stats = results.find(r => r.totalStudents !== undefined);
         if (stats) {
-          response = `ðŸ“Š **Academy Statistics** (${temporalContext.date})
+          response = `📊 **Academy Statistics** (${temporalContext.date})
 
 `;
-          response += `â€¢ **Total Students:** ${stats.totalStudents}
+          response += `• **Total Students:** ${stats.totalStudents}
 `;
-          response += `â€¢ **Active Coaches:** ${stats.totalCoaches}
+          response += `• **Active Coaches:** ${stats.totalCoaches}
 `;
-          response += `â€¢ **Total Revenue:** â‚¹${stats.revenue?.toLocaleString() || 0}
+          response += `• **Total Revenue:** ₹${stats.revenue?.toLocaleString() || 0}
 `;
-          response += `â€¢ **Collection Rate:** ${stats.collectionRate}%
+          response += `• **Collection Rate:** ${stats.collectionRate}%
 `;
-          response += `â€¢ **Paid Students:** ${stats.paid}
+          response += `• **Paid Students:** ${stats.paid}
 `;
-          response += `â€¢ **Due Payments:** ${stats.due}`;
+          response += `• **Due Payments:** ${stats.due}`;
         }
       }
 
       if (queryLower.includes('market') || queryLower.includes('stock') || queryLower.includes('finance')) {
         const market = results.find(r => r.indices);
         if (market) {
-          response = `ðŸ“ˆ **Market Overview** (${temporalContext.time})
+          response = `📈 **Market Overview** (${temporalContext.time})
 
 `;
           market.indices.forEach(idx => {
             const sign = idx.change >= 0 ? 'â†‘' : 'â†“';
-            response += `â€¢ **${idx.name}:** ${idx.value.toLocaleString()} (${sign}${Math.abs(idx.change)}%)
+            response += `• **${idx.name}:** ${idx.value.toLocaleString()} (${sign}${Math.abs(idx.change)}%)
 `;
           });
         }
@@ -7401,11 +7401,11 @@ Best regards,
           response = `ðŸŒ¤ï¸ **Current Weather** (${temporalContext.date})
 
 `;
-          response += `â€¢ **Temperature:** ${weather.temperature}Â°C
+          response += `• **Temperature:** ${weather.temperature}Â°C
 `;
-          response += `â€¢ **Condition:** ${weather.condition}
+          response += `• **Condition:** ${weather.condition}
 `;
-          response += `â€¢ **Humidity:** ${weather.humidity}%`;
+          response += `• **Humidity:** ${weather.humidity}%`;
         }
       }
 
@@ -7416,7 +7416,7 @@ Best regards,
 
 `;
           sensors.sensors.forEach(s => {
-            response += `â€¢ **${s.location} - ${s.type}:** ${s.value} ${s.unit}
+            response += `• **${s.location} - ${s.type}:** ${s.value} ${s.unit}
 `;
           });
         }
@@ -7425,14 +7425,14 @@ Best regards,
       if (queryLower.includes('event') || queryLower.includes('tournament')) {
         const events = results.find(r => r.upcoming !== undefined);
         if (events) {
-          response = `ðŸ“… **Events Summary** (${temporalContext.date})
+          response = `📅 **Events Summary** (${temporalContext.date})
 
 `;
-          response += `â€¢ **Upcoming Events:** ${events.upcoming}
+          response += `• **Upcoming Events:** ${events.upcoming}
 `;
-          response += `â€¢ **Past Events:** ${events.past}
+          response += `• **Past Events:** ${events.past}
 `;
-          response += `â€¢ **Total Events:** ${events.total}`;
+          response += `• **Total Events:** ${events.total}`;
         }
       }
 
@@ -7446,15 +7446,15 @@ Best regards,
 
         const stats = results.find(r => r.totalStudents !== undefined);
         if (stats) {
-          response += `ðŸ“Š **Statistics:** ${stats.totalStudents} students, ${stats.totalCoaches} coaches
+          response += `📊 **Statistics:** ${stats.totalStudents} students, ${stats.totalCoaches} coaches
 `;
-          response += `ðŸ’° **Revenue:** â‚¹${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)
+          response += `💰 **Revenue:** ₹${stats.revenue?.toLocaleString() || 0} (${stats.collectionRate}% collected)
 `;
         }
 
         const events = results.find(r => r.upcoming !== undefined);
         if (events) {
-          response += `ðŸ“… **Events:** ${events.upcoming} upcoming
+          response += `📅 **Events:** ${events.upcoming} upcoming
 `;
         }
 
@@ -7473,7 +7473,7 @@ Best regards,
     }
   };
 
-  // â”€â”€ ENHANCED AI QUERY HANDLER â”€â”€
+  // ── ENHANCED AI QUERY HANDLER ──
   function animateAIResponse(element, markdownText) {
     let html = (markdownText || '')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -7518,7 +7518,7 @@ Best regards,
     const query = input.value;
     const chatContainer = document.getElementById('ai-workspace-msgs');
 
-    // â”€â”€ PRIVACY GUARDRAIL: Validate parent queries â”€â”€
+    // ── PRIVACY GUARDRAIL: Validate parent queries ──
     if (role === 'parent') {
       const validation = validateParentAIQuery(query);
       if (!validation.allowed) {
@@ -7559,7 +7559,7 @@ Best regards,
     chatContainer.scrollTop = chatContainer.scrollHeight;
 
     try {
-      // â”€â”€ BUILD ROLE-SPECIFIC CONTEXT â”€â”€
+      // ── BUILD ROLE-SPECIFIC CONTEXT ──
       let context = {};
 
       if (role === 'parent') {
@@ -7603,7 +7603,7 @@ Best regards,
       const aiData = await aiResponse.json();
       let botResponse = aiData.message || 'I apologize, I couldn\'t process that request. Please try again.';
 
-      // â”€â”€ PRIVACY GUARDRAIL: Validate AI response for parents â”€â”€
+      // ── PRIVACY GUARDRAIL: Validate AI response for parents ──
       if (role === 'parent') {
         botResponse = validateParentAIResponse(botResponse);
       }
@@ -7632,9 +7632,9 @@ Best regards,
   // Initialize RAG on load
   VECTOR_RAG.indexData();
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // THEME & PDF
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   function toggleTheme() {
     const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
     document.body.dataset.theme = newTheme;
@@ -7766,11 +7766,11 @@ Best regards,
         [],
         ['Metric', 'Value', 'Context'],
         ['Total Cadets', allStudents.length, 'Active Roster'],
-        ['Revenue Potential', `â‚¹${totalPotential}`, 'Gross Capacity'],
-        ['Revenue Realized', `â‚¹${collected}`, 'Liquidity'],
-        ['Revenue Pending', `â‚¹${pending}`, 'Risk Exposure'],
+        ['Revenue Potential', `₹${totalPotential}`, 'Gross Capacity'],
+        ['Revenue Realized', `₹${collected}`, 'Liquidity'],
+        ['Revenue Pending', `₹${pending}`, 'Risk Exposure'],
         ['Collection Rate', `${((collected / totalPotential) * 100).toFixed(1)}%`, 'Operational Efficiency'],
-        ['ARPU', `â‚¹${(collected / allStudents.filter(s => s.status === 'active').length || 1).toFixed(0)}`, 'Yield Per Cadet']
+        ['ARPU', `₹${(collected / allStudents.filter(s => s.status === 'active').length || 1).toFixed(0)}`, 'Yield Per Cadet']
       ];
       const wsDash = XLSX.utils.aoa_to_sheet(dashboardData);
       XLSX.utils.book_append_sheet(wb, wsDash, "Executive Summary");
@@ -7879,9 +7879,9 @@ Best regards,
     }
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // INIT & EXPOSE
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // Role-based session timeouts (in milliseconds)
   const SESSION_TIMEOUTS = {
     'admin': 15 * 60 * 1000,   // 15 minutes for admin
@@ -7931,9 +7931,9 @@ Best regards,
      }
    });
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   // EXPOSE GLOBALS TO WINDOW
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═══════════════════════════════════════════════════════════════
   window.$ = $;
   window.toast = toast;
   window.apiCall = apiCall;
@@ -8074,7 +8074,7 @@ Best regards,
          ${unread.slice(0, 5).map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
            <div>
              <div style="font-size:13px;font-weight:500">${escapeHtml(m.subject || 'No Subject')}</div>
-             <div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(m.sender_name || 'User')} â€¢ ${new Date(m.created_at).toLocaleDateString()}</div>
+             <div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(m.sender_name || 'User')} • ${new Date(m.created_at).toLocaleDateString()}</div>
            </div>
            <button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${m.id}')" style="padding:2px 8px;font-size:10px">Mark Read</button>
          </div>`).join('')}
@@ -8083,7 +8083,7 @@ Best regards,
 
      if (due.length > 0) {
        html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--danger)">ðŸ’° Outstanding / Overdue Payments (${due.length})</div>
+         <div style="font-weight:600;color:var(--danger)">💰 Outstanding / Overdue Payments (${due.length})</div>
          <div style="font-size:12px;color:var(--ivory-dim)">Students with pending or overdue fees</div>
          ${due.slice(0, 5).map(s => {
            const st = getStudentPaymentStatus(s);
@@ -8110,7 +8110,7 @@ Best regards,
     content.innerHTML = `
       <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
         <h3 style="margin:0">System Notifications</h3>
-        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">ðŸ—‘ï¸ Clear All</button>
+        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">🗑️ Clear All</button>
       </div>
       ${html}
     `;
@@ -8179,7 +8179,7 @@ Best regards,
     generatedInsights.push({
       type: 'baseline',
       severity: 'success',
-      icon: 'ðŸ“Š',
+      icon: '📊',
       text: `<strong>Academy Overview:</strong> You currently have <strong>${activeStudentCount} active students</strong> and <strong>${activeCoachCount} active coaches</strong>. Your academy is operating smoothly.`
     });
 
@@ -8286,7 +8286,7 @@ Best regards,
           type: 'arrears',
           icon: 'ðŸ’¸',
           severity: 'danger',
-          text: `<strong>Arrears Warning:</strong> Student <strong>${getStudentName(s)}</strong> has <strong>${outstandingMonths} unpaid months</strong> (Owes: â‚¹${totalOwed.toLocaleString()}). Suggest sending notification.`
+          text: `<strong>Arrears Warning:</strong> Student <strong>${getStudentName(s)}</strong> has <strong>${outstandingMonths} unpaid months</strong> (Owes: ₹${totalOwed.toLocaleString()}). Suggest sending notification.`
         });
       }
     });
@@ -8294,7 +8294,7 @@ Best regards,
     // --- 4. General Overview Insight (Baseline) ---
     generatedInsights.push({
       type: 'all',
-      icon: 'ðŸ“Š',
+      icon: '📊',
       severity: 'info',
       text: `<strong>Academy Overview:</strong> You currently have <strong>${allStudents.length}</strong> registered students and <strong>${allCoaches.length}</strong> active coaches. The system is operating normally.`
     });
@@ -8582,7 +8582,7 @@ Best regards,
         
         if (!res.ok) throw new Error("Failed to save to database");
         
-        toast("QR Poster generated and saved successfully! ðŸŽ‰", "success");
+        toast("QR Poster generated and saved successfully! 🎉", "success");
         closeModal('qr-poster-modal');
         await loadAllData(true);
         window.openEventManagement(eventId);
