@@ -3924,6 +3924,10 @@ function initUI() {
          if (sStatus === 'archived' && fEnrollStatus !== 'archived') return false;
          const enrollDateStr = getStudentDate(s);
          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(Date.UTC(2026, 3, 1));
+         
+         // Always show upcoming, pending, or waitlisted students regardless of the dashboard month selected
+         if (['upcoming', 'pending', 'waitlist'].includes(sStatus)) return true;
+         
          return enrollDate <= targetMonthEnd;
        });
 
