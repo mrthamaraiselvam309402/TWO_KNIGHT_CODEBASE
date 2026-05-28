@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CHESSKIDOO ACADEMY - Complete Admin Panel Scripts
  * Fixed version - Academy Expansion Logic Integrated
  */
@@ -76,7 +76,7 @@
       value: '', textContent: '', innerHTML: '', style: {}, checked: false, disabled: false,
       classList: { add: ()=>{}, remove: ()=>{}, toggle: ()=>{}, contains: ()=>false },
       focus: ()=>{}, appendChild: ()=>{}, addEventListener: ()=>{}, setAttribute: ()=>{},
-      removeAttribute: ()=>{}
+      removeAttribute: ()=>{}, querySelector: ()=>null, querySelectorAll: ()=>[]
     };
   };
 
@@ -94,7 +94,7 @@
 
   // Security validation
   if (!SUPABASE_ANON_KEY) {
-    console.error('âŒ CRITICAL: Supabase Anon Key is missing!');
+    console.error('❌ CRITICAL: Supabase Anon Key is missing!');
     if (window.location.hostname !== 'localhost') {
       document.body.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px;background:#1a1a1a;color:#fff">
@@ -181,7 +181,7 @@
     el.className = `toast toast-${type}`;
     el.innerHTML = `
       <div class="toast-content">
-        <span class="toast-icon">${type === 'success' ? '✅' : (type === 'error' ? 'âŒ' : 'ℹ️')}</span>
+        <span class="toast-icon">${type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️')}</span>
         <span class="toast-msg">${msg}</span>
       </div>
     `;
@@ -352,7 +352,7 @@
            <div class="ev-body">
              <div class="ev-title">${escapeHtml(e.title)}</div>
              <div class="ev-meta">
-               <span class="ev-meta-item ev-time">â° ${escapeHtml(eventTime)}</span>
+               <span class="ev-meta-item ev-time">⏰ ${escapeHtml(eventTime)}</span>
                <span class="ev-meta-item ev-loc">${escapeHtml(e.location || 'TBD')}</span>
                ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${escapeHtml(e.prize_pool)}</span>` : ''}
              </div>
@@ -920,8 +920,8 @@
             <select class="att-status" data-sid="${s.id}" onchange="updateAttStats()">
               <option value="" ${!status ? 'selected' : ''}>-- Select --</option>
               <option value="present" ${status === 'present' ? 'selected' : ''}>✅ Present</option>
-              <option value="absent" ${status === 'absent' ? 'selected' : ''}>âŒ Absent</option>
-              <option value="late" ${status === 'late' ? 'selected' : ''}>â° Late</option>
+              <option value="absent" ${status === 'absent' ? 'selected' : ''}>❌ Absent</option>
+              <option value="late" ${status === 'late' ? 'selected' : ''}>⏰ Late</option>
               <option value="excused" ${status === 'excused' ? 'selected' : ''}>📋 Excused</option>
             </select>
           </td>
@@ -948,8 +948,8 @@
     if (statsEl) {
       statsEl.innerHTML = `
         <span style="color:var(--success)">✅ ${present}</span> |
-        <span style="color:var(--danger)">âŒ ${absent}</span> |
-        <span style="color:var(--gold)">â° ${late}</span> |
+        <span style="color:var(--danger)">❌ ${absent}</span> |
+        <span style="color:var(--gold)">⏰ ${late}</span> |
         <span style="color:var(--ivory3)">📋 ${excused}</span> |
         <span style="color:var(--ivory3)"> unmarked: ${unmarked}</span>
       `;
@@ -1706,21 +1706,21 @@ function initUI() {
     'MX': { currency: 'MXN', symbol: '$', rate: 0.20 },
     'IT': { currency: 'EUR', symbol: '€', rate: 0.011 },
     'ES': { currency: 'EUR', symbol: '€', rate: 0.011 },
-    'RU': { currency: 'RUB', symbol: 'â‚½', rate: 1.10 },
-    'KR': { currency: 'KRW', symbol: 'â‚©', rate: 16.4 },
+    'RU': { currency: 'RUB', symbol: '₽', rate: 1.10 },
+    'KR': { currency: 'KRW', symbol: '₩', rate: 16.4 },
     'SG': { currency: 'SGD', symbol: 'S$', rate: 0.016 },
     'MY': { currency: 'MYR', symbol: 'RM', rate: 0.056 },
     'TH': { currency: 'THB', symbol: 'à¸¿', rate: 0.44 },
     'ID': { currency: 'IDR', symbol: 'Rp', rate: 193.0 },
-    'PH': { currency: 'PHP', symbol: 'â‚±', rate: 0.70 },
-    'VN': { currency: 'VND', symbol: 'â‚«', rate: 305.0 },
+    'PH': { currency: 'PHP', symbol: '₱', rate: 0.70 },
+    'VN': { currency: 'VND', symbol: '₫', rate: 305.0 },
     'AE': { currency: 'AED', symbol: 'AED', rate: 0.044 },
     'SA': { currency: 'SAR', symbol: 'SR', rate: 0.045 },
     'PK': { currency: 'PKR', symbol: 'Rs', rate: 3.32 },
     'BD': { currency: 'BDT', symbol: 'à§³', rate: 1.41 },
     'LK': { currency: 'LKR', symbol: 'Rs', rate: 3.59 },
     'ZA': { currency: 'ZAR', symbol: 'R', rate: 0.22 },
-    'NG': { currency: 'NGN', symbol: 'â‚¦', rate: 18.0 },
+    'NG': { currency: 'NGN', symbol: '₦', rate: 18.0 },
     'EG': { currency: 'EGP', symbol: 'EÂ£', rate: 0.57 },
     'NL': { currency: 'EUR', symbol: '€', rate: 0.011 },
     'BE': { currency: 'EUR', symbol: '€', rate: 0.011 },
@@ -1729,8 +1729,8 @@ function initUI() {
     'DK': { currency: 'DKK', symbol: 'kr', rate: 0.083 },
     'FI': { currency: 'EUR', symbol: '€', rate: 0.011 },
     'PL': { currency: 'PLN', symbol: 'zÅ‚', rate: 0.048 },
-    'TR': { currency: 'TRY', symbol: 'â‚º', rate: 0.39 },
-    'IL': { currency: 'ILS', symbol: 'â‚ª', rate: 0.044 },
+    'TR': { currency: 'TRY', symbol: '₺', rate: 0.39 },
+    'IL': { currency: 'ILS', symbol: '₪', rate: 0.044 },
     'AR': { currency: 'ARS', symbol: '$', rate: 10.7 },
     'CL': { currency: 'CLP', symbol: '$', rate: 11.2 },
     'CO': { currency: 'COP', symbol: '$', rate: 47.0 },
@@ -2044,10 +2044,10 @@ function initUI() {
     let presentCount = 0;
     
     const tbody = $('ev-m-tbody');
-    tbody.innerHTML = '<tr><td colspan="5"><div class="loading-state"><span class="spinner"></span> Loadingâ€¦</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>';
     
     const expTbody = $('ev-exp-tbody');
-    expTbody.innerHTML = '<tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Loadingâ€¦</div></td></tr>';
+    expTbody.innerHTML = '<tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>';
 
     $('ev-list-view').style.display = 'none';
     $('ev-manage-view').style.display = 'block';
@@ -2070,7 +2070,7 @@ function initUI() {
       
       let html = '';
       if (regStudents.length === 0) {
-         html = '<tr><td colspan="5"><div class="empty-state"><span class="empty-icon">ðŸ‘¥</span><p>No students registered yet</p></div></td></tr>';
+         html = '<tr><td colspan="5"><div class="empty-state"><span class="empty-icon">👥</span><p>No students registered yet</p></div></td></tr>';
       } else {
          regStudents.forEach(sid => {
             const student = allStudents.find(s => s.id === sid);
@@ -2127,7 +2127,7 @@ function initUI() {
       let expHtml = '';
       let totalExp = 0;
       if (eventExps.length === 0) {
-        expHtml = '<tr><td colspan="3"><div class="empty-state"><span class="empty-icon">ðŸ’¸</span><p>No expenditures logged</p></div></td></tr>';
+        expHtml = '<tr><td colspan="3"><div class="empty-state"><span class="empty-icon">💸</span><p>No expenditures logged</p></div></td></tr>';
       } else {
         eventExps.forEach(ex => {
           totalExp += Number(ex.amount || 0);
@@ -2443,7 +2443,7 @@ function initUI() {
                   } else {
                       const data = await res.json();
                       toast(data.error || 'Failed to update', 'error');
-                      $('qr-reader-results').textContent = `âŒ ${data.error || 'Failed'}`;
+                      $('qr-reader-results').textContent = `❌ ${data.error || 'Failed'}`;
                       $('qr-reader-results').style.color = "var(--danger)";
                   }
               } catch (e) { toast('Error updating attendance', 'error'); }
@@ -3102,7 +3102,7 @@ function initUI() {
       modal.style.zIndex = '9999';
       modal.innerHTML = `
         <div class="modal-box" style="max-width:400px; text-align:center; border:2px solid var(--gold); background:var(--bg2)">
-          <h2 style="color:var(--gold); margin-bottom:15px; font-family:var(--font-head)">ðŸ†• New Billing Month!</h2>
+          <h2 style="color:var(--gold); margin-bottom:15px; font-family:var(--font-head)">🆕 New Billing Month!</h2>
           <p style="color:var(--ivory-dim); margin-bottom:25px; font-size:14px">It's a new month. The system has automatically updated student statuses. Would you like to inform all coaches about their student due lists now?</p>
           <div style="display:flex; gap:10px">
             <button class="btn btn-outline" style="flex:1" onclick="localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">Later</button>
@@ -3175,7 +3175,7 @@ function initUI() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
           const msg = payload.new;
           if (msg.receiver_type === 'admin' && shouldShowNotification('msg_' + msg.id)) {
-             toast(`ðŸ“¬ New Message from ${msg.sender_name || 'User'}!`, 'info');
+             toast(`📬 New Message from ${msg.sender_name || 'User'}!`, 'info');
              debouncedRefresh();
           }
         })
@@ -3209,7 +3209,7 @@ function initUI() {
           const newCount = newMsgs.length - lastMsgCount;
           const latest = newMsgs[0];
           if (latest && shouldShowNotification('msg_' + latest.id)) {
-            toast(`ðŸ“¬ ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
+            toast(`📬 ${newCount} new message${newCount > 1 ? 's' : ''}!`, 'info');
           }
           lastMsgCount = newMsgs.length;
           allMessages = newMsgs;
@@ -3232,7 +3232,7 @@ function initUI() {
 
         if (dedupedStuds.length > lastStudCount) {
           if (shouldShowNotification('new_student_' + dedupedStuds.length)) {
-            toast('ðŸŽ“ New student enrolled!', 'success');
+            toast('🎓 New student enrolled!', 'success');
           }
           logAudit('students', 'new', null, { count: dedupedStuds.length });
           lastStudCount = dedupedStuds.length;
@@ -3248,7 +3248,7 @@ function initUI() {
             const latest = failedLogins[0];
             if (latest && shouldShowNotification('fail_' + (latest.id || latest.timestamp || latest.created_at))) {
               const time = new Date(latest.created_at || latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`ðŸ›¡ï¸ Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
+              toast(`🛡️ Failed login attempt: ${latest.user_name || 'Unknown'} at ${time}`, 'error');
             }
           }
         } catch (e) {
@@ -3259,7 +3259,7 @@ function initUI() {
             const latest = localLogs[localLogs.length - 1];
             if (latest && shouldShowNotification('fail_local_' + latest.timestamp)) {
               const time = new Date(latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-              toast(`ðŸ›¡ï¸ Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
+              toast(`🛡️ Failed login: ${latest.user || 'Unknown'} at ${time}`, 'error');
             }
           }
         }
@@ -3371,15 +3371,15 @@ function initUI() {
             <input type="month" id="report-period" class="selector-minimal" onchange="updateReportContext()" value="${periodValue}">
           </div>
           <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">📄 Financial Report</button>
-          <button class="btn btn-gold" onclick="exportAcademyData()">ðŸ“¥ Export Academy Data</button>
+          <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
         `;
         }
         if (p === 'stud') btnArea.innerHTML = `
-          <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">ðŸ—“ï¸ Batch Attendance</button>
+          <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">🗓️ Batch Attendance</button>
           <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
         `;
         if (p === 'events') btnArea.innerHTML = `<button class="btn btn-gold" onclick="openEventModal()">+ Create Event</button>`;
-        if (p === 'insights') btnArea.innerHTML = `<button class="btn btn-gold" onclick="window.generateAcademyInsights()">ðŸ”„ Recalculate Insights</button>`;
+        if (p === 'insights') btnArea.innerHTML = `<button class="btn btn-gold" onclick="window.generateAcademyInsights()">🔄 Recalculate Insights</button>`;
       }
     }
 
@@ -3407,7 +3407,7 @@ function initUI() {
         if (chatBody && chatBody.children.length === 0) {
             chatBody.innerHTML = `
             <div class="ai-ws-msg bot">
-              <div class="ai-ws-avatar">ðŸ¤–</div>
+              <div class="ai-ws-avatar">🤖</div>
               <div class="ai-ws-bubble">
                 Hello Admin! I'm your dedicated AI Copilot. I'm securely connected to your live academy database. How can I assist you with analytics, student insights, or performance metrics today?
               </div>
@@ -3635,13 +3635,13 @@ function initUI() {
         let html = '';
         if (currentUserActive) {
           html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
-            <span><span style="color:var(--emerald)">â—</span> ${currentUser} <span style="color:var(--gold)">(You)</span></span>
+            <span><span style="color:var(--emerald)">●</span> ${currentUser} <span style="color:var(--gold)">(You)</span></span>
             <span style="color:var(--ivory-dim);font-size:11px">${formatTimeAgo(currentUserActive.loginAt)}</span>
           </div>`;
         }
         others.forEach(s => {
           html += `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
-            <span><span style="color:var(--emerald)">â—</span> ${s.user} <span class="badge badge-level" style="font-size:9px;margin-left:4px">${s.role}</span></span>
+            <span><span style="color:var(--emerald)">●</span> ${s.user} <span class="badge badge-level" style="font-size:9px;margin-left:4px">${s.role}</span></span>
             <span style="color:var(--ivory-dim);font-size:11px">${formatTimeAgo(s.loginAt)}</span>
           </div>`;
         });
@@ -3666,7 +3666,7 @@ function initUI() {
         uniqueSessions.forEach(s => {
           const loginTime = new Date(s.loginAt).toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' });
           const status = s.active
-            ? '<span style="color:var(--emerald)">â— Active</span>'
+            ? '<span style="color:var(--emerald)">● Active</span>'
             : s.logoutAt
               ? '<span style="color:var(--ivory-dim)">Logged out</span>'
               : '<span style="color:var(--danger)">Session ended</span>';
@@ -4517,7 +4517,7 @@ function initUI() {
             } else if (status === 'Paid') {
               dueDateHtml = `<span class="text-success" style="opacity: 0.85; font-weight: 500; cursor:pointer" onclick="viewPaymentHistory('${s.id}')">${dueDateString}</span>`;
             } else if (isOverdue) {
-              dueDateHtml = `<span class="text-danger" style="font-weight: 700;">âš ï¸ ${dueDateString}</span>`;
+              dueDateHtml = `<span class="text-danger" style="font-weight: 700;">⚠️¸ ${dueDateString}</span>`;
             } else {
               dueDateHtml = `<span style="color: var(--warning); font-weight: 600;">${dueDateString}</span>`;
             }
@@ -4533,11 +4533,11 @@ function initUI() {
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                   <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
-                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">ðŸ” Mark Unpaid</button>
+                  <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔄 Mark Unpaid</button>
                   </div>
                 `;
                moreActions = `
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">â³ History</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
@@ -4553,7 +4553,7 @@ function initUI() {
                  `;
                moreActions = `
                  <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">â³ History</button>
+                 <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="sendPaymentReminder('${s.id}')">💬 WhatsApp</button>
                `;
              } else if (isNonActive || status === 'Not Enrolled') {
@@ -4612,7 +4612,7 @@ function initUI() {
                    <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;min-width:0" class="action-menu-container">
                     ${primaryActions}
                     ${moreActions ? `
-                      <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">â‹® More</button>
+                      <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
                       <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:160px;box-shadow:var(--shadow);margin-top:4px">
                         ${moreActions}
                       </div>
@@ -4934,7 +4934,7 @@ function initUI() {
     if (!grid) return;
 
     if (!allCoaches || allCoaches.length === 0) {
-      grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="empty-icon">ðŸ‘¨â€ðŸ«</span><p>No coaches found in the academy</p></div>';
+      grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="empty-icon">👨‍🏫</span><p>No coaches found in the academy</p></div>';
       return;
     }
 
@@ -4982,8 +4982,8 @@ function initUI() {
              </div>
            </div>
            <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr; gap: 8px;">
-             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">ðŸ‘ï¸ View</button>
-             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">âœï¸ Edit</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️¸ Edit</button>
              <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
              <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${escapeHtml(getCoachName(c)).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
            </div>
@@ -5259,7 +5259,7 @@ function openCoachModal(id = null) {
              <span class="ev-meta-item ev-loc">${escapeHtml(e.location || 'TBD')}</span>
              ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${escapeHtml(e.prize_pool)}</span>` : ''}
            </div>
-           ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">ðŸ“ View on Map</a>` : ''}
+           ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">📍 View on Map</a>` : ''}
            ${e.description ? `<div class="ev-desc">${escapeHtml(e.description)}</div>` : ''}
          </div>
          <div class="ev-progress-wrap">
@@ -5273,7 +5273,7 @@ function openCoachModal(id = null) {
          </div>
          <div class="ev-footer">
            <div class="ev-spots"><strong>${spotsLeft}</strong> spots left</div>
-           ${role === 'parent' ? (e.registered_students?.includes(currentStudent?.id) ? '<span class="badge badge-success">âœ“ Registered</span>' : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`) : ''}
+           ${role === 'parent' ? (e.registered_students?.includes(currentStudent?.id) ? '<span class="badge badge-success">✓ Registered</span>' : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`) : ''}
            ${isAdmin ? `
              <div style="display:flex;gap:8px;margin-left:auto">
                <button class="btn btn-outline-grey btn-sm" onclick="editEvent('${e.id}')">Edit</button>
@@ -5462,7 +5462,7 @@ function openCoachModal(id = null) {
 
     // 2. Render Achievements Gallery
     if (!achievementsData || achievementsData.length === 0) {
-      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">ðŸ†</span><p>No achievements recorded yet</p></div>';
+      gridEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">🏆</span><p>No achievements recorded yet</p></div>';
       return;
     }
 
@@ -5483,7 +5483,7 @@ function openCoachModal(id = null) {
              
              <!-- Content -->
              <div style="text-transform: uppercase; font-size: 10px; letter-spacing: 2.5px; color: var(--gold); margin-bottom: 8px; font-weight: 800; display:flex; align-items:center; gap:6px;">
-               <span style="font-size:14px;">ðŸ†</span> Achievement
+               <span style="font-size:14px;">🏆</span> Achievement
              </div>
              
              <div style="font-family: var(--font-head), 'Playfair Display', serif; font-size: 26px; font-weight: 800; color: #fff; line-height: 1.1; margin-bottom: 12px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
@@ -5505,7 +5505,7 @@ function openCoachModal(id = null) {
            <!-- Action Buttons overlay (top right) -->
            ${isAdmin ? `
              <div style="position: absolute; top: 12px; right: 12px; display:flex; gap: 8px; background: rgba(15, 23, 42, 0.75); padding: 6px 8px; border-radius: 10px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); z-index:10;">
-               <button onclick="editAchievement('${a.id}')" style="background:transparent; border:none; color:var(--gold); cursor:pointer; font-size:14px; padding:0 4px;" title="Edit">âœï¸</button>
+               <button onclick="editAchievement('${a.id}')" style="background:transparent; border:none; color:var(--gold); cursor:pointer; font-size:14px; padding:0 4px;" title="Edit">✏️¸</button>
                <div style="width:1px; background:rgba(255,255,255,0.2); height:16px; align-self:center;"></div>
                <button onclick="confirmDeleteAchievement('${a.id}', '${escapeHtml(a.title).replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:0 4px;" title="Delete">🗑️</button>
              </div>
@@ -6216,14 +6216,14 @@ Best regards,
     const salary = getCoachSalary(c) || 0;
     const receiptUrl = `${window.location.origin}/salary_receipt.html?id=${c.id}&name=${encodeURIComponent(name)}&amount=${salary}&role=${encodeURIComponent(c.specialty || 'Chess Coach')}&specialty=${encodeURIComponent(c.specialty || 'Chess Academy Mentor')}&method=Online%20Transfer`;
 
-    const msg = `ðŸŒŸ SALARY CREDITED SUCCESSFULLY ðŸŒŸ\n` +
+    const msg = `🌟 SALARY CREDITED SUCCESSFULLY 🌟\n` +
                 `Hello Coach ${name},\n\n` +
                 `We are pleased to inform you that your salary of ₹${salary.toLocaleString()} for this period has been successfully processed and credited to your account! 💳💸\n\n` +
                 `📄 View/Download your Official Salary Slip here:\n` +
                 `${receiptUrl}\n\n` +
-                `Thank you so much for your incredible dedication, training expertise, and mentorship. You make Chesskidoo Academy shine! ðŸ†ðŸŽ“\n\n` +
+                `Thank you so much for your incredible dedication, training expertise, and mentorship. You make Chesskidoo Academy shine! 🏆🎓\n\n` +
                 `Warm regards,\n` +
-                `– Chesskidoo Academy Team ðŸ‘‘âœ¨`;
+                `– Chesskidoo Academy Team 👑✓¨`;
     openWhatsApp(dialCode, parsed.localNumber, msg);
   }
 
@@ -6323,7 +6323,7 @@ Best regards,
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             ${status === 'Pending' ?
           `<button class="btn btn-outline btn-sm" onclick="markCoachPaid('${c.id}')">✅ Mark Paid</button>` :
-          `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">âŒ Mark Unpaid</button>
+          `<button class="btn btn-outline-danger btn-sm" onclick="markCoachUnpaid('${c.id}')">❌ Mark Unpaid</button>
            <button class="btn btn-outline btn-sm" onclick="informCoachSalaryPaid(allCoaches.find(x => String(x.id) === '${c.id}'))" style="border-color:var(--emerald);color:var(--emerald);" title="Notify Coach of Salary Credit">📢 Notify Credit</button>`}
           </div>
         </td>
@@ -6466,13 +6466,13 @@ Best regards,
         if (status === 'Paid') {
           actionButtons = `
             <button class="btn btn-outline-grey btn-sm" onclick="downloadReceipt('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}', '${jsAttrEncode(getStudentLevel(s))}', '${getStudentRating(s)}', '${coachName}', 'Online')">📄 Receipt</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">â³ History</button>
-            <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">ðŸ” Mark Unpaid</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
+            <button class="btn btn-outline-warning btn-sm" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔄 Mark Unpaid</button>
           `;
         } else if (status === 'Pending' || status === 'Due' || status === 'Overdue') {
           actionButtons = `
             <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
-            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">â³ History</button>
+            <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
             <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
             <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
           `;
@@ -6690,7 +6690,7 @@ Best regards,
          <div class="msg-card-subject">${escapeHtml(m.subject || 'No Subject')}</div>
          <div class="msg-card-body">${escapeHtml(m.message || '')}</div>
          <div class="msg-card-actions">
-           ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${escapeHtml(String(m.id))}')">âœ“ Mark Read</button>` : ''}
+           ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${escapeHtml(String(m.id))}')">✓ Mark Read</button>` : ''}
            <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${escapeHtml(String(m.id))}')">🗑️ Delete</button>
          </div>
        </div>
@@ -6852,13 +6852,13 @@ Best regards,
     const myAchs = achievementsData.filter(a => String(a.student_id) === String(currentStudent.id));
 
     if (myAchs.length === 0) {
-      achGrid.innerHTML = '<div class="empty-state"><span class="empty-icon">ðŸ†</span><p>No achievements yet. Keep practicing!</p></div>';
+      achGrid.innerHTML = '<div class="empty-state"><span class="empty-icon">🏆</span><p>No achievements yet. Keep practicing!</p></div>';
       return;
     }
 
      achGrid.innerHTML = myAchs.slice(0, 6).map(a => `
        <div class="ach-card">
-         ${a.img_url ? `<img src="${escapeHtml(a.img_url)}" alt="${escapeHtml(a.title)}">` : '<div class="ach-icon">ðŸ†</div>'}
+         ${a.img_url ? `<img src="${escapeHtml(a.img_url)}" alt="${escapeHtml(a.title)}">` : '<div class="ach-icon">🏆</div>'}
          <div class="ach-info">
            <div class="ach-title">${escapeHtml(a.title)}</div>
            <div class="ach-date">${a.date_achieved ? new Date(a.date_achieved).toLocaleDateString() : ''}</div>
@@ -7046,10 +7046,10 @@ Best regards,
     buttons.forEach(btn => btn.classList.remove('active'));
 
     const moduleConfig = {
-      global: { title: 'Global Insights', icon: 'âš¡', btnIndex: 0, roles: ['admin', 'master'] },
+      global: { title: 'Global Insights', icon: '⚡', btnIndex: 0, roles: ['admin', 'master'] },
       finance: { title: 'Financial Analysis', icon: '💰', btnIndex: 1, roles: ['admin', 'master'] },
-      coach: { title: 'Coach Performance', icon: 'ðŸ§‘â€ðŸ«', btnIndex: 2, roles: ['admin', 'master'] },
-      parent: { title: 'My Child Progress', icon: 'ðŸ‘¶', btnIndex: 3, roles: ['parent'] }
+      coach: { title: 'Coach Performance', icon: '🧑‍🏫', btnIndex: 2, roles: ['admin', 'master'] },
+      parent: { title: 'My Child Progress', icon: '🧒', btnIndex: 3, roles: ['parent'] }
     };
 
     const config = moduleConfig[m];
@@ -7082,7 +7082,7 @@ Best regards,
       const welcomeMsg = document.createElement('div');
       welcomeMsg.className = 'ai-ws-msg bot';
       welcomeMsg.innerHTML = `
-        <div class="ai-ws-avatar">ðŸ¤–</div>
+        <div class="ai-ws-avatar">🤖</div>
         <div class="ai-ws-bubble">
           ${m === 'global' ? 'Switched to Global Insights. I can now provide academy-wide analytics, enrollment trends, and comprehensive metrics.' :
           m === 'finance' ? 'Switched to Financial Analysis. Let\'s examine revenue patterns, payment collections, and financial performance.' :
@@ -7388,7 +7388,7 @@ Best regards,
 
 `;
           market.indices.forEach(idx => {
-            const sign = idx.change >= 0 ? 'â†‘' : 'â†“';
+            const sign = idx.change >= 0 ? '↑' : '↓';
             response += `• **${idx.name}:** ${idx.value.toLocaleString()} (${sign}${Math.abs(idx.change)}%)
 `;
           });
@@ -7398,7 +7398,7 @@ Best regards,
       if (queryLower.includes('weather') || queryLower.includes('temperature')) {
         const weather = results.find(r => r.temperature !== undefined);
         if (weather) {
-          response = `ðŸŒ¤ï¸ **Current Weather** (${temporalContext.date})
+          response = `🌤️ **Current Weather** (${temporalContext.date})
 
 `;
           response += `• **Temperature:** ${weather.temperature}Â°C
@@ -7412,7 +7412,7 @@ Best regards,
       if (queryLower.includes('sensor') || queryLower.includes('iot') || queryLower.includes('monitor')) {
         const sensors = results.find(r => r.sensors);
         if (sensors) {
-          response = `ðŸ”Œ **IoT Sensors** (${temporalContext.time})
+          response = `🔌 **IoT Sensors** (${temporalContext.time})
 
 `;
           sensors.sensors.forEach(s => {
@@ -7438,7 +7438,7 @@ Best regards,
 
       if (!response) {
         // Default comprehensive response
-        response = `ðŸ« **Chesskidoo Academy Report**
+        response = `🏫 **Chesskidoo Academy Report**
 `;
         response += `${TEMPORAL_ENGINE.getTimeBasedGreeting()}! Here's your academy overview:
 
@@ -7459,14 +7459,14 @@ Best regards,
         }
 
         response += `
-â° Last updated: ${temporalContext.time}`;
+⏰ Last updated: ${temporalContext.time}`;
       }
 
       // Add source attribution
       if (sources.length > 0) {
         response += `
 
-ðŸ“¡ *Data sources: ${sources.join(', ')}*`;
+📡 *Data sources: ${sources.join(', ')}*`;
       }
 
       return response;
@@ -7524,12 +7524,12 @@ Best regards,
       if (!validation.allowed) {
         const userMsg = document.createElement('div');
         userMsg.className = 'ai-ws-msg user';
-        userMsg.innerHTML = `<div class="ai-ws-avatar">ðŸ‘¤</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
+        userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
         chatContainer.appendChild(userMsg);
 
         const botMsg = document.createElement('div');
         botMsg.className = 'ai-ws-msg bot';
-        botMsg.innerHTML = `<div class="ai-ws-avatar">ðŸ¤–</div><div class="ai-ws-bubble"></div>`;
+        botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble"></div>`;
         chatContainer.appendChild(botMsg);
         animateAIResponse(botMsg.querySelector('.ai-ws-bubble'), PARENT_DENIED_MESSAGE);
         chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -7540,7 +7540,7 @@ Best regards,
     // Add user message
     const userMsg = document.createElement('div');
     userMsg.className = 'ai-ws-msg user';
-    userMsg.innerHTML = `<div class="ai-ws-avatar">ðŸ‘¤</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
+    userMsg.innerHTML = `<div class="ai-ws-avatar">👤</div><div class="ai-ws-bubble">${escapeHtml(query)}</div>`;
     chatContainer.appendChild(userMsg);
 
     input.value = '';
@@ -7550,9 +7550,9 @@ Best regards,
     const thinkingMsg = document.createElement('div');
     thinkingMsg.className = 'ai-ws-msg bot';
     thinkingMsg.innerHTML = `
-      <div class="ai-ws-avatar">ðŸ¤–</div>
+      <div class="ai-ws-avatar">🤖</div>
       <div class="ai-ws-bubble msg-thinking">
-        ðŸ”„ Analyzing query...
+        🔄 Analyzing query...
       </div>
     `;
     chatContainer.appendChild(thinkingMsg);
@@ -7612,7 +7612,7 @@ Best regards,
 
       const botMsg = document.createElement('div');
       botMsg.className = 'ai-ws-msg bot';
-      botMsg.innerHTML = `<div class="ai-ws-avatar">ðŸ¤–</div><div class="ai-ws-bubble"></div>`;
+      botMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble"></div>`;
       chatContainer.appendChild(botMsg);
       animateAIResponse(botMsg.querySelector('.ai-ws-bubble'), botResponse);
       chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -7622,7 +7622,7 @@ Best regards,
       console.error('AI Query Error:', e);
        const errorMsg = document.createElement('div');
        errorMsg.className = 'ai-ws-msg bot';
-       errorMsg.innerHTML = `<div class="ai-ws-avatar">ðŸ¤–</div><div class="ai-ws-bubble">âš ï¸ Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
+       errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️¸ Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
        chatContainer.appendChild(errorMsg);
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -8070,7 +8070,7 @@ Best regards,
 
      if (unread.length > 0) {
        html += `<div style="padding:12px;background:var(--gold-glow);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--gold)">ðŸ“¬ Unread Messages (${unread.length})</div>
+         <div style="font-weight:600;color:var(--gold)">📬 Unread Messages (${unread.length})</div>
          ${unread.slice(0, 5).map(m => `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
            <div>
              <div style="font-size:13px;font-weight:500">${escapeHtml(m.subject || 'No Subject')}</div>
@@ -8095,7 +8095,7 @@ Best regards,
 
      if (failedLogins.length > 0) {
        html += `<div style="padding:12px;background:rgba(255,77,79,0.1);border-radius:8px;margin-bottom:12px">
-         <div style="font-weight:600;color:var(--danger)">ðŸš« Failed Logins (${failedLogins.length})</div>
+         <div style="font-weight:600;color:var(--danger)">🚫 Failed Logins (${failedLogins.length})</div>
          ${failedLogins.slice(0, 5).map(l => `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
            <span>${escapeHtml(l.user || 'Unknown')}</span>
            <span style="color:var(--ivory-dim);float:right">${new Date(l.timestamp).toLocaleString('en-IN')}</span>
@@ -8200,20 +8200,20 @@ Best regards,
         generatedInsights.push({
           type: 'promotion',
           severity: 'amber',
-          icon: 'ðŸ†',
+          icon: '🏆',
           text: `<strong>Promotion Alert:</strong> Beginner student <strong>${name}</strong> has a high rating of <strong>${rating} ELO</strong>. Suggest promoting to <strong>Intermediate</strong>.`
         });
       } else if (lvl === 'Intermediate' && rating >= intermediateThreshold) {
         generatedInsights.push({
           type: 'promotion',
-          icon: 'ðŸ†',
+          icon: '🏆',
           severity: 'amber',
           text: `<strong>Promotion Alert:</strong> Intermediate student <strong>${name}</strong> has reached <strong>${rating} ELO</strong>. Suggest promoting to <strong>Advanced</strong>.`
         });
       } else if (lvl === 'Advanced' && rating >= advancedThreshold) {
         generatedInsights.push({
           type: 'promotion',
-          icon: 'ðŸ†',
+          icon: '🏆',
           severity: 'amber',
           text: `<strong>Promotion Alert:</strong> Advanced student <strong>${name}</strong> has reached <strong>${rating} ELO</strong>. Suggest promoting to <strong>Elite</strong>.`
         });
@@ -8239,7 +8239,7 @@ Best regards,
         if (records[0].status === 'absent' && records[1].status === 'absent') {
           generatedInsights.push({
             type: 'attendance',
-            icon: 'âš ï¸',
+            icon: '⚠️¸',
             severity: 'danger',
             text: `<strong>Attendance Warning:</strong> Student <strong>${getStudentName(s)}</strong> has missed <strong>2 consecutive classes</strong> (last absent on ${records[0].date}). Suggest coach follow-up.`
           });
@@ -8284,7 +8284,7 @@ Best regards,
         const totalOwed = fee * outstandingMonths;
         generatedInsights.push({
           type: 'arrears',
-          icon: 'ðŸ’¸',
+          icon: '💸',
           severity: 'danger',
           text: `<strong>Arrears Warning:</strong> Student <strong>${getStudentName(s)}</strong> has <strong>${outstandingMonths} unpaid months</strong> (Owes: ₹${totalOwed.toLocaleString()}). Suggest sending notification.`
         });
@@ -8323,7 +8323,7 @@ Best regards,
     if (filtered.length === 0) {
       body.innerHTML = `
         <div style="color:var(--ivory-dim); font-size:14px; font-style:italic; text-align:center; padding:24px 0;">
-          âœ¨ No insights of this category at this time. All systems optimal!
+          ✨ No insights of this category at this time. All systems optimal!
         </div>`;
       return;
     }
