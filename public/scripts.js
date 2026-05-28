@@ -2033,7 +2033,8 @@ function initUI() {
       // Find payments related to this event
       const eventDescString = `Event: ${e.title}`;
       const res = await apiCall('/api/payments');
-      const allPaymentsLocal = await res.json();
+      const paymentsResponse = await res.json();
+      const allPaymentsLocal = Array.isArray(paymentsResponse) ? paymentsResponse : (paymentsResponse.data || []);
       
       // Populate student select dropdown
       const selectEl = $('ev-add-student-select');
