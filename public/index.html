@@ -1999,45 +1999,48 @@
       <script src="js/encryption.js?v=20260529" charset="utf-8"></script>
       <script src="js/scripts_patch.js?v=2.3&t=20260529" charset="utf-8"></script>
       <script src="js/automation.js?v=3.9&t=20260529" charset="utf-8"></script>
- </body>
-</html>
-<!-- Monthly Attendance Modal -->
-<div class="modal" id="monthly-attendance-modal">
-  <div class="modal-box" style="max-width:900px; width:95%">
-    <div class="modal-title">?? Monthly Attendance Matrix</div>
-    <div class="modal-sub" style="display:flex;gap:15px;align-items:center;flex-wrap:wrap;margin-bottom:15px">
-      <div>
-        <span style="margin-right:8px">Month:</span>
-        <input type="month" id="mat-month" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--ivory)" onchange="renderMonthlyMatrix()">
-      </div>
-      <div>
-        <span style="margin-right:8px">Coach:</span>
-        <select id="mat-coach" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--ivory)" onchange="renderMonthlyMatrix()">
-          <option value="">Select Coach...</option>
-        </select>
-      </div>
-      <div style="margin-left:auto;font-size:12px;color:var(--ivory-dim)">
-        Tip: Click a cell to instantly toggle ?? Present, ?? Absent, ? Clear.
-      </div>
-    </div>
-    <div class="table-wrap" id="mat-container" style="max-height:500px;overflow:auto;border:1px solid var(--border);border-radius:8px">
-      <!-- Grid rendered by JS -->
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:15px">
-      <button class="btn btn-outline" onclick="closeModals()">Close</button>
-    </div>
-  </div>
-</div>
+ 
+      <script src="js/attendance_extension.js?v=1.0&t=20260529" charset="utf-8"></script>
 
-<!-- Master Schedule Modal -->
-<div class="modal" id="master-schedule-modal">
-  <div class="modal-box" style="max-width:800px; width:95%">
-    <div class="modal-title">?? Coach Master Schedule</div>
-    <div style="max-height:500px;overflow-y:auto;padding-right:10px" id="master-schedule-container">
-      <!-- Populated by JS -->
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:15px">
-      <button class="btn btn-outline" onclick="closeModals()">Close</button>
-    </div>
-  </div>
-</div>
+      <!-- Monthly Attendance Modal -->
+      <div class="modal" id="monthly-attendance-modal">
+        <div class="modal-box" style="max-width:900px; width:95%">
+          <div class="modal-title">📅 Monthly Attendance Matrix</div>
+          <div class="modal-sub" style="display:flex;gap:15px;align-items:center;flex-wrap:wrap;margin-bottom:15px">
+            <div>
+              <span style="margin-right:8px">Month:</span>
+              <input type="month" id="mat-month" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--ivory)" onchange="renderMonthlyMatrix()">
+            </div>
+            <div>
+              <span style="margin-right:8px">Coach:</span>
+              <select id="mat-coach" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--ivory)" onchange="renderMonthlyMatrix()">
+                <option value="">Select Coach...</option>
+              </select>
+            </div>
+            <div style="margin-left:auto;font-size:12px;color:var(--ivory-dim)">
+              Tip: Click a cell to instantly toggle 🟩 Present, 🟥 Absent, ⬜ Clear.
+            </div>
+          </div>
+          <div class="table-wrap" id="mat-container" style="max-height:500px;overflow:auto;border:1px solid var(--border);border-radius:8px">
+            <!-- Grid rendered by JS -->
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:15px">
+            <button class="btn btn-outline" onclick="closeModals()">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Master Schedule Modal -->
+      <div class="modal" id="master-schedule-modal">
+        <div class="modal-box" style="max-width:800px; width:95%">
+          <div class="modal-title">📋 Coach Master Schedule</div>
+          <div style="max-height:500px;overflow-y:auto;padding-right:10px" id="master-schedule-container">
+            <!-- Populated by JS -->
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:15px">
+            <button class="btn btn-outline" onclick="closeModals()">Close</button>
+          </div>
+        </div>
+      </div>
+  </body>
+</html>
