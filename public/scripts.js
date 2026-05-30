@@ -8731,6 +8731,102 @@ Best regards,
     }
   };
 
+  window.toggleLoginChat = function() {
+    const panel = document.getElementById('login-chat-panel');
+    if (panel) {
+      if (panel.style.display === 'none') {
+        panel.style.display = 'flex';
+        document.getElementById('login-chat-input').focus();
+      } else {
+        panel.style.display = 'none';
+      }
+    }
+  };
+
+  function parseChatMarkdown(text) {
+    let html = escapeHtml(text);
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    html = html.replace(/\n• /g, '<br>• ');
+    html = html.replace(/\n/g, '<br>');
+    return html;
+  }
+
+  window.sendLoginChat = async function() {
+    const inputField = document.getElementById('login-chat-input');
+    if(!inputField) return;
+    const msg = inputField.value.trim();
+    if (!msg) return;
+    
+    const chatBody = document.getElementById('login-chat-body');
+    
+    // Add user message to UI
+    const userDiv = document.createElement('div');
+    userDiv.className = 'chat-msg user';
+    userDiv.textContent = msg;
+    chatBody.appendChild(userDiv);
+    
+    inputField.value = '';
+    chatBody.scrollTop = chatBody.scrollHeight;
+    
+    // Add loading indicator
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'chat-msg bot typing-indicator';
+    typingDiv.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;border-color:var(--gold) transparent var(--gold) transparent;display:inline-block;margin-right:6px;vertical-align:middle;"></span> <span style="vertical-align:middle;">Thinking...</span>';
+    chatBody.appendChild(typingDiv);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    
+    // Build Context Payload
+    const context = {
+       students_list: typeof allStudents !== 'undefined' ? allStudents : [],
+       coaches_list: typeof allCoaches !== 'undefined' ? allCoaches : [],
+       totalStudents: typeof allStudents !== 'undefined' ? allStudents.length : 0,
+       totalCoaches: typeof allCoaches !== 'undefined' ? allCoaches.length : 0,
+       revenue: typeof totalCollected !== 'undefined' ? totalCollected : 0,
+       pendingPayments: typeof pendingStudents !== 'undefined' ? pendingStudents : 0,
+       collectionRate: typeof window.updateDashboardNumbers === 'function' && typeof allStudents !== 'undefined' ? 
+           Math.round((allStudents.length - (typeof pendingStudents !== 'undefined' ? pendingStudents : 0)) / (allStudents.length || 1) * 100) : 0,
+       moduleFocus: 'global'
+    };
+
+    const role = window.currentRole || 'guest';
+    
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/ai`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          message: msg,
+          role: role,
+          context: context
+        })
+      });
+      
+      const data = await res.json();
+      chatBody.removeChild(typingDiv);
+      
+      if (!res.ok) throw new Error(data.error || 'Failed to connect to TOM AI');
+      
+      const aiDiv = document.createElement('div');
+      aiDiv.className = 'chat-msg bot';
+      aiDiv.innerHTML = parseChatMarkdown(data.message || 'I am sorry, I encountered an error.');
+      chatBody.appendChild(aiDiv);
+      
+    } catch(err) {
+      if(typingDiv.parentNode === chatBody) chatBody.removeChild(typingDiv);
+      const errDiv = document.createElement('div');
+      errDiv.className = 'chat-msg bot';
+      errDiv.style.color = 'var(--danger)';
+      errDiv.textContent = 'Error connecting to AI backend. Please try again.';
+      chatBody.appendChild(errDiv);
+    }
+    
+    chatBody.scrollTop = chatBody.scrollHeight;
+  };
+
   if (document.getElementById('ui-version')) document.getElementById('ui-version').textContent = 'Portal v5.8 (Clean Messages & Excel)';
   })();
 
