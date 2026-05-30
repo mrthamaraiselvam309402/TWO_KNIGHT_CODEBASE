@@ -135,7 +135,7 @@ function buildTOMSystemPrompt(role: string, moduleFocus: string, context: any): 
 CRITICAL RULES:
 1. ALWAYS use the EXACT data provided in your context — never guess or hallucinate numbers.
 2. Reference specific student names, coach names, and exact figures when answering.
-3. Use rich markdown: **bold** for emphasis, bullet points for lists, tables for comparisons.
+3. Use rich markdown: **bold** for emphasis, bullet points for lists, and clean tables for comparisons or reports.
 4. Be concise but thorough — give the answer, then brief analysis.
 5. If data isn't in your context, say so honestly instead of making up information.
 6. Current date/time: ${new Date().toISOString()}
@@ -147,9 +147,9 @@ CRITICAL RULES:
 
   const moduleInstructions: Record<string, string> = {
     'global': `\nMODULE: Global Academy Insights\nFocus: Overall academy health, enrollment trends, key metrics, strategic recommendations. Provide executive-level summaries.`,
-    'finance': `\nMODULE: Financial Analysis\nFocus: Revenue tracking, payment collections, outstanding dues, coach salary costs, profitability analysis, month-over-month growth. Calculate ROI and provide actionable financial recommendations.`,
-    'coach': `\nMODULE: Coach Performance\nFocus: Individual coach metrics, student load distribution, teaching effectiveness, salary efficiency, schedule optimization. Compare coaches when asked.`,
-    'student-intel': `\nMODULE: Student Intelligence\nFocus: Individual student progress analysis, weak students needing attention, promotion candidates, attendance risk scoring, personalized training recommendations, ELO progression tracking. When listing students, show their name, rating, attendance %, and your recommendation.`,
+    'finance': `\nMODULE: Financial Analysis\nFocus: Revenue tracking, payment collections, outstanding dues, coach salary costs, profitability analysis, MoM growth. Format reports as tables and provide actionable ROI summaries.`,
+    'coach': `\nMODULE: Coach Performance\nFocus: Individual coach metrics, student load distribution, teaching effectiveness, salary efficiency, schedule optimization. Present comparison tables.`,
+    'student-intel': `\nMODULE: Student Intelligence\nFocus: Individual student progress analysis, weak students needing attention, promotion candidates, attendance risk scoring, personalized training recommendations, ELO progression tracking. Print lists in clean tables with name, rating, level, coach, and recommendation.`,
     'tournament': `\nMODULE: Tournament Intelligence\nFocus: Tournament readiness assessment, student bracket recommendations based on age/rating, upcoming tournament preparation, historical performance analysis. Score each student's readiness as Low/Medium/High with reasoning.`,
     'parent': `\nMODULE: Parent Portal\nFocus: Only this parent's child data — progress, attendance, achievements, upcoming events, payment status. Be encouraging but honest about areas for improvement.`
   }
@@ -165,23 +165,30 @@ CRITICAL RULES:
 async function generateTOMResponse(message: string, role: string, moduleFocus: string, context: any, supabase: any): Promise<string> {
   const msgLower = message.toLowerCase()
   const ctx = context || {}
+  
+  // Extract lists from enriched client context
   const students = ctx.students_list || []
   const coaches = ctx.coaches_list || []
-  const totalStudents = ctx.totalStudents || students.length || 0
-  const totalCoaches = ctx.totalCoaches || coaches.length || 0
-  const revenue = ctx.revenue || 0
-  const collectionRate = ctx.collectionRate || '0'
-  const pendingPayments = ctx.pendingPayments || 0
+  
+  const activeStudents = students.filter((s: any) => s.status === 'active')
+  const totalStudentsCount = activeStudents.length || ctx.activeStudents || 0
+  const totalCoachesCount = coaches.length || ctx.coaches || 0
+  const revenue = ctx.revenue || activeStudents.reduce((acc: number, s: any) => acc + (s.fee || 0), 0)
+  
+  const paidCount = activeStudents.filter((s: any) => s.payment_status === 'Paid').length
+  const unpaidCount = activeStudents.filter((s: any) => s.payment_status === 'Due' || s.payment_status === 'Overdue').length
+  const computedCollectionRate = totalStudentsCount > 0 ? ((paidCount / totalStudentsCount) * 100).toFixed(1) : '100.0'
 
   // Weak students analysis
   if (msgLower.includes('weak') || msgLower.includes('struggling') || msgLower.includes('attention') || msgLower.includes('risk')) {
-    const weak = students.filter((s: any) => (s.rating || 800) < 1000)
+    const weak = activeStudents.filter((s: any) => (s.rating || 800) < 1000)
     if (weak.length === 0) {
-      return `🎯 **TOM Analysis: No At-Risk Students**\n\nAll ${totalStudents} enrolled students are currently rated above 1000 ELO. The academy is performing well across the board.\n\n💡 **Recommendation:** Focus on advancing intermediate students (1000-1200) to the next level with targeted tactical training.`
+      return `🎯 **TOM Analysis: No At-Risk Students**\n\nAll ${totalStudentsCount} enrolled students are currently rated above 1000 ELO. The academy is performing well across the board.\n\n💡 **Recommendation:** Focus on advancing intermediate students (1000-1200) to the next level with targeted tactical training.`
     }
     let resp = `⚠️ **TOM Student Risk Report**\n\n**${weak.length} student(s)** require immediate attention (below 1000 ELO):\n\n`
-    weak.slice(0, 10).forEach((s: any, i: number) => {
-      resp += `${i+1}. **${s.name}** — ELO: ${s.rating || 'N/A'}, Level: ${s.level || 'N/A'}\n`
+    resp += `| Student | Rating (ELO) | Level | Coach | Attendance Rate |\n| :--- | :--- | :--- | :--- | :--- |\n`
+    weak.slice(0, 15).forEach((s: any) => {
+      resp += `| **${s.name}** | ${s.rating} | ${s.level} | ${s.coach_name} | ${s.attendance_rate}% |\n`
     })
     resp += `\n💡 **TOM Recommendations:**\n• Assign extra tactical puzzle sessions\n• Schedule 1-on-1 review with coach\n• Consider batch adjustment for personalized attention`
     return resp
@@ -189,53 +196,97 @@ async function generateTOMResponse(message: string, role: string, moduleFocus: s
 
   // Tournament readiness
   if (msgLower.includes('tournament') || msgLower.includes('competition') || msgLower.includes('ready')) {
-    const ready = students.filter((s: any) => (s.rating || 0) >= 1000)
-    let resp = `🏆 **TOM Tournament Readiness Report**\n\n**${ready.length}/${totalStudents}** students meet minimum tournament criteria (1000+ ELO):\n\n`
-    ready.slice(0, 10).forEach((s: any, i: number) => {
+    const ready = activeStudents.filter((s: any) => (s.rating || 0) >= 1000)
+    if (ready.length === 0) {
+      return `🏆 **TOM Tournament Readiness Report**\n\nCurrently, no active students meet the minimum tournament criteria of 1000+ ELO.\n\n💡 **Recommendation:** Focus on intensive training for students close to the threshold.`
+    }
+    let resp = `🏆 **TOM Tournament Readiness Report**\n\n**${ready.length}/${totalStudentsCount}** active students meet minimum tournament criteria (1000+ ELO):\n\n`
+    resp += `| Student | Rating (ELO) | Level | Coach | Readiness Status |\n| :--- | :--- | :--- | :--- | :--- |\n`
+    ready.slice(0, 15).forEach((s: any) => {
       const readiness = (s.rating || 0) >= 1400 ? '🟢 High' : (s.rating || 0) >= 1200 ? '🟡 Medium' : '🔵 Developing'
-      resp += `${i+1}. **${s.name}** — ELO: ${s.rating || 'N/A'} | Readiness: ${readiness}\n`
+      resp += `| **${s.name}** | ${s.rating} | ${s.level} | ${s.coach_name} | ${readiness} |\n`
     })
     return resp
   }
 
   // Coach analysis
-  if (msgLower.includes('coach') || msgLower.includes('instructor') || msgLower.includes('top coach') || msgLower.includes('best coach')) {
+  if (msgLower.includes('coach') || msgLower.includes('instructor') || msgLower.includes('top coach') || msgLower.includes('best coach') || msgLower.includes('salary') || msgLower.includes('roi')) {
     if (coaches.length === 0) {
       return `🧑🏫 **TOM Coach Report**\n\nCoach data is being synchronized. Please try again in a moment.`
     }
-    let resp = `🧑🏫 **TOM Coach Performance Report**\n\n**${totalCoaches} Active Coaches:**\n\n`
-    coaches.slice(0, 10).forEach((c: any, i: number) => {
-      resp += `${i+1}. **${c.name}** — Students: ${c.studentCount || 'N/A'}, Specialty: ${c.specialty || 'General'}\n`
+    let resp = `🧑🏫 **TOM Coach Performance & ROI Report**\n\nHere is the financial and operational analysis for all **${totalCoachesCount} active coaches**:\n\n`
+    resp += `| Coach | Specialty | Students | Collected Revenue | Salary Cost | Net Profit | ROI |\n| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n`
+    coaches.forEach((c: any) => {
+      resp += `| **${c.name}** | ${c.specialty} | ${c.studentCount} | ₹${c.collected_revenue?.toLocaleString()} | ₹${c.salary_cost?.toLocaleString()} | ₹${c.net_profit?.toLocaleString()} | ${c.roi} |\n`
     })
+    resp += `\n💡 **TOM Recommendation:** Check coach student loads to ensure a balanced teaching distribution (target: 5-8 students per coach).`
     return resp
   }
 
   // Revenue/Financial
-  if (msgLower.includes('revenue') || msgLower.includes('money') || msgLower.includes('payment') || msgLower.includes('finance') || msgLower.includes('due') || msgLower.includes('arrears')) {
+  if (msgLower.includes('revenue') || msgLower.includes('money') || msgLower.includes('payment') || msgLower.includes('finance') || msgLower.includes('due') || msgLower.includes('arrears') || msgLower.includes('profit')) {
     if (role !== 'admin' && role !== 'master') {
       return `🔒 Financial data is restricted to administrators. Please contact the academy admin for financial inquiries.`
     }
-    return `💰 **TOM Financial Intelligence Report**\n\n• **Projected Monthly Revenue:** ₹${Number(revenue).toLocaleString()}\n• **Collection Rate:** ${collectionRate}%\n• **Pending Payments:** ${pendingPayments} students\n• **Active Students:** ${totalStudents}\n• **Active Coaches:** ${totalCoaches}\n\n💡 **TOM Recommendation:** ${Number(collectionRate) < 80 ? 'Collection rate is below target. Consider sending automated payment reminders to overdue accounts.' : 'Collection rate is healthy. Maintain current follow-up cadence.'}`
+    const unpaidStudents = activeStudents.filter((s: any) => s.payment_status === 'Due' || s.payment_status === 'Overdue')
+    let resp = `💰 **TOM Financial Intelligence Report**\n\n`
+    resp += `• **Projected Revenue:** ₹${Number(revenue).toLocaleString()}\n`
+    resp += `• **Collection Rate:** ${computedCollectionRate}%\n`
+    resp += `• **Pending Payments:** ${unpaidCount} student(s)\n`
+    resp += `• **Active Students:** ${totalStudentsCount}\n`
+    resp += `• **Active Coaches:** ${totalCoachesCount}\n\n`
+    
+    if (unpaidStudents.length > 0) {
+      resp += `⚠️ **Students with Outstanding Dues:**\n`
+      resp += `| Student | Rating (ELO) | Level | Coach | Monthly Fee | Status |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n`
+      unpaidStudents.slice(0, 10).forEach((s: any) => {
+        resp += `| **${s.name}** | ${s.rating} | ${s.level} | ${s.coach_name} | ₹${s.fee?.toLocaleString()} | **${s.payment_status}** |\n`
+      })
+    }
+    
+    resp += `\n💡 **TOM Recommendation:** ${Number(computedCollectionRate) < 80 ? 'Collection rate is below target. Consider sending automated payment reminders to overdue accounts.' : 'Collection rate is healthy. Maintain current follow-up cadence.'}`
+    return resp
   }
 
   // Student count / enrollment
   if (msgLower.includes('student') || msgLower.includes('how many') || msgLower.includes('enrolled') || msgLower.includes('count')) {
-    return `📊 **TOM Academy Census**\n\n• **Total Students:** ${totalStudents}\n• **Active Coaches:** ${totalCoaches}\n• **Monthly Revenue:** ₹${Number(revenue).toLocaleString()}\n• **Collection Rate:** ${collectionRate}%\n\n💡 Ask me about specific students, weak performers, or tournament readiness for deeper analysis.`
+    let resp = `📊 **TOM Academy Census Report**\n\n`
+    resp += `• **Active Enrolled Students:** ${totalStudentsCount}\n`
+    resp += `• **Active Teaching Coaches:** ${totalCoachesCount}\n`
+    resp += `• **Overall Collection Rate:** ${computedCollectionRate}%\n`
+    resp += `• **Pending Payment Cases:** ${unpaidCount}\n\n`
+    resp += `💡 Ask me about specific students, weak performers, or tournament readiness for deeper analysis.`
+    return resp
   }
 
   // Health / Summary
   if (msgLower.includes('health') || msgLower.includes('summary') || msgLower.includes('overview') || msgLower.includes('audit') || msgLower.includes('report')) {
-    return `🏫 **TOM Academy Health Report**\n\n✅ **Student Base:** ${totalStudents} enrolled\n✅ **Coaching Team:** ${totalCoaches} active coaches\n💰 **Revenue:** ₹${Number(revenue).toLocaleString()} (${collectionRate}% collected)\n⚠️ **Pending Payments:** ${pendingPayments} students\n\n💡 **Overall Status:** ${Number(collectionRate) >= 85 ? '🟢 Excellent' : Number(collectionRate) >= 70 ? '🟡 Good — improve collections' : '🔴 Needs Attention — collections below target'}`
+    return `🏫 **TOM Academy Health Report**\n\n✅ **Student Base:** ${totalStudentsCount} active enrolled\n✅ **Coaching Team:** ${totalCoachesCount} active coaches\n💰 **Revenue Collected:** ${computedCollectionRate}% collected (Projected: ₹${Number(revenue).toLocaleString()})\n⚠️ **Dues Outstanding:** ${unpaidCount} student(s)\n\n💡 **Overall Status:** ${Number(computedCollectionRate) >= 85 ? '🟢 Excellent' : Number(computedCollectionRate) >= 70 ? '🟡 Good — improve collections' : '🔴 Needs Attention — collections below target'}`
   }
 
   // Attendance
   if (msgLower.includes('attendance') || msgLower.includes('absent') || msgLower.includes('present')) {
-    return `📅 **TOM Attendance Intelligence**\n\nAttendance data is synchronized with your real-time dashboard. Current academy-wide metrics:\n\n• **Total Students:** ${totalStudents}\n• **Pending Payments (often correlates with low attendance):** ${pendingPayments}\n\n💡 **TOM Insight:** Students with payment arrears are 3x more likely to have attendance drops. Consider linking payment follow-ups with attendance monitoring.`
+    const lowAttendance = activeStudents.filter((s: any) => s.attendance_rate < 75)
+    let resp = `📅 **TOM Attendance Intelligence Report**\n\n`
+    resp += `Academy-wide attendance logs analyzed. Current summary:\n`
+    resp += `• **Active Students:** ${totalStudentsCount}\n`
+    resp += `• **Low Attendance Alerts (<75%):** ${lowAttendance.length} student(s)\n\n`
+    
+    if (lowAttendance.length > 0) {
+      resp += `⚠️ **Students at Attendance Risk:**\n`
+      resp += `| Student | ELO | Attendance % | Coach | Payment Status |\n| :--- | :--- | :--- | :--- | :--- |\n`
+      lowAttendance.slice(0, 10).forEach((s: any) => {
+        resp += `| **${s.name}** | ${s.rating} | ${s.attendance_rate}% | ${s.coach_name} | ${s.payment_status} |\n`
+      })
+    }
+    
+    resp += `\n💡 **TOM Insight:** Low attendance is often correlated with outstanding dues or declining interest. Suggest calling parent for follow-up.`
+    return resp
   }
 
   // Default
   if (role === 'admin' || role === 'master') {
-    return `🤖 **TOM AI — Training Operations Manager**\n\nI'm connected to your live academy database with ${totalStudents} students and ${totalCoaches} coaches.\n\n**Try asking me:**\n• "Who are the weak students?"\n• "Show tournament readiness"\n• "Academy health report"\n• "Financial summary"\n• "Coach performance comparison"\n• "Which students need attention?"\n\nI provide precise answers using your real-time data.`
+    return `🤖 **TOM AI — Training Operations Manager**\n\nI'm connected to your live academy database with ${totalStudentsCount} active students and ${totalCoachesCount} coaches.\n\n**Try asking me:**\n• "Who are the weak students?"\n• "Show tournament readiness"\n• "Academy health report"\n• "Financial summary"\n• "Coach performance comparison"\n• "Which students need attention?"\n\nI provide precise answers using your real-time data.`
   }
 
   if (role === 'parent') {

@@ -39,6 +39,9 @@ Deno.serve(async (req) => {
       registrations_data: e.registrations_data || [],
       max_participants: e.max_participants,
       status: e.status || 'upcoming',
+      img_url: e.img_url || e.qr_poster_url || '',
+      qr_poster_url: e.qr_poster_url || e.img_url || '',
+      map_url: e.map_url || '',
       created_at: e.created_at,
       updated_at: e.updated_at
     };
@@ -263,7 +266,7 @@ Deno.serve(async (req) => {
         }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
       }
       
-      const { title, date, type, location, id, event_date, event_time, max_participants, description, fee } = body;
+      const { title, date, type, location, id, event_date, event_time, max_participants, description, fee, map_url, img_url, prize_pool } = body;
       if (!title) return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400 });
       
       let newEvent: Record<string, unknown> = { 
@@ -273,8 +276,16 @@ Deno.serve(async (req) => {
       if (location) newEvent.location = location;
       if (description) newEvent.description = description;
       if (max_participants) newEvent.max_participants = parseInt(max_participants) || 50;
-      if (body.prize_pool || body.prize) newEvent.prize = body.prize_pool || body.prize;
+      if (prize_pool || body.prize) {
+        newEvent.prize = prize_pool || body.prize;
+        newEvent.prize_pool = prize_pool || body.prize;
+      }
       if (fee) newEvent.fee = fee;
+      if (map_url) newEvent.map_url = map_url;
+      if (img_url) {
+        newEvent.img_url = img_url;
+        newEvent.qr_poster_url = img_url;
+      }
       newEvent.status = 'upcoming';
       newEvent.current_participants = 0;
       newEvent.created_at = new Date().toISOString();
@@ -287,9 +298,36 @@ Deno.serve(async (req) => {
 
     if (req.method === 'PUT') {
       if (!id) return new Response(JSON.stringify({ error: 'ID is required' }), { status: 400 });
-      const { increment_registrations, ...bodyData } = body;
-      const updateData: any = { ...bodyData };
+      
+      const allowedColumns = [
+        'title', 'description', 'event_date', 'event_time', 'location', 
+        'type', 'status', 'max_participants', 'current_participants', 
+        'qr_poster_url', 'fee', 'prize', 'prize_pool', 'map_url', 'img_url'
+      ];
+      
+      const updateData: any = {};
+      for (const col of allowedColumns) {
+        if (body[col] !== undefined) {
+          updateData[col] = body[col];
+        }
+      }
+      
+      if (body.date !== undefined && body.event_date === undefined) {
+        updateData.event_date = body.date;
+      }
+      if (body.time !== undefined && body.event_time === undefined) {
+        updateData.event_time = body.time;
+      }
+      if (body.prize_pool !== undefined && body.prize === undefined) {
+        updateData.prize = body.prize_pool;
+        updateData.prize_pool = body.prize_pool;
+      }
+      if (body.img_url !== undefined && body.qr_poster_url === undefined) {
+        updateData.qr_poster_url = body.img_url;
+      }
+      
       updateData.updated_at = new Date().toISOString();
+      
       const { data: updatedEvent, error: updateError } = await supabase.from('events').update(updateData).eq('id', id).select().single();
       if (updateError) return new Response(JSON.stringify({ error: updateError.message }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
       return new Response(JSON.stringify({ message: 'Updated', data: updatedEvent ? transformEvent(updatedEvent) : null }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
@@ -297,6 +335,20 @@ Deno.serve(async (req) => {
 
     if (req.method === 'DELETE') {
       if (!id) return new Response(JSON.stringify({ error: 'ID is required' }), { status: 400 });
+      
+      try {
+        // Fetch the event first to get its title
+        const { data: eventData } = await supabase.from('events').select('title').eq('id', id).single();
+        
+        // Delete associated expenditures if event title is found
+        if (eventData && eventData.title) {
+          // Description format is: "Event Title - Expense Description"
+          await supabase.from('expenditures').delete().ilike('description', `${eventData.title} - %`);
+        }
+      } catch (e) {
+        console.warn("Failed to delete event expenditures:", e);
+      }
+
       await supabase.from('event_registrations').delete().eq('event_id', id);
       await supabase.from('events').delete().eq('id', id);
       return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });

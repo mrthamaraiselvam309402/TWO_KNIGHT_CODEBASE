@@ -10,7 +10,7 @@
   <!-- Force UTF-8 encoding for all browsers including Edge -->
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <link href="/fonts/fonts.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=20260511_v03"/>
+  <link rel="stylesheet" href="styles.css?v=20260530_v04"/>
 
    <!-- Local Libraries (self-hosted) -->
    <script src="lib/chart.umd.min.js"></script>
@@ -192,13 +192,13 @@
       </div>
 
       <div class="dash-charts" style="margin-bottom: 24px;">
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Enrollment Trend</h3><canvas id="chartRevenue" height="160"></canvas></div>
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Coach Load</h3><canvas id="chartCoach" height="260"></canvas></div>
+        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Enrollment Trend</h3><div class="chart-container" style="position:relative;height:220px;width:100%"><canvas id="chartRevenue"></canvas></div></div>
+        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Coach Load</h3><div class="chart-container" style="position:relative;height:300px;width:100%"><canvas id="chartCoach"></canvas></div></div>
       </div>
       <div class="dash-charts" style="margin-bottom: 32px;">
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Collection Split & Status</h3><canvas id="chartPayment" height="160"></canvas></div>
-        <div class="card" style="display: none;"><h3 style="margin-bottom:18px;color:var(--gold)">Monthly Business Growth (6m)</h3><canvas id="chartFinanceHistory" height="160"></canvas></div>
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Session Distribution</h3><canvas id="chartSession" height="160"></canvas></div>
+        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Collection Split & Status</h3><div class="chart-container" style="position:relative;height:240px;width:100%"><canvas id="chartPayment"></canvas></div></div>
+        <div class="card" style="display: none;"><h3 style="margin-bottom:18px;color:var(--gold)">Monthly Business Growth (6m)</h3><div class="chart-container" style="position:relative;height:240px;width:100%"><canvas id="chartFinanceHistory"></canvas></div></div>
+        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Session Distribution</h3><div class="chart-container" style="position:relative;height:240px;width:100%"><canvas id="chartSession"></canvas></div></div>
       </div>
 
       <!-- Coach Financial Table -->
@@ -2160,7 +2160,8 @@
 
    <!-- PDF libraries loaded dynamically in reporting.js -->
 
-      <script src="js/access.js?v=1.0"></script>\n      <script src="scripts.js?v=6.0&t=20260530" charset="utf-8"></script>
+      <script src="js/access.js?v=1.0"></script>
+      <script src="scripts.js?v=6.2&t=20260530" charset="utf-8"></script>
       <script src="js/expenditures.js?v=1.0&t=20260529" charset="utf-8"></script>
       <script src="js/calculator.js?v=1.0" charset="utf-8"></script>
       <script src="js/reporting.js?v=v8&t=20260529" charset="utf-8"></script>

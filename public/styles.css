@@ -244,9 +244,10 @@ body.login-mode .sidebar-overlay { display: none !important; }
   display: flex; align-items: center; gap: 16px;
 }
 
-.top-nav-right { display: flex; align-items: center; gap: 24px; }
-.top-nav-right .btn { padding: 8px 14px; font-size: 12px; }
-.content { padding: 28px 36px 48px; }
+.top-nav-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.top-nav-right .btn { padding: 8px 14px; font-size: 12px; white-space: nowrap; }
+#top-btn-area { flex-wrap: wrap !important; gap: 10px !important; }
+.content { padding: 24px 28px 40px; }
 
 
 
@@ -290,7 +291,7 @@ body.login-mode .sidebar-overlay { display: none !important; }
 .card:hover { border-color: rgba(232,168,48,0.25); transform: translateY(-3px); box-shadow: var(--shadow-amber); }
 
 .stat-label { font-size: 10px; text-transform: uppercase; color: var(--ivory3); letter-spacing: 1.5px; margin-bottom: 8px; font-weight: 600; }
-.stat-value { font-size: 30px; font-weight: 700; color: var(--gold); font-family: var(--font-mono); }
+.stat-value { font-size: clamp(22px, 2.5vw, 30px); font-weight: 700; color: var(--gold); font-family: var(--font-mono); word-break: break-word; overflow-wrap: break-word; }
 
 /* ── TABLES ── */
 .table-wrap {
@@ -608,13 +609,13 @@ body.admin-mode:not(.master-mode) .master-only { display: none !important; }
 /* ── DASHBOARD GRIDS ── */
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-  gap: 22px; margin-bottom: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 18px; margin-bottom: 18px;
 }
 .dash-charts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  gap: 18px;
 }
 
 /* Decorative chess piece watermark */
@@ -915,9 +916,11 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
   .sidebar { transform: translateX(-100%); width: 280px; box-shadow: 20px 0 60px rgba(0,0,0,0.8); z-index: 10000; }
   .sidebar.active, .sidebar.open { transform: translateX(0); }
   .main { margin-left: 0 !important; width: 100% !important; }
-  .top-bar { padding: 16px 20px; }
+  .top-bar { padding: 16px 20px; flex-wrap: wrap; gap: 10px; }
+  .top-nav-right { gap: 10px; }
   .content { padding: 20px; }
   .dash-charts { grid-template-columns: 1fr; }
+  .dash-grid { gap: 14px; margin-bottom: 14px; }
 }
 
 @media (max-width: 768px) {

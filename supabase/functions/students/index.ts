@@ -535,6 +535,47 @@ Deno.serve(async (req) => {
       
       const sanitizedId = sanitizeString(id, 50)
       
+      // 1. Delete associated achievements to avoid foreign key violations (no ON DELETE CASCADE is set on remote db)
+      try {
+        await supabase.from('achievements').delete().eq('student_id', sanitizedId);
+      } catch (e) {
+        console.warn("Failed to delete achievements:", e);
+      }
+      
+      // 2. Delete registrations from event_registrations table
+      try {
+        await supabase.from('event_registrations').delete().eq('student_id', sanitizedId);
+      } catch (e) {
+        console.warn("Failed to delete event registrations:", e);
+      }
+      
+      // 3. Clean up JSONB fields in events table (registered_students and registrations_data)
+      try {
+        const { data: affectedEvents } = await supabase
+          .from('events')
+          .select('id, registered_students, registrations_data')
+          .contains('registered_students', [sanitizedId]);
+
+        if (affectedEvents && affectedEvents.length > 0) {
+          for (const ev of affectedEvents) {
+            const newRegistered = (ev.registered_students || []).filter((sid: string) => sid !== sanitizedId);
+            const newRegsData = (ev.registrations_data || []).filter((r: any) => r.student_id !== sanitizedId);
+            
+            await supabase.from('events')
+              .update({
+                registered_students: newRegistered,
+                registrations_data: newRegsData,
+                current_participants: newRegsData.filter((r: any) => r.registration_status !== 'waitlisted').length,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', ev.id);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to clean up events JSONB data:", e);
+      }
+
+      // 4. Finally, delete the student
       const { error: deleteError } = await supabase
         .from('students')
         .delete()

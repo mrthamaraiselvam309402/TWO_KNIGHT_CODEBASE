@@ -2258,7 +2258,7 @@ function initUI() {
           });
           
           if (anomalies.length === 0) {
-              Swal.fire({
+              window.Swal.fire({
                   icon: 'success',
                   title: 'Financial Audit Clear',
                   text: 'No anomalies detected. All paid statuses match payment records.',
@@ -2267,7 +2267,7 @@ function initUI() {
                   confirmButtonColor: 'var(--gold)'
               });
           } else {
-              Swal.fire({
+              window.Swal.fire({
                   icon: 'warning',
                   title: 'Audit Anomalies Detected',
                   html: `<div style="text-align:left; font-size:14px; max-height:200px; overflow-y:auto;">${anomalies.join('<br><br>')}</div>`,
@@ -2288,7 +2288,7 @@ function initUI() {
       const res = await apiCall(`/api/expenditures?id=${encodeURIComponent(expId)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
       toast('Expense deleted', 'success');
-      loadManageEvent(window.currentManageEventId);
+      window.openEventManagement(window.currentManageEventId);
     } catch (e) {
       toast('Failed to delete expense', 'error');
     }
@@ -3283,6 +3283,9 @@ function initUI() {
            else if (active === 'page-msgs') renderMsgs();
            else if (active === 'page-fame') renderFame();
            else if (active === 'page-events') renderEvents();
+           else if (active === 'page-ai') {
+             if (window.updateTomKpis) window.updateTomKpis();
+           }
            else renderDash();
 
            updateMsgBadge();
@@ -3627,6 +3630,7 @@ function initUI() {
       if (p === 'msgs') renderMsgs();
       if (p === 'exp' && window.initExpPage) window.initExpPage();
       if (p === 'ai') {
+        if(window.updateTomKpis) window.updateTomKpis();
         if(window.initSmartPills) window.initSmartPills();
         const chatBody = document.getElementById('ai-workspace-msgs');
         if (chatBody && chatBody.children.length === 0) {
@@ -7840,6 +7844,104 @@ Best regards,
         }).length;
         const activeTab = document.querySelector('.nav-item.active')?.dataset.page || 'Dashboard';
 
+        const targetMonth = window.reportMonth;
+        const targetYear = window.reportYear;
+        const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+
+        const coachData = {};
+        allCoaches.forEach(c => {
+          coachData[c.id] = {
+            id: c.id,
+            name: c.name || c.full_name || 'Unknown',
+            specialization: getCoachSpecialty(c) || 'Chess Coach',
+            students: 0,
+            revenue: 0,
+            pending: 0,
+            projected: 0,
+            cost: getCoachSalary(c) || 0
+          };
+        });
+
+        const unassignedData = { name: 'Unassigned / Academy', students: 0, revenue: 0, pending: 0, projected: 0, cost: 0 };
+
+        allStudents.forEach(s => {
+          const sStatus = getStudentStatus(s);
+          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'upcoming' || sStatus === 'inactive') return;
+
+          const coachId = s.coach_id;
+          const targetData = coachData[coachId] || unassignedData;
+          
+          const enrollDateStr = getStudentDate(s);
+          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
+
+          if (enrollDate && enrollDate <= targetMonthEnd) {
+            const fee = getStudentMonthlyFee(s) || 0;
+            targetData.students++;
+            targetData.projected += fee;
+
+            const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+            if (status !== 'Paid') {
+              targetData.pending += fee;
+            }
+          }
+        });
+
+        const coachPaidStuds = new Set();
+        (allPayments || []).forEach(p => {
+          const pDate = new Date(p.payment_date || p.created_at);
+          if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
+            const sid = String(p.student_id).toLowerCase();
+            if (coachPaidStuds.has(sid)) return;
+
+            const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+            if (s && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
+              coachPaidStuds.add(sid);
+              const coachId = s.coach_id;
+              const targetData = coachData[coachId] || unassignedData;
+              targetData.revenue += getStudentMonthlyFee(s);
+            }
+          }
+        });
+
+        const coachesFinanceList = Object.entries(coachData).map(([id, d]) => {
+          const netProfit = d.revenue - d.cost;
+          const potentialNetProfit = d.projected - d.cost;
+          const roi = d.cost > 0 ? ((d.revenue / d.cost) * 100).toFixed(1) + '%' : '0%';
+          const potentialRoi = d.cost > 0 ? ((d.projected / d.cost) * 100).toFixed(1) + '%' : '0%';
+          return {
+            name: d.name,
+            specialty: d.specialization,
+            studentCount: d.students,
+            students: d.students,
+            collected_revenue: d.revenue,
+            pending_payments: d.pending,
+            salary_cost: d.cost,
+            net_profit: netProfit,
+            potential_net_profit: potentialNetProfit,
+            roi: roi,
+            potential_roi: potentialRoi
+          };
+        });
+
+        const studentsList = allStudents.map(s => {
+          const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
+          const sAtt = allAttendance.filter(a => String(a.student_id) === String(s.id));
+          const present = sAtt.filter(a => a.status === 'present').length;
+          const attRate = sAtt.length > 0 ? Math.round((present / sAtt.length) * 100) : 100;
+          return {
+            name: getStudentName(s),
+            rating: getStudentRating(s),
+            level: getStudentLevel(s),
+            status: getStudentStatus(s),
+            payment_status: getStudentPaymentStatus(s),
+            attendance_rate: attRate,
+            fee: getStudentMonthlyFee(s),
+            coach_name: coach ? getCoachName(coach) : 'Unassigned',
+            session_mode: getStudentBatchType(s),
+            session_time: getStudentSessionTime(s)
+          };
+        });
+
         context = {
           students: studentsCount,
           activeStudents: activeStudents,
@@ -7848,7 +7950,9 @@ Best regards,
           pendingPayments: pendingPayments,
           moduleFocus: activeTab,
           user: role || 'Admin',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          students_list: studentsList,
+          coaches_list: coachesFinanceList
         };
       }
 
@@ -7893,6 +7997,55 @@ Best regards,
 
   // Initialize RAG on load
   VECTOR_RAG.indexData();
+
+  function updateTomKpis() {
+    const activeStudents = allStudents.filter(s => getStudentStatus(s) === 'active').length;
+    
+    const present = allAttendance.filter(a => a.status === 'present').length;
+    const totalAtt = allAttendance.filter(a => a.status === 'present' || a.status === 'absent').length;
+    const attRate = totalAtt > 0 ? Math.round((present / totalAtt) * 100) : 100;
+
+    const weakStudents = allStudents.filter(s => getStudentStatus(s) === 'active' && (getStudentRating(s) || 800) < 1000).length;
+
+    // Coach Performance: average ELO rating of all active students
+    const activeStuds = allStudents.filter(s => getStudentStatus(s) === 'active');
+    const avgElo = activeStuds.length ? Math.round(activeStuds.reduce((a, s) => a + getStudentRating(s), 0) / activeStuds.length) : 0;
+
+    const upcomingEvents = eventsData.filter(e => new Date(e.date) >= new Date()).length;
+
+    const pendingPayments = allStudents.filter(s => {
+      const sStatus = getStudentStatus(s);
+      if (sStatus !== 'active') return false;
+      const payStatus = getStudentPaymentStatus(s);
+      return payStatus === 'Due' || payStatus === 'Overdue';
+    }).length;
+
+    const tournamentReady = allStudents.filter(s => getStudentStatus(s) === 'active' && getStudentRating(s) >= 1000).length;
+
+    // AI recommendations (generate insights in memory first)
+    if (window.generateAcademyInsights) {
+      const prevFilter = window.currentInsightsFilter || 'all';
+      window.generateAcademyInsights();
+      window.currentInsightsFilter = prevFilter;
+    }
+    const aiRecs = (window.generatedInsights || []).filter(x => x.type === 'promotion' || x.type === 'attendance' || x.type === 'arrears').length;
+
+    if ($('tom-active-students')) $('tom-active-students').textContent = activeStudents;
+    if ($('tom-attendance-rate')) $('tom-attendance-rate').textContent = attRate + '%';
+    if ($('tom-weak-students')) $('tom-weak-students').textContent = weakStudents;
+    if ($('tom-coach-perf')) $('tom-coach-perf').textContent = avgElo + ' ELO';
+    if ($('tom-upcoming-classes')) $('tom-upcoming-classes').textContent = upcomingEvents;
+    if ($('tom-pending-payments')) $('tom-pending-payments').textContent = pendingPayments;
+    if ($('tom-tournament-ready')) $('tom-tournament-ready').textContent = tournamentReady;
+    if ($('tom-ai-recommendations')) $('tom-ai-recommendations').textContent = aiRecs;
+
+    // Update last sync time
+    if ($('tom-last-sync')) {
+      const now = new Date();
+      $('tom-last-sync').textContent = 'Synced at ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+  }
+  window.updateTomKpis = updateTomKpis;
 
   // ═══════════════════════════════════════════════════════════════
   // THEME & PDF
@@ -8303,11 +8456,11 @@ Best regards,
       toast('Only admins can compose messages', 'error');
       return;
     }
-    const subject = prompt('Subject (e.g. "Holiday notice"):');
+    const subject = window.prompt('Subject (e.g. "Holiday notice"):');
     if (subject === null) return;
     const trimmedSubject = (subject || '').trim();
     if (!trimmedSubject) { toast('Subject is required', 'error'); return; }
-    const body = prompt('Message body:');
+    const body = window.prompt('Message body:');
     if (body === null) return;
     const trimmedBody = (body || '').trim();
     if (!trimmedBody) { toast('Message body is required', 'error'); return; }
@@ -8460,10 +8613,6 @@ Best regards,
   let generatedInsights = [];
 
   function generateAcademyInsights() {
-    const card = document.getElementById('ai-insights-card');
-    const body = document.getElementById('ai-insights-body');
-    if (!card || !body) return;
-
     generatedInsights = [];
 
     // --- 0. General Overview Baseline Insight ---
@@ -8601,12 +8750,14 @@ Best regards,
     const attCount = generatedInsights.filter(x => x.type === 'attendance').length;
     const arrearsCount = generatedInsights.filter(x => x.type === 'arrears').length;
 
-    if (document.getElementById('ins-promo-count')) document.getElementById('ins-promo-count').textContent = promoCount;
-    if (document.getElementById('ins-att-count')) document.getElementById('ins-att-count').textContent = attCount;
-    if (document.getElementById('ins-arrears-count')) document.getElementById('ins-arrears-count').textContent = arrearsCount;
-
-    // Render the current filter view
-    renderInsightsList();
+    const card = document.getElementById('ai-insights-card');
+    const body = document.getElementById('ai-insights-body');
+    if (card && body) {
+      if (document.getElementById('ins-promo-count')) document.getElementById('ins-promo-count').textContent = promoCount;
+      if (document.getElementById('ins-att-count')) document.getElementById('ins-att-count').textContent = attCount;
+      if (document.getElementById('ins-arrears-count')) document.getElementById('ins-arrears-count').textContent = arrearsCount;
+      renderInsightsList();
+    }
   }
 
   function renderInsightsList() {
@@ -8947,10 +9098,10 @@ Best regards,
        coaches_list: typeof allCoaches !== 'undefined' ? allCoaches : [],
        totalStudents: typeof allStudents !== 'undefined' ? allStudents.length : 0,
        totalCoaches: typeof allCoaches !== 'undefined' ? allCoaches.length : 0,
-       revenue: typeof totalCollected !== 'undefined' ? totalCollected : 0,
-       pendingPayments: typeof pendingStudents !== 'undefined' ? pendingStudents : 0,
+       revenue: typeof window.totalCollected !== 'undefined' ? window.totalCollected : 0,
+       pendingPayments: typeof window.pendingStudents !== 'undefined' ? window.pendingStudents : 0,
        collectionRate: typeof window.updateDashboardNumbers === 'function' && typeof allStudents !== 'undefined' ? 
-           Math.round((allStudents.length - (typeof pendingStudents !== 'undefined' ? pendingStudents : 0)) / (allStudents.length || 1) * 100) : 0,
+           Math.round((allStudents.length - (typeof window.pendingStudents !== 'undefined' ? window.pendingStudents : 0)) / (allStudents.length || 1) * 100) : 0,
        moduleFocus: 'global'
     };
 
