@@ -118,8 +118,8 @@ window.generateReportPDF = async function() {
         }
     });
 
-    const pending = Math.max(0, potential - collected);
-    currPendingAmount = pending; // Synchronize with actual uncollected balance for 100% mathematical consistency
+    // Removed strict synchronization to show the true sum of unpaid fees for students
+    // instead of netting overpayments against unpaid fees.
     const payroll = allCoaches.filter(c => c.status !== 'archived').reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
     
     // Fetch real-time expenditures for the reporting month
@@ -157,7 +157,7 @@ window.generateReportPDF = async function() {
         return aDate.getUTCMonth() === targetMonth && aDate.getUTCFullYear() === targetYear;
     });
     const presentCount = monthAtt.filter(a => a.status === 'present').length;
-    const attendanceHealth = monthAtt.length > 0 ? ((presentCount / monthAtt.length) * 100).toFixed(1) : 88.5; 
+    const attendanceHealth = monthAtt.length > 0 ? ((presentCount / monthAtt.length) * 100).toFixed(1) : 'N/A'; 
 
     // Coach Performance (based on true payments from assigned students this month)
     const coachMetrics = allCoaches.filter(c => c.status !== 'archived').map(c => {
@@ -177,7 +177,6 @@ window.generateReportPDF = async function() {
       
       const coachCost = getCoachSalary(c) || 0;
       const profit = coachRev - coachCost;
-      const roi = coachCost > 0 ? ((profit / coachCost) * 100).toFixed(0) : '0';
       return { 
         name: getCoachName(c), 
         students: coachStuds.filter(s => {
@@ -191,7 +190,7 @@ window.generateReportPDF = async function() {
         revenue: coachRev, 
         cost: coachCost, 
         profit: profit, 
-        roi: parseFloat(roi)
+        roi: coachCost > 0 ? ((profit / coachCost) * 100) : 'N/A'
       };
     });
 
@@ -421,7 +420,7 @@ window.generateReportPDF = async function() {
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Attendance</div>
-        <div class="kpi-value">${attendanceHealth}%</div>
+        <div class="kpi-value">${attendanceHealth === 'N/A' ? 'N/A' : attendanceHealth + '%'}</div>
         <div class="kpi-sub">Avg Attendance</div>
       </div>
     </div>
@@ -459,7 +458,7 @@ window.generateReportPDF = async function() {
           <td class="text-right mono">₹${m.revenue.toLocaleString()}</td>
           <td class="text-right mono">₹${m.cost.toLocaleString()}</td>
           <td class="text-right mono ${m.profit < 0 ? 'loss' : 'gain'}">₹${m.profit.toLocaleString()}</td>
-          <td class="text-right mono ${m.roi < 0 ? 'loss' : 'gain'}">${m.roi.toFixed(0)}%</td>
+          <td class="text-right mono ${m.roi !== 'N/A' && m.roi < 0 ? 'loss' : 'gain'}">${m.roi === 'N/A' ? 'N/A' : m.roi.toFixed(0) + '%'}</td>
         </tr>`).join('')}
       </tbody>
     </table>
