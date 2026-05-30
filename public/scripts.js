@@ -2098,7 +2098,7 @@ function initUI() {
                     <option value="pending" ${!isPaid ? 'selected' : ''}>Pending</option>
                     <option value="paid" ${isPaid ? 'selected' : ''}>Paid</option>
                   </select>
-                  ${isPaid ? `<button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="downloadReceipt('${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}', '${e.fee || 0}', '${escapeHtml(level).replace(/'/g, "\\'")}', '800', 'N/A', 'Event Fee', '')" title="Download Receipt">📄</button>
+                  ${isPaid ? `<button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="downloadReceipt('${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}', '${e.fee || 0}', '${escapeHtml(level).replace(/'/g, "\\'")}', '800', 'N/A', 'Event Fee', '', 'event', '${escapeHtml(e.title).replace(/'/g, "\\'")}')" title="Download Receipt">📄</button>
                   <button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="sendPaymentReceiptNotification('${sid}', '${e.fee || 0}')" title="Send via WhatsApp">📢</button>` : ''}
                 </div>
               </td>
@@ -6690,8 +6690,8 @@ Best regards,
     }, 2000);
   }
 
-  function downloadReceipt(id, name, fee, level = 'Beginner', rating = 800, coach = 'N/A', paymentMode = 'Online Transfer', dateStr = '') {
-    const url = `receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&level=${encodeURIComponent(level)}&rating=${rating}&coach=${encodeURIComponent(coach)}&method=${encodeURIComponent(paymentMode)}&date=${encodeURIComponent(dateStr)}&print=true`;
+  function downloadReceipt(id, name, fee, level = 'Beginner', rating = 800, coach = 'N/A', paymentMode = 'Online Transfer', dateStr = '', type = 'tuition', eventName = '') {
+    const url = `receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&level=${encodeURIComponent(level)}&rating=${rating}&coach=${encodeURIComponent(coach)}&method=${encodeURIComponent(paymentMode)}&date=${encodeURIComponent(dateStr)}&type=${encodeURIComponent(type)}&eventName=${encodeURIComponent(eventName)}&print=true`;
     window.open(url, '_blank');
     toast('Opening receipt for printing...', 'success');
   }
