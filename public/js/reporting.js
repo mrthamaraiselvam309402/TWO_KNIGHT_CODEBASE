@@ -636,7 +636,7 @@ window.generateReportPDF = async function() {
         data: {
           labels: ['Profit', 'Payroll', 'Pending Arrears'],
           datasets: [{
-            data: [${netProfit > 0 ? netProfit : 0}, ${payroll}, ${pending}],
+            data: [${netProfit > 0 ? netProfit : 0}, ${payroll}, ${currPendingAmount}],
             backgroundColor: ['#52c41a', '#1a1a1a', '#e8a830'],
             borderColor: 'rgba(201,150,12,0.5)',
             borderWidth: 1
