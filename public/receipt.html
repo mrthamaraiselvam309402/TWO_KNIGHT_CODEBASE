@@ -17,6 +17,17 @@
       --border-sep: #e8e0d0;
     }
 
+    :root.theme-event {
+      --gold-primary: #6366f1;
+      --gold-light: #818cf8;
+      --gold-dark: #4f46e5;
+      --bg-cream: #f5f3ff;
+      --text-main: #1e1b4b;
+      --text-dim: #4338ca;
+      --border-sep: #e0e7ff;
+    }
+
+
     body { 
       background: var(--bg-cream); 
       font-family: 'Syne', sans-serif; 
@@ -241,7 +252,8 @@
 
     <div class="receipt-section">
       <div class="section-title">Payment Details</div>
-      <div class="detail-row"><span class="detail-label">Tuition Fee</span><span class="detail-value mono" id="disp-amount-row">₹ 0</span></div>
+      <div class="detail-row"><span class="detail-label" id="disp-fee-label">Tuition Fee</span><span class="detail-value mono" id="disp-amount-row">₹ 0</span></div>
+      <div class="detail-row" id="row-event" style="display: none;"><span class="detail-label">Tournament / Camp</span><span class="detail-value" id="disp-event-name"></span></div>
       <div class="detail-row"><span class="detail-label">Payment Mode</span><span class="detail-value" id="disp-method">Online Transfer</span></div>
       <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span style="color:#2e7d32;font-weight:700">✓ SUCCESS</span></span></div>
     </div>
@@ -287,6 +299,8 @@
     const rating = params.get('rating') || '800';
     const coach = params.get('coach') || 'N/A';
     const method = params.get('method') || 'Online Transfer';
+    const type = params.get('type') || 'tuition';
+    const eventName = params.get('eventName') || '';
 
     const date = dateStr ? new Date(dateStr) : new Date();
     
@@ -300,6 +314,24 @@
     document.getElementById('disp-method').textContent = method;
     document.getElementById('disp-total').textContent = amount.toLocaleString();
     document.getElementById('disp-words').textContent = numberToWords(amount);
+
+    if (type === 'event') {
+      document.documentElement.classList.add('theme-event');
+      const feeLabel = document.getElementById('disp-fee-label');
+      if (feeLabel) feeLabel.textContent = 'Event Registration Fee';
+      
+      const rowEvent = document.getElementById('row-event');
+      const dispEventName = document.getElementById('disp-event-name');
+      if (rowEvent && dispEventName && eventName) {
+        rowEvent.style.display = 'flex';
+        dispEventName.textContent = eventName;
+      }
+      
+      // Override title to show Event Registration Receipt
+      document.title = "Chesskidoo Academy - Event Registration Receipt";
+      const titleBarH2 = document.querySelector('.receipt-title-bar h2');
+      if (titleBarH2) titleBarH2.textContent = "Event Registration Receipt";
+    }
 
     if (params.has('print')) {
       setTimeout(() => window.print(), 800);

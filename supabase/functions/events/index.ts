@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
   function generateId() { return crypto.randomUUID(); }
 
   function transformEvent(e) {
+    if (!e) return null;
     return {
       id: e.id,
       title: e.title || '',
@@ -121,14 +122,18 @@ Deno.serve(async (req) => {
         const regStatus = isWaitlisted ? 'waitlisted' : 'confirmed';
         
         // Insert into relational table
-        await supabase.from('event_registrations').insert({
-          event_id: currentEvent.id,
-          student_id: studentId,
-          student_name: studentName,
-          payment_status: 'pending',
-          attendance: 'absent',
-          status: regStatus
-        }).select().single().catch(()=>null);
+        try {
+          await supabase.from('event_registrations').insert({
+            event_id: currentEvent.id,
+            student_id: studentId,
+            student_name: studentName,
+            payment_status: 'pending',
+            attendance: 'absent',
+            status: regStatus
+          }).select().single();
+        } catch (e) {
+          console.error("Error inserting registration record:", e);
+        }
         
         // For backwards compatibility, we also update JSONB
         const registeredStudents = currentEvent.registered_students || [];

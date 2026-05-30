@@ -4,7 +4,24 @@
  */
 
 window.generateReportPDF = async function() {
-    if (!window.allStudents || window.allStudents.length === 0) {
+    const allStudents = window.allStudents || [];
+    const allCoaches = window.allCoaches || [];
+    const allPayments = window.allPayments || [];
+    const allAttendance = window.allAttendance || [];
+
+    const getStudentPaymentStatus = window.getStudentPaymentStatus;
+    const getCoachSalary = window.getCoachSalary;
+    const getCoachName = window.getCoachName;
+    const getStudentBatchType = window.getStudentBatchType;
+    const getStudentSessionTime = window.getStudentSessionTime;
+    const getStudentName = window.getStudentName;
+    const getStudentLevel = window.getStudentLevel;
+    const getStudentRating = window.getStudentRating;
+    const getStudentDate = window.getStudentDate;
+    const getStudentStatus = window.getStudentStatus;
+    const getStudentMonthlyFee = window.getStudentMonthlyFee;
+
+    if (allStudents.length === 0) {
         toast('Academy data not yet synchronized. Please wait a moment...', 'warning');
         return;
     }
@@ -35,15 +52,16 @@ window.generateReportPDF = async function() {
      const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
      
      const targetStudents = allStudents.filter(s => {
-         const sStatus = getStudentStatus(s);
-         if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
-         
-         const sName = (getStudentName(s) || '').toUpperCase();
-         if (sName.includes('PARENT') || sName.includes('COACH') || sName.includes('TEST')) return false;
-         
-         const joinStr = getStudentDate(s);
-         const enrollDate = joinStr ? new Date(joinStr) : baseline;
-         return enrollDate <= monthEndLimit;
+          const sStatus = getStudentStatus(s);
+          if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
+          
+          const sName = (getStudentName(s) || '').toUpperCase();
+          if (sName.includes('PARENT') || sName.includes('COACH') || sName.includes('TEST')) return false;
+          
+          const joinStr = getStudentDate(s);
+          let enrollDate = joinStr ? new Date(joinStr) : baseline;
+          if (isNaN(enrollDate.getTime())) enrollDate = baseline;
+          return enrollDate <= monthEndLimit;
      });
 
     const totalStudents = allStudents.length;
@@ -68,22 +86,9 @@ window.generateReportPDF = async function() {
       }
     });
 
-    // Enforce 1x monthly fee logic to align with paidRevenue on dashboard
-    const paidStudentIds = new Set();
-    let collected = (allPayments || []).reduce((sum, p) => {
-        const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
-            const sid = String(p.student_id).toLowerCase();
-            if (paidStudentIds.has(sid)) return sum;
-
-            const s = targetStudents.find(x => String(x.id).toLowerCase() === sid);
-            if (s && getStudentStatus(s) !== 'archived' && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
-                paidStudentIds.add(sid);
-                return sum + getStudentMonthlyFee(s);
-            }
-        }
-        return sum;
-    }, 0);
+    // Sum actual cash collected from verified payments in the target month (100% database-accurate)
+    const monthlyPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM && p.status === 'paid');
+    const collected = monthlyPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
     let lastDueAmount = 0;
     let currPendingAmount = 0;
@@ -92,7 +97,10 @@ window.generateReportPDF = async function() {
     targetStudents.forEach(s => {
         const fee = getStudentMonthlyFee(s) || 0;
         const enrollDateStr = getStudentDate(s);
-        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+        let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+        if (isNaN(enrollDate.getTime())) {
+            enrollDate = baseline;
+        }
         const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
         
         const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
@@ -137,7 +145,9 @@ window.generateReportPDF = async function() {
     // Growth & Attendance Metrics
     const monthStartLimit = new Date(Date.UTC(targetYear, targetMonth, 1));
     const newStudsThisMonth = allStudents.filter(s => {
-        const join = new Date(s.joining_date || s.enrollment_date || s.created_at);
+        const joinStr = s.joining_date || s.enrollment_date || s.created_at;
+        let join = joinStr ? new Date(joinStr) : baseline;
+        if (isNaN(join.getTime())) join = baseline;
         return join >= monthStartLimit && join <= monthEndLimit;
     }).length;
     
@@ -159,10 +169,7 @@ window.generateReportPDF = async function() {
           if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
               const sid = String(p.student_id).toLowerCase();
               if (coachStudIds.has(sid)) {
-                  const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
-                  if (s && getStudentStatus(s) !== 'archived' && getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
-                      return sum + getStudentMonthlyFee(s);
-                  }
+                  return sum + (parseFloat(p.amount) || 0);
               }
           }
           return sum;
@@ -177,7 +184,8 @@ window.generateReportPDF = async function() {
           const sStatus = getStudentStatus(s);
           if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
           const enrollDateStr = getStudentDate(s);
-          const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+          let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+          if (isNaN(enrollDate.getTime())) enrollDate = baseline;
           return enrollDate <= monthEndLimit;
         }).length, 
         revenue: coachRev, 
@@ -191,7 +199,9 @@ window.generateReportPDF = async function() {
       .filter(s => {
           const sStatus = getStudentStatus(s);
           if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
-          const enrollDate = new Date(getStudentDate(s));
+          const enrollDateStr = getStudentDate(s);
+          let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+          if (isNaN(enrollDate.getTime())) enrollDate = baseline;
           if (enrollDate > monthEndLimit) return false;
           const status = getStudentPaymentStatus(s, targetMonth, targetYear);
           return status !== 'Paid' && status !== 'Not Enrolled';
@@ -212,15 +222,10 @@ window.generateReportPDF = async function() {
         let mCollected = 0;
         let mOutstanding = 0;
         
-        const paidSet = new Set();
         (allPayments || []).forEach(p => {
             const pDate = new Date(p.payment_date || p.created_at);
             if (pDate.getUTCMonth() === m && pDate.getUTCFullYear() === y && p.status === 'paid') {
-                const sid = String(p.student_id).toLowerCase();
-                if (paidSet.has(sid)) return;
-                paidSet.add(sid);
-                const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
-                mCollected += s ? getStudentMonthlyFee(s) : (parseFloat(p.amount) || 0);
+                mCollected += (parseFloat(p.amount) || 0);
             }
         });
 
@@ -228,7 +233,8 @@ window.generateReportPDF = async function() {
             const sStatus = getStudentStatus(s);
             if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return;
             const enrollDateStr = getStudentDate(s);
-            const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+            let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+            if (isNaN(enrollDate.getTime())) enrollDate = baseline;
             if (enrollDate <= mEnd) {
                 const fee = getStudentMonthlyFee(s) || 0;
                 mPotential += fee;
@@ -291,7 +297,6 @@ window.generateReportPDF = async function() {
     }).filter(x => x.total > 0).sort((a, b) => b.rate - a.rate).slice(0, 8);
 
     // Prepare transaction rows for the ledger (Actual transactions in that specific month)
-    const monthlyPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM && p.status === 'paid');
     const transactionRows = monthlyPayments.map(p => {
         const s = allStudents.find(x => String(x.id) === String(p.student_id));
         const localCurrStr = s && window.getStudentLocalCurrencyAmount ? window.getStudentLocalCurrencyAmount(s, p.amount) : '';
@@ -725,6 +730,11 @@ window.getAcademySnapshot = function() {
     const coaches  = window.allCoaches  || [];
     const payments = window.allPayments || [];
     const attendance = window.allAttendance || [];
+
+    const getStudentPaymentStatus = window.getStudentPaymentStatus;
+    const getCoachName = window.getCoachName;
+    const getStudentStatus = window.getStudentStatus;
+    const getStudentMonthlyFee = window.getStudentMonthlyFee;
 
     // ── Monthly revenue dedup (1 fee per student per month) ────────────
     const paidMonths = new Set();
