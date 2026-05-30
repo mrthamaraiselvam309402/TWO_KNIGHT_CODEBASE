@@ -1388,6 +1388,8 @@
   }
 
   function openModal(id) { const el = $(id); if (el) el.style.display = 'flex'; }
+  function closeModal(id) { const el = $(id); if (el) el.style.display = 'none'; }
+  window.closeModal = closeModal;
    function closeModals() {
      document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
      const hardDeleteCheckbox = $('hard-delete');
@@ -2039,7 +2041,7 @@ function initUI() {
     if($('ev-m-fill-bar')) $('ev-m-fill-bar').style.width = `${fillPercent}%`;
     if($('ev-m-waitlist')) $('ev-m-waitlist').textContent = waitlistedStudents.length > 0 ? `${waitlistedStudents.length} Waitlisted` : 'No Waitlist';
     
-    const expectedRev = confirmedStudents.length * (e.fee || 0);
+    let expectedRev = 0;
     let collectedRev = 0;
     let presentCount = 0;
     
@@ -2083,23 +2085,32 @@ function initUI() {
             const currentAttendance = regData.attendance || 'absent';
             const isWaitlisted = regData.registration_status === 'waitlisted';
             
-            if (isPaid) collectedRev += (e.fee || 0);
+            const studentFee = regData.custom_fee !== undefined ? Number(regData.custom_fee) : (e.fee || 0);
+            if (!isWaitlisted) {
+                expectedRev += studentFee;
+            }
+            if (isPaid) collectedRev += studentFee;
             if (currentAttendance === 'present') presentCount++;
             
             const rowStyle = isWaitlisted ? 'opacity: 0.7; background: #ffffff05;' : '';
             const statusBadge = isWaitlisted ? ' <span class="badge badge-warning" style="font-size:9px; margin-left:4px;">Waitlist</span>' : '';
             
             html += `<tr style="${rowStyle}">
-              <td>${escapeHtml(name)}${statusBadge}</td>
+              <td>
+                ${escapeHtml(name)}${statusBadge}
+              </td>
               <td>${escapeHtml(level)}</td>
+              <td>
+                <input type="number" class="form-input" style="width: 70px; padding: 4px; font-size: 11px; margin-right: 8px;" value="${studentFee}" onblur="updateEventRegistration('${id}', '${sid}', 'custom_fee', this.value)" placeholder="Fee">
+              </td>
               <td>
                 <div style="display:flex; align-items:center; gap:8px;">
                   <select style="padding:4px 8px; font-size:11px; width:90px; background:var(--bg3); color:var(--ivory); border:1px solid var(--border); border-radius:4px;" onchange="updateEventRegistration('${id}', '${sid}', 'payment_status', this.value)">
                     <option value="pending" ${!isPaid ? 'selected' : ''}>Pending</option>
                     <option value="paid" ${isPaid ? 'selected' : ''}>Paid</option>
                   </select>
-                  ${isPaid ? `<button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="downloadReceipt('${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}', '${e.fee || 0}', '${escapeHtml(level).replace(/'/g, "\\'")}', '800', 'N/A', 'Event Fee', '', 'event', '${escapeHtml(e.title).replace(/'/g, "\\'")}')" title="Download Receipt">📄</button>
-                  <button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="sendPaymentReceiptNotification('${sid}', '${e.fee || 0}')" title="Send via WhatsApp">📢</button>` : ''}
+                  ${isPaid ? `<button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="downloadReceipt('${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}', '${studentFee}', '${escapeHtml(level).replace(/'/g, "\\'")}', '800', 'N/A', 'Event Fee', '', 'event', '${escapeHtml(e.title).replace(/'/g, "\\'")}')" title="Download Receipt">📄</button>
+                  <button class="btn btn-outline-grey btn-sm" style="padding: 2px 6px; font-size:10px;" onclick="sendPaymentReceiptNotification('${sid}', '${studentFee}')" title="Send via WhatsApp">📢</button>` : ''}
                 </div>
               </td>
               <td>
@@ -2134,7 +2145,13 @@ function initUI() {
           expHtml += `<tr>
             <td>${new Date(ex.date || ex.created_at).toLocaleDateString()}</td>
             <td>${escapeHtml(ex.description || 'Event Expense')}</td>
-            <td class="text-danger">₹${ex.amount}</td>
+            <td class="text-danger" style="text-align:right;">₹${ex.amount}</td>
+            <td style="text-align:center;">
+              <div style="display:flex; justify-content:center; gap:6px;">
+                <button class="btn btn-outline-grey btn-sm" style="padding: 4px; font-size:12px; border:none;" onclick="setPage('exp'); setTimeout(()=>window.openEditExpense('${ex.id}'), 300);" title="Edit in Expenses">✏️</button>
+                <button class="btn btn-outline-grey btn-sm" style="padding: 4px; font-size:12px; border:none; color:var(--danger);" onclick="deleteEventExpenditure('${ex.id}', '${escapeHtml(ex.description).replace(/'/g, "\\'")}')" title="Delete Expense">🗑️</button>
+              </div>
+            </td>
           </tr>`;
         });
       }
@@ -2150,9 +2167,130 @@ function initUI() {
       const attendanceRate = confirmedStudents.length > 0 ? Math.round((presentCount / confirmedStudents.length) * 100) : 0;
       if($('ev-m-att')) $('ev-m-att').textContent = `${attendanceRate}%`;
       
+      // Render the new chart
+      window.renderEventManageChart(expectedRev, collectedRev, totalExp, waitlistedStudents.length, confirmedStudents.length);
+      
     } catch (err) {
        console.error(err);
        tbody.innerHTML = '<tr><td colspan="5">Error loading data.</td></tr>';
+    }
+  };
+  
+  let eventManageChartInstance = null;
+  window.renderEventManageChart = function(expRev, colRev, totalExp, waitlist, confirmed) {
+      const canvas = $('ev-manage-chart');
+      if (!canvas) return;
+      if (typeof Chart === 'undefined') return; // Fail safe if chart.js not loaded
+
+      if (eventManageChartInstance) {
+          eventManageChartInstance.destroy();
+      }
+
+      const netProfit = colRev - totalExp;
+      
+      eventManageChartInstance = new Chart(canvas, {
+          type: 'bar',
+          data: {
+              labels: ['Expected Rev', 'Collected Rev', 'Total Expenses', 'Net Profit'],
+              datasets: [{
+                  label: 'Financials (₹)',
+                  data: [expRev, colRev, totalExp, netProfit],
+                  backgroundColor: [
+                      'rgba(54, 162, 235, 0.6)', 
+                      'rgba(82, 196, 26, 0.6)', 
+                      'rgba(255, 77, 79, 0.6)', 
+                      netProfit >= 0 ? 'rgba(82, 196, 26, 0.9)' : 'rgba(255, 77, 79, 0.9)'
+                  ],
+                  borderColor: [
+                      'rgba(54, 162, 235, 1)', 
+                      'rgba(82, 196, 26, 1)', 
+                      'rgba(255, 77, 79, 1)', 
+                      netProfit >= 0 ? 'rgba(82, 196, 26, 1)' : 'rgba(255, 77, 79, 1)'
+                  ],
+                  borderWidth: 1,
+                  borderRadius: 4
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                  legend: { display: false }
+              },
+              scales: {
+                  y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                  x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+              }
+          }
+      });
+  };
+
+  window.runFinancialAudit = async function() {
+      const eventId = window.currentManageEventId;
+      if (!eventId) return toast('No event selected.', 'error');
+      
+      toast('🤖 AI Guardian running financial audit...', 'info');
+      
+      try {
+          // Fetch event and payments
+          const evRes = await apiCall(`/api/events?id=${eventId}`);
+          const ev = await evRes.json();
+          const pRes = await apiCall('/api/payments');
+          const paymentsData = await pRes.json();
+          const payments = paymentsData.data || paymentsData;
+          
+          let anomalies = [];
+          
+          // Cross-reference registrations with payments
+          const regs = ev.registrations_data || [];
+          regs.forEach(r => {
+             const studentFee = r.custom_fee !== undefined ? Number(r.custom_fee) : (ev.fee || 0);
+             if (studentFee === 0) return; // Skip free entries
+             
+             if (r.payment_status === 'paid') {
+                 // Check if payment actually exists
+                 const eventDescString = `Event: ${ev.title}`;
+                 const hasPayment = payments.find(p => p.student_id === r.student_id && (p.description === eventDescString || (p.details && p.details.event_id === eventId)));
+                 if (!hasPayment) {
+                     anomalies.push(`🔴 <b>${escapeHtml(r.name)}</b> is marked as 'paid' but no payment record exists for ₹${studentFee}.`);
+                 }
+             }
+          });
+          
+          if (anomalies.length === 0) {
+              Swal.fire({
+                  icon: 'success',
+                  title: 'Financial Audit Clear',
+                  text: 'No anomalies detected. All paid statuses match payment records.',
+                  background: 'var(--surface)',
+                  color: 'var(--ivory)',
+                  confirmButtonColor: 'var(--gold)'
+              });
+          } else {
+              Swal.fire({
+                  icon: 'warning',
+                  title: 'Audit Anomalies Detected',
+                  html: `<div style="text-align:left; font-size:14px; max-height:200px; overflow-y:auto;">${anomalies.join('<br><br>')}</div>`,
+                  background: 'var(--surface)',
+                  color: 'var(--ivory)',
+                  confirmButtonColor: 'var(--gold)'
+              });
+          }
+      } catch (err) {
+          console.error(err);
+          toast('Error running audit.', 'error');
+      }
+  };
+
+  window.deleteEventExpenditure = async function(expId, desc) {
+    if (!confirm(`Delete event expense: "${desc}"?\n\nThis action cannot be undone.`)) return;
+    try {
+      const res = await apiCall(`/api/expenditures?id=${encodeURIComponent(expId)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+      toast('Expense deleted', 'success');
+      loadManageEvent(window.currentManageEventId);
+    } catch (e) {
+      toast('Failed to delete expense', 'error');
     }
   };
 
@@ -2162,6 +2300,16 @@ function initUI() {
     $('ev-exp-desc').value = '';
     $('ev-exp-amount').value = '';
     openModal('event-expenditure-modal');
+  };
+
+  window.submitEditEventExpenditure = async function() {
+      toast('Editing event expenditures is not yet supported in this version.', 'info');
+      closeModal('event-expense-edit-modal');
+  };
+  
+  window.submitEditEventRegistration = async function() {
+      toast('Editing registrations directly via modal is deprecated. Use inline dropdowns.', 'info');
+      closeModal('event-registration-edit-modal');
   };
 
   window.submitEventExpenditure = async function() {
@@ -2388,6 +2536,7 @@ function initUI() {
     $('ext-student-name').value = '';
     $('ext-student-phone').value = '';
     $('ext-student-level').value = 'Guest';
+    if ($('ext-student-fee')) $('ext-student-fee').value = '';
     openModal('external-student-modal');
   };
 
@@ -2432,6 +2581,14 @@ function initUI() {
           })
       });
       if (!eRes.ok) throw new Error('Failed to register to event');
+      
+      const feeInput = $('ext-student-fee');
+      if (feeInput && feeInput.value.trim() !== '') {
+          const feeVal = Number(feeInput.value.trim());
+          if (!isNaN(feeVal)) {
+              await window.updateEventRegistration(eventId, newStudent.id, 'custom_fee', feeVal);
+          }
+      }
       
       toast('External student successfully registered!', 'success');
       closeModal('external-student-modal');
@@ -2755,7 +2912,7 @@ function initUI() {
       }
   };
 
-  window.generateEventReportPDF = function() {
+  window.generateEventReportPDF = async function() {
       const id = window.currentManageEventId;
       if (!id) return;
       const e = eventsData.find(ev => String(ev.id) === String(id));
@@ -2778,7 +2935,11 @@ function initUI() {
           doc.autoTable({ startY: 50, head: [['Name', 'Level', 'Payment', 'Attendance', 'Status']], body: studentsBody, theme: 'grid', headStyles: { fillColor: [212, 175, 55] } });
           
           const finalY = doc.lastAutoTable.finalY || 50;
-          const expResLocal = allExpenditures || [];
+          let expResLocal = [];
+          try {
+              const res = await apiCall('/api/expenditures');
+              if (res.ok) { const json = await res.json(); expResLocal = json.data || json || []; }
+          } catch(err){}
           const eventExps = expResLocal.filter(ex => ex.description && ex.description.startsWith(e.title + ' -'));
           
           if (eventExps.length > 0) {
@@ -2792,14 +2953,18 @@ function initUI() {
       } catch (err) { console.error(err); toast('Error generating PDF', 'error'); }
   };
 
-  window.exportEventWord = function() {
+  window.exportEventWord = async function() {
       const id = window.currentManageEventId;
       if (!id) return;
       const e = eventsData.find(ev => String(ev.id) === String(id));
       if (!e) return;
       
       const regs = e.registrations_data || [];
-      const expResLocal = allExpenditures || [];
+      let expResLocal = [];
+      try {
+          const res = await apiCall('/api/expenditures');
+          if (res.ok) { const json = await res.json(); expResLocal = json.data || json || []; }
+      } catch(err){}
       const eventExps = expResLocal.filter(ex => ex.description && ex.description.startsWith(e.title + ' -'));
       
       let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>

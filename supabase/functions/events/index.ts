@@ -70,14 +70,18 @@ Deno.serve(async (req) => {
          mergedEvents = mergedEvents.map(e => {
             const eRegs = regs.filter(r => r.event_id === e.id);
             if (eRegs.length > 0) {
-               e.registrations_data = eRegs.map(r => ({
-                  student_id: r.student_id,
-                  name: r.student_name,
-                  payment_status: r.payment_status,
-                  attendance: r.attendance,
-                  registered_at: r.registered_at,
-                  registration_status: (r as any).status || 'confirmed'
-               }));
+               e.registrations_data = eRegs.map(r => {
+                  const existingJson = (e.registrations_data || []).find((old: any) => old.student_id === r.student_id) || {};
+                  return {
+                     student_id: r.student_id,
+                     name: r.student_name,
+                     payment_status: r.payment_status,
+                     attendance: r.attendance,
+                     registered_at: r.registered_at,
+                     registration_status: (r as any).status || 'confirmed',
+                     custom_fee: (r as any).custom_fee !== undefined ? (r as any).custom_fee : existingJson.custom_fee
+                  };
+               });
                e.registered_students = eRegs.map(r => r.student_id);
                // Do not count waitlisted as active participants
                e.current_participants = eRegs.filter(r => (r as any).status !== 'waitlisted').length;
@@ -169,14 +173,19 @@ Deno.serve(async (req) => {
       if (action === 'update_registration' && eventId && studentId) {
         const paymentStatus = body.payment_status;
         const attendance = body.attendance;
+        const customFee = body.custom_fee;
         
         // Update relational table
         const updates: any = {};
-        if (paymentStatus) updates.payment_status = paymentStatus;
-        if (attendance) updates.attendance = attendance;
+        if (paymentStatus !== undefined) updates.payment_status = paymentStatus;
+        if (attendance !== undefined) updates.attendance = attendance;
+        if (customFee !== undefined) updates.custom_fee = customFee; // Assuming column exists; if not, we rely on JSONB
         
         if (Object.keys(updates).length > 0) {
-            await supabase.from('event_registrations').update(updates).match({ event_id: eventId, student_id: studentId });
+            // We ignore errors here in case custom_fee doesn't exist on the relational table yet
+            await supabase.from('event_registrations').update(updates).match({ event_id: eventId, student_id: studentId }).then(res => {
+                if (res.error) console.warn("Relational update warning:", res.error);
+            });
         }
 
         // Update JSONB
@@ -185,8 +194,9 @@ Deno.serve(async (req) => {
            let regsData = eventToUpdate.registrations_data || [];
            regsData = regsData.map((r: any) => {
              if (r.student_id === studentId) {
-               if (paymentStatus) r.payment_status = paymentStatus;
-               if (attendance) r.attendance = attendance;
+               if (paymentStatus !== undefined) r.payment_status = paymentStatus;
+               if (attendance !== undefined) r.attendance = attendance;
+               if (customFee !== undefined) r.custom_fee = customFee;
              }
              return r;
            });

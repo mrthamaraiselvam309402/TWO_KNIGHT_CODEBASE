@@ -143,3 +143,78 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// ─── Draggable AI Bot Logic ────────────────────────────────────────
+(function() {
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let isClick = true;
+
+    window.dragStartBot = function(e) {
+        if (e.button !== 0) return;
+        const btn = document.getElementById('ai-chat-btn');
+        if (!btn) return;
+
+        isDragging = true;
+        isClick = true;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const rect = btn.getBoundingClientRect();
+        btn.style.right = 'auto';
+        btn.style.bottom = 'auto';
+        btn.style.left = rect.left + 'px';
+        btn.style.top = rect.top + 'px';
+
+        document.addEventListener('mousemove', dragMoveBot);
+        document.addEventListener('mouseup', dragEndBot);
+        e.preventDefault();
+    };
+
+    function dragMoveBot(e) {
+        if (!isDragging) return;
+        const btn = document.getElementById('ai-chat-btn');
+        if (!btn) return;
+
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+            isClick = false; // it's a drag
+        }
+
+        const rect = btn.getBoundingClientRect();
+        const nextLeft = rect.left + dx;
+        const nextTop = rect.top + dy;
+        
+        if (nextLeft > 0 && nextLeft < window.innerWidth - 60) {
+            btn.style.left = nextLeft + 'px';
+        }
+        if (nextTop > 0 && nextTop < window.innerHeight - 60) {
+            btn.style.top = nextTop + 'px';
+        }
+
+        startX = e.clientX;
+        startY = e.clientY;
+    }
+
+    function dragEndBot(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        document.removeEventListener('mousemove', dragMoveBot);
+        document.removeEventListener('mouseup', dragEndBot);
+        
+        if (isClick) {
+            toggleChat();
+        }
+    }
+
+    // Initialize drag on load
+    window.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('ai-chat-btn');
+        if (btn) {
+            btn.removeAttribute('onclick'); // remove inline onclick
+            btn.addEventListener('mousedown', dragStartBot);
+        }
+    });
+})();

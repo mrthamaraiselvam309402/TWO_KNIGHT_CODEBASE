@@ -650,16 +650,17 @@
               <button class="btn btn-outline btn-sm" onclick="openQrPosterModal()">🎨 QR Poster</button>
             </div>
             <div class="ev-action-separator"></div>
-            <div class="ev-action-group">
+            <div class="ev-action-group" style="display:flex; gap:8px; flex-wrap:wrap;">
               <button class="btn btn-outline btn-sm" onclick="generateEventReportPDF()">📄 Report</button>
               <button class="btn btn-outline btn-sm" onclick="exportEventWord()">📝 Word</button>
               <button class="btn btn-outline btn-sm" onclick="exportEventCSV()">📥 CSV</button>
+              <button class="btn btn-gold btn-sm" onclick="runFinancialAudit()">🤖 AI Audit</button>
             </div>
           </div>
         </div>
         
         <!-- Premium Analytics KPIs Cards Grid -->
-        <div class="dash-grid" style="margin: 30px 0;">
+        <div class="dash-grid" style="margin: 30px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
           <div class="card ev-manage-card" style="--card-accent: var(--gold); --card-accent-glow: rgba(220,163,62,0.25);">
             <div style="font-size:10px; text-transform:uppercase; color:var(--slate); letter-spacing:1px; margin-bottom:8px; font-weight:700;">Fill Rate / Waitlist</div>
             <div style="font-size:24px; font-weight:700; color:var(--gold);" id="ev-m-fill">0 / 0</div>
@@ -683,6 +684,16 @@
           </div>
         </div>
         
+        <!-- Event Analytics Chart -->
+        <div class="card" style="margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--surface); border: 1px solid var(--border);">
+          <div style="width:100%; display:flex; justify-content:space-between; margin-bottom: 15px;">
+            <div style="font-size:12px; font-weight:600; color:var(--slate); text-transform:uppercase; letter-spacing:1px;">Financial & Status Overview</div>
+          </div>
+          <div style="width:100%; height: 250px; position: relative;">
+            <canvas id="ev-manage-chart"></canvas>
+          </div>
+        </div>
+        
         <div style="display:grid; grid-template-columns: 1fr; gap: 40px; margin-top: 30px;">
           <!-- Student Registry Section -->
           <div id="ev-registry-section">
@@ -690,9 +701,9 @@
               <h3 style="color:var(--ivory); margin:0; font-family: 'Playfair Display', serif, 'Georgia'; font-size:18px;">Student Registry</h3>
               <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
                 <!-- Internal Student Selector Group -->
-                <div class="premium-select-wrap">
-                  <select id="ev-add-student-select" class="premium-select"></select>
-                  <button class="btn btn-gold btn-sm" onclick="addStudentToEvent()" style="border-radius:6px; font-size:12px; padding: 6px 12px; margin: 2px;">+ Add</button>
+                <div class="premium-select-wrap" style="display:flex; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 200px;">
+                  <select id="ev-add-student-select" class="premium-select" style="flex:1;"></select>
+                  <button class="btn btn-gold btn-sm" onclick="addStudentToEvent()" style="border-radius:6px; font-size:12px; padding: 6px 12px; margin: 2px; white-space: nowrap;">+ Add</button>
                 </div>
                 
                 <span style="color:var(--slate); font-size:12px; font-weight: 500;">or</span>
@@ -713,6 +724,7 @@
                   <tr>
                     <th style="padding:12px 15px; font-size:10px; text-transform:uppercase; color:var(--slate); text-align:left; font-weight:600; letter-spacing:1px;">Student</th>
                     <th style="padding:12px 15px; font-size:10px; text-transform:uppercase; color:var(--slate); text-align:left; font-weight:600; letter-spacing:1px;">Level</th>
+                    <th style="padding:12px 15px; font-size:10px; text-transform:uppercase; color:var(--slate); text-align:left; font-weight:600; letter-spacing:1px;">Event Fee</th>
                     <th style="padding:12px 15px; font-size:10px; text-transform:uppercase; color:var(--slate); text-align:left; font-weight:600; letter-spacing:1px;">Payment</th>
                     <th style="padding:12px 15px; font-size:10px; text-transform:uppercase; color:var(--slate); text-align:left; font-weight:600; letter-spacing:1px;">Attendance</th>
                     <th style="padding:12px 15px; font-size:10px; text-transform:uppercase; color:var(--slate); text-align:center; font-weight:600; letter-spacing:1px;">Actions</th>
@@ -742,6 +754,7 @@
                     <th style="padding:12px 15px; font-size:10px; text-transform:uppercase; color:var(--slate); text-align:left; font-weight:600; letter-spacing:1px;">Date</th>
                     <th style="padding:12px 15px; font-size:10px; text-transform:uppercase; color:var(--slate); text-align:left; font-weight:600; letter-spacing:1px;">Description</th>
                     <th style="padding:12px 15px; font-size:10px; text-transform:uppercase; color:var(--slate); text-align:right; font-weight:600; letter-spacing:1px;">Amount</th>
+                    <th style="padding:12px 15px; font-size:10px; text-transform:uppercase; color:var(--slate); text-align:center; font-weight:600; letter-spacing:1px;">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="ev-exp-tbody">
@@ -869,6 +882,9 @@
         <div style="margin-left:auto;display:flex;gap:8px">
           <button class="btn btn-outline" onclick="toggleCalculator()" title="Toggle Quick Math Calculator">
             🧮 Calculator
+          </button>
+          <button class="btn btn-gold" onclick="openFinOpsReport()" title="FinOps AI Guardian Audit">
+            🤖 AI Guardian
           </button>
           <button class="btn btn-gold" onclick="openAddExpense()">
             <svg style="width:16px;height:16px;vertical-align:middle;margin-right:5px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
@@ -1082,6 +1098,7 @@
               <button class="ai-ws-pill admin-only" onclick="setAISuggestion('Academy health report')">📊 Health report</button>
               <button class="ai-ws-pill admin-only" onclick="setAISuggestion('Coach performance comparison')">🧑🏫 Coach comparison</button>
               <button class="ai-ws-pill parent-only" onclick="setAISuggestion('How is my child progressing?')">📈 My progress?</button>
+              <button class="ai-ws-pill admin-only" onclick="openFinOpsReport()" style="border-color:var(--info); color:var(--info);">🛡️ AI Guardian FinOps</button>
               <button class="ai-ws-pill parent-only" onclick="setAISuggestion('What is my child attendance?')">📅 Attendance?</button>
             </div>
           </div>
@@ -1096,6 +1113,52 @@
 <div id="toast-container"></div>
 
 <!-- Expenditure Add/Edit Modal -->
+    <!-- FinOps Report Modal -->
+    <div class="modal" id="finops-report-modal">
+      <div class="modal-content" style="max-width:600px;">
+        <button class="close-btn" onclick="closeModal('finops-report-modal')">×</button>
+        <h2 style="color:var(--gold); margin-bottom: 5px;">🤖 AI Guardian FinOps Report</h2>
+        <div class="modal-sub">Automated audit and cost analysis</div>
+        
+        <div id="finops-loading" style="padding: 20px; text-align: center; color: var(--ivory-dim);">
+          <span class="spinner" style="margin-right: 10px;"></span> AI is analyzing your financials...
+        </div>
+        
+        <div id="finops-content" style="display: none; margin-top: 15px;">
+          <!-- 1. Burn Rate Prediction -->
+          <div class="card" style="margin-bottom: 15px; border-left: 3px solid var(--info); background: rgba(23,162,184,0.05);">
+            <h4 style="margin:0 0 10px 0; color:var(--info);">📊 Burn Rate & Forecast</h4>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-size:11px; color:var(--slate); text-transform:uppercase;">6-Month Avg Spend</div>
+                <div id="finops-avg-spend" style="font-size:18px; font-weight:700; color:var(--ivory);">₹0</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px; color:var(--slate); text-transform:uppercase;">Predicted Next Month</div>
+                <div id="finops-predicted-spend" style="font-size:18px; font-weight:700; color:var(--gold);">₹0</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 2. Anomalies -->
+          <div class="card" style="margin-bottom: 15px; border-left: 3px solid var(--danger); background: rgba(255,77,79,0.05);">
+            <h4 style="margin:0 0 10px 0; color:var(--danger);">⚠️ Expenditure Anomalies (>150% Spike)</h4>
+            <div id="finops-anomalies" style="max-height:150px; overflow-y:auto; font-size:13px;">
+              <div style="color:var(--success);">✅ No anomalies detected.</div>
+            </div>
+          </div>
+
+          <!-- 3. Duplicate Billing -->
+          <div class="card" style="margin-bottom: 15px; border-left: 3px solid var(--warning); background: rgba(250,173,20,0.05);">
+            <h4 style="margin:0 0 10px 0; color:var(--warning);">🔍 Potential Duplicate Billings</h4>
+            <div id="finops-duplicates" style="max-height:100px; overflow-y:auto; font-size:13px;">
+              <div style="color:var(--success);">✅ No duplicate expenses found.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
 <div class="modal" id="exp-modal">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-title" id="exp-modal-title">Add Expense</div>
@@ -1652,6 +1715,10 @@
           <div class="form-group">
             <label class="form-label">Level / Category</label>
             <input type="text" id="ext-student-level" class="form-input" placeholder="e.g. Guest, Beginner" value="Guest">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Event Fee (₹)</label>
+            <input type="number" id="ext-student-fee" class="form-input" placeholder="e.g. 500">
           </div>
         </div>
         <div class="modal-footer">

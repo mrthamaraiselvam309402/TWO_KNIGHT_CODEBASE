@@ -273,4 +273,77 @@
       e.preventDefault();
     }
   });
+
+  // ─── Draggable Calculator Toggle Icon Logic ──────────────────────
+  let isIconDragging = false;
+  let iconStartX = 0, iconStartY = 0;
+  let iconIsClick = true;
+
+  window.dragStartCalcIcon = function(e) {
+    if (e.button !== 0) return;
+    const btn = document.getElementById('calc-toggle-btn');
+    if (!btn) return;
+
+    isIconDragging = true;
+    iconIsClick = true;
+    iconStartX = e.clientX;
+    iconStartY = e.clientY;
+
+    const rect = btn.getBoundingClientRect();
+    btn.style.right = 'auto';
+    btn.style.bottom = 'auto';
+    btn.style.left = rect.left + 'px';
+    btn.style.top = rect.top + 'px';
+
+    document.addEventListener('mousemove', dragMoveCalcIcon);
+    document.addEventListener('mouseup', dragEndCalcIcon);
+    e.preventDefault();
+  };
+
+  function dragMoveCalcIcon(e) {
+    if (!isIconDragging) return;
+    const btn = document.getElementById('calc-toggle-btn');
+    if (!btn) return;
+
+    const dx = e.clientX - iconStartX;
+    const dy = e.clientY - iconStartY;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      iconIsClick = false; // it's a drag
+    }
+
+    const rect = btn.getBoundingClientRect();
+    const nextLeft = rect.left + dx;
+    const nextTop = rect.top + dy;
+    
+    if (nextLeft > 0 && nextLeft < window.innerWidth - 60) {
+      btn.style.left = nextLeft + 'px';
+    }
+    if (nextTop > 0 && nextTop < window.innerHeight - 60) {
+      btn.style.top = nextTop + 'px';
+    }
+
+    iconStartX = e.clientX;
+    iconStartY = e.clientY;
+  }
+
+  function dragEndCalcIcon(e) {
+    if (!isIconDragging) return;
+    isIconDragging = false;
+    document.removeEventListener('mousemove', dragMoveCalcIcon);
+    document.removeEventListener('mouseup', dragEndCalcIcon);
+    
+    if (iconIsClick) {
+      toggleCalculator();
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('calc-toggle-btn');
+    if (btn) {
+      btn.removeAttribute('onclick'); // prevent double click firing
+      btn.addEventListener('mousedown', dragStartCalcIcon);
+    }
+  });
+
 })();

@@ -661,6 +661,12 @@
       if (el) el.addEventListener('input', () => { expCurrentPage = 1; renderExpTable(); });
     });
 
+    // Auto-categorization listener
+    const descInput = document.getElementById('exp-desc');
+    if (descInput) {
+      descInput.addEventListener('keyup', window.autoCategorizeExpense);
+    }
+
     await loadExpenditurePage();
   };
 
@@ -675,6 +681,142 @@
     if (plEl) {
       plEl.textContent  = fmtCurrency(Math.abs(pl));
       plEl.className    = 'stat-value ' + (pl >= 0 ? 'text-success' : 'text-danger');
+    }
+  };
+
+  // ─── AI Guardian FinOps Logic ────────────────────────────────────
+  window.autoCategorizeExpense = function() {
+    const desc = (document.getElementById('exp-desc').value || '').toLowerCase();
+    const catSelect = document.getElementById('exp-cat');
+    if (!desc || !catSelect) return;
+    
+    // Do not override if user already explicitly chose something else manually (unless it's default 'Miscellaneous')
+    // A heuristic ruleset
+    const rules = {
+      'facebook': 'Marketing',
+      'instagram': 'Marketing',
+      'ads': 'Marketing',
+      'salary': 'Coach Salary',
+      'coach': 'Coach Salary',
+      'internet': 'Utilities',
+      'electricity': 'Utilities',
+      'power': 'Utilities',
+      'water': 'Utilities',
+      'rent': 'Rent',
+      'snacks': 'Snacks',
+      'food': 'Snacks',
+      'pizza': 'Snacks',
+      'board': 'Equipment',
+      'clock': 'Equipment',
+      'pieces': 'Equipment',
+      'zoom': 'Platform & Software',
+      'google': 'Platform & Software',
+      'vercel': 'Platform & Software',
+      'supabase': 'Platform & Software',
+      'flight': 'Travel',
+      'train': 'Travel',
+      'uber': 'Travel',
+      'ola': 'Travel'
+    };
+
+    for (let key in rules) {
+      if (desc.includes(key)) {
+        if (catSelect.value === 'Miscellaneous' || catSelect.value === '') {
+          catSelect.value = rules[key];
+          toastExp(`🤖 AI auto-categorized as ${rules[key]}`, 'info');
+        }
+        break;
+      }
+    }
+  };
+
+  window.openFinOpsReport = async function() {
+    openModal('finops-report-modal');
+    document.getElementById('finops-loading').style.display = 'block';
+    document.getElementById('finops-content').style.display = 'none';
+
+    try {
+      // Refresh data
+      await fetchExpenditures();
+      
+      let total6MonthSpend = 0;
+      let monthCounts = {};
+      let catAvgs = {};
+      let anomaliesHtml = '';
+      let duplicateHtml = '';
+      
+      const now = new Date();
+      // Calculate 6 month burn
+      allExpenditures.forEach(e => {
+        if (!e.date || e.type === 'Event Expense') return;
+        const eDate = new Date(e.date);
+        const diffMonths = (now.getFullYear() - eDate.getFullYear()) * 12 + (now.getMonth() - eDate.getMonth());
+        
+        if (diffMonths >= 0 && diffMonths < 6) {
+          const amt = parseFloat(e.amount || 0);
+          total6MonthSpend += amt;
+          monthCounts[diffMonths] = true;
+          
+          if (!catAvgs[e.category]) catAvgs[e.category] = { total: 0, count: 0 };
+          catAvgs[e.category].total += amt;
+          catAvgs[e.category].count += 1;
+        }
+      });
+      
+      const numMonths = Object.keys(monthCounts).length || 1;
+      const avgSpend = total6MonthSpend / numMonths;
+      
+      // Calculate anomalies (Spikes > 150% of avg)
+      let recentExp = allExpenditures.filter(e => {
+         if (!e.date) return false;
+         const diff = (now - new Date(e.date)) / (1000*60*60*24);
+         return diff <= 30 && e.type !== 'Event Expense';
+      });
+      
+      let anomaliesCount = 0;
+      recentExp.forEach(e => {
+        const catStats = catAvgs[e.category];
+        if (catStats && catStats.count > 2) {
+          const catAvg = catStats.total / catStats.count;
+          const amt = parseFloat(e.amount);
+          if (amt > catAvg * 1.5 && catAvg > 100) {
+            anomaliesHtml += `<div style="margin-bottom:8px;">🔴 <b>${escHtml(e.category)}</b> spike: <b>${fmtCurrency(amt)}</b> for "${escHtml(e.description)}" (Avg: ${fmtCurrency(catAvg)})</div>`;
+            anomaliesCount++;
+          }
+        }
+      });
+      
+      // Check duplicates
+      let seen = {};
+      let dupeCount = 0;
+      recentExp.forEach(e => {
+        const key = `${e.date}_${e.amount}_${e.category}`;
+        if (seen[key]) {
+          duplicateHtml += `<div style="margin-bottom:8px;">⚠️ <b>Duplicate found:</b> ${fmtCurrency(e.amount)} on ${fmtDate(e.date)} for "${escHtml(e.category)}"</div>`;
+          dupeCount++;
+        }
+        seen[key] = true;
+      });
+
+      // Update UI
+      document.getElementById('finops-avg-spend').textContent = fmtCurrency(avgSpend);
+      document.getElementById('finops-predicted-spend').textContent = fmtCurrency(avgSpend * 1.05); // 5% inflation buffer
+      
+      const aContainer = document.getElementById('finops-anomalies');
+      if (anomaliesCount > 0) aContainer.innerHTML = anomaliesHtml;
+      else aContainer.innerHTML = `<div style="color:var(--success);">✅ No anomalies detected in the last 30 days.</div>`;
+      
+      const dContainer = document.getElementById('finops-duplicates');
+      if (dupeCount > 0) dContainer.innerHTML = duplicateHtml;
+      else dContainer.innerHTML = `<div style="color:var(--success);">✅ No duplicate expenses found.</div>`;
+
+      // Show content
+      document.getElementById('finops-loading').style.display = 'none';
+      document.getElementById('finops-content').style.display = 'block';
+
+    } catch (e) {
+      console.error(e);
+      document.getElementById('finops-loading').innerHTML = '<span style="color:var(--danger)">Failed to run AI Audit</span>';
     }
   };
 
