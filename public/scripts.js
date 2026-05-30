@@ -2120,7 +2120,7 @@ function initUI() {
                 </select>
               </td>
               <td style="text-align:center;">
-                <button class="btn btn-outline-grey btn-sm" style="padding: 4px; font-size:12px; border:none; color:var(--danger);" onclick="unregisterStudentFromEvent('${id}', '${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}')" title="Remove Student">🗑️</button>
+                <div style="display:flex; justify-content:center; gap:6px;">\n                  <button class="btn btn-outline-grey btn-sm" style="padding: 4px; font-size:12px; border:none;" onclick="closeModals(); openEdit('${sid}');" title="Edit Student Data">✏️</button>\n                  <button class="btn btn-outline-grey btn-sm" style="padding: 4px; font-size:12px; border:none; color:var(--danger);" onclick="unregisterStudentFromEvent('${id}', '${sid}', '${escapeHtml(name).replace(/'/g, "\\'")}')" title="Remove Student">🗑️</button>
               </td>
             </tr>`;
          });
