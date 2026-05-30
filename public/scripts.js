@@ -2268,6 +2268,10 @@ function initUI() {
     const studentId = $('ev-add-student-select').value;
     if (!eventId || !studentId) { toast('Please select a student', 'error'); return; }
     
+    // Disable button to prevent double-click race conditions
+    const btn = event.target;
+    if(btn) { btn.disabled = true; btn.textContent = 'Adding...'; }
+    
     const student = allStudents.find(s => String(s.id) === String(studentId));
     try {
       const res = await apiCall('/api/events', {
@@ -2279,12 +2283,15 @@ function initUI() {
             student_name: student ? getStudentName(student) : 'Unknown' 
           })
       });
-      if (!res.ok) throw new Error('Failed');
-      toast('Student registered successfully!', 'success');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to register student');
+      toast(data.message || 'Student registered successfully!', 'success');
       await loadAllData(true);
       window.openEventManagement(eventId);
     } catch(err) {
-      toast('Error registering student', 'error');
+      toast(err.message || 'Error registering student', 'error');
+    } finally {
+      if(btn) { btn.disabled = false; btn.textContent = '+ Add'; }
     }
   };
 
@@ -5253,12 +5260,27 @@ function openCoachModal(id = null) {
        const regCount = e.registrations_count || (e.registered_students?.length || 0);
        const spotsLeft = maxSpots - regCount;
        const isArchived = e.archived === true || e.status === 'archived';
+       const evDate = new Date(e.date || e.event_date);
+       const today = new Date();
+       today.setHours(0,0,0,0);
+       
+       let statusTag = '';
+       if (isArchived) {
+         statusTag = '<span class="badge" style="background:var(--ivory3);color:var(--obsidian)">[ARCHIVED]</span>';
+       } else if (evDate < today) {
+         statusTag = '<span class="badge" style="background:var(--slate);color:#fff">[COMPLETED]</span>';
+       } else if (spotsLeft <= 0) {
+         statusTag = '<span class="badge" style="background:var(--danger);color:#fff">[FULL]</span>';
+       } else {
+         statusTag = '<span class="badge" style="background:var(--success);color:#fff">[UPCOMING]</span>';
+       }
+
        return `<div class="ev-card" ${isArchived ? 'style="opacity:0.7"' : ''}>
          ${e.img_url ? `<img src="${e.img_url}" class="ev-poster" alt="Event Poster">` : ''}
          <div class="ev-header">
            <span class="ev-type-badge">${escapeHtml(getEventType(e))}</span>
            <span class="ev-date-badge">${e.date ? new Date(e.date).toLocaleDateString() : ''}</span>
-           ${isArchived ? '<span class="badge" style="background:var(--ivory3);color:var(--obsidian)">Archived</span>' : ''}
+           ${statusTag}
          </div>
          <div class="ev-body">
            <div class="ev-title">${escapeHtml(e.title)}</div>
