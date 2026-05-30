@@ -40,21 +40,25 @@ window.doLogin = async function() {
         });
         
         if (authRes && authRes.ok) {
-            const data = await authRes.json();
-         if (data.success) {
-                 role = data.role;
-                 // Store both the full auth object and a separate token for API calls
-                 localStorage.setItem('chesskidoo_auth', JSON.stringify({
-                     role,
-                     user: data.user || user,
-                     studentId: data.student_id,
-                     token: data.token
-                 }));
-                 // Store token separately for API Authorization header
-                 localStorage.setItem('sb-access-token', data.token);
-                 finishLogin(data.user || user, role, data.student_id);
-                 toast(`Welcome back, ${data.role}!`, 'success');
-                 return;
+            const data = await authRes.json().catch(() => ({}));
+            if (data.success) {
+                // FIX: write to window.role explicitly. The previous `role = data.role`
+                // was an implicit global that (a) breaks under strict mode and (b) does
+                // not update scripts.js's IIFE-scoped `role` — finishLogin re-syncs it,
+                // but the pattern is fragile.
+                window.role = data.role;
+                // Store both the full auth object and a separate token for API calls
+                localStorage.setItem('chesskidoo_auth', JSON.stringify({
+                    role: data.role,
+                    user: data.user || user,
+                    studentId: data.student_id,
+                    token: data.token
+                }));
+                // Store token separately for API Authorization header
+                localStorage.setItem('sb-access-token', data.token);
+                finishLogin(data.user || user, data.role, data.student_id);
+                toast(`Welcome back, ${data.role}!`, 'success');
+                return;
             } else {
                 errEl.textContent = data.details || data.error || 'Invalid credentials.';
                 errEl.style.display = 'block';
