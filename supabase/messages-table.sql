@@ -70,8 +70,15 @@ CREATE TRIGGER trg_messages_read_at
 
 -- 5. ROW LEVEL SECURITY
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
--- FIX: drop existing policy before recreating so re-running this migration no longer errors
+-- FIX: previous policy used FOR ALL USING (true) without WITH CHECK,
+--      which silently DENIED all INSERTs by anon users (USING applies to
+--      SELECT/UPDATE/DELETE row-filtering only; INSERT requires WITH CHECK).
+--      Live REST probe confirmed: messages POST returned 42501 RLS violation.
+-- Also: drop existing policy before recreating so re-running this migration no longer errors.
 DROP POLICY IF EXISTS "Allow all on messages" ON messages;
-CREATE POLICY "Allow all on messages" ON messages FOR ALL USING (true);
+CREATE POLICY "Allow all on messages" ON messages
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 
 SELECT 'Messages table ready! OK' AS result;
