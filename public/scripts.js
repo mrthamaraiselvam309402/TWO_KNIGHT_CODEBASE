@@ -2337,6 +2337,51 @@ function initUI() {
     }
   };
 
+  window.filterEventRegistry = function() {
+    const input = document.getElementById('ev-registry-search').value.toLowerCase();
+    const rows = document.querySelectorAll('#ev-m-tbody tr');
+    rows.forEach(row => {
+      const nameCell = row.querySelector('td:first-child');
+      if (nameCell) {
+        const name = nameCell.textContent.toLowerCase();
+        row.style.display = name.includes(input) ? '' : 'none';
+      }
+    });
+  };
+
+  window.bulkEventAction = async function(field, value) {
+    const eventId = window.currentManageEventId;
+    if (!eventId) return;
+    const confirmMsg = field === 'payment_status' ? 'Mark all pending students as PAID?' : 'Mark all absent students as PRESENT?';
+    if (!confirm(confirmMsg)) return;
+    
+    try {
+      toast('Processing bulk update...', 'info');
+      // A full implementation would use a single bulk API endpoint.
+      // Here we find all students not matching the value and loop them.
+      const ev = eventsData.find(e => String(e.id) === String(eventId));
+      if (!ev) return;
+      const regs = ev.registrations_data || [];
+      const toUpdate = regs.filter(r => r[field] !== value && r.registration_status !== 'waitlisted');
+      
+      if (toUpdate.length === 0) {
+        toast('Everyone is already updated.', 'info');
+        return;
+      }
+      
+      for (const r of toUpdate) {
+        const payload = { action: 'update_registration', event_id: eventId, student_id: r.student_id };
+        payload[field] = value;
+        await apiCall('/api/events', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      toast('Bulk update complete!', 'success');
+      await loadAllData(true);
+      window.openEventManagement(eventId);
+    } catch(err) {
+      toast('Error during bulk update', 'error');
+    }
+  };
+
   window.promptRegisterGuestEvent = async function() {
     const eventId = window.currentManageEventId;
     if (!eventId) return;

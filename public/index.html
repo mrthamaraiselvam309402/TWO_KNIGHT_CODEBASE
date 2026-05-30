@@ -704,6 +704,9 @@
               </div>
             </div>
             
+            <div style="margin: 15px 0; display:flex; gap: 15px;">
+              <input type="text" id="ev-registry-search" class="tom-input" placeholder="🔍 Search participant name..." style="flex:1; max-width: 300px; padding: 8px 12px; border-radius: 8px;" onkeyup="filterEventRegistry()">
+            </div>
             <div class="table-wrap" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow-x:auto;">
               <table style="width:100%; border-collapse:collapse;">
                 <thead style="background:var(--bg3); border-bottom:1px solid var(--border);">
@@ -719,6 +722,10 @@
                   <tr><td colspan="5"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>
                 </tbody>
               </table>
+              <div style="background:var(--bg3); padding: 10px 15px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content: flex-end;">
+                <button class="btn btn-outline-grey btn-sm" onclick="bulkEventAction('payment_status', 'paid')">✓ Mark All Paid</button>
+                <button class="btn btn-outline-grey btn-sm" onclick="bulkEventAction('attendance', 'present')">👥 Mark All Present</button>
+              </div>
             </div>
           </div>
 
