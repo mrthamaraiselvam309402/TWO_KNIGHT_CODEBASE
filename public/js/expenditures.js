@@ -36,7 +36,13 @@
   let expEditingId    = null;
   let expChartPie     = null;
   let expChartLine    = null;
-  let expFilterMonth  = ''; // Default to all-time instead of strict current month
+  // FIX: Default to current month so dashboard widgets and table both have data on first load.
+  // Empty string means "all-time" but the local summary calc previously returned zeros for empty filter,
+  // which made the dashboard look broken.
+  let expFilterMonth  = (function () {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  })();
 
   // ─── API Helper (re-uses global apiCall from scripts.js) ────────
   async function apiCall(endpoint, opts = {}) {
@@ -261,13 +267,18 @@
     return allExpenditures.filter(e => {
       // Filter out Event Expenses so they don't clutter global expenditures
       if (e.type === 'Event Expense') return false;
-      // 1. Must match current selected month filter (YYYY-MM)
-      if (e.date && !e.date.startsWith(expFilterMonth)) return false;
+      // 1. Must match current selected month filter (YYYY-MM). Empty filter = all-time.
+      if (expFilterMonth && e.date && !e.date.startsWith(expFilterMonth)) return false;
 
       // 2. Category, payment mode, and text search filter constraints
       if (cat  && e.category    !== cat)  return false;
       if (mode && e.payment_mode !== mode) return false;
-      if (search && !e.description.toLowerCase().includes(search) && !e.category.toLowerCase().includes(search)) return false;
+      // FIX: defensive null/undefined guards on description/category before .toLowerCase()
+      if (search) {
+        const desc = (e.description || '').toLowerCase();
+        const catText = (e.category || '').toLowerCase();
+        if (!desc.includes(search) && !catText.includes(search)) return false;
+      }
       return true;
     });
   }
@@ -449,7 +460,8 @@
   };
 
   window.openEditExpense = function (id) {
-    const exp = allExpenditures.find(e => e.id === id);
+    // FIX: string-safe ID comparison — IDs come through as escaped strings from the table HTML
+    const exp = allExpenditures.find(e => String(e.id) === String(id));
     if (!exp) { toastExp('Expense not found', 'error'); return; }
     expEditingId = id;
     resetExpForm();
@@ -516,8 +528,9 @@
         res = await apiCall('/api/expenditures',                    { method: 'POST', body: JSON.stringify(payload) });
       }
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Server error');
+      // FIX: defensive parse — some 204/empty responses break .json()
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
 
       toastExp(expEditingId ? 'Expense updated successfully' : 'Expense added successfully', 'success');
       closeModals();
@@ -534,9 +547,10 @@
   window.deleteExpense = async function (id, desc) {
     if (!confirm(`Delete expense: "${desc}"?\n\nThis action cannot be undone.`)) return;
     try {
-      const res  = await apiCall(`/api/expenditures?id=${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Delete failed');
+      const res  = await apiCall(`/api/expenditures?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      // FIX: defensive parse — DELETE may return empty body
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Delete failed (${res.status})`);
       toastExp('Expense deleted', 'success');
       await loadExpenditurePage();
     } catch (e) {
@@ -555,21 +569,27 @@
 
   // ─── Local In-Memory Summary Calculations (Extremely Fast) ───────
   function calculateLocalSummary() {
-    if (!expFilterMonth || !expFilterMonth.includes('-')) {
-      return { total_expense: 0, total_income: 0, profit_or_loss: 0, category_totals: {} };
+    // FIX: previously returned all zeros if filter was empty (all-time), making widgets
+    // appear broken. Now empty filter aggregates across all data.
+    const allTime = !expFilterMonth || !expFilterMonth.includes('-');
+    let targetYear = null, targetMonth = null;
+    if (!allTime) {
+      const parts = expFilterMonth.split('-').map(Number);
+      targetYear = parts[0];
+      targetMonth = parts[1];
     }
-    const [targetYear, targetMonth] = expFilterMonth.split('-').map(Number);
-    
+
     let totalExpense = 0;
     const categoryTotals = {};
-    
+
     if (Array.isArray(allExpenditures)) {
       allExpenditures.forEach(e => {
-        // Double safety check: Only summarize expenditures for the currently selected month
-        if (e.date && !e.date.startsWith(expFilterMonth)) return;
+        // Only summarize expenditures for the currently selected month (or all-time)
+        if (!allTime && e.date && !e.date.startsWith(expFilterMonth)) return;
         if (e.type === 'Event Expense') return;
 
         const amt = parseFloat(e.amount || 0);
+        if (isNaN(amt)) return;
         totalExpense += amt;
         const cat = e.category || 'Miscellaneous';
         categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
@@ -581,19 +601,22 @@
     if (Array.isArray(paymentsList)) {
       paymentsList.forEach(p => {
         if (p.status !== 'paid') return;
-        
+
         const dateStr = p.payment_date || p.created_at;
         if (!dateStr) return;
-        
+
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return;
-        
-        // Match year and month (using UTC to align with sync modules)
-        const pYear = d.getUTCFullYear();
-        const pMonth = d.getUTCMonth() + 1;
-        
-        if (pYear === targetYear && pMonth === targetMonth) {
+
+        if (allTime) {
           totalIncome += parseFloat(p.amount || 0);
+        } else {
+          // Match year and month (using UTC to align with sync modules)
+          const pYear = d.getUTCFullYear();
+          const pMonth = d.getUTCMonth() + 1;
+          if (pYear === targetYear && pMonth === targetMonth) {
+            totalIncome += parseFloat(p.amount || 0);
+          }
         }
       });
     }

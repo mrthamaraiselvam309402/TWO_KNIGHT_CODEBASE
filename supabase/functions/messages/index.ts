@@ -33,14 +33,22 @@ Deno.serve(async (req) => {
     })
   }
 
-  async function getStudentName(studentId) {
-    if (!studentId) return '';
-    const { data } = await supabase.from('students').select('name').eq('id', studentId).single();
-    return data?.name || '';
+  // FIX: previous transformMessage ran a per-row query for student names = N+1.
+  // batchGetStudentNames does one IN query for all parent sender_ids.
+  async function batchGetStudentNames(ids) {
+    const unique = Array.from(new Set(ids.filter(Boolean)));
+    if (unique.length === 0) return new Map();
+    const { data } = await supabase.from('students').select('id, name').in('id', unique);
+    const map = new Map();
+    (data || []).forEach(s => map.set(String(s.id), s.name));
+    return map;
   }
 
-  async function transformMessage(m) {
-    const studentName = m.sender_type === 'parent' && m.sender_id ? await getStudentName(m.sender_id) : (m.sender_name || '');
+  function transformMessageWithNames(m, nameMap) {
+    const studentName =
+      m.sender_type === 'parent' && m.sender_id
+        ? (nameMap.get(String(m.sender_id)) || m.sender_name || '')
+        : (m.sender_name || '');
     const adminName = m.sender_type === 'admin' ? 'Admin' : '';
     return {
       id: m.id,
@@ -48,13 +56,20 @@ Deno.serve(async (req) => {
       sender_id: m.sender_id,
       sender_name: m.sender_type === 'admin' ? adminName : studentName,
       receiver_type: m.receiver_type,
+      receiver_id: m.receiver_id || null,
       subject: m.subject || '',
       message: m.message || '',
       is_read: m.is_read || false,
+      read_at: m.read_at || null,
       priority: m.priority || 'normal',
       created_at: m.created_at,
       reply_to: m.reply_to
     };
+  }
+
+  async function transformMessage(m) {
+    const nameMap = await batchGetStudentNames([m.sender_id]);
+    return transformMessageWithNames(m, nameMap);
   }
 
   try {
@@ -100,20 +115,36 @@ Deno.serve(async (req) => {
 
       const { data: messages, error } = await query;
       if (error) throw error;
-      const transformedList = await Promise.all((messages || []).map(transformMessage));
+      // FIX: single batched lookup for all student names (was N+1)
+      const senderIds = (messages || [])
+        .filter(m => m.sender_type === 'parent' && m.sender_id)
+        .map(m => m.sender_id);
+      const nameMap = await batchGetStudentNames(senderIds);
+      const transformedList = (messages || []).map(m => transformMessageWithNames(m, nameMap));
       return new Response(JSON.stringify(transformedList), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     if (req.method === 'POST') {
+      // FIX: validate required field, persist sender_name and receiver_id so the UI
+      // and downstream queries have everything they need without re-joining students.
+      if (!body.message || typeof body.message !== 'string' || !body.message.trim()) {
+        return new Response(JSON.stringify({ error: 'message is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       const newMessage = {
         id: crypto.randomUUID(),
         sender_type: body.sender_type || 'parent',
         sender_id: body.sender_id || null,
+        sender_name: body.sender_name || null,
         receiver_type: body.receiver_type || 'admin',
+        receiver_id: body.receiver_id || null,
         subject: body.subject || '',
-        message: body.message || '',
+        message: String(body.message).trim(),
         is_read: false,
         priority: body.priority || 'normal',
         reply_to: body.reply_to || null,
@@ -181,7 +212,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    // FIX: error is `unknown` — narrow before accessing .message so this doesn't itself crash
+    const msg = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

@@ -59,32 +59,43 @@ window.sendLoginChat = async function() {
 async function handleAITask(inputId, bodyId) {
     const input = document.getElementById(inputId);
     if (!input || !input.value.trim()) return;
-    
+
     const msg = input.value.trim();
     input.value = '';
-    
+
     appendMsg(bodyId, 'user', msg);
-    
+
     const thinking = showThinking(bodyId);
     const snapshot = window.getAcademySnapshot ? window.getAcademySnapshot() : null;
 
+    // FIX: Use window.apiCall with fetch fallback so this file works even if scripts.js hasn't loaded
+    const callApi = (url, opts) => {
+        if (typeof window.apiCall === 'function') return window.apiCall(url, opts);
+        return fetch(url, opts);
+    };
+
     try {
-        const res = await apiCall('/api/ai', {
+        const res = await callApi('/api/ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                message: msg, 
-                role: window.role || 'guest', 
+            body: JSON.stringify({
+                message: msg,
+                role: window.role || 'guest',
                 context: snapshot || { status: 'landing_page' },
                 systemPrompt: "You are the ChessKidoo Landing Assistant. Be welcoming, helpful, and encourage visitors to join the premium chess academy. If they ask about fees or schedule, suggest they log in or contact admin."
             })
         });
-        
-        const data = await res.json();
+
+        if (!res || !res.ok) {
+            throw new Error(`AI service returned ${res ? res.status : 'no response'}`);
+        }
+
+        const data = await res.json().catch(() => ({}));
         hideThinking(thinking);
         appendMsg(bodyId, 'bot', data.message || "My calculations are complete. How can I assist further?");
-        
+
     } catch (e) {
+        console.warn('[AI Assistant] request failed:', e && e.message);
         hideThinking(thinking);
         appendMsg(bodyId, 'bot', 'Neural link interrupted. Please check your connection.', true);
     }
@@ -114,6 +125,7 @@ function appendMsg(bodyId, type, text, isError = false) {
 
 function showThinking(bodyId) {
     const body = document.getElementById(bodyId);
+    if (!body) return null;
     const div = document.createElement('div');
     div.className = 'ai-msg bot thinking';
     div.innerHTML = '<span class="spinner" style="width:12px; height:12px; margin-right:8px"></span>Grandmaster is calculating strategy...';

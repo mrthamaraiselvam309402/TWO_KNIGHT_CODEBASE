@@ -121,11 +121,11 @@
    window.allPayments = allPayments;
    window.allAttendance = allAttendance;
 
-   let achievementsData = [];
-   let eventsData = [];
-   let allMessages = [];
+   let achievementsData = []; window.achievementsData = achievementsData;
+   let eventsData = []; window.eventsData = eventsData;
+   let allMessages = []; window.allMessages = allMessages;
    let allRatingHistory = [];
-   let allResources = [];
+   let allResources = []; window.allResources = allResources;
 
    window.allRatingHistory = allRatingHistory; // Also needed for ELO gainers in report
 
@@ -6687,30 +6687,45 @@ Best regards,
 
      listEl.style.display = 'grid';
      listEl.innerHTML = allMessages.map(m => `
-       <div class="msg-card ${m.is_read ? '' : 'unread'}">
+       <div class="msg-card ${getMessageIsRead(m) ? '' : 'unread'}">
          <div class="msg-card-head">
            <div class="msg-card-sender">
              ${escapeHtml(m.sender_name || 'User')}
-             ${!m.is_read ? '<span class="badge badge-level" style="margin-left:8px">New</span>' : ''}
+             ${!getMessageIsRead(m) ? '<span class="badge badge-level" style="margin-left:8px">New</span>' : ''}
            </div>
            <div class="msg-card-time">${m.created_at ? new Date(m.created_at).toLocaleDateString() : ''}</div>
          </div>
          <div class="msg-card-subject">${escapeHtml(m.subject || 'No Subject')}</div>
          <div class="msg-card-body">${escapeHtml(m.message || '')}</div>
          <div class="msg-card-actions">
-           ${!m.is_read ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${escapeHtml(String(m.id))}')">✓ Mark Read</button>` : ''}
-           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${escapeHtml(String(m.id))}')">🗑️ Delete</button>
+           ${!getMessageIsRead(m) ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${encodeURIComponent(String(m.id || ''))}')">✓ Mark Read</button>` : ''}
+           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${encodeURIComponent(String(m.id || ''))}')">🗑️ Delete</button>
          </div>
        </div>
      `).join('');
   }
   async function markMsgRead(id) {
-    await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'PUT', body: JSON.stringify({ is_read: true }) });
-    loadAllData(true);
+    // FIX: surface API failures to the user instead of swallowing them
+    try {
+      const res = await apiCall(`${API_BASE}/messages?id=${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ is_read: true }) });
+      if (!res || !res.ok) throw new Error(`Server returned ${res ? res.status : 'no response'}`);
+      toast('Message marked as read', 'success');
+      loadAllData(true);
+    } catch (e) {
+      toast('Failed to mark as read: ' + (e.message || 'connection error'), 'error');
+    }
   }
   async function deleteMsg(id) {
-    await apiCall(`${API_BASE}/messages?id=${id}`, { method: 'DELETE' });
-    loadAllData(true);
+    // FIX: confirmation, error handling, user feedback
+    if (!confirm('Delete this message? This cannot be undone.')) return;
+    try {
+      const res = await apiCall(`${API_BASE}/messages?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res || !res.ok) throw new Error(`Server returned ${res ? res.status : 'no response'}`);
+      toast('Message deleted', 'success');
+      loadAllData(true);
+    } catch (e) {
+      toast('Failed to delete: ' + (e.message || 'connection error'), 'error');
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -6888,22 +6903,27 @@ Best regards,
 
     try {
       const coach = allCoaches.find(c => String(c.id) === String(currentStudent.coach_id));
-      await apiCall('/api/messages', {
+      // FIX: messages.sender_type / receiver_type CHECK only allows ('parent','admin','system').
+      // Previously sent 'student' / 'coach' which the DB rejected, silently failing.
+      // Route parent→coach messages through admin (admin forwards to coach), and tag sender as 'parent'.
+      const coachName = coach ? getCoachName(coach) : 'their coach';
+      const res = await apiCall('/api/messages', {
         method: 'POST',
         body: JSON.stringify({
-          receiver_id: currentStudent.coach_id,
-          receiver_type: 'coach',
+          sender_type: 'parent',
           sender_id: currentStudent.id,
-          sender_type: 'student',
+          receiver_type: 'admin',
           message: msg,
-          subject: `Message from parent of ${getStudentName(currentStudent)}`
+          subject: `Parent of ${getStudentName(currentStudent)} would like to reach ${coachName}`,
+          priority: 'normal'
         })
       });
-      toast('Message sent to ' + (coach ? getCoachName(coach) : 'coach') + '!', 'success');
-      $('contact-msg').value = '';
+      if (!res || !res.ok) throw new Error(`Server returned ${res ? res.status : 'no response'}`);
+      toast('Message sent to ' + coachName + '!', 'success');
+      if ($('contact-msg')) $('contact-msg').value = '';
       closeModals();
     } catch (e) {
-      toast('Failed to send message', 'error');
+      toast('Failed to send message: ' + (e.message || 'connection error'), 'error');
     }
   }
   async function sendFeedback() {
@@ -8041,6 +8061,41 @@ Best regards,
   window.renderMsgs = renderMsgs;
   window.markMsgRead = markMsgRead;
   window.deleteMsg = deleteMsg;
+
+  // FIX: Compose Message now works (was a placeholder alert). Admin can send a broadcast
+  // notice to all parents or a one-off message to themselves for record-keeping.
+  window.openComposeMessage = async function () {
+    if (role !== 'admin' && role !== 'master') {
+      toast('Only admins can compose messages', 'error');
+      return;
+    }
+    const subject = prompt('Subject (e.g. "Holiday notice"):');
+    if (subject === null) return;
+    const trimmedSubject = (subject || '').trim();
+    if (!trimmedSubject) { toast('Subject is required', 'error'); return; }
+    const body = prompt('Message body:');
+    if (body === null) return;
+    const trimmedBody = (body || '').trim();
+    if (!trimmedBody) { toast('Message body is required', 'error'); return; }
+
+    try {
+      const res = await apiCall('/api/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          sender_type: 'admin',
+          receiver_type: 'parent',
+          subject: trimmedSubject,
+          message: trimmedBody,
+          priority: 'normal'
+        })
+      });
+      if (!res || !res.ok) throw new Error(`Server returned ${res ? res.status : 'no response'}`);
+      toast('Message posted to parent inbox', 'success');
+      loadAllData(true);
+    } catch (e) {
+      toast('Failed to send: ' + (e.message || 'connection error'), 'error');
+    }
+  };
   window.renderChild = renderChild;
   window.setChildTab = setChildTab;
   window.renderChildEvents = renderChildEvents;

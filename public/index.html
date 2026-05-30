@@ -117,7 +117,7 @@
     <div class="nav-item admin-only" id="nav-insights" onclick="setPage('insights')"><span class="ico">💡</span> AI Insights</div>
     <div class="nav-item admin-only" id="nav-exp" onclick="setPage('exp')"><span class="ico">💸</span> Expenditures</div>
 <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
-<div class="nav-item admin-only" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> AI Assistant</div>
+<div class="nav-item admin-only" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> TOM AI</div>
   </div>
   <div style="padding:16px;border-top:1px solid var(--border)">
     <div class="nav-item" onclick="toggleTheme()"><span class="ico">🌗</span> Switch Theme</div>
@@ -626,62 +626,85 @@
         <div class="ev-grid" id="ev-grid" style="display:none"></div>
       </div>
 
-      <div id="ev-manage-view" style="display:none; padding:clamp(15px, 4vw, 30px); border-radius:12px; border:1px solid var(--border); position: relative;">
-        <button onclick="closeEventManagement()" style="margin-bottom:20px; background:transparent; border:1px solid var(--gold); color:var(--gold); padding:6px 16px; border-radius:6px; cursor:pointer; font-size:13px; transition:0.2s;">← Back to Events</button>
+            <div id="ev-manage-view" class="ev-manage-view" style="display:none;">
+        <button onclick="closeEventManagement()" class="back-link-btn" style="margin-bottom:20px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; transition: transform 0.2s ease;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          Back to Events
+        </button>
         
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
           <div>
             <div id="ev-manage-title" style="margin-bottom: 4px; color:var(--gold); font-size:clamp(20px, 4vw, 26px); font-weight:600; font-family: 'Playfair Display', serif, 'Georgia';">Manage Event</div>
             <div id="ev-manage-subtitle" style="color:var(--ivory-dim); font-size:12px; font-weight:600; letter-spacing:0.5px;">—</div>
           </div>
-          <div style="display:flex; gap:12px; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
-            <button class="btn btn-gold" onclick="generateEventTickets()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">🎟️ Tickets</button>
-            <button class="btn btn-gold" onclick="generateEventCertificates()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">🎓 Certificates</button>
-            <button class="btn" onclick="openScannerModal()" style="font-size:12px; border-radius:8px; background:var(--success); border:1px solid var(--success); color:#fff; flex: 1 1 auto; justify-content:center;">📷 Scan QR</button>
-            <button class="btn btn-outline" onclick="openQrPosterModal()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">🎨 QR Poster</button>
-            <button class="btn btn-outline" onclick="generateEventReportPDF()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">📄 Report</button>
-            <button class="btn btn-outline" onclick="exportEventWord()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">📝 Word</button>
-            <button class="btn btn-outline" onclick="exportEventCSV()" style="font-size:12px; border-radius:8px; flex: 1 1 auto; justify-content:center;">📥 CSV</button>
+          
+          <!-- Cohesive Operations Control Panel -->
+          <div class="ev-action-bar">
+            <div class="ev-action-group">
+              <button class="btn btn-gold btn-sm" onclick="generateEventTickets()">🎟️ Tickets</button>
+              <button class="btn btn-gold btn-sm" onclick="generateEventCertificates()">🎓 Certificates</button>
+              <button class="btn btn-sm" onclick="openScannerModal()" style="background:var(--success); border:1px solid var(--success); color:#fff;">📷 Scan QR</button>
+            </div>
+            <div class="ev-action-separator"></div>
+            <div class="ev-action-group">
+              <button class="btn btn-outline btn-sm" onclick="openQrPosterModal()">🎨 QR Poster</button>
+            </div>
+            <div class="ev-action-separator"></div>
+            <div class="ev-action-group">
+              <button class="btn btn-outline btn-sm" onclick="generateEventReportPDF()">📄 Report</button>
+              <button class="btn btn-outline btn-sm" onclick="exportEventWord()">📝 Word</button>
+              <button class="btn btn-outline btn-sm" onclick="exportEventCSV()">📥 CSV</button>
+            </div>
           </div>
         </div>
         
+        <!-- Premium Analytics KPIs Cards Grid -->
         <div class="dash-grid" style="margin: 30px 0;">
-          <div class="card" style="padding:20px; position:relative; overflow:hidden; background:var(--bg3); border:1px solid var(--border);">
+          <div class="card ev-manage-card" style="--card-accent: var(--gold); --card-accent-glow: rgba(220,163,62,0.25);">
             <div style="font-size:10px; text-transform:uppercase; color:var(--slate); letter-spacing:1px; margin-bottom:8px; font-weight:700;">Fill Rate / Waitlist</div>
             <div style="font-size:24px; font-weight:700; color:var(--gold);" id="ev-m-fill">0 / 0</div>
             <div style="font-size:11px; color:var(--warning); margin-top:4px;" id="ev-m-waitlist">0 Waitlisted</div>
-            <div style="width:100%; height:4px; background:#ffffff10; margin-top:8px; border-radius:2px;"><div id="ev-m-fill-bar" style="width:0%; height:100%; background:var(--gold); border-radius:2px;"></div></div>
+            <div style="width:100%; height:4px; background:#ffffff10; margin-top:8px; border-radius:2px; overflow:hidden;"><div id="ev-m-fill-bar" style="width:0%; height:100%; background:var(--gold); border-radius:2px; transition: width 0.4s ease;"></div></div>
           </div>
-          <div class="card" style="padding:20px; position:relative; overflow:hidden; background:var(--bg3); border:1px solid var(--border);">
+          <div class="card ev-manage-card" style="--card-accent: var(--success); --card-accent-glow: rgba(82,196,26,0.25);">
             <div style="font-size:10px; text-transform:uppercase; color:var(--slate); letter-spacing:1px; margin-bottom:8px; font-weight:700;">Net Profit</div>
             <div style="font-size:24px; font-weight:700; color:var(--success);" id="ev-m-profit">₹0</div>
             <div style="font-size:11px; color:var(--slate); margin-top:4px;" id="ev-m-rev-exp">Rev: ₹0 | Exp: ₹0</div>
           </div>
-          <div class="card" style="padding:20px; position:relative; overflow:hidden; background:var(--bg3); border:1px solid var(--border);">
+          <div class="card ev-manage-card" style="--card-accent: var(--danger); --card-accent-glow: rgba(255,77,79,0.25);">
             <div style="font-size:10px; text-transform:uppercase; color:var(--slate); letter-spacing:1px; margin-bottom:8px; font-weight:700;">Pending Dues</div>
             <div style="font-size:24px; font-weight:700; color:var(--danger);" id="ev-m-due">₹0</div>
-            <div style="position:absolute; right:10px; bottom:-10px; font-size:60px; opacity:0.03; pointer-events:none;">💳</div>
+            <div style="position:absolute; right:15px; bottom:-10px; font-size:60px; opacity:0.04; pointer-events:none;">💳</div>
           </div>
-          <div class="card" style="padding:20px; position:relative; overflow:hidden; background:var(--bg3); border:1px solid var(--border);">
+          <div class="card ev-manage-card" style="--card-accent: var(--info); --card-accent-glow: rgba(23,162,184,0.25);">
             <div style="font-size:10px; text-transform:uppercase; color:var(--slate); letter-spacing:1px; margin-bottom:8px; font-weight:700;">Attendance Rate</div>
             <div style="font-size:24px; font-weight:700; color:var(--info);" id="ev-m-att">0%</div>
-            <div style="position:absolute; right:10px; bottom:-10px; font-size:60px; opacity:0.03; pointer-events:none;">👥</div>
+            <div style="position:absolute; right:15px; bottom:-10px; font-size:60px; opacity:0.04; pointer-events:none;">👥</div>
           </div>
         </div>
         
         <div style="display:grid; grid-template-columns: 1fr; gap: 40px; margin-top: 30px;">
           <!-- Student Registry Section -->
           <div id="ev-registry-section">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ffffff10; padding-bottom:10px; margin-bottom:15px; flex-wrap: wrap; gap: 15px;">
+            <div class="premium-registry-bar">
               <h3 style="color:var(--ivory); margin:0; font-family: 'Playfair Display', serif, 'Georgia'; font-size:18px;">Student Registry</h3>
-              <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap; width: 100%; justify-content: flex-start;">
-                <select id="ev-add-student-select" style="flex: 1; min-width:140px; padding:8px 10px; font-size:13px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px;"></select>
-                <button class="btn btn-gold btn-sm" onclick="addStudentToEvent()" style="border-radius:6px; font-size:12px; padding: 8px 16px;">+ Add</button>
-                <span style="color:var(--slate); font-size:12px; width:100%; text-align:center;">— or —</span>
-                <button onclick="promptRegisterGuestEvent()" style="width:100%; background:transparent; border:1px solid var(--gold); color:var(--gold); padding:10px 10px; border-radius:6px; font-size:13px; cursor:pointer; white-space: nowrap;">+ Register External Student</button>
+              <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
+                <!-- Internal Student Selector Group -->
+                <div class="premium-select-wrap">
+                  <select id="ev-add-student-select" class="premium-select"></select>
+                  <button class="btn btn-gold btn-sm" onclick="addStudentToEvent()" style="border-radius:6px; font-size:12px; padding: 6px 12px; margin: 2px;">+ Add</button>
+                </div>
+                
+                <span style="color:var(--slate); font-size:12px; font-weight: 500;">or</span>
+                
+                <!-- External Register Button -->
+                <button class="btn btn-outline btn-sm" onclick="promptRegisterGuestEvent()" style="border-radius:8px; border:1px solid rgba(232,168,48,0.35); color:var(--gold); padding:8px 14px; font-size:12px; font-weight: 500; cursor:pointer; background: transparent; transition: all 0.2s ease;">
+                  + Register External Student
+                </button>
               </div>
             </div>
-            <div class="table-wrap" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:x-auto;">
+            
+            <div class="table-wrap" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow-x:auto;">
               <table style="width:100%; border-collapse:collapse;">
                 <thead style="background:var(--bg3); border-bottom:1px solid var(--border);">
                   <tr>
@@ -693,7 +716,7 @@
                   </tr>
                 </thead>
                 <tbody id="ev-m-tbody">
-                  <tr><td colspan="4"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>
+                  <tr><td colspan="5"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr>
                 </tbody>
               </table>
             </div>
@@ -701,11 +724,11 @@
 
           <!-- Expenditures Section -->
           <div id="ev-expenditures-section">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ffffff10; padding-bottom:10px; margin-bottom:15px; flex-wrap: wrap; gap: 15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255, 255, 255, 0.06); padding-bottom:10px; margin-bottom:15px; flex-wrap: wrap; gap: 15px;">
               <h3 style="color:var(--ivory); margin:0; font-family: 'Playfair Display', serif, 'Georgia'; font-size:18px;">Expenditures</h3>
               <button class="btn btn-gold btn-sm" onclick="promptAddEventExpenditure()" style="border-radius:6px; font-size:11px; white-space: nowrap;">+ Add Expense</button>
             </div>
-            <div class="table-wrap" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:x-auto;">
+            <div class="table-wrap" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow-x:auto;">
               <table style="width:100%; border-collapse:collapse;">
                 <thead style="background:var(--bg3); border-bottom:1px solid var(--border);">
                   <tr>
@@ -930,66 +953,134 @@
     <div id="page-msgs" class="page admin-only">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px;">
         <h2 style="color:var(--gold); margin:0;">📬 Messages Hub</h2>
-        <button class="btn btn-gold" onclick="alert('Message composition is coming in the next update!')">+ Compose Message</button>
+        <button class="btn btn-gold" onclick="openComposeMessage()">+ Compose Message</button>
       </div>
       <div id="msgs-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
       <div class="msgs-list" id="msgs-list" style="display:none;grid-template-columns:1fr;gap:16px"></div>
     </div>
 
-    <!-- AI Assistant Workspace -->
+    <!-- TOM AI Command Center -->
     <div id="page-ai" class="page">
+      <!-- TOM AI Command Center Header -->
+      <div class="tom-command-header">
+        <div class="tom-header-content">
+          <div class="tom-brand-row">
+            <div class="tom-avatar">🤖</div>
+            <div>
+              <h2 class="tom-title">TOM AI <span class="tom-subtitle">Training Operations Manager</span></h2>
+              <p class="tom-status"><span class="tom-online-dot"></span>Connected to Live Database • <span id="tom-last-sync">Syncing...</span></p>
+            </div>
+          </div>
+        </div>
+        <div class="tom-neural-bg"></div>
+      </div>
+
+      <!-- TOM KPI Cards -->
+      <div class="tom-kpi-grid">
+        <div class="tom-kpi-card" onclick="setPage('stud')">
+          <div class="tom-kpi-icon" style="background:rgba(90,159,255,0.12);color:var(--accent)">👥</div>
+          <div class="tom-kpi-value" id="tom-active-students">—</div>
+          <div class="tom-kpi-label">Active Students</div>
+        </div>
+        <div class="tom-kpi-card">
+          <div class="tom-kpi-icon" style="background:rgba(82,196,26,0.12);color:var(--success)">📊</div>
+          <div class="tom-kpi-value" id="tom-attendance-rate">—</div>
+          <div class="tom-kpi-label">Attendance Rate</div>
+        </div>
+        <div class="tom-kpi-card">
+          <div class="tom-kpi-icon" style="background:rgba(255,77,79,0.12);color:var(--danger)">⚠️</div>
+          <div class="tom-kpi-value" id="tom-weak-students">—</div>
+          <div class="tom-kpi-label">Weak Students</div>
+        </div>
+        <div class="tom-kpi-card" onclick="setPage('coach-mgmt')">
+          <div class="tom-kpi-icon" style="background:rgba(220,163,62,0.12);color:var(--gold)">🎯</div>
+          <div class="tom-kpi-value" id="tom-coach-perf">—</div>
+          <div class="tom-kpi-label">Coach Performance</div>
+        </div>
+        <div class="tom-kpi-card" onclick="setPage('events')">
+          <div class="tom-kpi-icon" style="background:rgba(23,162,184,0.12);color:var(--info)">📅</div>
+          <div class="tom-kpi-value" id="tom-upcoming-classes">—</div>
+          <div class="tom-kpi-label">Upcoming Events</div>
+        </div>
+        <div class="tom-kpi-card" onclick="setPage('bills')">
+          <div class="tom-kpi-icon" style="background:rgba(255,193,7,0.12);color:var(--warning)">💳</div>
+          <div class="tom-kpi-value" id="tom-pending-payments">—</div>
+          <div class="tom-kpi-label">Pending Payments</div>
+        </div>
+        <div class="tom-kpi-card">
+          <div class="tom-kpi-icon" style="background:rgba(82,196,26,0.12);color:var(--emerald)">🏆</div>
+          <div class="tom-kpi-value" id="tom-tournament-ready">—</div>
+          <div class="tom-kpi-label">Tournament Ready</div>
+        </div>
+        <div class="tom-kpi-card" onclick="setPage('insights')">
+          <div class="tom-kpi-icon" style="background:rgba(220,163,62,0.12);color:var(--gold)">💡</div>
+          <div class="tom-kpi-value" id="tom-ai-recommendations">—</div>
+          <div class="tom-kpi-label">AI Recommendations</div>
+        </div>
+      </div>
+
+      <!-- AI Workspace -->
       <div class="ai-ws">
         <!-- Sidebar -->
         <div class="ai-ws-sidebar">
           <div class="ai-ws-brand">
-            <span>✨</span> Chesskidoo AI
+            <span>🤖</span> TOM AI
           </div>
           
-          <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--ivory-dim);margin-bottom:12px;font-weight:600">Copilot Modules</div>
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--ivory-dim);margin-bottom:12px;font-weight:600">AI Agent Modules</div>
           <div class="ai-ws-menu" id="ai-modules">
             <button class="ai-ws-btn admin-only active" onclick="setAIModule('global')">⚡ Global Insights</button>
             <button class="ai-ws-btn admin-only" onclick="setAIModule('finance')">💰 Financial Analysis</button>
-            <button class="ai-ws-btn admin-only" onclick="setAIModule('coach')">🧑‍🏫 Coach Performance</button>
+            <button class="ai-ws-btn admin-only" onclick="setAIModule('coach')">🧑🏫 Coach Performance</button>
+            <button class="ai-ws-btn admin-only" onclick="setAIModule('student-intel')">🎓 Student Intelligence</button>
+            <button class="ai-ws-btn admin-only" onclick="setAIModule('tournament')">🏆 Tournament Intelligence</button>
             <button class="ai-ws-btn parent-only" onclick="setAIModule('parent')" style="display:none">👶 My Child</button>
+          </div>
+
+          <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--ivory3);text-align:center;opacity:0.6;letter-spacing:1px;">TOM AI v1.0 • Live</div>
           </div>
         </div>
         
         <!-- Main Chat Area -->
         <div class="ai-ws-main">
           <div class="ai-ws-header">
-            <h2>Academy Intelligence</h2>
-            <p>Real-time analytics and predictive capabilities.</p>
+            <div>
+              <h2 id="tom-module-title">Global Insights</h2>
+              <p id="tom-module-desc">Real-time analytics and predictive capabilities powered by live academy data.</p>
+            </div>
+            <div class="tom-agent-badge" id="tom-agent-badge">⚡ Global Agent</div>
           </div>
           
           <div class="ai-ws-chat" id="ai-workspace-msgs">
             <div class="ai-ws-msg bot">
               <div class="ai-ws-avatar">🤖</div>
               <div class="ai-ws-bubble">
-                Hello Admin! I'm your dedicated AI Copilot. I'm securely connected to your live academy database. How can I assist you with analytics, student insights, or performance metrics today?
+                <strong>TOM AI Online</strong> — I'm connected to your live academy database. I analyze real student ratings, attendance records, payment data, and coach performance in real-time. Ask me anything specific and I'll give you precise, data-driven answers.
               </div>
             </div>
           </div>
           
           <div class="ai-ws-input-area">
             <div class="ai-ws-input-box">
-              <input type="text" id="ai-query" placeholder="Ask about revenue trends, active coaches, or due payments..." onkeydown="if(event.key==='Enter') sendAIQuery()">
+              <input type="text" id="ai-query" placeholder="Ask TOM about students, revenue, coaches, tournaments..." onkeydown="if(event.key==='Enter') sendAIQuery()">
               <button class="ai-ws-send" onclick="sendAIQuery()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
               </button>
             </div>
             <div class="ai-ws-suggest">
-              <button class="ai-ws-pill" onclick="setAISuggestion('How many students are enrolled?')">How many students?</button>
-              <button class="ai-ws-pill admin-only" onclick="setAISuggestion('What is the total revenue?')">Total revenue?</button>
-              <button class="ai-ws-pill admin-only" onclick="setAISuggestion('Which coach has the most students?')">Top coach?</button>
-              <button class="ai-ws-pill admin-only" onclick="setAISuggestion('Show me payment status breakdown')">Payment status breakdown</button>
-              <button class="ai-ws-pill parent-only" onclick="setAISuggestion('How is my child progressing?')">My progress?</button>
-              <button class="ai-ws-pill parent-only" onclick="setAISuggestion('What is my child attendance?')">Attendance?</button>
-              <button class="ai-ws-pill parent-only" onclick="setAISuggestion('When are upcoming events?')">Upcoming events?</button>
+              <button class="ai-ws-pill" onclick="setAISuggestion('Who are the weak students needing attention?')">⚠️ Weak students?</button>
+              <button class="ai-ws-pill admin-only" onclick="setAISuggestion('Give me a complete financial summary')">💰 Financial summary</button>
+              <button class="ai-ws-pill admin-only" onclick="setAISuggestion('Which students are tournament ready?')">🏆 Tournament ready?</button>
+              <button class="ai-ws-pill admin-only" onclick="setAISuggestion('Academy health report')">📊 Health report</button>
+              <button class="ai-ws-pill admin-only" onclick="setAISuggestion('Coach performance comparison')">🧑🏫 Coach comparison</button>
+              <button class="ai-ws-pill parent-only" onclick="setAISuggestion('How is my child progressing?')">📈 My progress?</button>
+              <button class="ai-ws-pill parent-only" onclick="setAISuggestion('What is my child attendance?')">📅 Attendance?</button>
             </div>
           </div>
         </div>
       </div>
-</div>
+    </div>
 
   </div>
 </div>
@@ -1921,15 +2012,15 @@
 <!-- Chat Panel (Chess Design) -->
 <div class="chat-panel" id="chat-panel" style="display:none">
   <div class="chat-head">
-    <div class="chat-head-av">👑</div>
+    <div class="chat-head-av">🤖</div>
     <div class="chat-head-info">
-      <h4 style="color:var(--gold)">Chesskidoo Grandmaster</h4>
-      <p><span class="online-dot"></span>Strategist Active</p>
+      <h4 style="color:var(--gold)">TOM AI Assistant</h4>
+      <p><span class="online-dot"></span>Live Database Connected</p>
     </div>
     <button onclick="toggleChat()" style="background:none;border:none;color:var(--ivory3);cursor:pointer;font-size:20px;margin-left:auto">&times;</button>
   </div>
   <div class="chat-body" id="ai-chat-body">
-    <div class="ai-msg bot">Greetings! I am the Academy Grandmaster. I have synchronized with your latest financial and student data. How shall we strategize today?</div>
+    <div class="ai-msg bot">I'm TOM AI, connected to your live academy data. Ask me about students, revenue, coaches, or any academy metric for precise, real-time answers.</div>
   </div>
   <div id="ai-suggestions" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 14px;background:var(--surface2);border-top:1px solid var(--border)">
     <!-- Pills injected by JS -->

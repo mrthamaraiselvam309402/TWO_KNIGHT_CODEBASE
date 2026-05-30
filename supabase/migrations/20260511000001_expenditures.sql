@@ -53,16 +53,21 @@ DROP POLICY IF EXISTS "Allow all on expenditures" ON expenditures;
 CREATE POLICY "Allow all on expenditures"
   ON expenditures FOR ALL USING (true);
 
--- 5. SAMPLE DATA (comment out if not needed)
-INSERT INTO expenditures (date, category, description, amount, payment_mode) VALUES
-  (CURRENT_DATE - INTERVAL '2 days', 'Rent',         'Monthly academy hall rent - May 2026',              12000, 'Bank Transfer'),
-  (CURRENT_DATE - INTERVAL '5 days', 'Coach Salary', 'Coach Priya salary - May 2026',                      8000, 'Bank Transfer'),
-  (CURRENT_DATE - INTERVAL '7 days', 'Equipment',    'Chess sets x10 + DGT boards x2',                    4500, 'UPI'),
-  (CURRENT_DATE - INTERVAL '9 days', 'Snacks',       'Student refreshments for weekend tournament prep',    800, 'Cash'),
-  (CURRENT_DATE - INTERVAL '12 days','Tournament',   'FIDE rated event registration fees - 5 students',   2500, 'UPI'),
-  (CURRENT_DATE - INTERVAL '15 days','Utilities',    'Internet + electricity for hall - April billing',   1200, 'Bank Transfer'),
-  (CURRENT_DATE - INTERVAL '20 days','Travel',       'Coach travel reimbursement - outstation match',      600, 'Cash'),
-  (CURRENT_DATE - INTERVAL '25 days','Marketing',    'Instagram / Google Ads spend - April',              1800, 'UPI')
-ON CONFLICT DO NOTHING;
+-- 5. SAMPLE DATA — only inserted once, on a fresh empty table.
+--    FIX: previous version had `ON CONFLICT DO NOTHING` against a UUID-default PK with no
+--    deterministic unique key, so each re-run inserted 8 fresh duplicates. Now guarded
+--    by an existence check so re-running this migration is safe.
+INSERT INTO expenditures (date, category, description, amount, payment_mode)
+SELECT * FROM (VALUES
+  (CURRENT_DATE - INTERVAL '2 days', 'Rent',         'Monthly academy hall rent - May 2026',              12000::NUMERIC, 'Bank Transfer'),
+  (CURRENT_DATE - INTERVAL '5 days', 'Coach Salary', 'Coach Priya salary - May 2026',                      8000::NUMERIC, 'Bank Transfer'),
+  (CURRENT_DATE - INTERVAL '7 days', 'Equipment',    'Chess sets x10 + DGT boards x2',                    4500::NUMERIC, 'UPI'),
+  (CURRENT_DATE - INTERVAL '9 days', 'Snacks',       'Student refreshments for weekend tournament prep',    800::NUMERIC, 'Cash'),
+  (CURRENT_DATE - INTERVAL '12 days','Tournament',   'FIDE rated event registration fees - 5 students',   2500::NUMERIC, 'UPI'),
+  (CURRENT_DATE - INTERVAL '15 days','Utilities',    'Internet + electricity for hall - April billing',   1200::NUMERIC, 'Bank Transfer'),
+  (CURRENT_DATE - INTERVAL '20 days','Travel',       'Coach travel reimbursement - outstation match',      600::NUMERIC, 'Cash'),
+  (CURRENT_DATE - INTERVAL '25 days','Marketing',    'Instagram / Google Ads spend - April',              1800::NUMERIC, 'UPI')
+) AS seed(date, category, description, amount, payment_mode)
+WHERE NOT EXISTS (SELECT 1 FROM expenditures LIMIT 1);
 
 SELECT 'Expenditures table ready! ✅' AS result;
