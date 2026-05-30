@@ -618,6 +618,15 @@ body.admin-mode:not(.master-mode) .master-only { display: none !important; }
   gap: 18px;
 }
 
+/* ── CHART RESPONSIVENESS ── */
+.chart-revenue { height: 300px; }
+.chart-coach, .chart-payment, .chart-finance, .chart-session { height: 350px; }
+
+@media (min-width: 1025px) {
+  .chart-revenue { height: 420px; }
+  .chart-coach, .chart-payment, .chart-finance, .chart-session { height: 450px; }
+}
+
 /* Decorative chess piece watermark */
 .dash-grid .card { position: relative; overflow: hidden; z-index: 1; }
 .dash-grid .card::after { content: '♟'; position: absolute; bottom: -15px; right: -5px; font-size: 80px; opacity: 0.03; transform: rotate(15deg); pointer-events: none; }

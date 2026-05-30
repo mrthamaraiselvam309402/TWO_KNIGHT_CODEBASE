@@ -1513,7 +1513,11 @@ function initUI() {
     }
     return raw;
   }
-  function getStudentBatchType(s) { return s.session_mode || s.batch_type || 'Group'; }
+  function getStudentBatchType(s) {
+    const raw = s.session_mode || s.batch_type || 'Group';
+    if (String(raw).trim().toLowerCase() === 'single') return 'Single';
+    return 'Group';
+  }
   function getStudentBatchTime(s) { return s.session_time || s.batch_time || ''; }
   function getStudentSessionTime(s) { return s.session_time || s.batch_time || 'TBD'; }
   function getStudentCoachNotes(s) { return s.notes || s.coach_notes || ''; }

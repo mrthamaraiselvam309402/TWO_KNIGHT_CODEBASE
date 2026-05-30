@@ -138,21 +138,30 @@ Deno.serve(async (req) => {
     }
 
     // 4. Check parent credentials (username = student name, password = parent phone)
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id, name, parent_phone')
-      .ilike('name', username)
-      .eq('parent_phone', password)
-      .single();
+    const { data: students, error: studentError } = await supabase
+      .from('students_decrypted')
+      .select('id, name, parent_phone, phone')
+      .ilike('name', username);
 
-    if (student) {
-      return new Response(JSON.stringify({
-        success: true,
-        token: 'parent-token-' + Date.now(),
-        role: 'parent',
-        student_id: student.id,
-        user: student.name
-      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    if (students && students.length > 0) {
+      const inputDigits = String(password).replace(/\D/g, '');
+      const matchedStudent = students.find(s => {
+        const pDigits = s.parent_phone ? String(s.parent_phone).replace(/\D/g, '') : '';
+        const fDigits = s.phone ? String(s.phone).replace(/\D/g, '') : '';
+        if (inputDigits.length >= 8 && pDigits.length >= 8 && (pDigits.endsWith(inputDigits) || inputDigits.endsWith(pDigits))) return true;
+        if (inputDigits.length >= 8 && fDigits.length >= 8 && (fDigits.endsWith(inputDigits) || inputDigits.endsWith(fDigits))) return true;
+        return false;
+      });
+
+      if (matchedStudent) {
+        return new Response(JSON.stringify({
+          success: true,
+          token: 'parent-token-' + Date.now(),
+          role: 'parent',
+          student_id: matchedStudent.id,
+          user: matchedStudent.name
+        }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
     }
 
      // Failed attempt
