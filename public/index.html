@@ -2055,28 +2055,37 @@
       <div id="calc-display">0</div>
     </div>
     <div class="calc-keypad">
+      <button class="calc-btn calc-action calc-mem" onclick="calcMemory('mc')" title="Memory Clear">MC</button>
+      <button class="calc-btn calc-action calc-mem" onclick="calcMemory('mr')" title="Memory Recall">MR</button>
+      <button class="calc-btn calc-action calc-mem" onclick="calcMemory('m-')" title="Memory Subtract">M-</button>
+      <button class="calc-btn calc-action calc-mem" onclick="calcMemory('m+')" title="Memory Add">M+</button>
+
+      <button class="calc-btn calc-action" onclick="calcInput('(')">(</button>
+      <button class="calc-btn calc-action" onclick="calcInput(')')">)</button>
+      <button class="calc-btn calc-action" onclick="calcInput('%')">%</button>
       <button class="calc-btn calc-action" onclick="calcClear()">C</button>
-      <button class="calc-btn calc-action" onclick="calcBackspace()">⌫</button>
-      <button class="calc-btn calc-action" onclick="calcOperator('/')">÷</button>
-      <button class="calc-btn calc-action" onclick="calcOperator('*')">×</button>
-      
+
       <button class="calc-btn" onclick="calcInput('7')">7</button>
       <button class="calc-btn" onclick="calcInput('8')">8</button>
       <button class="calc-btn" onclick="calcInput('9')">9</button>
-      <button class="calc-btn calc-action" onclick="calcOperator('-')">−</button>
+      <button class="calc-btn calc-action" onclick="calcOperator('/')">÷</button>
       
       <button class="calc-btn" onclick="calcInput('4')">4</button>
       <button class="calc-btn" onclick="calcInput('5')">5</button>
       <button class="calc-btn" onclick="calcInput('6')">6</button>
-      <button class="calc-btn calc-action" onclick="calcOperator('+')">+</button>
+      <button class="calc-btn calc-action" onclick="calcOperator('*')">×</button>
       
       <button class="calc-btn" onclick="calcInput('1')">1</button>
       <button class="calc-btn" onclick="calcInput('2')">2</button>
       <button class="calc-btn" onclick="calcInput('3')">3</button>
-      <button class="calc-btn calc-equals" onclick="calcEvaluate()" style="grid-row: span 2">=</button>
+      <button class="calc-btn calc-action" onclick="calcOperator('-')">−</button>
       
-      <button class="calc-btn" onclick="calcInput('0')" style="grid-column: span 2">0</button>
+      <button class="calc-btn" onclick="calcInput('0')">0</button>
       <button class="calc-btn" onclick="calcInput('.')">.</button>
+      <button class="calc-btn calc-action" onclick="calcBackspace()">⌫</button>
+      <button class="calc-btn calc-action" onclick="calcOperator('+')">+</button>
+
+      <button class="calc-btn calc-equals" onclick="calcEvaluate()" style="grid-column: span 4">=</button>
     </div>
   </div>
 </div>

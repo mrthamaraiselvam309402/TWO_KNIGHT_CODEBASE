@@ -1,11 +1,12 @@
 /**
  * ChessKidoo Admin - Floating Premium Calculator Widget
- * Features: Sleek Glassmorphism UI, Draggable, Keyboard Support, Safe Math Evaluation
+ * Features: Sleek Glassmorphism UI, Draggable, Keyboard Support, Safe Math Evaluation, Memory, Parentheses, Percentages
  */
 (function () {
   let currentValue = '0';
   let expressionStr = '';
   let shouldResetDisplay = false;
+  let memoryValue = 0;
 
   // Draggable Window Logic
   let isDragging = false;
@@ -16,7 +17,6 @@
     const calc = document.getElementById('floating-calc');
     if (!calc || calc.classList.contains('minimized')) return;
     
-    // Only drag with left click on the header itself (not buttons)
     if (e.button !== 0 || e.target.closest('.calc-controls')) return;
 
     isDragging = true;
@@ -25,7 +25,6 @@
 
     const rect = calc.getBoundingClientRect();
     
-    // Lock dimensions and unlock fixed coordinates
     calc.style.right = 'auto';
     calc.style.bottom = 'auto';
     calc.style.left = rect.left + 'px';
@@ -46,14 +45,13 @@
 
     const rect = calc.getBoundingClientRect();
     
-    // Bounds constraints to prevent dragging off-screen
     const nextLeft = rect.left + dx;
     const nextTop = rect.top + dy;
     
-    if (nextLeft > 10 && nextLeft < window.innerWidth - 100) {
+    if (nextLeft > 10 && nextLeft < window.innerWidth - 50) {
       calc.style.left = nextLeft + 'px';
     }
-    if (nextTop > 10 && nextTop < window.innerHeight - 100) {
+    if (nextTop > 10 && nextTop < window.innerHeight - 50) {
       calc.style.top = nextTop + 'px';
     }
 
@@ -99,25 +97,42 @@
   function updateDisplay() {
     const display = document.getElementById('calc-display');
     const prevExpr = document.getElementById('calc-prev-expression');
-    if (display) display.textContent = currentValue;
+    if (display) display.textContent = currentValue || '0';
     if (prevExpr) prevExpr.textContent = expressionStr;
   }
 
-  window.calcInput = function (num) {
+  window.calcInput = function (char) {
     if (shouldResetDisplay) {
-      currentValue = '';
+      if (/[0-9(]/.test(char)) {
+        currentValue = '';
+      }
       shouldResetDisplay = false;
     }
 
-    if (num === '.') {
-      if (currentValue.includes('.')) return; // prevent double decimal
-      if (currentValue === '') currentValue = '0';
-    }
-
-    if (currentValue === '0' && num !== '.') {
-      currentValue = num;
+    if (currentValue === '0' && char !== '.' && char !== '%' && char !== ')' && !/[+/*-]/.test(char)) {
+      currentValue = char;
     } else {
-      currentValue += num;
+      currentValue += char;
+    }
+    updateDisplay();
+  };
+
+  window.calcOperator = function (op) {
+    if (shouldResetDisplay) {
+      shouldResetDisplay = false;
+    }
+    
+    // Replace visual operators if entered by keyboard
+    if (op === '÷') op = '/';
+    if (op === '×') op = '*';
+    if (op === '−') op = '-';
+
+    const lastChar = currentValue.slice(-1);
+    // Don't allow multiple operators in a row unless it's a negative sign
+    if (/[+/*-]/.test(lastChar) && op !== '-') {
+      currentValue = currentValue.slice(0, -1) + op;
+    } else {
+      currentValue += op;
     }
     updateDisplay();
   };
@@ -142,28 +157,32 @@
     updateDisplay();
   };
 
-  window.calcOperator = function (op) {
-    if (shouldResetDisplay) {
-      shouldResetDisplay = false;
+  window.calcMemory = function(action) {
+    if (action === 'mc') {
+      memoryValue = 0;
+      if(window.toast) window.toast('Memory Cleared', 'info');
+    } else if (action === 'mr') {
+      calcInput(String(memoryValue));
+    } else if (action === 'm+') {
+      calcEvaluate();
+      memoryValue += parseFloat(currentValue || 0);
+      if(window.toast) window.toast('Added to Memory', 'info');
+    } else if (action === 'm-') {
+      calcEvaluate();
+      memoryValue -= parseFloat(currentValue || 0);
+      if(window.toast) window.toast('Subtracted from Memory', 'info');
     }
-    
-    // If we have an expression, calculate intermediate result first or chain it
-    if (expressionStr && !isNaN(expressionStr.slice(-1))) {
-      expressionStr += ' ' + currentValue + ' ' + op;
-    } else {
-      expressionStr = currentValue + ' ' + op;
-    }
-    currentValue = '0';
-    updateDisplay();
   };
 
-  function safeEvaluate(expr) {
-    const tokens = expr.split(/\s+/).filter(t => t.length > 0);
-    if (tokens.length === 0) return 0;
-
-    // Phase 1: Handle multiplication and division with operator precedence
+  function safeEvaluateBase(expr) {
+    expr = expr.replace(/([0-9.]+)\%/g, (match, num) => String(parseFloat(num) / 100));
+    expr = expr.replace(/\-\-/g, '+').replace(/\+\-/g, '-').replace(/\-\+/g, '-');
+    
+    const tokens = expr.match(/([+-]?(?:[0-9]*\.[0-9]+|[0-9]+))|([*/])/g) || [];
+    
     const nextTokens = [];
-    for (let i = 0; i < tokens.length; i++) {
+    let i = 0;
+    while (i < tokens.length) {
       const token = tokens[i];
       if (token === '*' || token === '/') {
         if (nextTokens.length === 0) return NaN;
@@ -171,52 +190,49 @@
         const right = parseFloat(tokens[++i]);
         if (isNaN(left) || isNaN(right)) return NaN;
         const res = token === '*' ? left * right : left / right;
-        nextTokens.push(res);
+        nextTokens.push(res >= 0 ? '+' + res : String(res));
       } else {
         nextTokens.push(token);
       }
+      i++;
     }
 
-    // Phase 2: Handle addition and subtraction sequentially from left to right
-    if (nextTokens.length === 0) return 0;
-    let result = parseFloat(nextTokens[0]);
-    if (isNaN(result)) return NaN;
-
-    for (let i = 1; i < nextTokens.length; i += 2) {
-      const op = nextTokens[i];
-      const val = parseFloat(nextTokens[i + 1]);
-      if (isNaN(val)) return NaN;
-      if (op === '+') {
-        result += val;
-      } else if (op === '-') {
-        result -= val;
-      } else {
-        return NaN;
-      }
+    let result = 0;
+    for (const token of nextTokens) {
+      result += parseFloat(token);
     }
     return result;
   }
 
-  window.calcEvaluate = function () {
-    if (!expressionStr) return;
-
-    let evalExpr = expressionStr + ' ' + currentValue;
+  function safeEvaluate(expr) {
+    expr = expr.replace(/\s+/g, '');
     
-    // Replace visual operator signs with actual JS ones safely
+    let maxIters = 100;
+    while (expr.includes('(') && maxIters-- > 0) {
+      expr = expr.replace(/\(([^()]+)\)/g, (match, innerExpr) => {
+        return safeEvaluateBase(innerExpr);
+      });
+    }
+    
+    return safeEvaluateBase(expr);
+  }
+
+  window.calcEvaluate = function () {
+    if (!currentValue) return;
+
+    let evalExpr = currentValue;
     evalExpr = evalExpr.replace(/÷/g, '/').replace(/×/g, '*').replace(/−/g, '-');
 
     try {
-      // Safe custom arithmetic parser (CSP-compliant, bypasses 'unsafe-eval' block)
       const result = safeEvaluate(evalExpr);
       
       if (result === undefined || isNaN(result) || !isFinite(result)) {
         throw new Error();
       }
       
-      // Clean up floating point decimal precision issues (e.g. 0.1 + 0.2 = 0.3)
       const cleanResult = parseFloat(result.toFixed(8));
       
-      expressionStr = evalExpr + ' =';
+      expressionStr = currentValue + ' =';
       currentValue = String(cleanResult);
       shouldResetDisplay = true;
     } catch (e) {
@@ -232,29 +248,18 @@
     const calc = document.getElementById('floating-calc');
     if (!calc || calc.style.display === 'none' || calc.classList.contains('minimized')) return;
 
+    // Don't intercept if typing in an input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
     const key = e.key;
 
-    // Numbers 0-9
-    if (/[0-9]/.test(key)) {
+    if (/[0-9()]/.test(key) || key === '%') {
       calcInput(key);
       e.preventDefault();
-    }
-    // Operators
-    else if (key === '+') {
-      calcOperator('+');
+    } else if (['+', '-', '*', '/'].includes(key)) {
+      calcOperator(key);
       e.preventDefault();
-    } else if (key === '-') {
-      calcOperator('-');
-      e.preventDefault();
-    } else if (key === '*') {
-      calcOperator('*');
-      e.preventDefault();
-    } else if (key === '/') {
-      calcOperator('/');
-      e.preventDefault();
-    }
-    // Actions
-    else if (key === '.' || key === ',') {
+    } else if (key === '.' || key === ',') {
       calcInput('.');
       e.preventDefault();
     } else if (key === 'Enter' || key === '=') {

@@ -8789,7 +8789,7 @@ Best regards,
        moduleFocus: 'global'
     };
 
-    const role = window.currentRole || 'guest';
+    const role = window.role || 'guest';
     
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/ai`, {

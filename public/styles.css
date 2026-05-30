@@ -1500,7 +1500,7 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
   position: fixed;
   bottom: 175px;
   right: 30px;
-  width: 290px;
+  width: 320px;
   background: rgba(14, 14, 26, 0.9);
   backdrop-filter: blur(25px);
   -webkit-backdrop-filter: blur(25px);
@@ -1621,6 +1621,12 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
 }
 .calc-btn:active {
   transform: scale(0.96);
+}
+.calc-mem {
+  font-size: 13px !important;
+  color: var(--amber) !important;
+  font-weight: 700;
+  background: rgba(232,168,48,0.03) !important;
 }
 .calc-btn.calc-action {
   background: rgba(232,168,48,0.05);
