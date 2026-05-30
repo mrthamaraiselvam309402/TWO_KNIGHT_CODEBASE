@@ -6932,7 +6932,8 @@ Best regards,
     if (!currentStudent) return;
 
     try {
-      await apiCall('/api/messages', {
+      // FIX: previously ignored res.ok so a 500/RLS failure silently looked "successful".
+      const res = await apiCall('/api/messages', {
         method: 'POST',
         body: JSON.stringify({
           sender_type: 'parent',
@@ -6943,11 +6944,12 @@ Best regards,
           priority: 'normal'
         })
       });
+      if (!res || !res.ok) throw new Error(`Server returned ${res ? res.status : 'no response'}`);
       toast('Feedback submitted successfully!', 'success');
       if ($('fb-msg')) $('fb-msg').value = '';
       closeModals();
     } catch (e) {
-      toast('Failed to submit feedback', 'error');
+      toast('Failed to submit feedback: ' + (e.message || 'connection error'), 'error');
     }
   }
 

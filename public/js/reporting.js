@@ -9,11 +9,18 @@ window.generateReportPDF = async function() {
         return;
     }
 
-    const targetMonth = window.reportMonth;
-    const targetYear = window.reportYear;
+    // FIX: fall back to current month/year if not set so the report doesn't break with
+    // "Invalid Date" when called before the dashboard picker has initialized the globals.
+    const _today = new Date();
+    const targetMonth = Number.isFinite(window.reportMonth) ? window.reportMonth : _today.getUTCMonth();
+    const targetYear  = Number.isFinite(window.reportYear)  ? window.reportYear  : _today.getUTCFullYear();
     const now = new Date(targetYear, targetMonth, 1);
+    // FIX: use a stable "generated_at" snapshot so the timestamp shown in the report header
+    // and the footer audit trail match each other (they used to drift across re-renders).
+    const generatedAt = new Date();
     const dateStr = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const timeStr = generatedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    const fullStamp = generatedAt.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'medium' });
     toast(`Generating Financial Report for ${dateStr}...`, 'info');
 
     // Helper for robust date matching (Consolidated)
@@ -378,10 +385,10 @@ window.generateReportPDF = async function() {
     <div class="header">
       <h1>ACADEMY FINANCIAL REPORT</h1>
       <div class="header-meta">
-        <div>REPORT ID: CKD-FIN-${now.getFullYear()}-${Math.floor(Math.random()*10000)}</div>
+        <div>REPORT ID: CKD-FIN-${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${generatedAt.getTime().toString(36).toUpperCase()}</div>
         <div class="confidential">EXECUTIVE REPORT // PRIVATE & CONFIDENTIAL</div>
         <div style="color:var(--gold);font-weight:700;letter-spacing:1px;margin-top:5px">REPORT PERIOD: ${dateStr.toUpperCase()}</div>
-        <div class="heartbeat">SYNC STATUS: REAL-TIME</div>
+        <div class="heartbeat">SYNC STATUS: REAL-TIME &middot; GENERATED ${fullStamp.toUpperCase()}</div>
       </div>
     </div>
 
@@ -539,7 +546,7 @@ window.generateReportPDF = async function() {
         </table>
       </div>
     </div>
--
+
     <h3>VIII. Strategic Recommendations</h3>
     <div class="data-story" style="margin-top:20px;">
       <div style="margin-bottom:15px; border-bottom: 1px solid var(--border); padding-bottom:10px; font-size: 15px;">
@@ -552,14 +559,14 @@ window.generateReportPDF = async function() {
         <strong style="color:var(--gold)">3. BATCH GROWTH POTENTIAL:</strong> ${timings['Evening'] > timings['Morning'] ? 'Evening batches are approaching peak saturation. Expansion should focus on weekend morning slots.' : 'Current morning utilization is healthy. Potential for expansion in evening group sessions.'}
       </div>
     </div>
--
+
     <div class="footer">
       <div>© CHESSKIDOO ACADEMY MANAGEMENT</div>
       <div>AUTHENTICATED BY: CKD-AI-CORE</div>
       <div>PAGE 02 / 03</div>
     </div>
   </div>
--
+
   <div class="page">
     <div class="watermark">TRANSACTION LOG</div>
     <h3>IX. Verified Transaction Ledger</h3>
@@ -580,7 +587,7 @@ window.generateReportPDF = async function() {
         ${transactionRows || '<tr><td colspan="5" style="text-align:center">No transactions recorded for this period.</td></tr>'}
       </tbody>
     </table>
--
+
     <h3 style="margin-top:60px">X. Engagement Audit (Top Attendees)</h3>
     <table>
       <thead>
@@ -601,14 +608,14 @@ window.generateReportPDF = async function() {
         </tr>`).join('') : `<tr><td colspan="4" style="text-align:center; color: var(--text-dim)">No attendance records logged for this period.</td></tr>`}
       </tbody>
     </table>
--
+
     <div class="strategic-insight" style="margin-top:50px; font-size:14px">
-      <strong>Audit Affirmation:</strong> This report represents a high-fidelity snapshot of academy operations as of ${timeStr}. All metrics are derived directly from the synchronized data lake.
+      <strong>Audit Affirmation:</strong> This report represents a high-fidelity snapshot of academy operations generated at <span class="bold">${fullStamp}</span> (local). All metrics are derived directly from the live synchronized data lake — ${window.allStudents.length} students, ${window.allCoaches?.length || 0} coaches, ${window.allPayments?.length || 0} payments, ${monthAtt.length} attendance entries for ${dateStr}.
     </div>
--
+
     <div class="footer">
-      <div>© CHESSKIDOO ACADEMY MANAGEMENT</div>
-      <div>AUDIT TRAIL: ${now.getTime()}</div>
+      <div>&copy; CHESSKIDOO ACADEMY MANAGEMENT</div>
+      <div>AUDIT TRAIL: ${generatedAt.toISOString()}</div>
       <div>PAGE 03 / 03</div>
     </div>
   </div>`;
@@ -705,40 +712,85 @@ window.generateReportPDF = async function() {
 
 /**
  * AI Neural Link: Compiles a clean snapshot for the AI Assistant.
+ *
+ * FIX: previously returned a hardcoded avgAttendance: 88.5 baseline,
+ *      which made the AI confidently quote a fake number. Now computes
+ *      attendance from the live window.allAttendance feed for the
+ *      current month, falls back to "n/a" when no data exists.
  */
 window.getAcademySnapshot = function() {
-    if (!window.allStudents) return null;
-    
+    if (!window.allStudents || !Array.isArray(window.allStudents)) return null;
+
+    const students = window.allStudents || [];
+    const coaches  = window.allCoaches  || [];
+    const payments = window.allPayments || [];
+    const attendance = window.allAttendance || [];
+
+    // ── Monthly revenue dedup (1 fee per student per month) ────────────
     const paidMonths = new Set();
-    const totalRev = allPayments.reduce((a, p) => {
-        if (p.status === 'paid') {
-            const pDate = new Date(p.payment_date || p.created_at);
-            const mKey = `${p.student_id}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
-            if (paidMonths.has(mKey)) return a;
-            paidMonths.add(mKey);
-            
-            const s = allStudents.find(x => String(x.id) === String(p.student_id));
-            return a + (s ? getStudentMonthlyFee(s) : (parseFloat(p.amount) || 0));
-        }
-        return a;
+    const totalRev = payments.reduce((a, p) => {
+        if (p.status !== 'paid') return a;
+        const pDate = new Date(p.payment_date || p.created_at);
+        if (isNaN(pDate.getTime())) return a;
+        const mKey = `${p.student_id}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+        if (paidMonths.has(mKey)) return a;
+        paidMonths.add(mKey);
+        const s = students.find(x => String(x.id) === String(p.student_id));
+        return a + (s && typeof getStudentMonthlyFee === 'function'
+            ? getStudentMonthlyFee(s)
+            : (parseFloat(p.amount) || 0));
     }, 0);
-    const activeCount = allStudents.filter(s => (s.status || 'active') === 'active').length;
-    const coachData = allCoaches.map(c => ({
-        name: getCoachName(c),
-        students: allStudents.filter(s => String(s.coach_id) === String(c.id)).length
-    }));
+
+    // ── Active/archive counts ──────────────────────────────────────────
+    const activeCount = students.filter(s => {
+        const st = (typeof getStudentStatus === 'function' ? getStudentStatus(s) : (s.status || 'active'));
+        return st !== 'archived' && st !== 'inactive' && st !== 'pending';
+    }).length;
+
+    // ── Real attendance for current month (UTC) ────────────────────────
+    const now = new Date();
+    const tm = now.getUTCMonth(), ty = now.getUTCFullYear();
+    const monthAtt = attendance.filter(a => {
+        const d = new Date(a.date);
+        return !isNaN(d.getTime()) && d.getUTCMonth() === tm && d.getUTCFullYear() === ty;
+    });
+    const presentCount = monthAtt.filter(a => a.status === 'present').length;
+    const avgAttendance = monthAtt.length > 0
+        ? Number(((presentCount / monthAtt.length) * 100).toFixed(1))
+        : null; // honest "n/a" instead of a fake 88.5
+
+    // ── Coach roster (filtered to non-archived only) ───────────────────
+    const coachData = coaches
+        .filter(c => (c.status || 'active') !== 'archived')
+        .map(c => ({
+            name: typeof getCoachName === 'function' ? getCoachName(c) : (c.name || 'Coach'),
+            students: students.filter(s => String(s.coach_id) === String(c.id)
+                && (typeof getStudentStatus === 'function' ? getStudentStatus(s) : (s.status || 'active')) !== 'archived'
+            ).length
+        }));
+
+    // ── Pending payments (this month, unpaid) ──────────────────────────
+    const pendingPayments = students.filter(s => {
+        if (typeof getStudentPaymentStatus !== 'function') return false;
+        const st = getStudentPaymentStatus(s, tm, ty);
+        return st === 'Due' || st === 'Overdue' || st === 'Unpaid';
+    }).length;
 
     return {
         timestamp: new Date().toISOString(),
+        period: `${ty}-${String(tm + 1).padStart(2, '0')}`,
         metrics: {
-            totalStudents: allStudents.length,
+            totalStudents: students.length,
             activeStudents: activeCount,
             totalRevenue: totalRev,
-            coachCount: allCoaches.length,
-            avgAttendance: 88.5 // Baseline
+            coachCount: coachData.length,
+            pendingPayments,
+            // null when no records — AI is instructed to say "n/a" rather than guess
+            avgAttendance,
+            attendanceSampleSize: monthAtt.length
         },
         roster: coachData,
-        systemHealth: 'Optimal'
+        systemHealth: monthAtt.length > 0 ? 'Optimal' : 'Limited Telemetry'
     };
 };
 
@@ -747,7 +799,7 @@ window.generateEventReportPDF = async function() {
     const eventId = window.currentManageEventId;
     if (!eventId) return;
     
-    const e = eventsData.find(x => String(x.id) === String(eventId));
+    const e = (window.eventsData || []).find(x => String(x.id) === String(eventId));
     if (!e) return;
 
     const regStudents = e.registered_students || [];
@@ -791,11 +843,11 @@ window.generateEventReportPDF = async function() {
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Expected Revenue</div>
-      <div class="kpi-val">?${regStudents.length * (e.fee || 0)}</div>
+      <div class="kpi-val">&#8377;${(regStudents.length * (e.fee || 0)).toLocaleString('en-IN')}</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Base Fee</div>
-      <div class="kpi-val">?${e.fee || 0}</div>
+      <div class="kpi-val">&#8377;${(e.fee || 0).toLocaleString('en-IN')}</div>
     </div>
   </div>
 
@@ -835,7 +887,7 @@ window.generateEventCertificates = async function() {
     const eventId = window.currentManageEventId;
     if (!eventId) return;
     
-    const e = eventsData.find(x => String(x.id) === String(eventId));
+    const e = (window.eventsData || []).find(x => String(x.id) === String(eventId));
     if (!e) return;
     const regStudents = e.registered_students || [];
 
