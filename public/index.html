@@ -23,7 +23,7 @@
    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
    <!-- Security Hardening - Fully offline-first, only Supabase external -->
-   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://html2canvas.hertzen.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.supabase.co https://i.ibb.co https://*.ibb.co https://api.imgbb.com https://flagcdn.com https://*.flagcdn.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.imgbb.com;"/>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://html2canvas.hertzen.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.supabase.co https://i.ibb.co https://*.ibb.co https://api.imgbb.com https://flagcdn.com https://*.flagcdn.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.imgbb.com https://ipapi.co https://ip-api.com https://ipinfo.io;"/>
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
   <!-- X-Frame-Options must be an HTTP header, not a meta tag — set in vercel.json -->
 
@@ -117,7 +117,7 @@
     <div class="nav-item parent-only" id="nav-parent-schedule" onclick="setPage('child'); setChildTab('schedule');"><span class="ico">🗓️</span> Class Schedule</div>
     <div class="nav-item parent-only" id="nav-parent-growth" onclick="setPage('child'); setChildTab('growth');"><span class="ico">📊</span> Skill & ELO Growth</div>
     <div class="nav-item parent-only" id="nav-parent-learning" onclick="setPage('child'); setChildTab('learning');"><span class="ico">📚</span> Chess Study Hub</div>
-    <div class="nav-item parent-only" id="nav-parent-events" onclick="setPage('child'); setChildTab('events');"><span class="ico">🎫</span> Upcoming Events</div></div>
+    <div class="nav-item parent-only" id="nav-parent-events" onclick="setPage('child'); setChildTab('events');"><span class="ico">🎫</span> Upcoming Events</div>
     <div class="nav-item parent-only" id="nav-parent-attendance" onclick="setPage('child'); setChildTab('attendance');"><span class="ico">🗓️</span> Attendance Logs</div>
     <div class="nav-item parent-only" id="nav-parent-billing" onclick="setPage('child'); setChildTab('billing');"><span class="ico">💰</span> Tuition & Invoices</div>
     <div class="nav-item parent-only" id="nav-parent-productivity" onclick="setPage('child'); setChildTab('productivity');"><span class="ico">📝</span> Daily Tasks</div>
@@ -1058,6 +1058,10 @@
             <div class="form-group">
               <label class="label">Regular Time</label>
               <input type="text" id="sch-reg-time" class="input-field" placeholder="e.g. 7:00 PM – 8:00 PM">
+            </div>
+            <div class="form-group" style="margin-top:12px;">
+              <label class="label">Meeting Link (Zoom / GMeet)</label>
+              <input type="text" id="sch-meet-link" class="input-field" placeholder="https://meet.google.com/xxx-xxxx-xxx">
             </div>
           </div>
 
