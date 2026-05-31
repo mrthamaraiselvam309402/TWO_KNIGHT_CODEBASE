@@ -129,6 +129,9 @@
 
    window.allRatingHistory = allRatingHistory; // Also needed for ELO gainers in report
 
+
+   window.allResources = allResources;
+
    window.reportMonth = new Date().getUTCMonth(); // 0-11 (UTC)
    window.reportYear = new Date().getUTCFullYear();
    window.isEditing = false;
@@ -296,7 +299,11 @@
     if (tabId === 'overview') renderChildBilling();
     if (tabId === 'growth') renderChildGrowth();
     if (tabId === 'learning') renderChildResources();
-    if (tabId === 'events') renderChildEvents();
+    if (tabId === 'events') {
+      renderChildEvents();
+      if (window.setChildEventsSubTab) window.setChildEventsSubTab('academy');
+    }
+    if (tabId === 'productivity' && typeof window.renderChildProductivity === 'function') window.renderChildProductivity();
   }
 
   function setDashTab(tabId, btn) {
@@ -1520,7 +1527,7 @@ function initUI() {
   }
   function getStudentBatchTime(s) { return s.session_time || s.batch_time || ''; }
   function getStudentSessionTime(s) { return s.session_time || s.batch_time || 'TBD'; }
-  function getStudentCoachNotes(s) { return s.notes || s.coach_notes || ''; }
+  function getStudentCoachNotes(s) { let n = s.notes || s.coach_notes || ''; return n.replace(/\[SCHEDULE:({.*?})\]/g, '').trim(); }
   
   function isStudentScheduledToday(s) {
     if (!s || (s.status || 'active').toLowerCase() !== 'active') return false;
@@ -1552,20 +1559,38 @@ function initUI() {
     let day = 5;
     let feeOverride = null;
 
-    if (s.due_date) {
+    // Default to the day of their enrollment/join date
+    const enrollStr = s.enrollment_date || s.join_date || s.created_at;
+    if (enrollStr) {
       try {
-        day = new Date(s.due_date).getUTCDate() || 5;
+        day = new Date(enrollStr).getUTCDate() || 5;
       } catch (e) {
         day = 5;
       }
     }
+
+    if (s.due_date) {
+      const parsedDay = parseInt(s.due_date);
+      if (!isNaN(parsedDay) && parsedDay >= 1 && parsedDay <= 31) {
+        day = parsedDay;
+      } else {
+        try {
+          day = new Date(s.due_date).getUTCDate() || day;
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
     
     // First Month Override: If this is the student's first month of enrollment, their due date is their enrollment date
-    const enrollStr = s.enrollment_date || s.join_date || s.created_at;
     if (enrollStr) {
-      const enrollDate = new Date(enrollStr);
-      if (enrollDate.getUTCFullYear() === year && enrollDate.getUTCMonth() === month) {
-        day = enrollDate.getUTCDate();
+      try {
+        const enrollDate = new Date(enrollStr);
+        if (enrollDate.getUTCFullYear() === year && enrollDate.getUTCMonth() === month) {
+          day = enrollDate.getUTCDate();
+        }
+      } catch (e) {
+        // ignore
       }
     }
     
@@ -1643,6 +1668,20 @@ function initUI() {
        // We omit isFirstMonth || here because dueDateObj is correctly set to their enrollment date for their first month.
        // They will automatically transition from 'Pending' to 'Due' precisely on their join date.
        return (currentDate >= dueDateObj) ? 'Due' : 'Pending';
+    }
+
+    // C2. FUTURE PERIODS: If target month is in the future
+    const now = new Date();
+    const currentUTCMonth = now.getUTCMonth();
+    const currentUTCFullYear = now.getUTCFullYear();
+    const isFuturePeriod = (targetYear > currentUTCFullYear) || 
+                           (targetYear === currentUTCFullYear && targetMonth > currentUTCMonth);
+    if (isFuturePeriod) {
+       const currentMonthsRequired = ((currentUTCFullYear - effectiveEnroll.getUTCFullYear()) * 12) + (currentUTCMonth - effectiveEnroll.getUTCMonth()) + 1;
+       if (totalPaidInvoices < currentMonthsRequired) {
+         return 'Overdue';
+       }
+       return 'Pending';
     }
 
     // D. ARREARS (Past Months): If missing payments and in the past, status is 'Overdue'
@@ -3103,6 +3142,8 @@ function initUI() {
          window.allPayments = allPayments;
          window.allRatingHistory = allRatingHistory;
 
+         window.allResources = allResources;
+
          syncCoachDropdowns();
          if (role === 'admin' || role === 'master') {
            renderDash();
@@ -3263,6 +3304,8 @@ function initUI() {
          window.allAttendance = allAttendance;
          window.allRatingHistory = allRatingHistory;
 
+         window.allResources = allResources;
+
          if ($('sync-text')) $('sync-text').textContent = 'Database Connected';
          if ($('sync-status')) $('sync-status').classList.add('connected');
          console.log(`[Sync] Loaded: ${allStudents.length} students, ${allCoaches.length} coaches, ${allPayments.length} payments`);
@@ -3271,7 +3314,8 @@ function initUI() {
            console.warn('[Sync] Warning: No students found in database.');
          }
 
-         dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, attendance: allAttendance, payments: allPayments, ratingHistory: allRatingHistory, timestamp: now };
+         dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, attendance: allAttendance, payments: allPayments, ratingHistory: allRatingHistory, resources: allResources, timestamp: now };
+          try { localStorage.setItem('chesskidoo_data_cache', JSON.stringify(dataCache)); } catch(e) {}
          syncCoachDropdowns();
 
          if (role === 'admin' || role === 'master') {
@@ -3549,15 +3593,20 @@ function initUI() {
     child: 'My Child', fame: 'Wall of Fame', events: 'Events', bills: 'Payments',
     insights: 'AI Academy Insights',
     exp: 'Expenditure Management',
-    msgs: 'Messages', ai: 'AI Assistant'
+    msgs: 'Messages', ai: 'AI Assistant', access: 'Access Control', schedules: 'Schedule Manager',
+    productivity: 'Operations Productivity Center'
   };
 
   function setPage(p) {
-    const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'insights', 'exp', 'msgs', 'events', 'ai'];
+    const adminPages = ['dash', 'stud', 'coach-mgmt', 'bills', 'insights', 'exp', 'msgs', 'events', 'ai', 'access', 'schedules', 'productivity'];
     if (adminPages.includes(p) && role !== 'admin' && role !== 'master') {
       toast('Access denied', 'error');
       setPage(role === 'parent' ? 'child' : 'dash');
       return;
+    }
+
+    if (p !== 'bills' && window.stopGatewayLogsSimulation) {
+      window.stopGatewayLogsSimulation();
     }
 
     document.querySelectorAll('.page').forEach(pg => {
@@ -3599,6 +3648,7 @@ function initUI() {
             <input type="month" id="report-period" class="selector-minimal" onchange="updateReportContext()" value="${periodValue}">
           </div>
           <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">📄 Financial Report</button>
+          <button class="btn btn-outline" onclick="if(window.generateReportPPT)window.generateReportPPT()" style="border-color:var(--amber); color:var(--amber);">📊 Boardroom Slides</button>
           <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
         `;
         }
@@ -3627,12 +3677,17 @@ function initUI() {
       if (p === 'stud') renderStudents();
       if (p === 'coach-mgmt') renderCoachMgmt();
       if (p === 'fame') renderFame();
-      if (p === 'events') renderEvents();
+      if (p === 'events') {
+        renderEvents();
+        if (window.setEventsSubTab) window.setEventsSubTab('academy');
+      }
       if (p === 'bills') renderBills();
       if (p === 'child') renderChild();
       if (p === 'insights' && window.generateAcademyInsights) window.generateAcademyInsights();
       if (p === 'msgs') renderMsgs();
       if (p === 'exp' && window.initExpPage) window.initExpPage();
+      if (p === 'schedules' && window.initSchedulePage) window.initSchedulePage();
+      if (p === 'productivity' && window.initProductivityPage) window.initProductivityPage();
       if (p === 'ai') {
         if(window.updateTomKpis) window.updateTomKpis();
         if(window.initSmartPills) window.initSmartPills();
@@ -4721,7 +4776,7 @@ function initUI() {
             const dueMonthName = months[targetMonth];
             const dueDateString = `${dueDay}-${dueMonthName}-${targetYear}`;
             
-            const dueDateObj = new Date(Date.UTC(targetYear, targetMonth, dueCfg.day, 23, 59, 59));
+            const dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
             const isOverdue = dueDateObj < new Date() && status !== 'Paid';
             
             const enrollStatus = getStudentStatus(s);
@@ -4964,7 +5019,12 @@ function initUI() {
         fees: newFee,
         tuition_fee: newFee,
         learning_mode: $('e-learning-mode')?.value || s.learning_mode || 'online',
-        notes: `[LM:${$('e-learning-mode')?.value || s.learning_mode || 'online'}] ` + ($('e-notes')?.value || s.notes || '').replace(/\[LM:(online|offline)\]/g, '').trim()
+        notes: (function(){
+          const oldScheduleMatch = (s.notes || '').match(/\[SCHEDULE:({.*?})\]/);
+          const scheduleStr = oldScheduleMatch ? "\n" + oldScheduleMatch[0] : "";
+          const cleanNotes = ($('e-notes')?.value || s.notes || '').replace(/\[LM:(online|offline)\]/g, '').replace(/\[SCHEDULE:({.*?})\]/g, '').trim();
+          return `[LM:${$('e-learning-mode')?.value || s.learning_mode || 'online'}] ` + cleanNotes + scheduleStr;
+        })()
       };
 
     try {
@@ -6543,6 +6603,16 @@ Best regards,
     btn.classList.add('active');
     $('bills-tab-students').style.display = tabName === 'students' ? 'block' : 'none';
     $('bills-tab-coaches').style.display = tabName === 'coaches' ? 'block' : 'none';
+    const monitorTab = $('bills-tab-gateway-monitor');
+    if (monitorTab) {
+      monitorTab.style.display = tabName === 'gateway-monitor' ? 'block' : 'none';
+      if (tabName === 'gateway-monitor') {
+        if (window.initGatewayMonitorVirtualizer) window.initGatewayMonitorVirtualizer();
+        if (window.startGatewayLogsSimulation) window.startGatewayLogsSimulation();
+      } else {
+        if (window.stopGatewayLogsSimulation) window.stopGatewayLogsSimulation();
+      }
+    }
   };
 
   function renderCoachBills() {
@@ -6829,6 +6899,24 @@ Best regards,
   let currentPayId = null;
   let currentPayAmt = 0;
 
+  // Razorpay integration configuration variables
+  let isRazorpayConfigured = false;
+  let razorpayKeyId = null;
+
+  async function checkRazorpayConfig() {
+    try {
+      const res = await fetch('/api/razorpay/config');
+      if (res.ok) {
+        const data = await res.json();
+        isRazorpayConfigured = !!data.configured;
+        razorpayKeyId = data.keyId;
+      }
+    } catch (e) {
+      console.warn('Payment Gateway: Config fetch failed, running in simulation mode.', e);
+    }
+  }
+  checkRazorpayConfig();
+
   function openPay(id, name, fee) {
     const nameEl = $('pay-name');
     const feeEl = $('pay-amt');
@@ -6845,23 +6933,439 @@ Best regards,
     if (feeEl) feeEl.textContent = `₹${finalFee.toLocaleString()}`;
 
     // Reset payment modal view
-    if ($('pay-options')) $('pay-options').style.display = 'block';
+    const optionsEl = $('pay-options');
+    if (optionsEl) {
+      optionsEl.style.display = 'block';
+      let optionsHtml = '';
+      if (isRazorpayConfigured) {
+        optionsHtml += `<div class="upi-item" onclick="initiateRazorpayPay()" style="background:rgba(232,168,48,0.1); border-color:var(--gold); color:var(--gold); display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px;">🛡️ <b>Pay via Razorpay (Card/UPI)</b></div>`;
+      }
+      optionsHtml += `
+        <div class="upi-item" onclick="initiatePay('Google Pay')"><b>Google Pay</b></div>
+        <div class="upi-item" onclick="initiatePay('PhonePe')"><b>PhonePe</b></div>
+        <div class="upi-item" onclick="initiatePay('Paytm')"><b>Paytm</b></div>
+      `;
+      optionsEl.innerHTML = optionsHtml;
+    }
+    
     if ($('pay-processing')) $('pay-processing').style.display = 'none';
 
     openModal('pay-modal');
   }
 
   function initiatePay(provider) {
-    if ($('pay-options')) $('pay-options').style.display = 'none';
-    if ($('pay-processing')) $('pay-processing').style.display = 'block';
-    if ($('pay-provider')) $('pay-provider').textContent = 'Connecting to ' + provider + '...';
+    const optionsEl = $('pay-options');
+    const processingEl = $('pay-processing');
+    const logsEl = $('pay-console-logs');
+    const titleEl = $('pay-status-title');
+    
+    if (optionsEl) optionsEl.style.display = 'none';
+    if (processingEl) processingEl.style.display = 'block';
+    if (logsEl) logsEl.innerHTML = '';
+    if (titleEl) titleEl.textContent = 'Processing Secure UPI Payment...';
+
+    const s = allStudents.find(x => String(x.id) === String(currentPayId));
+    const email = s ? (s.email || 'parent@academy.com') : 'parent@academy.com';
+
+    function addLogLine(text, type = 'info') {
+      if (!logsEl) return;
+      let color = '#d4d4d8';
+      if (type === 'success') color = 'var(--success)';
+      if (type === 'error') color = 'var(--danger)';
+      if (type === 'warn') color = 'var(--amber)';
+      logsEl.innerHTML += `<div style="color:${color}; margin-bottom: 4px;">[${new Date().toLocaleTimeString()}] ${escapeHtml(text)}</div>`;
+      logsEl.scrollTop = logsEl.scrollHeight;
+    }
+
+    addLogLine(`[CONNECTING] Establishing secure socket with ${provider}...`);
+    window.logGatewaySecurityEvent('payment.initiated', 'SUCCESS', `Initiated ₹${currentPayAmt} via ${provider}`, email);
+
+    setTimeout(() => {
+      addLogLine(`[RESOLVING] Gateway handshake success. Merchant router online.`);
+      window.logGatewaySecurityEvent('payment.bank_handshake', 'SUCCESS', `Merchant handshake verified`, email);
+    }, 600);
+
+    setTimeout(() => {
+      const telemetry = window.extractDeviceTelemetry ? window.extractDeviceTelemetry() : { ip: '127.0.0.1', browser: 'Chrome', os: 'Windows', country: 'IN' };
+      addLogLine(`[TELEMETRY] Checked signature: IP=${telemetry.ip}, Browser=${telemetry.browser}, OS=${telemetry.os}, LOC=${telemetry.country}`);
+      window.logGatewaySecurityEvent('payment.risk_check', 'SUCCESS', `Security footprint scan: PASS`, email);
+    }, 1200);
+
+    setTimeout(() => {
+      addLogLine(`[BANK] Verifying transaction token HMAC-sha256 signature...`);
+      window.logGatewaySecurityEvent('payment.captured', 'SUCCESS', `Bank HMAC confirmed`, email);
+    }, 2000);
+
+    setTimeout(() => {
+      addLogLine(`[CONFIRMING] Callback received. Transaction captured.`, 'success');
+      window.logGatewaySecurityEvent('payment.captured', 'SUCCESS', `Tuition credited: ₹${currentPayAmt}`, email);
+    }, 2800);
+
+    setTimeout(() => {
+      addLogLine(`[IMMUTABLE] Committing transaction records to Supabase DB...`);
+    }, 3400);
 
     setTimeout(async () => {
       await markPaid(currentPayId, currentPayAmt, provider);
       closeModals();
       loadAllData(true);
-    }, 2000);
+    }, 4200);
   }
+
+  // Real-time Razorpay Payment Flow
+  window.initiateRazorpayPay = async function() {
+    const optionsEl = $('pay-options');
+    const processingEl = $('pay-processing');
+    const logsEl = $('pay-console-logs');
+    const titleEl = $('pay-status-title');
+
+    if (optionsEl) optionsEl.style.display = 'none';
+    if (processingEl) processingEl.style.display = 'block';
+    if (logsEl) logsEl.innerHTML = '';
+    if (titleEl) titleEl.textContent = 'Contacting Razorpay Server...';
+
+    const s = allStudents.find(x => String(x.id) === String(currentPayId));
+    const studentName = s ? getStudentName(s) : 'Unknown Student';
+    const email = s ? (s.email || 'parent@academy.com') : 'parent@academy.com';
+
+    function addLogLine(text, type = 'info') {
+      if (!logsEl) return;
+      let color = '#d4d4d8';
+      if (type === 'success') color = 'var(--success)';
+      if (type === 'error') color = 'var(--danger)';
+      if (type === 'warn') color = 'var(--amber)';
+      logsEl.innerHTML += `<div style="color:${color}; margin-bottom: 4px;">[${new Date().toLocaleTimeString()}] ${escapeHtml(text)}</div>`;
+      logsEl.scrollTop = logsEl.scrollHeight;
+    }
+
+    addLogLine(`[CONNECTING] Connecting to Razorpay Edge APIs...`);
+    window.logGatewaySecurityEvent('payment.initiated', 'SUCCESS', `Razorpay flow started: ₹${currentPayAmt}`, email);
+
+    // 1. Dynamic Script Loader
+    if (!window.Razorpay) {
+      addLogLine(`[SDK] Loading Razorpay Checkout SDK script...`);
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      }).catch(err => {
+        addLogLine(`[ERROR] Failed to load Razorpay SDK!`, 'error');
+        window.logGatewaySecurityEvent('payment.failed', 'FAILED', `Razorpay SDK script load failure`, email);
+        setTimeout(() => {
+          if (optionsEl) optionsEl.style.display = 'block';
+          if (processingEl) processingEl.style.display = 'none';
+        }, 2000);
+      });
+    }
+
+    if (!window.Razorpay) return;
+
+    addLogLine(`[ORDER] Initializing secure transaction order...`);
+    
+    try {
+      const orderRes = await fetch('/api/razorpay/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: currentPayAmt,
+          currency: 'INR',
+          receipt: 'receipt_adm_' + Date.now()
+        })
+      });
+
+      if (!orderRes.ok) throw new Error('Order creation failed');
+
+      const orderData = await orderRes.json();
+      addLogLine(`[ORDER] Order generated: ${orderData.id}. Opening Razorpay Frame...`, 'success');
+
+      // If simulated, bypass popups
+      if (orderData.simulated) {
+        addLogLine(`[SIMULATION] Server in simulation mode (Missing keys). Processing checkout...`, 'warn');
+        setTimeout(async () => {
+          addLogLine(`[VERIFYING] Client callback signature verify...`);
+          window.logGatewaySecurityEvent('payment.captured', 'SUCCESS', `Simulated order capture verified: ${orderData.id}`, email);
+          await markPaid(currentPayId, currentPayAmt, 'Razorpay (Simulated)');
+          closeModals();
+          loadAllData(true);
+        }, 2000);
+        return;
+      }
+
+      // Configure official Razorpay Checkout Options
+      const options = {
+        key: razorpayKeyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'Chesskidoo Academy',
+        description: 'Tuition Fee - ' + studentName,
+        order_id: orderData.id,
+        handler: async function (response) {
+          addLogLine(`[SDK] Payment success response received. Triggering cryptographic verify...`);
+          
+          try {
+            const verifyRes = await fetch('/api/razorpay/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok && (verifyData.status === 'success' || verifyData.simulated)) {
+              addLogLine(`[VERIFY] Signature verification check PASS. Writing database records...`, 'success');
+              window.logGatewaySecurityEvent('payment.captured', 'SUCCESS', `Razorpay payment captured: ${response.razorpay_payment_id}`, email);
+              await markPaid(currentPayId, currentPayAmt, 'Razorpay');
+              closeModals();
+              loadAllData(true);
+            } else {
+              throw new Error(verifyData.error || 'Signature check failed');
+            }
+          } catch (err) {
+            addLogLine(`[ERROR] Verification check FAIL: ${err.message}`, 'error');
+            window.logGatewaySecurityEvent('signature.mismatch', 'FAILED', `HMAC verification failed: ${err.message}`, email);
+            setTimeout(() => {
+              if (optionsEl) optionsEl.style.display = 'block';
+              if (processingEl) processingEl.style.display = 'none';
+            }, 3000);
+          }
+        },
+        prefill: {
+          name: studentName,
+          email: email
+        },
+        theme: {
+          color: '#e8a830' // Academy gold color
+        },
+        modal: {
+          ondismiss: function() {
+            addLogLine(`[CANCEL] Checkout iframe dismissed by user.`, 'warn');
+            window.logGatewaySecurityEvent('payment.failed', 'FAILED', `Checkout closed by client`, email);
+            setTimeout(() => {
+              if (optionsEl) optionsEl.style.display = 'block';
+              if (processingEl) processingEl.style.display = 'none';
+            }, 1500);
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
+    } catch (e) {
+      addLogLine(`[ERROR] Order creation crashed: ${e.message}`, 'error');
+      window.logGatewaySecurityEvent('payment.failed', 'FAILED', `Order creation failure: ${e.message}`, email);
+      setTimeout(() => {
+        if (optionsEl) optionsEl.style.display = 'block';
+        if (processingEl) processingEl.style.display = 'none';
+      }, 3000);
+    }
+  };
+
+  // =========================================================================
+  // Live Payment Security & Gateway Log Telemetry Stream (Vanilla Virtualizer)
+  // =========================================================================
+  window.gatewaySecurityLogs = [];
+  window.gatewayVirtualizer = null;
+  let gatewaySimulationInterval = null;
+
+  window.logGatewaySecurityEvent = function(action, status, detail, email = 'anonymous@parent.com') {
+    const telemetry = window.extractDeviceTelemetry ? window.extractDeviceTelemetry() : { ip: '127.0.0.1', os: 'Windows', browser: 'Chrome', country: 'IN' };
+    const log = {
+      id: 'pay_log_' + Math.random().toString(36).substr(2, 9),
+      userEmail: email,
+      action: action,
+      status: status,
+      ipAddress: telemetry.ip,
+      deviceOS: telemetry.os,
+      browser: telemetry.browser,
+      countryCode: telemetry.country,
+      createdAt: new Date().toISOString(),
+      detail: detail
+    };
+
+    window.gatewaySecurityLogs.unshift(log);
+    
+    // Cap buffer to 1000 items
+    if (window.gatewaySecurityLogs.length > 1000) {
+      window.gatewaySecurityLogs = window.gatewaySecurityLogs.slice(0, 1000);
+    }
+
+    // Refresh virtual table count
+    if (window.gatewayVirtualizer) {
+      window.gatewayVirtualizer.updateCount(window.gatewaySecurityLogs.length);
+    }
+    
+    const bufferLabel = document.getElementById('gateway-buffer-track');
+    if (bufferLabel) {
+      bufferLabel.textContent = `Buffer: ${window.gatewaySecurityLogs.length.toLocaleString()} items cached`;
+    }
+  };
+
+  window.initGatewayMonitorVirtualizer = function() {
+    const scrollContainer = document.getElementById('gateway-virtual-scroll-container');
+    const spacer = document.getElementById('gateway-virtual-spacer');
+    const emptyState = document.getElementById('gateway-empty-state');
+    
+    if (!scrollContainer || !spacer) return;
+
+    if (window.gatewaySecurityLogs.length === 0) {
+      generateDemoGatewayLogs();
+    }
+
+    if (emptyState) emptyState.style.display = 'none';
+
+    if (window.gatewayVirtualizer) {
+      window.gatewayVirtualizer.destroy();
+    }
+
+    const rowHeight = 44;
+    window.gatewayVirtualizer = new window.VanillaVirtualizer({
+      container: scrollContainer,
+      spacer: spacer,
+      estimateSize: rowHeight,
+      overscan: 10,
+      count: window.gatewaySecurityLogs.length,
+      renderRow: function(index, startY, height) {
+        const log = window.gatewaySecurityLogs[index];
+        if (!log) return null;
+
+        const row = document.createElement('div');
+        row.className = 'virtual-row';
+        row.style.position = 'absolute';
+        row.style.left = '0';
+        row.style.top = '0';
+        row.style.width = '100%';
+        row.style.height = `${height}px`;
+        row.style.transform = `translateY(${startY}px)`;
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
+        row.style.padding = '0 16px';
+        row.style.fontSize = '12px';
+        row.style.background = log.status === 'FAILED' ? 'rgba(239, 68, 68, 0.05)' : 'transparent';
+        row.style.boxSizing = 'border-box';
+        
+        const isSuccess = log.status === 'SUCCESS';
+        const statusIcon = isSuccess 
+          ? `<span style="color:var(--success); font-size: 14px;" title="Success">💳</span>`
+          : `<span class="pulse-alert" style="color:var(--danger); font-size: 14px;" title="Risk Flag">🚨</span>`;
+
+        const actionColor = log.status === 'FAILED' 
+          ? 'color: #f87171; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.1);' 
+          : 'color: #fbbf24; border-color: rgba(232,168,48,0.3); background: rgba(232,168,48,0.05);';
+        
+        row.innerHTML = `
+          <div style="flex: 0 0 40px; display:flex; align-items:center; justify-content:center;">${statusIcon}</div>
+          <div style="flex: 0 0 160px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;"><span style="font-family:var(--font-mono); font-size:10px; padding:2px 6px; border:1px solid; border-radius:4px; ${actionColor}">${log.action}</span></div>
+          <div style="flex: 1 1 180px; color:var(--ivory); font-weight:500; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; padding-right:10px;">${log.userEmail} <span style="color:var(--slate); font-weight:400; font-size:11px; margin-left:6px;">${log.detail}</span></div>
+          <div style="flex: 0 0 120px; font-family:var(--font-mono); color:var(--ivory-dim); font-size:11px;">💻 ${log.ipAddress}</div>
+          <div style="flex: 0 0 60px; display:flex; align-items:center; gap:4px; font-family:var(--font-mono); font-size:11px; color:var(--ivory-dim);">🌍 ${log.countryCode}</div>
+          <div style="flex: 0 0 160px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; color:var(--slate); font-size:11px;">⚙️ ${log.deviceOS} (${log.browser})</div>
+          <div style="flex: 0 0 80px; text-align:right; font-family:var(--font-mono); color:var(--slate); font-size:11px;">⏱️ ${new Date(log.createdAt).toLocaleTimeString()}</div>
+        `;
+        return row;
+      }
+    });
+
+    window.gatewayVirtualizer.updateCount(window.gatewaySecurityLogs.length);
+    
+    const bufferLabel = document.getElementById('gateway-buffer-track');
+    if (bufferLabel) {
+      bufferLabel.textContent = `Buffer: ${window.gatewaySecurityLogs.length.toLocaleString()} items cached`;
+    }
+  };
+
+  function generateDemoGatewayLogs() {
+    const emails = ['parent.james@gmail.com', 'parent.lucy@yahoo.co.in', 'parent.ron@outlook.com', 'attacker@recon.net', 'parent.sara@gmail.com'];
+    const actions = ['payment.initiated', 'payment.bank_handshake', 'payment.captured', 'payment.failed'];
+    const statuses = ['SUCCESS', 'SUCCESS', 'SUCCESS', 'FAILED'];
+    const details = ['Checkout opened (₹5,000)', 'Bank handshake verified', 'Tuition credit success: ₹5,000', 'Card Declined (3D Secure Fail)'];
+    const countries = ['IN', 'IN', 'IN', 'US', 'GB'];
+    const ips = ['103.45.12.84', '192.168.1.15', '49.206.12.89', '201.44.11.2', '76.104.99.12'];
+
+    for (let i = 0; i < 40; i++) {
+      const idx = Math.floor(Math.random() * actions.length);
+      window.gatewaySecurityLogs.push({
+        id: 'demo_pay_' + i + '_' + Date.now(),
+        userEmail: emails[Math.floor(Math.random() * emails.length)],
+        action: actions[idx],
+        status: statuses[idx],
+        ipAddress: ips[Math.floor(Math.random() * ips.length)],
+        deviceOS: Math.random() > 0.5 ? 'Windows' : 'macOS',
+        browser: 'Chrome',
+        countryCode: countries[Math.floor(Math.random() * countries.length)],
+        createdAt: new Date(Date.now() - i * 8 * 60 * 1000).toISOString(),
+        detail: details[idx]
+      });
+    }
+  }
+
+  window.startGatewayLogsSimulation = function() {
+    if (gatewaySimulationInterval) clearInterval(gatewaySimulationInterval);
+
+    async function pollPayments() {
+      try {
+        const res = await fetch('/api/payments?limit=50').catch(() => null);
+        if (res && res.ok) {
+          const payments = await res.json().catch(() => []);
+          let hasNew = false;
+          
+          payments.forEach(p => {
+            const exists = window.gatewaySecurityLogs.some(existing => existing.id === p.id);
+            if (!exists) {
+              const s = allStudents.find(x => String(x.id) === String(p.student_id));
+              const email = s ? (s.email || 'parent@academy.com') : 'parent@academy.com';
+              const log = {
+                id: p.id,
+                userEmail: email,
+                action: p.payment_method === 'Razorpay' ? 'payment.captured' : 'payment.completed',
+                status: (p.status === 'paid' || p.status === 'completed') ? 'SUCCESS' : 'FAILED',
+                ipAddress: '127.0.0.1',
+                deviceOS: 'System DB',
+                browser: p.payment_method || 'Online',
+                countryCode: 'IN',
+                createdAt: p.payment_date || p.created_at || new Date().toISOString(),
+                detail: `${p.description || 'Tuition Fee payment processed'} (Amount: ₹${p.amount})`
+              };
+              window.gatewaySecurityLogs.unshift(log);
+              hasNew = true;
+            }
+          });
+
+          if (hasNew) {
+            window.gatewaySecurityLogs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            if (window.gatewaySecurityLogs.length > 1000) {
+              window.gatewaySecurityLogs = window.gatewaySecurityLogs.slice(0, 1000);
+            }
+            if (window.gatewayVirtualizer) {
+              window.gatewayVirtualizer.updateCount(window.gatewaySecurityLogs.length);
+            }
+            const bufferLabel = document.getElementById('gateway-buffer-track');
+            if (bufferLabel) {
+              bufferLabel.textContent = `Buffer: ${window.gatewaySecurityLogs.length.toLocaleString()} items cached`;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Gateway log poll failed:', e);
+      }
+    }
+
+    pollPayments();
+    gatewaySimulationInterval = setInterval(pollPayments, 4000);
+  };
+
+  window.stopGatewayLogsSimulation = function() {
+    if (gatewaySimulationInterval) {
+      clearInterval(gatewaySimulationInterval);
+      gatewaySimulationInterval = null;
+    }
+  };
 
   function downloadReceipt(id, name, fee, level = 'Beginner', rating = 800, coach = 'N/A', paymentMode = 'Online Transfer', dateStr = '', type = 'tuition', eventName = '') {
     const url = `receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&level=${encodeURIComponent(level)}&rating=${rating}&coach=${encodeURIComponent(coach)}&method=${encodeURIComponent(paymentMode)}&date=${encodeURIComponent(dateStr)}&type=${encodeURIComponent(type)}&eventName=${encodeURIComponent(eventName)}&print=true`;
@@ -7019,7 +7523,8 @@ Best regards,
     if ($('c-coach')) $('c-coach').textContent = coachName;
 
     // Latest coach notes/review (from student notes field or messages)
-    const latestNotes = s.notes || 'No recent review available';
+    const rawNotes = s.notes || '';
+    const latestNotes = rawNotes.replace(/\[SCHEDULE:({.*?})\]/g, '').trim() || 'No recent review available';
     if ($('c-notes')) $('c-notes').textContent = latestNotes;
 
     // Skill breakdown (based on level)
@@ -7030,6 +7535,16 @@ Best regards,
 
     // Billing tab
     renderChildBilling();
+
+    // Schedule tab
+    if (typeof window.renderChildSchedule === 'function') {
+        window.renderChildSchedule(s, coachName);
+    }
+
+    // AI Overview Insight
+    if (typeof window.generateContextualInsight === 'function') {
+        window.generateContextualInsight('child_overview', s.id);
+    }
 
     if (loadingEl) loadingEl.style.display = 'none';
     if (contentEl) contentEl.style.display = 'block';

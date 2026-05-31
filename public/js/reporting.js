@@ -86,9 +86,31 @@ window.generateReportPDF = async function() {
       }
     });
 
-    // Sum actual cash collected from verified payments in the target month (100% database-accurate)
+    // Helper function to match dashboard slot-based revenue calculation
+    function calculateSlotRevenue(year, month) {
+      if (!allPayments) return 0;
+      const seenStuds = new Set();
+      return allPayments.reduce((sum, p) => {
+        const pDate = new Date(p.payment_date || p.created_at);
+        if (pDate.getUTCMonth() === month && pDate.getUTCFullYear() === year && p.status === 'paid') {
+          const sid = String(p.student_id).toLowerCase();
+          if (seenStuds.has(sid)) return sum;
+          
+          const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+          if (s) {
+            if (getStudentPaymentStatus(s, month, year) === 'Paid') {
+              seenStuds.add(sid);
+              return sum + getStudentMonthlyFee(s);
+            }
+          }
+        }
+        return sum;
+      }, 0);
+    }
+
+    // Sum actual cash collected matching the dashboard's s-rev calculation
+    const collected = calculateSlotRevenue(targetYear, targetMonth);
     const monthlyPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM && p.status === 'paid');
-    const collected = monthlyPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
     let lastDueAmount = 0;
     let currPendingAmount = 0;
@@ -221,12 +243,7 @@ window.generateReportPDF = async function() {
         let mCollected = 0;
         let mOutstanding = 0;
         
-        (allPayments || []).forEach(p => {
-            const pDate = new Date(p.payment_date || p.created_at);
-            if (pDate.getUTCMonth() === m && pDate.getUTCFullYear() === y && p.status === 'paid') {
-                mCollected += (parseFloat(p.amount) || 0);
-            }
-        });
+        mCollected = calculateSlotRevenue(y, m);
 
         allStudents.forEach(s => {
             const sStatus = getStudentStatus(s);
@@ -713,6 +730,643 @@ window.generateReportPDF = async function() {
     
     toast('Executive Audit generated! Real data synchronized. ✨', 'success');
 };
+
+// =========================================================================
+// Widescreen Widescreen Boardroom Presentation Exporter (PptxGenJS Integration)
+// =========================================================================
+
+async function loadPptxGenLibrary() {
+    if (window.pptxgen) return;
+    toast('Loading presentation engine...', 'info');
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS@3.12.0/dist/pptxgen.bundle.js';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Failed to load PowerPoint engine'));
+        document.head.appendChild(script);
+    });
+}
+
+window.generateReportPPT = async function() {
+    try {
+        await loadPptxGenLibrary();
+        
+        const allStudents = window.allStudents || [];
+        const allCoaches = window.allCoaches || [];
+        const allPayments = window.allPayments || [];
+        const allAttendance = window.allAttendance || [];
+
+        const getStudentPaymentStatus = window.getStudentPaymentStatus;
+        const getCoachSalary = window.getCoachSalary;
+        const getCoachName = window.getCoachName;
+        const getStudentBatchType = window.getStudentBatchType;
+        const getStudentSessionTime = window.getStudentSessionTime;
+        const getStudentName = window.getStudentName;
+        const getStudentLevel = window.getStudentLevel;
+        const getStudentRating = window.getStudentRating;
+        const getStudentDate = window.getStudentDate;
+        const getStudentStatus = window.getStudentStatus;
+        const getStudentMonthlyFee = window.getStudentMonthlyFee;
+
+        if (allStudents.length === 0) {
+            toast('Academy data not yet synchronized. Please wait a moment...', 'warning');
+            return;
+        }
+
+        const _today = new Date();
+        const targetMonth = Number.isFinite(window.reportMonth) ? window.reportMonth : _today.getUTCMonth();
+        const targetYear  = Number.isFinite(window.reportYear)  ? window.reportYear  : _today.getUTCFullYear();
+        const now = new Date(targetYear, targetMonth, 1);
+        const generatedAt = new Date();
+        const dateStr = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+        const fullStamp = generatedAt.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'medium' });
+
+        toast(`Compiling Boardroom Presentation for ${dateStr}...`, 'info');
+
+        const getYM = (d) => {
+            const dt = new Date(d);
+            return isNaN(dt.getTime()) ? null : `${dt.getUTCFullYear()}-${dt.getUTCMonth()}`;
+        };
+        const targetYM = `${targetYear}-${targetMonth}`;
+        const monthStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
+        const monthEndLimit = new Date(Date.UTC(targetYear, targetMonth + 1, 0));
+        const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0));
+
+        const targetStudents = allStudents.filter(s => {
+            const sStatus = getStudentStatus(s);
+            if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
+            const sName = (getStudentName(s) || '').toUpperCase();
+            if (sName.includes('PARENT') || sName.includes('COACH') || sName.includes('TEST')) return false;
+            const joinStr = getStudentDate(s);
+            let enrollDate = joinStr ? new Date(joinStr) : baseline;
+            if (isNaN(enrollDate.getTime())) enrollDate = baseline;
+            return enrollDate <= monthEndLimit;
+        });
+
+        const activeStudents = targetStudents.length;
+
+        // 1. Dynamic slot-based collected calculations (matches s-rev dashboard value exactly)
+        function calculateSlotRevenue(year, month) {
+            if (!allPayments) return 0;
+            const seenStuds = new Set();
+            return allPayments.reduce((sum, p) => {
+                const pDate = new Date(p.payment_date || p.created_at);
+                if (pDate.getUTCMonth() === month && pDate.getUTCFullYear() === year && p.status === 'paid') {
+                    const sid = String(p.student_id).toLowerCase();
+                    if (seenStuds.has(sid)) return sum;
+                    
+                    const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
+                    if (s) {
+                        if (getStudentPaymentStatus(s, month, year) === 'Paid') {
+                            seenStuds.add(sid);
+                            return sum + getStudentMonthlyFee(s);
+                        }
+                    }
+                }
+                return sum;
+            }, 0);
+        }
+
+        const collected = calculateSlotRevenue(targetYear, targetMonth);
+
+        // Deduplication structure for arrears
+        const totalPaymentsMap = {};
+        const seenMonthsGlobal = new Set();
+        const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
+        
+        allPayments.forEach(p => {
+            if (p.status === 'paid') {
+                const sid = String(p.student_id || '').trim().toLowerCase();
+                const pDate = new Date(p.payment_date || p.created_at);
+                if (pDate <= targetMonthEnd) {
+                    const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+                    if (seenMonthsGlobal.has(mKey)) return;
+                    seenMonthsGlobal.add(mKey);
+                    if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
+                    totalPaymentsMap[sid]++;
+                }
+            }
+        });
+
+        let lastDueAmount = 0;
+        let currPendingAmount = 0;
+        let potential = 0;
+
+        targetStudents.forEach(s => {
+            const fee = getStudentMonthlyFee(s) || 0;
+            potential += fee;
+            const enrollDateStr = getStudentDate(s);
+            let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+            if (isNaN(enrollDate.getTime())) enrollDate = baseline;
+            const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+            const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+            const s_id_key = String(s.id || '').trim().toLowerCase();
+            const totalCredits = totalPaymentsMap[s_id_key] || 0;
+            const totalMonthsUnpaid = Math.max(0, monthsRequired - totalCredits);
+            if (totalMonthsUnpaid > 0) {
+                const isPaidThisMonth = (getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid');
+                const histMonths = totalMonthsUnpaid - (isPaidThisMonth ? 0 : 1);
+                if (histMonths > 0) lastDueAmount += (fee * histMonths);
+                if (!isPaidThisMonth) currPendingAmount += fee;
+            }
+        });
+
+        const payroll = allCoaches.filter(c => c.status !== 'archived').reduce((a, c) => a + (getCoachSalary(c) || 0), 0);
+        
+        let totalExp = 0;
+        try {
+            const res = await (window.apiCall || fetch)(`/api/expenditures?mode=summary&month=${monthStr}`);
+            if (res.ok) {
+                const summary = await res.json();
+                totalExp = parseFloat(summary.total_expense || 0);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        const netProfit = collected - payroll - totalExp;
+        const collectionRate = potential > 0 ? ((collected / potential) * 100).toFixed(1) : 0;
+
+        // Fetch detailed expenditures for AI FinOps Audit
+        let allExpenditures = [];
+        let avgSpend = 0;
+        let predictedSpend = 0;
+        let anomalies = [];
+        let duplicates = [];
+
+        try {
+            const expRes = await (window.apiCall || fetch)(`/api/expenditures?limit=500`);
+            if (expRes.ok) {
+                const expJson = await expRes.json();
+                allExpenditures = expJson.data || [];
+            }
+        } catch (e) {
+            console.error("Failed to fetch expenditures list for PPT AI Audit", e);
+        }
+
+        if (allExpenditures.length > 0) {
+            let total6MonthSpend = 0;
+            let monthCounts = {};
+            let catTotalsFor6M = {};
+            
+            const currentPeriodDate = new Date(targetYear, targetMonth, 1);
+            allExpenditures.forEach(e => {
+                if (!e.date || e.type === 'Event Expense') return;
+                const eDate = new Date(e.date);
+                const diffMonths = (currentPeriodDate.getFullYear() - eDate.getFullYear()) * 12 + (currentPeriodDate.getMonth() - eDate.getMonth());
+                if (diffMonths >= 0 && diffMonths < 6) {
+                    const amt = parseFloat(e.amount || 0);
+                    total6MonthSpend += amt;
+                    monthCounts[diffMonths] = true;
+                    
+                    if (!catTotalsFor6M[e.category]) catTotalsFor6M[e.category] = { total: 0, count: 0 };
+                    catTotalsFor6M[e.category].total += amt;
+                    catTotalsFor6M[e.category].count += 1;
+                }
+            });
+
+            const numMonths = Object.keys(monthCounts).length || 1;
+            avgSpend = total6MonthSpend / numMonths;
+            predictedSpend = avgSpend * 1.05; // 5% inflation buffer
+
+            let seen = {};
+            allExpenditures.forEach(e => {
+                if (!e.date || e.type === 'Event Expense') return;
+                const eDate = new Date(e.date);
+                if (eDate.getUTCMonth() === targetMonth && eDate.getUTCFullYear() === targetYear) {
+                    const amt = parseFloat(e.amount);
+                    // Check anomalies
+                    const catStats = catTotalsFor6M[e.category];
+                    if (catStats && catStats.count > 2) {
+                        const catAvg = catStats.total / catStats.count;
+                        if (amt > catAvg * 1.5 && catAvg > 100) {
+                            anomalies.push(`${e.category}: ₹${amt.toLocaleString('en-IN')} ("${e.description.slice(0, 20)}")`);
+                        }
+                    }
+                    // Check duplicates
+                    const key = `${e.date}_${e.amount}_${e.category}`;
+                    if (seen[key]) {
+                        duplicates.push(`₹${amt.toLocaleString('en-IN')} in ${e.category}`);
+                    }
+                    seen[key] = true;
+                }
+            });
+        }
+
+        // Historical collections for last 6 months
+        const monthwiseData = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(Date.UTC(targetYear, targetMonth - i, 1));
+            const mName = d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+            const m = d.getUTCMonth();
+            const y = d.getUTCFullYear();
+            const mEnd = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59));
+            
+            let mPotential = 0;
+            let mCollected = calculateSlotRevenue(y, m);
+            let mOutstanding = 0;
+            
+            allStudents.forEach(s => {
+                const sStatus = getStudentStatus(s);
+                if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return;
+                const enrollDateStr = getStudentDate(s);
+                let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+                if (isNaN(enrollDate.getTime())) enrollDate = baseline;
+                if (enrollDate <= mEnd) {
+                    const fee = getStudentMonthlyFee(s) || 0;
+                    mPotential += fee;
+                    const status = getStudentPaymentStatus(s, m, y);
+                    if (status !== 'Paid' && status !== 'Not Enrolled') {
+                        mOutstanding += fee;
+                    }
+                }
+            });
+            const mRate = mPotential > 0 ? ((mCollected / mPotential) * 100).toFixed(0) : 0;
+            monthwiseData.push({ month: mName, potential: mPotential, collected: mCollected, outstanding: mOutstanding, rate: mRate });
+        }
+
+        const batches = { 'Group': 0, 'Single': 0 };
+        const timings = { 'Morning': 0, 'Evening': 0, 'Weekend': 0 };
+        const levels = { 'Beginner': 0, 'Intermediate': 0, 'Advanced': 0, 'Elite': 0 };
+        
+        targetStudents.forEach(s => {
+            const type = getStudentBatchType(s);
+            if (batches[type] !== undefined) batches[type]++;
+            const time = getStudentSessionTime(s).toUpperCase();
+            if (time.includes('MORNING')) timings['Morning']++;
+            else if (time.includes('WEEKEND')) timings['Weekend']++;
+            else timings['Evening']++;
+            const lvl = getStudentLevel(s);
+            if (levels[lvl] !== undefined) levels[lvl]++;
+            else levels['Beginner']++;
+        });
+
+        const coachMetrics = allCoaches.filter(c => c.status !== 'archived').map(c => {
+            const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
+            const coachStudIds = new Set(coachStuds.map(s => String(s.id).toLowerCase()));
+            let coachRev = (allPayments || []).reduce((sum, p) => {
+                const pDate = new Date(p.payment_date || p.created_at);
+                if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
+                    const sid = String(p.student_id).toLowerCase();
+                    if (coachStudIds.has(sid)) {
+                        return sum + (parseFloat(p.amount) || 0);
+                    }
+                }
+                return sum;
+            }, 0);
+            const coachCost = getCoachSalary(c) || 0;
+            const profit = coachRev - coachCost;
+            return {
+                name: getCoachName(c),
+                students: coachStuds.filter(s => {
+                    const sStatus = getStudentStatus(s);
+                    if (sStatus === 'archived' || sStatus === 'pending' || sStatus === 'waitlist' || sStatus === 'inactive') return false;
+                    const enrollDateStr = getStudentDate(s);
+                    let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
+                    if (isNaN(enrollDate.getTime())) enrollDate = baseline;
+                    return enrollDate <= monthEndLimit;
+                }).length,
+                revenue: coachRev,
+                cost: coachCost,
+                profit: profit,
+                roi: coachCost > 0 ? ((profit / coachCost) * 100) : 0
+            };
+        });
+
+        // 2. Initialize Widescreen Slide Deck
+        const pptx = new window.pptxgen();
+        pptx.layout = 'LAYOUT_16x9';
+
+        const darkBG = '0F0F12';
+        const cardBG = '17171C';
+        const goldAccent = 'E8A830';
+        const textWhite = 'FFFFFF';
+        const textMuted = '71717A';
+
+        // ────────── SLIDE 1: Title Slide (Cover) ──────────
+        let slide1 = pptx.addSlide();
+        slide1.background = { fill: darkBG };
+        
+        slide1.addShape('rect', { x: 0.5, y: 0.5, w: 9.0, h: 4.625, line: { color: goldAccent, width: 2 } });
+        
+        slide1.addText("CHESSKIDOO ACADEMY", {
+            x: 1.0, y: 1.6, w: 8.0, h: 0.8,
+            fontSize: 36, fontFace: 'Georgia', color: goldAccent, bold: true, align: 'center'
+        });
+        
+        slide1.addShape('rect', { x: 3.5, y: 2.5, w: 3.0, h: 0.03, fill: { color: goldAccent } });
+        
+        slide1.addText("BOARDROOM BUSINESS REVIEW & FINANCIAL PERFORMANCE", {
+            x: 1.0, y: 2.7, w: 8.0, h: 0.4,
+            fontSize: 13, fontFace: 'Arial', color: textWhite, bold: true, align: 'center', margin: 0
+        });
+
+        slide1.addText(`Reporting Period: ${dateStr.toUpperCase()}\nGenerated at: ${fullStamp}`, {
+            x: 1.0, y: 3.6, w: 8.0, h: 0.6,
+            fontSize: 10, fontFace: 'Arial', color: textMuted, align: 'center', margin: 0
+        });
+
+        // Helper function to add slide headers
+        function addSlideHeader(slide, title) {
+            slide.addText(title, {
+                x: 0.6, y: 0.3, w: 8.8, h: 0.4,
+                fontSize: 18, fontFace: 'Georgia', color: goldAccent, bold: true
+            });
+            slide.addShape('rect', { x: 0.6, y: 0.75, w: 8.8, h: 0.02, fill: { color: '2D2D35' } });
+        }
+
+        // Helper function to add footer info
+        function addSlideFooter(slide, pageNum) {
+            slide.addText("CHESSKIDOO EXECUTIVE AUDIT  |  CONFIDENTIAL", {
+                x: 0.6, y: 5.25, w: 7.0, h: 0.2,
+                fontSize: 8, fontFace: 'Arial', color: textMuted
+            });
+            slide.addText(`PAGE ${pageNum}`, {
+                x: 8.0, y: 5.25, w: 1.4, h: 0.2,
+                fontSize: 8, fontFace: 'Arial', color: textMuted, align: 'right'
+            });
+        }
+
+        // ────────── SLIDE 2: Executive Summary KPIs ──────────
+        let slide2 = pptx.addSlide();
+        slide2.background = { fill: darkBG };
+        addSlideHeader(slide2, "STRATEGIC KEY METRICS Summary");
+
+        const kpis = [
+            { label: 'ACTIVE STUDENTS', value: activeStudents.toString(), color: 'FFFFFF' },
+            { label: 'COLLECTED REVENUE', value: `₹${collected.toLocaleString()}`, color: '10B981' },
+            { label: 'COLLECTION RATE', value: `${collectionRate}%`, color: 'E8A830' },
+            { label: 'PAST ARREARS', value: `₹${lastDueAmount.toLocaleString()}`, color: 'EF4444' },
+            { label: 'MONTH OUTSTANDING', value: `₹${currPendingAmount.toLocaleString()}`, color: 'EF4444' }
+        ];
+
+        kpis.forEach((kpi, idx) => {
+            const xPos = 0.6 + (idx * 1.76);
+            slide2.addShape('rect', {
+                x: xPos, y: 1.2, w: 1.6, h: 1.8,
+                fill: { color: cardBG },
+                line: { color: '2D2D35', width: 1 }
+            });
+            
+            slide2.addText(kpi.label, {
+                x: xPos, y: 1.4, w: 1.6, h: 0.3,
+                fontSize: 8, fontFace: 'Arial', color: textMuted, bold: true, align: 'center'
+            });
+            
+            slide2.addText(kpi.value, {
+                x: xPos, y: 1.8, w: 1.6, h: 0.6,
+                fontSize: 16, fontFace: 'Arial', color: kpi.color, bold: true, align: 'center'
+            });
+        });
+
+        // AI Summary Narrative panel
+        slide2.addShape('rect', {
+            x: 0.6, y: 3.3, w: 8.8, h: 1.6,
+            fill: { color: '17171C' },
+            line: { color: goldAccent, width: 1 }
+        });
+        
+        const narrativeText = `Reconciliation Note:\nExpected Tuition value stands at ₹${potential.toLocaleString()} with cash capture totaling ₹${collected.toLocaleString()}.\nCoaching roster payroll overhead is ₹${payroll.toLocaleString()} and Expenditures are ₹${totalExp.toLocaleString()}.\nOperating surplus for this period is registered at ₹${netProfit.toLocaleString()}.`;
+        slide2.addText(narrativeText, {
+            x: 0.8, y: 3.4, w: 8.4, h: 1.4,
+            fontSize: 10, fontFace: 'Arial', color: textWhite, lineSpacing: 18
+        });
+
+        addSlideFooter(slide2, 2);
+
+        // ────────── SLIDE 3: Coaching Operations ──────────
+        let slide3 = pptx.addSlide();
+        slide3.background = { fill: darkBG };
+        addSlideHeader(slide3, "COACH OPERATIONS & FEE ROI");
+
+        const headers = [
+            { text: 'Coach Name', options: { bold: true, color: goldAccent, fill: '1F1F27' } },
+            { text: 'Students', options: { bold: true, color: goldAccent, fill: '1F1F27', align: 'center' } },
+            { text: 'Revenue', options: { bold: true, color: goldAccent, fill: '1F1F27', align: 'right' } },
+            { text: 'Salary', options: { bold: true, color: goldAccent, fill: '1F1F27', align: 'right' } },
+            { text: 'Net Return', options: { bold: true, color: goldAccent, fill: '1F1F27', align: 'right' } },
+            { text: 'ROI', options: { bold: true, color: goldAccent, fill: '1F1F27', align: 'right' } }
+        ];
+
+        const rows = coachMetrics.slice(0, 7).map(m => [
+            { text: m.name.toUpperCase(), options: { bold: true } },
+            { text: m.students.toString(), options: { align: 'center' } },
+            { text: `₹${m.revenue.toLocaleString()}`, options: { align: 'right' } },
+            { text: `₹${m.cost.toLocaleString()}`, options: { align: 'right' } },
+            { text: `₹${m.profit.toLocaleString()}`, options: { align: 'right', color: m.profit < 0 ? 'EF4444' : '10B981' } },
+            { text: `${m.roi.toFixed(0)}%`, options: { align: 'right', color: m.profit < 0 ? 'EF4444' : '10B981' } }
+        ]);
+
+        const tableData = [headers, ...rows];
+
+        slide3.addTable(tableData, {
+            x: 0.6, y: 1.1, w: 8.8, h: 3.8,
+            colW: [2.0, 1.0, 1.4, 1.4, 1.5, 1.5],
+            border: { type: 'line', size: 1, color: '2D2D35' },
+            fill: { color: '17171C' },
+            color: 'FFFFFF',
+            fontSize: 9,
+            fontFace: 'Arial'
+        });
+
+        addSlideFooter(slide3, 3);
+
+        // ────────── SLIDE 4: Demographic Distribution Charts ──────────
+        let slide4 = pptx.addSlide();
+        slide4.background = { fill: darkBG };
+        addSlideHeader(slide4, "STUDENT LEVEL & SESSION SEGMENTATION");
+
+        const pptCharts = pptx.charts || pptx.ChartType || {};
+        
+        // 1. Levels bar chart
+        if (pptCharts.BAR) {
+            const chartDataLevel = [{
+                name: 'Student Count',
+                labels: ['Beginner', 'Intermediate', 'Advanced', 'Elite'],
+                values: [levels.Beginner, levels.Intermediate, levels.Advanced, levels.Elite]
+            }];
+            
+            slide4.addChart(pptx.charts.BAR, chartDataLevel, {
+                x: 0.6, y: 1.2, w: 4.2, h: 3.6,
+                showLegend: false,
+                chartColors: ['E8A830'],
+                plotArea: { fill: { color: '17171C' } },
+                title: 'Student Count by Skill Level',
+                titleColor: 'FFFFFF',
+                titleFontSize: 11
+            });
+        }
+
+        // 2. Timings pie chart
+        if (pptCharts.PIE) {
+            const chartDataTime = [{
+                name: 'Session Share',
+                labels: ['Morning', 'Evening', 'Weekend'],
+                values: [timings.Morning, timings.Evening, timings.Weekend]
+            }];
+
+            slide4.addChart(pptx.charts.PIE, chartDataTime, {
+                x: 5.2, y: 1.2, w: 4.2, h: 3.6,
+                showLegend: true,
+                legendColor: 'FFFFFF',
+                legendFontSize: 9,
+                chartColors: ['5A9FFF', '#fbbf24', '10B981'],
+                title: 'Batch Schedule Timings Share',
+                titleColor: 'FFFFFF',
+                titleFontSize: 11
+            });
+        }
+
+        addSlideFooter(slide4, 4);
+
+        // ────────── SLIDE 5: Historical Trends ──────────
+        let slide5 = pptx.addSlide();
+        slide5.background = { fill: darkBG };
+        addSlideHeader(slide5, "MONTHLY COLLECTION RATES (6-MONTH HISTORY)");
+
+        if (pptCharts.LINE) {
+            const lineChartData = [
+                {
+                    name: 'Expected Potential',
+                    labels: monthwiseData.map(m => m.month),
+                    values: monthwiseData.map(m => m.potential)
+                },
+                {
+                    name: 'Verified Captured',
+                    labels: monthwiseData.map(m => m.month),
+                    values: monthwiseData.map(m => m.collected)
+                }
+            ];
+
+            slide5.addChart(pptx.charts.LINE, lineChartData, {
+                x: 0.6, y: 1.2, w: 8.8, h: 3.8,
+                showLegend: true,
+                legendColor: 'FFFFFF',
+                legendFontSize: 9,
+                chartColors: ['E8A830', '10B981'],
+                title: 'Expected Fees Revenue vs Actual Collections',
+                titleColor: 'FFFFFF',
+                titleFontSize: 12
+            });
+        }
+
+        addSlideFooter(slide5, 5);
+
+        // ────────── SLIDE 6: AI FinOps & Audit Insights ──────────
+        let slide6 = pptx.addSlide();
+        slide6.background = { fill: darkBG };
+        addSlideHeader(slide6, "AI GUARDIAN FINOPS & COST AUDIT");
+
+        slide6.addShape('rect', {
+            x: 0.6, y: 1.1, w: 4.2, h: 3.8,
+            fill: { color: '17171C' },
+            line: { color: '2D2D35', width: 1 }
+        });
+
+        slide6.addText("AI FORECAST & BURN RATE", {
+            x: 0.8, y: 1.3, w: 3.8, h: 0.4,
+            fontSize: 13, fontFace: 'Georgia', color: '5A9FFF', bold: true
+        });
+
+        slide6.addText("6-MONTH AVERAGE SPEND", {
+            x: 0.8, y: 1.9, w: 3.8, h: 0.3,
+            fontSize: 9, fontFace: 'Arial', color: textMuted, bold: true
+        });
+
+        slide6.addText(`₹${avgSpend.toLocaleString(undefined, {maximumFractionDigits: 0})}`, {
+            x: 0.8, y: 2.2, w: 3.8, h: 0.4,
+            fontSize: 20, fontFace: 'Arial', color: textWhite, bold: true
+        });
+
+        slide6.addText("PREDICTED NEXT MONTH SPEND", {
+            x: 0.8, y: 2.8, w: 3.8, h: 0.3,
+            fontSize: 9, fontFace: 'Arial', color: textMuted, bold: true
+        });
+
+        slide6.addText(`₹${predictedSpend.toLocaleString(undefined, {maximumFractionDigits: 0})}`, {
+            x: 0.8, y: 3.1, w: 3.8, h: 0.4,
+            fontSize: 20, fontFace: 'Arial', color: goldAccent, bold: true
+        });
+
+        slide6.addText("Burn rate forecast includes a 5% inflation buffer based on moving average.", {
+            x: 0.8, y: 3.7, w: 3.8, h: 0.8,
+            fontSize: 9, fontFace: 'Arial', color: textMuted, italic: true
+        });
+
+        slide6.addShape('rect', {
+            x: 5.2, y: 1.1, w: 4.2, h: 3.8,
+            fill: { color: '17171C' },
+            line: { color: '2D2D35', width: 1 }
+        });
+
+        slide6.addText("AI AUDIT ALERTS (CURRENT PERIOD)", {
+            x: 5.4, y: 1.3, w: 3.8, h: 0.4,
+            fontSize: 13, fontFace: 'Georgia', color: 'EF4444', bold: true
+        });
+
+        let alertsText = "";
+        if (anomalies.length > 0) {
+            alertsText += "⚠️ EXPENDITURE SPIKES DETECTED:\n" + anomalies.slice(0, 2).map(a => `• ${a}`).join("\n") + "\n\n";
+        } else {
+            alertsText += "✅ No category expenditure spikes detected (>150% average).\n\n";
+        }
+        
+        if (duplicates.length > 0) {
+            alertsText += "⚠️ POTENTIAL DUPLICATE BILLINGS:\n" + duplicates.slice(0, 2).map(d => `• ${d}`).join("\n");
+        } else {
+            alertsText += "✅ No potential duplicate bills found.";
+        }
+
+        slide6.addText(alertsText, {
+            x: 5.4, y: 1.9, w: 3.8, h: 2.8,
+            fontSize: 10, fontFace: 'Arial', color: textWhite, lineSpacing: 16
+        });
+
+        addSlideFooter(slide6, 6);
+
+        // ────────── SLIDE 7: Boardroom AI Strategy ──────────
+        let slide7 = pptx.addSlide();
+        slide7.background = { fill: darkBG };
+        addSlideHeader(slide7, "BOARDROOM STRATEGIC RECOMMENDATIONS");
+
+        slide7.addShape('rect', {
+            x: 0.6, y: 1.1, w: 8.8, h: 3.8,
+            fill: { color: '17171C' },
+            line: { color: '2D2D35', width: 1 }
+        });
+
+        const recs = [
+            `1. REVENUE CAPTURE RESOLUTION: Recover the total outstanding arrears of ₹${monthwiseData.reduce((a, m) => a + m.outstanding, 0).toLocaleString()} across past billing periods.`,
+            `2. COACH FACULTY ROSTER MANAGEMENT: Top roster ROI is led by ${coachMetrics.sort((a,b)=>b.roi-a.roi)[0]?.name || 'coaches'}. Adopt their batch models across all classes.`,
+            `3. BATCH CAPACITY DIVERSIFICATION: ${timings.Evening > timings.Morning ? 'Evening sessions are approaching capacity limits' : 'Morning sessions show high utilization'}. Divert incoming student bookings to weekend slots.`
+        ];
+
+        if (anomalies.length > 0 || duplicates.length > 0) {
+            recs.push(`4. FINOPS VENDOR COMPLIANCE: Address the flagged expenditure spikes or duplicate entries on Slide 6 to secure operating margin.`);
+        } else {
+            recs.push(`4. OPERATIONAL COST EFFICIENCY: Cost structures remain stable; continue maintaining the current 6-month budget line.`);
+        }
+
+        recs.forEach((rec, idx) => {
+            slide7.addText(rec, {
+                x: 0.9, y: 1.4 + (idx * 0.85), w: 8.2, h: 0.7,
+                fontSize: 11, fontFace: 'Arial', color: textWhite,
+                bullet: true, lineSpacing: 16
+            });
+        });
+
+        addSlideFooter(slide7, 7);
+
+        // 3. Save File
+        pptx.writeFile({ fileName: `Chesskidoo_Executive_Slides_${monthStr}.pptx` });
+        toast('Presentation generated! PowerPoint slides downloaded. ✨', 'success');
+
+    } catch (err) {
+        console.error(err);
+        toast('PowerPoint generation failed! See console for details.', 'error');
+    }
+};
+
 
 /**
  * AI Neural Link: Compiles a clean snapshot for the AI Assistant.

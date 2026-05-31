@@ -12,6 +12,8 @@
   let isDragging = false;
   let startX = 0;
   let startY = 0;
+  let initialLeft = 0;
+  let initialTop = 0;
 
   window.dragStart = function (e) {
     const calc = document.getElementById('floating-calc');
@@ -24,11 +26,15 @@
     startY = e.clientY;
 
     const rect = calc.getBoundingClientRect();
+    initialLeft = rect.left;
+    initialTop = rect.top;
     
+    // Disable transition to avoid layout delay/lag during dragging
+    calc.style.transition = 'none';
     calc.style.right = 'auto';
     calc.style.bottom = 'auto';
-    calc.style.left = rect.left + 'px';
-    calc.style.top = rect.top + 'px';
+    calc.style.left = initialLeft + 'px';
+    calc.style.top = initialTop + 'px';
 
     document.addEventListener('mousemove', dragMove);
     document.addEventListener('mouseup', dragEnd);
@@ -43,10 +49,8 @@
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
 
-    const rect = calc.getBoundingClientRect();
-    
-    const nextLeft = rect.left + dx;
-    const nextTop = rect.top + dy;
+    const nextLeft = initialLeft + dx;
+    const nextTop = initialTop + dy;
     
     if (nextLeft > 10 && nextLeft < window.innerWidth - 50) {
       calc.style.left = nextLeft + 'px';
@@ -54,15 +58,18 @@
     if (nextTop > 10 && nextTop < window.innerHeight - 50) {
       calc.style.top = nextTop + 'px';
     }
-
-    startX = e.clientX;
-    startY = e.clientY;
   }
 
   function dragEnd() {
+    if (!isDragging) return;
     isDragging = false;
     document.removeEventListener('mousemove', dragMove);
     document.removeEventListener('mouseup', dragEnd);
+    
+    const calc = document.getElementById('floating-calc');
+    if (calc) {
+      calc.style.transition = '';
+    }
   }
 
   // UI Control Logic
@@ -277,6 +284,7 @@
   // ─── Draggable Calculator Toggle Icon Logic ──────────────────────
   let isIconDragging = false;
   let iconStartX = 0, iconStartY = 0;
+  let iconInitialLeft = 0, iconInitialTop = 0;
   let iconIsClick = true;
 
   window.dragStartCalcIcon = function(e) {
@@ -290,10 +298,15 @@
     iconStartY = e.clientY;
 
     const rect = btn.getBoundingClientRect();
+    iconInitialLeft = rect.left;
+    iconInitialTop = rect.top;
+
+    // Temporarily turn off transitions during dragging
+    btn.style.transition = 'none';
     btn.style.right = 'auto';
     btn.style.bottom = 'auto';
-    btn.style.left = rect.left + 'px';
-    btn.style.top = rect.top + 'px';
+    btn.style.left = iconInitialLeft + 'px';
+    btn.style.top = iconInitialTop + 'px';
 
     document.addEventListener('mousemove', dragMoveCalcIcon);
     document.addEventListener('mouseup', dragEndCalcIcon);
@@ -312,9 +325,8 @@
       iconIsClick = false; // it's a drag
     }
 
-    const rect = btn.getBoundingClientRect();
-    const nextLeft = rect.left + dx;
-    const nextTop = rect.top + dy;
+    const nextLeft = iconInitialLeft + dx;
+    const nextTop = iconInitialTop + dy;
     
     if (nextLeft > 0 && nextLeft < window.innerWidth - 60) {
       btn.style.left = nextLeft + 'px';
@@ -322,9 +334,6 @@
     if (nextTop > 0 && nextTop < window.innerHeight - 60) {
       btn.style.top = nextTop + 'px';
     }
-
-    iconStartX = e.clientX;
-    iconStartY = e.clientY;
   }
 
   function dragEndCalcIcon(e) {
@@ -332,6 +341,11 @@
     isIconDragging = false;
     document.removeEventListener('mousemove', dragMoveCalcIcon);
     document.removeEventListener('mouseup', dragEndCalcIcon);
+    
+    const btn = document.getElementById('calc-toggle-btn');
+    if (btn) {
+      btn.style.transition = '';
+    }
     
     if (iconIsClick) {
       toggleCalculator();

@@ -148,6 +148,7 @@ function escapeHtml(text) {
 (function() {
     let isDragging = false;
     let startX = 0, startY = 0;
+    let initialLeft = 0, initialTop = 0;
     let isClick = true;
 
     window.dragStartBot = function(e) {
@@ -161,10 +162,15 @@ function escapeHtml(text) {
         startY = e.clientY;
 
         const rect = btn.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+
+        // Temporarily turn off transitions during dragging
+        btn.style.transition = 'none';
         btn.style.right = 'auto';
         btn.style.bottom = 'auto';
-        btn.style.left = rect.left + 'px';
-        btn.style.top = rect.top + 'px';
+        btn.style.left = initialLeft + 'px';
+        btn.style.top = initialTop + 'px';
 
         document.addEventListener('mousemove', dragMoveBot);
         document.addEventListener('mouseup', dragEndBot);
@@ -183,9 +189,8 @@ function escapeHtml(text) {
             isClick = false; // it's a drag
         }
 
-        const rect = btn.getBoundingClientRect();
-        const nextLeft = rect.left + dx;
-        const nextTop = rect.top + dy;
+        const nextLeft = initialLeft + dx;
+        const nextTop = initialTop + dy;
         
         if (nextLeft > 0 && nextLeft < window.innerWidth - 60) {
             btn.style.left = nextLeft + 'px';
@@ -193,9 +198,6 @@ function escapeHtml(text) {
         if (nextTop > 0 && nextTop < window.innerHeight - 60) {
             btn.style.top = nextTop + 'px';
         }
-
-        startX = e.clientX;
-        startY = e.clientY;
     }
 
     function dragEndBot(e) {
@@ -204,6 +206,11 @@ function escapeHtml(text) {
         document.removeEventListener('mousemove', dragMoveBot);
         document.removeEventListener('mouseup', dragEndBot);
         
+        const btn = document.getElementById('ai-chat-btn');
+        if (btn) {
+            btn.style.transition = '';
+        }
+
         if (isClick) {
             toggleChat();
         }
@@ -217,4 +224,62 @@ function escapeHtml(text) {
             btn.addEventListener('mousedown', dragStartBot);
         }
     });
+
+    window.generateContextualInsight = async function (context, contextId) {
+        let msg = "";
+        let elemId = "";
+        let containerId = "";
+        const student = window.students ? window.students.find(s => s.id == contextId) : null;
+        
+        if (context === 'schedule') {
+            msg = `Analyze the schedule for student ${student ? student.name : 'Unknown'}. Check for time conflicts and suggest best practices for the coach. Keep it under 2 short sentences.`;
+            elemId = 'sch-ai-insight-content';
+            containerId = 'schedule-ai-insight';
+        } else if (context === 'child_schedule') {
+            msg = `Analyze the schedule for student ${student ? student.name : 'Unknown'} and provide a brief encouraging message for the parent about the upcoming class schedule. Keep it under 2 short sentences.`;
+            elemId = 'child-schedule-ai-insight-text';
+            containerId = 'child-schedule-ai-insight';
+        } else if (context === 'child_overview') {
+            msg = `Provide a very brief 1-sentence supportive progress insight for the parent of ${student ? student.name : 'Unknown'} based on their current level.`;
+            elemId = 'child-overview-ai-insight-text';
+            containerId = 'child-overview-ai-insight';
+        }
+
+        if (!msg) return;
+        
+        const textEl = document.getElementById(elemId);
+        const containerEl = document.getElementById(containerId);
+        
+        if (containerEl) containerEl.style.display = 'block';
+        if (textEl) textEl.innerHTML = '<span class="spinner" style="width:14px;height:14px;"></span> Generating AI Insight...';
+
+        try {
+            const callApi = (url, opts) => {
+                if (typeof window.apiCall === 'function') return window.apiCall(url, opts);
+                return fetch(url, opts);
+            };
+
+            const snapshot = window.getAcademySnapshot ? window.getAcademySnapshot() : null;
+
+            const res = await callApi('/api/ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: msg,
+                    role: window.role || 'admin',
+                    context: snapshot || { status: 'contextual_insight' },
+                    systemPrompt: "You are TOM AI, the Chesskidoo Academy Advisor. Provide a very short, direct, and helpful insight based on the prompt. No pleasantries, just the insight."
+                })
+            });
+
+            if (!res || !res.ok) throw new Error('AI request failed');
+            const data = await res.json();
+            
+            if (textEl) textEl.innerHTML = data.message || 'Insight generated.';
+        } catch (e) {
+            console.warn('[AI Insight Failed]', e);
+            if (textEl) textEl.innerHTML = 'AI analysis temporarily unavailable.';
+        }
+    };
+
 })();

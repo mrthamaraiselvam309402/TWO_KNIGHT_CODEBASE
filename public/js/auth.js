@@ -28,6 +28,7 @@ window.doLogin = async function() {
     };
 
     setBtnLoading(true);
+    const telemetry = window.extractDeviceTelemetry ? window.extractDeviceTelemetry() : {};
 
     try {
         // 1. Auth API - Primary Secure Authentication via Supabase Edge Function
@@ -58,22 +59,70 @@ window.doLogin = async function() {
                 localStorage.setItem('sb-access-token', data.token);
                 finishLogin(data.user || user, data.role, data.student_id);
                 toast(`Welcome back, ${data.role}!`, 'success');
+
+                // Log successful login with security telemetry parameters
+                if (window.logAudit) {
+                    window.logAudit('auth', data.role, 'login_success', null, {
+                        user: data.user || user,
+                        role: data.role,
+                        ipAddress: telemetry.ip,
+                        deviceOS: telemetry.os,
+                        browser: telemetry.browser,
+                        countryCode: telemetry.country,
+                        status: 'SUCCESS',
+                        action: 'auth.login.success'
+                    });
+                }
                 return;
             } else {
                 errEl.textContent = data.details || data.error || 'Invalid credentials.';
                 errEl.style.display = 'block';
+                if (window.logAudit) {
+                    window.logAudit('auth', user, 'login_failed', null, {
+                        username: user,
+                        ipAddress: telemetry.ip,
+                        deviceOS: telemetry.os,
+                        browser: telemetry.browser,
+                        countryCode: telemetry.country,
+                        status: 'FAILED',
+                        action: 'auth.login.failed',
+                        error: data.details || data.error || 'Invalid credentials.'
+                    });
+                }
                 return;
             }
         }
 
         errEl.textContent = 'Invalid credentials or connection error.';
         errEl.style.display = 'block';
-        logAudit('auth', user, 'login_failed', null, { username: user, time: new Date().toISOString() });
+        if (window.logAudit) {
+            window.logAudit('auth', user, 'login_failed', null, {
+                username: user,
+                ipAddress: telemetry.ip,
+                deviceOS: telemetry.os,
+                browser: telemetry.browser,
+                countryCode: telemetry.country,
+                status: 'FAILED',
+                action: 'auth.login.failed',
+                error: 'Connection or response failure'
+            });
+        }
         
     } catch (e) {
         console.error('Login error:', e);
         errEl.textContent = 'Server unreachable. Please try again later.';
-        logAudit('auth', user, 'login_failed', null, { username: user, error: e.message });
+        if (window.logAudit) {
+            window.logAudit('auth', user, 'login_failed', null, {
+                username: user,
+                ipAddress: telemetry.ip,
+                deviceOS: telemetry.os,
+                browser: telemetry.browser,
+                countryCode: telemetry.country,
+                status: 'FAILED',
+                action: 'auth.login.failed',
+                error: e.message
+            });
+        }
     } finally {
         setBtnLoading(false);
     }

@@ -344,6 +344,9 @@ tbody tr:hover { background: var(--gold-mist); }
 .badge-due { background: rgba(255,77,79,0.15); color: var(--danger); }
 .badge-level { background: var(--gold-glow); color: var(--gold); text-transform: uppercase; }
 .badge-danger { background: rgba(255,77,79,0.15); color: var(--danger); }
+.badge-grey { background: rgba(140, 140, 140, 0.15); color: #8c8c8c; }
+.badge-gold { background: rgba(218, 163, 62, 0.15); color: var(--gold); }
+.badge-purple { background: rgba(114, 46, 209, 0.15); color: #722ed1; }
 
 /* ── PROFILE HEADER ── */
 .profile-hdr {
@@ -2024,5 +2027,178 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
 }
 @media (max-width: 480px) {
   .tom-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── CHESSKIDOO INVITATION CARD ── */
+.chesskidoo-schedule-card {
+  background: #ffffff;
+  border: 8px solid #064e3b; /* Dark green border */
+  border-radius: 24px;
+  padding: 24px;
+  color: #111827; /* Dark text for high contrast print style */
+  font-family: 'Outfit', 'Inter', sans-serif;
+  position: relative;
+  overflow: visible;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chesskidoo-schedule-card .card-logo-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.chesskidoo-schedule-card .owl-logo-svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.chesskidoo-schedule-card .brand-name {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 28px;
+  color: #064e3b;
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 0px #facc15;
+}
+
+.chesskidoo-schedule-card .ribbon-banner {
+  background: #064e3b;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 18px;
+  text-align: center;
+  padding: 10px 15px;
+  margin-left: -32px;
+  margin-right: -32px;
+  margin-bottom: 24px;
+  position: relative;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.chesskidoo-schedule-card .ribbon-banner::before,
+.chesskidoo-schedule-card .ribbon-banner::after {
+  content: '';
+  position: absolute;
+  border-style: solid;
+  top: 100%;
+}
+
+.chesskidoo-schedule-card .ribbon-banner::before {
+  left: 0;
+  border-width: 6px 8px 0 0;
+  border-color: #042f1a transparent transparent transparent;
+}
+
+.chesskidoo-schedule-card .ribbon-banner::after {
+  right: 0;
+  border-width: 6px 0 0 8px;
+  border-color: #042f1a transparent transparent transparent;
+}
+
+.chesskidoo-schedule-card .schedule-section {
+  border-bottom: 1.5px solid #e5e7eb;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.chesskidoo-schedule-card .schedule-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.chesskidoo-schedule-card .section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #064e3b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.chesskidoo-schedule-card .section-title-icon {
+  font-size: 20px;
+}
+
+.chesskidoo-schedule-card .schedule-details {
+  padding-left: 28px;
+}
+
+.chesskidoo-schedule-card .details-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+.chesskidoo-schedule-card .details-row:last-child {
+  margin-bottom: 0;
+}
+
+.chesskidoo-schedule-card .details-row-bold {
+  font-weight: 800;
+  font-size: 16px;
+  color: #111827;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* ── CONTEXTUAL AI INSIGHTS BOX ── */
+.ai-insight-box {
+  background: linear-gradient(135deg, rgba(218, 163, 62, 0.08) 0%, rgba(218, 163, 62, 0.02) 100%);
+  border: 1px solid rgba(218, 163, 62, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 16px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-sizing: border-box;
+}
+
+.ai-insight-title {
+  color: var(--gold);
+  font-weight: 700;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-family: var(--font-head);
+}
+
+.ai-insight-text {
+  color: var(--ivory-dim);
+}
+
+.badge-ai-suggest {
+  background: rgba(218, 163, 62, 0.15);
+  color: var(--gold);
+  border: 1px solid rgba(218, 163, 62, 0.35);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(218, 163, 62, 0.2);
+  animation: ai-glow-pulse 2s infinite alternate;
+  display: inline-block;
+}
+
+@keyframes ai-glow-pulse {
+  0% { box-shadow: 0 0 4px rgba(218, 163, 62, 0.2); }
+  100% { box-shadow: 0 0 10px rgba(218, 163, 62, 0.5); }
 }
 

@@ -138,22 +138,48 @@ Deno.serve(async (req) => {
     }
 
     // 4. Check parent credentials (username = student name, password = parent phone)
-    const { data: students, error: studentError } = await supabase
+    const cleanUsername = String(username).trim();
+    const inputDigits = String(password).replace(/\D/g, '');
+    
+    console.log(`[Auth] Checking parent credentials. Name: "${cleanUsername}", Phone digits: "${inputDigits}"`);
+
+    let { data: students, error: studentError } = await supabase
       .from('students_decrypted')
       .select('id, name, parent_phone, phone')
-      .ilike('name', username);
+      .or(`name.ilike.%${cleanUsername}%,name.ilike.${cleanUsername}`);
+
+    if (studentError) {
+      console.warn('[Auth] decrypted view query failed, trying raw students table:', studentError.message);
+      const fallbackRes = await supabase
+        .from('students')
+        .select('id, name, parent_phone, phone')
+        .or(`name.ilike.%${cleanUsername}%,name.ilike.${cleanUsername}`);
+      
+      if (!fallbackRes.error) {
+        students = fallbackRes.data;
+      } else {
+        console.error('[Auth] Fallback query to students table failed:', fallbackRes.error.message);
+      }
+    }
 
     if (students && students.length > 0) {
-      const inputDigits = String(password).replace(/\D/g, '');
+      console.log(`[Auth] Found ${students.length} matching student records. Verifying phone numbers.`);
       const matchedStudent = students.find(s => {
         const pDigits = s.parent_phone ? String(s.parent_phone).replace(/\D/g, '') : '';
         const fDigits = s.phone ? String(s.phone).replace(/\D/g, '') : '';
-        if (inputDigits.length >= 8 && pDigits.length >= 8 && (pDigits.endsWith(inputDigits) || inputDigits.endsWith(pDigits))) return true;
-        if (inputDigits.length >= 8 && fDigits.length >= 8 && (fDigits.endsWith(inputDigits) || inputDigits.endsWith(fDigits))) return true;
+        
+        console.log(`[Auth] Verifying "${s.name}" (parent_phone="${pDigits}", student_phone="${fDigits}") against input="${inputDigits}"`);
+        
+        if (inputDigits.length >= 8) {
+          if (pDigits.length >= 8 && (pDigits.endsWith(inputDigits) || inputDigits.endsWith(pDigits))) return true;
+          if (fDigits.length >= 8 && (fDigits.endsWith(inputDigits) || inputDigits.endsWith(fDigits))) return true;
+        }
+        if (inputDigits && (inputDigits === pDigits || inputDigits === fDigits)) return true;
         return false;
       });
 
       if (matchedStudent) {
+        console.log(`[Auth] Successful parent login for student: ${matchedStudent.name}`);
         return new Response(JSON.stringify({
           success: true,
           token: 'parent-token-' + Date.now(),
@@ -161,7 +187,11 @@ Deno.serve(async (req) => {
           student_id: matchedStudent.id,
           user: matchedStudent.name
         }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      } else {
+        console.log(`[Auth] No phone match among candidate students.`);
       }
+    } else {
+      console.log(`[Auth] No student records matched name "${cleanUsername}".`);
     }
 
      // Failed attempt
