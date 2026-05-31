@@ -9213,6 +9213,7 @@ Best regards,
     });
 
     // --- 3. Arrears Alerts (> 2 months outstanding) ---
+    const arrearsDetails = [];
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
     const baseline = new Date(Date.UTC(2026, 3, 1));
@@ -9247,6 +9248,7 @@ Best regards,
       if (outstandingMonths >= 2) {
         const fee = getStudentMonthlyFee(s) || 0;
         const totalOwed = fee * outstandingMonths;
+        arrearsDetails.push({ name: getStudentName(s), owed: totalOwed });
         generatedInsights.push({
           type: 'arrears',
           icon: '💸',
@@ -9276,7 +9278,105 @@ Best regards,
       if (document.getElementById('ins-att-count')) document.getElementById('ins-att-count').textContent = attCount;
       if (document.getElementById('ins-arrears-count')) document.getElementById('ins-arrears-count').textContent = arrearsCount;
       renderInsightsList();
+      renderInsightsCharts(promoCount, attCount, arrearsCount, arrearsDetails, generatedInsights);
     }
+  }
+
+  function renderInsightsCharts(promoCount, attCount, arrearsCount, arrearsDetails, insights) {
+      if (!window.Chart) return;
+      if (!window.insightsCharts) window.insightsCharts = {};
+
+      const destroyChart = (id) => {
+          if (window.insightsCharts[id]) window.insightsCharts[id].destroy();
+      };
+
+      // 1. Distribution Chart
+      const ctxDist = document.getElementById('chartInsightsDistribution');
+      if (ctxDist) {
+          destroyChart('dist');
+          window.insightsCharts['dist'] = new Chart(ctxDist, {
+              type: 'doughnut',
+              data: {
+                  labels: ['Promotions', 'Attendance', 'Arrears', 'General'],
+                  datasets: [{
+                      data: [promoCount, attCount, arrearsCount, insights.filter(x => x.type === 'all' && x.severity === 'info').length],
+                      backgroundColor: ['#daa33e', '#ff4d4f', '#cf1322', '#52c41a'],
+                      borderWidth: 0,
+                      hoverOffset: 4
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { position: 'bottom', labels: { color: '#bbb' } } },
+                  cutout: '70%'
+              }
+          });
+      }
+
+      // 2. Promotions Chart
+      const ctxPromo = document.getElementById('chartInsightsPromotions');
+      if (ctxPromo) {
+          const promoLevels = { Elite: 0, Advanced: 0, Intermediate: 0, Beginner: 0 };
+          insights.filter(x => x.type === 'promotion').forEach(ins => {
+              if (ins.text.includes('Elite')) promoLevels.Elite++;
+              else if (ins.text.includes('Advanced')) promoLevels.Advanced++;
+              else if (ins.text.includes('Intermediate')) promoLevels.Intermediate++;
+              else promoLevels.Beginner++;
+          });
+
+          destroyChart('promo');
+          window.insightsCharts['promo'] = new Chart(ctxPromo, {
+              type: 'bar',
+              data: {
+                  labels: ['Elite', 'Advanced', 'Intermediate', 'Beginner'],
+                  datasets: [{
+                      label: 'Candidates',
+                      data: [promoLevels.Elite, promoLevels.Advanced, promoLevels.Intermediate, promoLevels.Beginner],
+                      backgroundColor: '#daa33e',
+                      borderRadius: 4
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                      y: { ticks: { color: '#bbb', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                      x: { ticks: { color: '#bbb' }, grid: { display: false } }
+                  }
+              }
+          });
+      }
+
+      // 3. Arrears Chart
+      const ctxArrears = document.getElementById('chartInsightsArrears');
+      if (ctxArrears) {
+          const topArrears = arrearsDetails.sort((a, b) => b.owed - a.owed).slice(0, 5);
+          destroyChart('arrears');
+          window.insightsCharts['arrears'] = new Chart(ctxArrears, {
+              type: 'bar',
+              data: {
+                  labels: topArrears.length ? topArrears.map(a => a.name) : ['None'],
+                  datasets: [{
+                      label: 'Owed (₹)',
+                      data: topArrears.length ? topArrears.map(a => a.owed) : [0],
+                      backgroundColor: '#ff4d4f',
+                      borderRadius: 4
+                  }]
+              },
+              options: {
+                  indexAxis: 'y',
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                      x: { ticks: { color: '#bbb' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                      y: { ticks: { color: '#bbb' }, grid: { display: false } }
+                  }
+              }
+          });
+      }
   }
 
   function renderInsightsList() {
