@@ -49,19 +49,19 @@
   }
 
   async function loadAdminTodos() {
-    if (window.supabaseClient) {
+    if (window.supabaseClient && !window.sbTableKnownMissing('productivity_tasks')) {
       try {
         const { data, error } = await window.supabaseClient
           .from('productivity_tasks')
           .select('*')
           .is('student_id', null)
           .order('created_at', { ascending: true });
-        
+
         if (error) {
-          if (error.code === '42P01') {
-            console.warn('[Supabase] productivity_tasks table missing. Falling back to LocalStorage caching.');
+          if (window.sbIsTableMissing(error)) {
+            window.sbMarkTableMissing('productivity_tasks');
           } else {
-            console.error('[Supabase] Error loading admin tasks:', error);
+            console.warn('[Supabase] Admin tasks unavailable, using local cache.');
           }
           adminTodos = getAdminTodosFromLocal();
         } else {
@@ -270,13 +270,14 @@
 
     clearTimeout(adminNotesTimeout);
     adminNotesTimeout = setTimeout(async () => {
-      if (window.supabaseClient) {
+      if (window.supabaseClient && !window.sbTableKnownMissing('productivity_notes')) {
         try {
-          await window.supabaseClient
+          const { error } = await window.supabaseClient
             .from('productivity_notes')
             .upsert({ student_id: 'admin', notes: val }, { onConflict: 'student_id' });
+          if (error && window.sbIsTableMissing(error)) window.sbMarkTableMissing('productivity_notes');
         } catch (e) {
-          console.warn('[Supabase] Notepad save error:', e);
+          if (window.sbIsTableMissing(e)) window.sbMarkTableMissing('productivity_notes');
         }
       }
     }, 1000);
@@ -286,7 +287,7 @@
     const el = document.getElementById('productivity-notepad');
     if (!el) return;
 
-    if (window.supabaseClient) {
+    if (window.supabaseClient && !window.sbTableKnownMissing('productivity_notes')) {
       try {
         const { data, error } = await window.supabaseClient
           .from('productivity_notes')
@@ -294,13 +295,15 @@
           .eq('student_id', 'admin')
           .maybeSingle();
 
-        if (!error && data) {
+        if (error && window.sbIsTableMissing(error)) {
+          window.sbMarkTableMissing('productivity_notes');
+        } else if (!error && data) {
           el.value = data.notes;
           localStorage.setItem('chesskidoo_admin_notes', data.notes);
           return;
         }
       } catch (e) {
-        console.warn('[Supabase] Notepad load error:', e);
+        if (window.sbIsTableMissing(e)) window.sbMarkTableMissing('productivity_notes');
       }
     }
     el.value = localStorage.getItem('chesskidoo_admin_notes') || '';
@@ -321,7 +324,7 @@
   }
 
   async function loadScheduledMeetings() {
-    if (window.supabaseClient) {
+    if (window.supabaseClient && !window.sbTableKnownMissing('scheduled_meetings')) {
       try {
         const { data, error } = await window.supabaseClient
           .from('scheduled_meetings')
@@ -329,10 +332,10 @@
           .order('time', { ascending: true });
 
         if (error) {
-          if (error.code === '42P01') {
-            console.warn('[Supabase] scheduled_meetings table missing. Falling back to LocalStorage.');
+          if (window.sbIsTableMissing(error)) {
+            window.sbMarkTableMissing('scheduled_meetings');
           } else {
-            console.error('[Supabase] Error loading meetings:', error);
+            console.warn('[Supabase] Meetings unavailable, using local cache.');
           }
           scheduledMeetings = getScheduledMeetingsFromLocal();
         } else {
@@ -556,7 +559,7 @@
       return;
     }
 
-    if (window.supabaseClient) {
+    if (window.supabaseClient && !window.sbTableKnownMissing('productivity_tasks')) {
       try {
         const { data, error } = await window.supabaseClient
           .from('productivity_tasks')
@@ -565,7 +568,11 @@
           .order('created_at', { ascending: true });
 
         if (error) {
-          if (error.code !== '42P01') console.error('[Supabase] Error loading child tasks:', error);
+          if (window.sbIsTableMissing(error)) {
+            window.sbMarkTableMissing('productivity_tasks');
+          } else {
+            console.warn('[Supabase] Child tasks unavailable, using local cache.');
+          }
           childTodos = getChildTodosFromLocal();
         } else {
           childTodos = data || [];
@@ -811,13 +818,14 @@
 
     clearTimeout(childNotesTimeout);
     childNotesTimeout = setTimeout(async () => {
-      if (window.supabaseClient) {
+      if (window.supabaseClient && !window.sbTableKnownMissing('productivity_notes')) {
         try {
-          await window.supabaseClient
+          const { error } = await window.supabaseClient
             .from('productivity_notes')
             .upsert({ student_id: activeId, notes: val }, { onConflict: 'student_id' });
+          if (error && window.sbIsTableMissing(error)) window.sbMarkTableMissing('productivity_notes');
         } catch (e) {
-          console.warn('[Supabase] Child notes save error:', e);
+          if (window.sbIsTableMissing(e)) window.sbMarkTableMissing('productivity_notes');
         }
       }
     }, 1000);
@@ -833,7 +841,7 @@
       return;
     }
 
-    if (window.supabaseClient) {
+    if (window.supabaseClient && !window.sbTableKnownMissing('productivity_notes')) {
       try {
         const { data, error } = await window.supabaseClient
           .from('productivity_notes')
@@ -841,13 +849,15 @@
           .eq('student_id', activeId)
           .maybeSingle();
 
-        if (!error && data) {
+        if (error && window.sbIsTableMissing(error)) {
+          window.sbMarkTableMissing('productivity_notes');
+        } else if (!error && data) {
           el.value = data.notes;
           localStorage.setItem('chesskidoo_child_notes_' + activeId, data.notes);
           return;
         }
       } catch (e) {
-        console.warn('[Supabase] Child notes load error:', e);
+        if (window.sbIsTableMissing(e)) window.sbMarkTableMissing('productivity_notes');
       }
     }
     const key = 'chesskidoo_child_notes_' + activeId;

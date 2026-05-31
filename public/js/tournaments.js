@@ -198,6 +198,7 @@
   ];
 
   let tournamentsData = [];
+  let tournamentsLoaded = false;
 
   // Client position tracking (defaults to Chennai center)
   let userLat = 13.0827;
@@ -219,7 +220,8 @@
 
   // ─── Fetch Tournaments from Supabase (with fallback) ─────────────
   async function loadTournaments() {
-    if (window.supabaseClient) {
+    if (tournamentsLoaded && tournamentsData.length > 0) return;
+    if (window.supabaseClient && !(window.sbTableKnownMissing && window.sbTableKnownMissing('tournaments'))) {
       try {
         const { data, error } = await window.supabaseClient
           .from('tournaments')
@@ -227,12 +229,13 @@
           .order('start_date', { ascending: true });
 
         if (error) {
-          if (error.code === '42P01') {
-            console.warn('[Supabase] tournaments table missing. Using Local Mock database.');
+          if (window.sbIsTableMissing && window.sbIsTableMissing(error)) {
+            window.sbMarkTableMissing('tournaments');
           } else {
-            console.error('[Supabase] Error loading tournaments:', error);
+            console.warn('[Supabase] Tournaments unavailable, using local data.');
           }
           tournamentsData = LOCAL_TOURNAMENTS_FALLBACK;
+          tournamentsLoaded = true;
         } else {
           // Map database structure to client structure
           tournamentsData = (data || []).map(t => {
@@ -252,13 +255,16 @@
               regLink: t.registration_url || 'https://aicf.in'
             };
           });
+          tournamentsLoaded = true;
         }
       } catch (e) {
         console.warn('[Supabase] Failed to fetch tournaments. Local fallback:', e);
         tournamentsData = LOCAL_TOURNAMENTS_FALLBACK;
+        tournamentsLoaded = true;
       }
     } else {
       tournamentsData = LOCAL_TOURNAMENTS_FALLBACK;
+      tournamentsLoaded = true;
     }
   }
 

@@ -158,18 +158,9 @@ window.deleteUserAccess = async function(id, email) {
     }
 };
 
-// Hook into existing navigation if possible
-const origSetPage = window.setPage;
-window.setPage = function(page) {
-    origSetPage(page);
-    if (page === 'access') {
-        loadAccessControl();
-        loadAuditLogs();
-        startSecurityLogsSimulation();
-    } else {
-        stopSecurityLogsSimulation();
-    }
-};
+// Navigation hook for the Access Control page is handled centrally in
+// scripts.js setPage() (loadAccessControl / loadAuditLogs / security logs),
+// because scripts.js loads after this file and reassigns window.setPage.
 
 // =========================================================================
 // Real-Time Threat Intelligence & Security Logs (Vanilla Virtualization)

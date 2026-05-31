@@ -3688,6 +3688,13 @@ function initUI() {
       if (p === 'exp' && window.initExpPage) window.initExpPage();
       if (p === 'schedules' && window.initSchedulePage) window.initSchedulePage();
       if (p === 'productivity' && window.initProductivityPage) window.initProductivityPage();
+      if (p === 'access') {
+        if (window.loadAccessControl) window.loadAccessControl();
+        if (window.loadAuditLogs) window.loadAuditLogs();
+        if (window.startSecurityLogsSimulation) window.startSecurityLogsSimulation();
+      } else {
+        if (window.stopSecurityLogsSimulation) window.stopSecurityLogsSimulation();
+      }
       if (p === 'ai') {
         if(window.updateTomKpis) window.updateTomKpis();
         if(window.initSmartPills) window.initSmartPills();
@@ -3755,6 +3762,7 @@ function initUI() {
 
   function finishLogin(displayName, userRole, studentId) {
     role = userRole;
+    window.role = userRole; // keep window in sync for modules (access.js, etc.) on both fresh login & session restore
     recordSession('login');
     logAudit('auth', userRole, 'login_success', null, { user: displayName, role: userRole });
     if (userRole === 'admin' || userRole === 'master') {
@@ -7587,6 +7595,7 @@ Best regards,
           if (idx !== -1) window.allStudents[idx] = { ...window.allStudents[idx], ...payload };
         }
         currentStudent = { ...s, ...payload };
+        window.currentStudent = currentStudent;
         renderChild();
         loadAllData(true);
       } else { toast('Failed to save details', 'error'); }

@@ -27,7 +27,7 @@
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
   <!-- X-Frame-Options must be an HTTP header, not a meta tag — set in vercel.json -->
 
-  <script src="js/config.js?t=20260504_1948"></script>
+  <script src="js/config.js?t=20260531"></script>
 
   <script src="js/avatar-utils.js"></script>
 </head>
@@ -127,7 +127,7 @@
     <div class="nav-item admin-only" id="nav-bills" onclick="setPage('bills')"><span class="ico">💳</span> Payments</div>
     <div class="nav-item admin-only" id="nav-insights" onclick="setPage('insights')"><span class="ico">💡</span> AI Insights</div>
     <div class="nav-item admin-only" id="nav-exp" onclick="setPage('exp')"><span class="ico">💸</span> Expenditures</div>
-    <div class="nav-item master-only admin-only" id="nav-access" onclick="setPage('access')"><span class="ico">🔐</span> Access Control</div>
+    <div class="nav-item admin-only" id="nav-access" onclick="setPage('access')"><span class="ico">🔐</span> Access Control</div>
     <div class="nav-item admin-only" id="nav-productivity" onclick="setPage('productivity')"><span class="ico">📝</span> Productivity</div>
     <div class="nav-item admin-only" id="nav-msgs" onclick="setPage('msgs')"><span class="ico">💬</span> Messages <span id="msg-badge" class="badge badge-level" style="display:none;margin-left:8px">0</span></div>
     <div class="nav-item admin-only" id="nav-ai" onclick="setPage('ai')"><span class="ico">🤖</span> TOM AI</div>
@@ -169,52 +169,52 @@
       
       <!-- AI Insights Feed has been moved to its own page -->
 
-      <div class="dash-grid" style="margin-bottom:24px">
+      <div class="dash-grid" style="margin-bottom:14px">
         <div class="card card-clickable" onclick="setPage('stud')"><div class="stat-label">Total Students</div><div class="stat-value" id="s-total">—</div></div>
         <div class="card"><div class="stat-label">Avg Academy ELO</div><div class="stat-value" id="s-elo">—</div></div>
         <div class="card card-clickable" onclick="setPage('coach-mgmt')"><div class="stat-label">Active Coaches</div><div class="stat-value" id="s-coaches">—</div></div>
       </div>
-      <div class="dash-grid" style="margin-bottom:24px">
+      <div class="dash-grid" style="margin-bottom:14px">
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Collected Revenue</div><div class="stat-value text-success" id="s-rev">—</div></div>
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Revenue Growth (MoM)</div><div class="stat-value" id="s-due">—</div></div>
         <div class="card"><div class="stat-label">Collection Rate</div><div class="stat-value" style="color:var(--blue)" id="s-rate">—</div></div>
       </div>
-      <div class="dash-grid" style="margin-bottom:24px">
+      <div class="dash-grid" style="margin-bottom:14px">
         <div class="card"><div class="stat-label">Projected Revenue</div><div class="stat-value" style="color:var(--blue)" id="s-total-revenue">—</div></div>
         <div class="card"><div class="stat-label">Total Coach Cost</div><div class="stat-value" style="color:var(--danger)" id="s-total-cost">—</div></div>
         <div class="card card-clickable" onclick="setPage('exp')"><div class="stat-label">Total Academy Expenditures</div><div class="stat-value" style="color:var(--danger)" id="s-profit">—</div></div>
       </div>
-      <div class="dash-grid" style="margin-bottom:24px">
+      <div class="dash-grid" style="margin-bottom:14px">
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Historical Arrears</div><div class="stat-value text-danger" id="s-last-due">₹0</div></div>
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Month Pending</div><div class="stat-value" style="color:var(--gold)" id="s-curr-pending">₹0</div></div>
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Total Outstanding</div><div class="stat-value text-danger" id="s-total-outstanding">₹0</div></div>
       </div>
-      <div class="dash-grid" style="margin-bottom:32px">
+      <div class="dash-grid" style="margin-bottom:20px">
         <div class="card"><div class="stat-label">Active Enrollments</div><div class="stat-value" style="color:var(--emerald)" id="s-active-enroll">—</div></div>
         <div class="card"><div class="stat-label">Group Sessions</div><div class="stat-value" id="s-group">—</div></div>
         <div class="card"><div class="stat-label">Single Sessions</div><div class="stat-value" id="s-single">—</div></div>
       </div>
 
       <!-- Golden State: Attendance Insights -->
-      <h3 style="color:var(--gold);margin-bottom:18px;font-family:var(--font-head);letter-spacing:1px">Today's Attendance Insights</h3>
-      <div class="dash-grid" style="margin-bottom:32px">
+      <h3 style="color:var(--gold);margin-bottom:12px;font-family:var(--font-head);letter-spacing:1px">Today's Attendance Insights</h3>
+      <div class="dash-grid" style="margin-bottom:20px">
         <div class="card"><div class="stat-label">Present Today</div><div class="stat-value text-success" id="s-att-present">0</div></div>
         <div class="card"><div class="stat-label">Absent Today</div><div class="stat-value text-danger" id="s-att-absent">0</div></div>
         <div class="card"><div class="stat-label">Class Pending</div><div class="stat-value" style="color:var(--surface3)" id="s-att-pending">0</div></div>
       </div>
 
-      <div class="dash-charts" style="margin-bottom: 24px;">
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Enrollment Trend</h3><div class="chart-container chart-revenue" style="position:relative;width:100%"><canvas id="chartRevenue"></canvas></div></div>
-        <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Coach Load</h3><div class="chart-container chart-coach" style="position:relative;width:100%"><canvas id="chartCoach"></canvas></div></div>
+      <div class="dash-charts" style="margin-bottom: 16px;">
+        <div class="card"><h3 style="margin-bottom:14px;color:var(--gold)">Enrollment Trend</h3><div class="chart-container chart-revenue" style="position:relative;width:100%"><canvas id="chartRevenue"></canvas></div></div>
+        <div class="card"><h3 style="margin-bottom:14px;color:var(--gold)">Coach Load</h3><div class="chart-container chart-coach" style="position:relative;width:100%"><canvas id="chartCoach"></canvas></div></div>
       </div>
-      <div class="dash-charts" style="margin-bottom: 32px;">
+      <div class="dash-charts" style="margin-bottom: 20px;">
         <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Collection Split & Status</h3><div class="chart-container chart-payment" style="position:relative;width:100%"><canvas id="chartPayment"></canvas></div></div>
         <div class="card" style="display: none;"><h3 style="margin-bottom:18px;color:var(--gold)">Monthly Business Growth (6m)</h3><div class="chart-container chart-finance" style="position:relative;width:100%"><canvas id="chartFinanceHistory"></canvas></div></div>
         <div class="card"><h3 style="margin-bottom:18px;color:var(--gold)">Session Distribution</h3><div class="chart-container chart-session" style="position:relative;width:100%"><canvas id="chartSession"></canvas></div></div>
       </div>
 
       <!-- Coach Financial Table -->
-      <div style="margin-top:32px">
+      <div style="margin-top:20px">
         <h3 style="color:var(--gold);margin-bottom:18px;font-family:var(--font-head);letter-spacing:1px">Coach Financial Performance</h3>
         <div class="table-wrap">
           <table>
@@ -1300,7 +1300,7 @@
     </div>
 
     <!-- Access Control Manager Page -->
-    <div id="page-access" class="page master-only admin-only">
+    <div id="page-access" class="page admin-only">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px;">
         <h2 style="color:var(--gold); margin:0; font-family:var(--font-head);">🔐 Access Control Manager</h2>
         <button class="btn btn-gold" onclick="promptCreateUser()">+ Create User</button>
@@ -2761,10 +2761,10 @@
    <!-- PDF libraries loaded dynamically in reporting.js -->
 
       <script src="js/telemetry.js?v=1.0" charset="utf-8"></script>
-      <script src="js/productivity.js?v=1.0" charset="utf-8"></script>
-      <script src="js/tournaments.js?v=1.0" charset="utf-8"></script>
-      <script src="js/access.js?v=1.0"></script>
-      <script src="scripts.js?v=6.2&t=20260530" charset="utf-8"></script>
+      <script src="js/productivity.js?v=1.1&t=20260531" charset="utf-8"></script>
+      <script src="js/tournaments.js?v=1.1&t=20260531" charset="utf-8"></script>
+      <script src="js/access.js?v=1.1&t=20260531"></script>
+      <script src="scripts.js?v=6.3&t=20260531" charset="utf-8"></script>
       <script src="js/expenditures.js?v=1.0&t=20260529" charset="utf-8"></script>
       <script src="js/calculator.js?v=1.0" charset="utf-8"></script>
       <script src="js/reporting.js?v=v8&t=20260529" charset="utf-8"></script>
@@ -2779,7 +2779,7 @@
       <script src="js/encryption.js?v=20260529" charset="utf-8"></script>
       <script src="js/scripts_patch.js?v=2.3&t=20260529" charset="utf-8"></script>
       <script src="js/automation.js?v=3.9&t=20260529" charset="utf-8"></script>
-      <script src="js/schedule.js?v=1.0" charset="utf-8"></script>
+      <script src="js/schedule.js?v=1.1&t=20260531" charset="utf-8"></script>
  
       <script src="js/attendance_extension.js?v=1.0&t=20260529" charset="utf-8"></script>
 

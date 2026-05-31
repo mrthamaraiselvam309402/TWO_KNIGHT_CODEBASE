@@ -19,8 +19,9 @@
         const sel = document.getElementById('sch-student-select');
         if (!sel) return;
         sel.innerHTML = '<option value="">-- Select Student --</option>';
-        if (window.students && window.students.length) {
-            window.students.forEach(s => {
+        const students = window.allStudents || window.students || [];
+        if (students.length) {
+            students.forEach(s => {
                 const opt = document.createElement('option');
                 opt.value = s.id;
                 opt.textContent = s.name + (s.parent_name ? ` (Parent: ${s.parent_name})` : '');
@@ -33,8 +34,9 @@
         const sel = document.getElementById('sch-coach-select');
         if (!sel) return;
         sel.innerHTML = '<option value="">-- Select Coach --</option>';
-        if (window.coaches && window.coaches.length) {
-            window.coaches.forEach(c => {
+        const coaches = window.allCoaches || window.coaches || [];
+        if (coaches.length) {
+            coaches.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.id;
                 opt.textContent = c.name;
@@ -80,7 +82,7 @@
             return;
         }
 
-        const student = window.students.find(s => s.id == studentId);
+        const student = (window.allStudents || []).find(s => s.id == studentId);
         if (student && student.notes) {
             const schedData = window.extractScheduleJSON(student.notes);
             if (schedData) {
@@ -130,7 +132,7 @@
             return;
         }
 
-        const student = window.students.find(s => s.id == studentId);
+        const student = (window.allStudents || []).find(s => s.id == studentId);
         const stName = student ? student.name : 'Student';
         
         const demoDate = document.getElementById('sch-demo-date').value || 'TBD';
@@ -140,8 +142,8 @@
         const meetLink = document.getElementById('sch-meet-link') ? document.getElementById('sch-meet-link').value : '';
         const coachId = document.getElementById('sch-coach-select').value;
         let coachName = 'TBD';
-        if (coachId && window.coaches) {
-            const coach = window.coaches.find(c => c.id == coachId);
+        if (coachId && (window.allCoaches || window.coaches)) {
+            const coach = (window.allCoaches || window.coaches || []).find(c => c.id == coachId);
             if (coach) coachName = coach.name;
         }
         const footnote = document.getElementById('sch-footnote').value || '';
@@ -242,7 +244,7 @@
             footnote: document.getElementById('sch-footnote').value
         };
 
-        const student = window.students.find(s => s.id == studentId);
+        const student = (window.allStudents || []).find(s => s.id == studentId);
         if (!student) return;
 
         let notesWithoutSchedule = window.removeScheduleJSON(student.notes || '');
@@ -297,7 +299,7 @@
     window.shareScheduleViaWhatsApp = function () {
         const studentId = document.getElementById('sch-student-select').value;
         if (!studentId) return window.toast('Please select a student', 'error');
-        const student = window.students.find(s => s.id == studentId);
+        const student = (window.allStudents || []).find(s => s.id == studentId);
         if (!student) return;
 
         const demoDate = document.getElementById('sch-demo-date').value || 'TBD';
@@ -307,8 +309,8 @@
         const meetLink = document.getElementById('sch-meet-link') ? document.getElementById('sch-meet-link').value : '';
         const coachId = document.getElementById('sch-coach-select').value;
         let coachName = 'TBD';
-        if (coachId && window.coaches) {
-            const coach = window.coaches.find(c => c.id == coachId);
+        if (coachId && (window.allCoaches || window.coaches)) {
+            const coach = (window.allCoaches || window.coaches || []).find(c => c.id == coachId);
             if (coach) coachName = coach.name;
         }
         const footnote = document.getElementById('sch-footnote').value || '';
@@ -434,7 +436,7 @@
     };
 
     window.syncClassCalendar = function(studentId) {
-        const student = window.students.find(s => s.id == studentId);
+        const student = (window.allStudents || []).find(s => s.id == studentId);
         if (!student || !student.notes) return;
         const schedData = window.extractScheduleJSON(student.notes);
         if (!schedData) return;
