@@ -51,4 +51,30 @@ window.sbMarkTableMissing = function (table) {
   window.__sbMissingTables[table] = true;
 };
 
+// ─── Configurable fee-collection payee (used in all reminder messages) ───────
+// Stored in localStorage so the admin can change the UPI/phone + name without a
+// code change. Defaults preserve the previous hard-coded value.
+window.getPaymentPayee = function () {
+  try {
+    const saved = JSON.parse(localStorage.getItem('chesskidoo_payment_payee') || 'null');
+    if (saved && saved.number) {
+      return { number: String(saved.number), name: String(saved.name || '') };
+    }
+  } catch (e) {}
+  return { number: '9025846663', name: 'Ranjith' };
+};
+
+window.setPaymentPayee = function (number, name) {
+  localStorage.setItem('chesskidoo_payment_payee', JSON.stringify({
+    number: String(number || '').trim(),
+    name: String(name || '').trim()
+  }));
+};
+
+// Convenience string: "9025846663 (Ranjith)" or just the number if no name.
+window.getPaymentPayeeText = function () {
+  const p = window.getPaymentPayee();
+  return p.name ? `${p.number} (${p.name})` : p.number;
+};
+
 document.addEventListener('DOMContentLoaded', initSupabase);

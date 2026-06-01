@@ -1107,7 +1107,7 @@
         `\u{1F4B0} *Amount Due:* ${amountText}\n` +                            // 💰
         `\u{1F4C5} *Due Date:* ${dueDateStr}\n\n` +                            // 📅
         `Kindly complete the payment on or before the due date to avoid any interruption in class participation. \u{1F64F}\n\n` + // 🙏
-        `\u{1F4F2} *Pay via UPI / GPay / PhonePe:* 9025846663 (Ranjith)\n\n` + // 📲
+        `\u{1F4F2} *Pay via UPI / GPay / PhonePe:* ${(window.getPaymentPayeeText ? window.getPaymentPayeeText() : '9025846663 (Ranjith)')}\n\n` + // 📲
         `Thank you for your continued support! \u{1F31F}\n` +                  // 🌟
         `\u{265F}\u{FE0F} *Chesskidoo Academy*`;                               // ♟️
     }
@@ -1118,7 +1118,7 @@
       `\u{1F4B0} *Fee Amount:* ${amountText}\n` +                              // 💰
       `\u{1F4C5} *Due Date:* ${dueDateStr}\n\n` +                              // 📅
       `Kindly complete the payment on or before the due date. \u{1F64F}\n\n` + // 🙏
-      `\u{1F4F2} *Pay via UPI / GPay / PhonePe:* 9025846663 (Ranjith)\n\n` +   // 📲
+      `\u{1F4F2} *Pay via UPI / GPay / PhonePe:* ${(window.getPaymentPayeeText ? window.getPaymentPayeeText() : '9025846663 (Ranjith)')}\n\n` + // 📲
       `Thank you so much for your support and cooperation! \u{1F31F}\n` +      // 🌟
       `\u{265F}\u{FE0F} *Chesskidoo Academy*`;                                 // ♟️
   }

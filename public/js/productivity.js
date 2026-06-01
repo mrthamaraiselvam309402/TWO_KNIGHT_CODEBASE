@@ -911,17 +911,42 @@
     });
   };
 
+  // ─── Fee Collection Account (configurable payee) ────────────────
+  function loadPaymentPayeeUI() {
+    if (!window.getPaymentPayee) return;
+    const p = window.getPaymentPayee();
+    const numEl = document.getElementById('pay-payee-number');
+    const nameEl = document.getElementById('pay-payee-name');
+    const prev = document.getElementById('pay-payee-preview');
+    if (numEl) numEl.value = p.number || '';
+    if (nameEl) nameEl.value = p.name || '';
+    if (prev) prev.textContent = 'Reminders will show: ' + (window.getPaymentPayeeText ? window.getPaymentPayeeText() : '');
+  }
+
+  window.savePaymentPayee = function () {
+    const numEl = document.getElementById('pay-payee-number');
+    const nameEl = document.getElementById('pay-payee-name');
+    if (!numEl || !numEl.value.trim()) {
+      if (window.toast) window.toast('Please enter a UPI / phone number', 'error');
+      return;
+    }
+    window.setPaymentPayee(numEl.value.trim(), (nameEl ? nameEl.value.trim() : ''));
+    loadPaymentPayeeUI();
+    if (window.toast) window.toast('Collection account updated for all fee reminders!', 'success');
+  };
+
   // ─── Module Page Initializer ────────────────────────────────────
   window.initProductivityPage = async function () {
     window.refreshMotivationQuote();
-    
+    loadPaymentPayeeUI();
+
     // Load lists & notepad notes in parallel
     await Promise.all([
       loadAdminTodos(),
       loadProductivityNotes(),
       loadScheduledMeetings()
     ]);
-    
+
     populateAttendeeDropdown();
     renderAdminMeetings();
   };

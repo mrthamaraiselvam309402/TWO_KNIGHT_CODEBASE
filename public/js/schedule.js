@@ -225,6 +225,7 @@
             overflow: hidden;
             width: 100%;
             box-sizing: border-box;
+            user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
         ">
             <!-- Decorative background elements -->
             <div style="position:absolute; top:-20px; right:-20px; font-size:120px; opacity:0.03; pointer-events:none;">♟️</div>
@@ -450,6 +451,7 @@
             overflow: hidden;
             width: 100%;
             box-sizing: border-box;
+            user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
         ">
             <div style="position:absolute; top:-20px; right:-20px; font-size:120px; opacity:0.03; pointer-events:none;">♟️</div>
             

@@ -27,7 +27,7 @@
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
   <!-- X-Frame-Options must be an HTTP header, not a meta tag — set in vercel.json -->
 
-  <script src="js/config.js?t=20260531"></script>
+  <script src="js/config.js?t=20260601c"></script>
 
   <script src="js/avatar-utils.js"></script>
 </head>
@@ -1431,6 +1431,28 @@
             </div>
           </div>
 
+          <!-- Fee Collection Account (configurable, used in reminder messages) -->
+          <div class="card" style="border: 1px solid var(--border); background:var(--bg2); padding: 20px;">
+            <h3 style="margin: 0 0 12px 0; color:var(--gold); font-size:16px; display:flex; align-items:center; gap:8px;">
+              <span>💳</span> Fee Collection Account
+            </h3>
+            <p style="font-size:11px; color:var(--ivory-dim); line-height:1.4; margin-bottom:12px;">
+              Shown to parents in every fee reminder (UPI / GPay / PhonePe). Update here — no code change needed.
+            </p>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+              <div>
+                <label style="font-size:10px; color:var(--ivory-dim); text-transform:uppercase; display:block; margin-bottom:4px;">UPI / Phone Number</label>
+                <input type="text" id="pay-payee-number" placeholder="9025846663" style="width:100%; padding:8px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+              </div>
+              <div>
+                <label style="font-size:10px; color:var(--ivory-dim); text-transform:uppercase; display:block; margin-bottom:4px;">Payee Name</label>
+                <input type="text" id="pay-payee-name" placeholder="Ranjith" style="width:100%; padding:8px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+              </div>
+            </div>
+            <button class="btn btn-gold" onclick="window.savePaymentPayee()" style="margin-top:12px; padding:8px 16px; font-size:12px; font-weight:700;">💾 Save Collection Account</button>
+            <div id="pay-payee-preview" style="margin-top:10px; font-size:11px; color:var(--ivory-dim);"></div>
+          </div>
+
           <!-- Academy operational details & Note pad -->
           <div class="card" style="border: 1px solid var(--border); background:var(--bg2); padding: 20px;">
             <h3 style="margin: 0 0 12px 0; color:var(--gold); font-size:16px; display:flex; align-items:center; gap:8px;">
@@ -2761,11 +2783,11 @@
    <!-- PDF libraries loaded dynamically in reporting.js -->
 
       <script src="js/telemetry.js?v=1.0" charset="utf-8"></script>
-      <script src="js/productivity.js?v=1.1&t=20260531" charset="utf-8"></script>
+      <script src="js/productivity.js?v=1.2&t=20260601c" charset="utf-8"></script>
       <script src="js/tournaments.js?v=1.1&t=20260531" charset="utf-8"></script>
       <script src="js/access.js?v=1.2&t=20260601"></script>
       <script src="js/tom-brain.js?v=1.0&t=20260601" charset="utf-8"></script>
-      <script src="scripts.js?v=6.5&t=20260601b" charset="utf-8"></script>
+      <script src="scripts.js?v=6.6&t=20260601c" charset="utf-8"></script>
       <script src="js/expenditures.js?v=1.0&t=20260529" charset="utf-8"></script>
       <script src="js/calculator.js?v=1.0" charset="utf-8"></script>
       <script src="js/reporting.js?v=v9&t=20260601" charset="utf-8"></script>
@@ -2780,7 +2802,7 @@
       <script src="js/encryption.js?v=20260529" charset="utf-8"></script>
       <script src="js/scripts_patch.js?v=2.3&t=20260529" charset="utf-8"></script>
       <script src="js/automation.js?v=3.9&t=20260529" charset="utf-8"></script>
-      <script src="js/schedule.js?v=1.3&t=20260601b" charset="utf-8"></script>
+      <script src="js/schedule.js?v=1.4&t=20260601c" charset="utf-8"></script>
  
       <script src="js/attendance_extension.js?v=1.0&t=20260529" charset="utf-8"></script>
 
