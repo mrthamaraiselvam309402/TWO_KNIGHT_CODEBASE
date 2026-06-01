@@ -4810,14 +4810,24 @@ function initUI() {
            const time = s.session_time || s.class_time || s.batch_time || '';
            const coach = allCoaches.find(c => String(c.id) === String(s.coach_id));
            const coachName = coach ? escapeHtml(getCoachName(coach)) : '-';
-           const uniqueId = 'more-' + (s.id || 'err').replace(/[^a-zA-Z0-9]/g, '');            const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
-            const dueDay = String(dueCfg.day).padStart(2, '0');
+           const uniqueId = 'more-' + (s.id || 'err').replace(/[^a-zA-Z0-9]/g, '');
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const dueMonthName = months[targetMonth];
-            const dueDateString = `${dueDay}-${dueMonthName}-${targetYear}`;
-            
-            const dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
-            const isOverdue = dueDateObj < new Date() && status !== 'Paid';
+            // Due Date: show the EXACT date the admin entered/updated (s.due_date),
+            // with no month-selector shifting or auto-rollover. Fall back to the
+            // day-of-month billing computation only when no explicit date is stored.
+            let dueDateString, dueDateObj;
+            const _ddMatch = String(s.due_date || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+            if (_ddMatch) {
+              const _yy = +_ddMatch[1], _mm = +_ddMatch[2] - 1, _dd = +_ddMatch[3];
+              dueDateObj = new Date(_yy, _mm, _dd, 23, 59, 59);
+              dueDateString = `${String(_dd).padStart(2, '0')}-${months[_mm]}-${_yy}`;
+            } else {
+              const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
+              const dueDay = String(dueCfg.day).padStart(2, '0');
+              dueDateString = `${dueDay}-${months[targetMonth]}-${targetYear}`;
+              dueDateObj = new Date(targetYear, targetMonth, dueCfg.day, 23, 59, 59);
+            }
+            const isOverdue = (status === 'Overdue') || (status !== 'Paid' && status !== 'Pending' && dueDateObj < new Date());
             
             const enrollStatus = getStudentStatus(s);
             const isNonActive = enrollStatus !== 'active';
