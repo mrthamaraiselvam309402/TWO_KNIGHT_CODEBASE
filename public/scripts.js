@@ -7885,7 +7885,16 @@ Best regards,
     const minKeywords = [
       /child/i, /my/i, /student/i, /attendance/i, /payment/i,
       /coach/i, /event/i, /level/i, /elo/i, /rating/i,
-      /class/i, /session/i, /batch/i, /progress/i, /achievement/i
+      /class/i, /session/i, /batch/i, /progress/i, /achievement/i,
+      // General chess & educational topics are allowed for parents — they are
+      // harmless and helpful. Sensitive academy data stays guarded by
+      // BLOCKED_PATTERNS above.
+      /chess/i, /opening/i, /tactic/i, /checkmate/i, /\bmate\b/i, /stalemate/i,
+      /castl/i, /en\s*passant/i, /endgame/i, /strateg/i, /puzzle/i, /move/i,
+      /piece/i, /pawn|knight|bishop|rook|queen|king/i, /sicilian|defense|defence|gambit|lopez|italian|french|caro/i,
+      /tournament/i, /schedule/i, /bill|invoice|fee|due/i, /learn|study|improve|practice|tip/i,
+      // Greetings / small talk
+      /hello|hi\b|hey|thanks|thank you|how are you|good (morning|evening|afternoon)|help/i
     ];
 
     const hasMinKeyword = minKeywords.some(k => k.test(queryLower));
@@ -8575,7 +8584,15 @@ Best regards,
       });
 
       const aiData = await aiResponse.json();
-      let botResponse = aiData.message || 'I apologize, I couldn\'t process that request. Please try again.';
+      let botResponse = aiData.message || '';
+
+      // If the server returned only its generic template (e.g. Gemini key not
+      // configured), answer general/chess/conversational queries locally.
+      if (window.tomResolveAnswer) {
+        botResponse = window.tomResolveAnswer(query, botResponse);
+      } else if (!botResponse) {
+        botResponse = "I apologize, I couldn't process that request. Please try again.";
+      }
 
       // ── PRIVACY GUARDRAIL: Validate AI response for parents ──
       if (role === 'parent') {

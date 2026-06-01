@@ -92,12 +92,24 @@ async function handleAITask(inputId, bodyId) {
 
         const data = await res.json().catch(() => ({}));
         hideThinking(thinking);
-        appendMsg(bodyId, 'bot', data.message || "My calculations are complete. How can I assist further?");
+        // Prefer a real server (Gemini) answer; otherwise answer chess/general
+        // questions locally via the TOM knowledge brain.
+        let reply = data.message || '';
+        if (window.tomResolveAnswer) {
+            reply = window.tomResolveAnswer(msg, reply);
+        }
+        appendMsg(bodyId, 'bot', reply || "My calculations are complete. How can I assist further?");
 
     } catch (e) {
         console.warn('[AI Assistant] request failed:', e && e.message);
         hideThinking(thinking);
-        appendMsg(bodyId, 'bot', 'Neural link interrupted. Please check your connection.', true);
+        // Even if the network failed, try to answer general chess questions locally.
+        const local = window.tomLocalAnswer ? window.tomLocalAnswer(msg) : null;
+        if (local) {
+            appendMsg(bodyId, 'bot', local);
+        } else {
+            appendMsg(bodyId, 'bot', 'Neural link interrupted. Please check your connection.', true);
+        }
     }
 }
 
@@ -229,7 +241,7 @@ function escapeHtml(text) {
         let msg = "";
         let elemId = "";
         let containerId = "";
-        const student = window.students ? window.students.find(s => s.id == contextId) : null;
+        const student = (window.allStudents || window.students || []).find(s => s.id == contextId) || null;
         
         if (context === 'schedule') {
             msg = `Analyze the schedule for student ${student ? student.name : 'Unknown'}. Check for time conflicts and suggest best practices for the coach. Keep it under 2 short sentences.`;
