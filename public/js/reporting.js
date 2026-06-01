@@ -348,11 +348,43 @@ window.generateReportPDF = async function() {
       --ruby: #ff4d4f;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    @page { size: A4; margin: 14mm; }
     @media print {
-      body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      /* Switch to a clean, ink-friendly white executive document for the
+         actual PDF/print output (the on-screen view stays dark & premium). */
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { background: #ffffff !important; color: #1a1a1a !important; padding: 0 !important; }
       .no-print { display: none !important; }
-      .page { border: none !important; box-shadow: none !important; margin: 0 !important; width: 100% !important; page-break-after: always; }
-      .watermark { opacity: 0.1 !important; }
+      .page {
+        background: #ffffff !important; color: #1a1a1a !important;
+        border: none !important; box-shadow: none !important;
+        margin: 0 auto !important; padding: 0 6mm !important;
+        width: 100% !important; min-height: auto !important;
+        page-break-after: always; break-after: page;
+      }
+      .page:last-child { page-break-after: auto; break-after: auto; }
+      .watermark { color: rgba(201, 150, 12, 0.06) !important; }
+      .header h1 { color: #8c6a08 !important; }
+      .header h2, .header-meta, .footer { color: #555 !important; }
+      .confidential { color: #8c6a08 !important; }
+      .heartbeat { color: #2e7d32 !important; }
+      h3 { color: #8c6a08 !important; }
+      h3::after { background: #d9c48a !important; }
+      .kpi-card { background: #faf7ef !important; border: 1px solid #e3d6a8 !important; }
+      .kpi-label { color: #777 !important; }
+      .kpi-value { color: #8c6a08 !important; }
+      .kpi-sub { color: #999 !important; }
+      .chart-box { background: #fbfbfd !important; border: 1px solid #e2e2e2 !important; }
+      .data-story { color: #2a2a2a !important; }
+      .strategic-insight { background: #faf5e6 !important; border-left-color: #c9960c !important; color: #3a3a3a !important; }
+      th { color: #8c6a08 !important; border-bottom: 2px solid #c9960c !important; }
+      td { color: #222 !important; border-bottom: 1px solid #e4e4e4 !important; }
+      .bold { color: #000 !important; }
+      .loss { color: #c0392b !important; }
+      .gain { color: #1e7e34 !important; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; page-break-after: auto; }
+      thead { display: table-header-group; }
     }
     body { background: var(--bg); font-family: 'Cormorant Garamond', serif; color: var(--text); line-height: 1.5; padding: 50px 0; display: flex; flex-direction: column; align-items: center; }
     .page { width: 950px; padding: 80px; position: relative; min-height: 1300px; background: var(--card-bg); margin-bottom: 50px; box-shadow: 0 40px 100px rgba(0,0,0,0.6); border: 1px solid var(--border); overflow: hidden; }
