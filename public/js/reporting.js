@@ -179,7 +179,18 @@ window.generateReportPDF = async function() {
         return aDate.getUTCMonth() === targetMonth && aDate.getUTCFullYear() === targetYear;
     });
     const presentCount = monthAtt.filter(a => a.status === 'present').length;
-    const attendanceHealth = monthAtt.length > 0 ? ((presentCount / monthAtt.length) * 100).toFixed(1) : 'N/A'; 
+    const attendanceHealth = monthAtt.length > 0 ? ((presentCount / monthAtt.length) * 100).toFixed(1) : 'N/A';
+
+    // Payment-status breakdown counts for the executive summary cards.
+    let paidCount = 0, pendingCount = 0, dueCount = 0, overdueCount = 0;
+    targetStudents.forEach(s => {
+      const st = getStudentPaymentStatus(s, targetMonth, targetYear);
+      if (st === 'Paid') paidCount++;
+      else if (st === 'Pending') pendingCount++;
+      else if (st === 'Due') dueCount++;
+      else if (st === 'Overdue') overdueCount++;
+    });
+    const outstanding = lastDueAmount + currPendingAmount;
 
     // Coach Performance (based on true payments from assigned students this month)
     const coachMetrics = allCoaches.filter(c => c.status !== 'archived').map(c => {
@@ -471,6 +482,40 @@ window.generateReportPDF = async function() {
         <div class="kpi-label">Attendance</div>
         <div class="kpi-value">${attendanceHealth === 'N/A' ? 'N/A' : attendanceHealth + '%'}</div>
         <div class="kpi-sub">Avg Attendance</div>
+      </div>
+    </div>
+
+    <h3>I-B. Collections & Payment Status</h3>
+    <div class="kpi-grid" style="grid-template-columns: repeat(6, 1fr);">
+      <div class="kpi-card">
+        <div class="kpi-label">Revenue Collected</div>
+        <div class="kpi-value" style="color:var(--emerald)">₹${collected.toLocaleString()}</div>
+        <div class="kpi-sub">${collectionRate}% of expected</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Outstanding</div>
+        <div class="kpi-value" style="color:var(--ruby)">₹${outstanding.toLocaleString()}</div>
+        <div class="kpi-sub">Arrears + current</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Paid</div>
+        <div class="kpi-value" style="color:var(--emerald)">${paidCount}</div>
+        <div class="kpi-sub">students settled</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Pending</div>
+        <div class="kpi-value" style="color:var(--gold)">${pendingCount}</div>
+        <div class="kpi-sub">not yet due</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Due / Overdue</div>
+        <div class="kpi-value" style="color:var(--ruby)">${dueCount + overdueCount}</div>
+        <div class="kpi-sub">${dueCount} due &middot; ${overdueCount} overdue</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">New Enrollments</div>
+        <div class="kpi-value" style="color:var(--sapphire)">${newStudsThisMonth}</div>
+        <div class="kpi-sub">this month</div>
       </div>
     </div>
 
@@ -1042,6 +1087,16 @@ window.generateReportPPT = async function() {
             else levels['Beginner']++;
         });
 
+        // Payment-status distribution for the boardroom pie chart.
+        let pPaid = 0, pPending = 0, pDue = 0, pOverdue = 0;
+        targetStudents.forEach(s => {
+            const st = getStudentPaymentStatus(s, targetMonth, targetYear);
+            if (st === 'Paid') pPaid++;
+            else if (st === 'Pending') pPending++;
+            else if (st === 'Due') pDue++;
+            else if (st === 'Overdue') pOverdue++;
+        });
+
         const coachMetrics = allCoaches.filter(c => c.status !== 'archived').map(c => {
             const coachStuds = allStudents.filter(s => String(s.coach_id) === String(c.id));
             const coachStudIds = new Set(coachStuds.map(s => String(s.id).toLowerCase()));
@@ -1215,7 +1270,7 @@ window.generateReportPPT = async function() {
         // ────────── SLIDE 4: Demographic Distribution Charts ──────────
         let slide4 = pptx.addSlide();
         slide4.background = { fill: darkBG };
-        addSlideHeader(slide4, "STUDENT LEVEL & SESSION SEGMENTATION");
+        addSlideHeader(slide4, "STUDENT LEVELS & FEE PAYMENT STATUS");
 
         const pptCharts = pptx.charts || pptx.ChartType || {};
         
@@ -1238,21 +1293,26 @@ window.generateReportPPT = async function() {
             });
         }
 
-        // 2. Timings pie chart
-        if (pptCharts.PIE) {
-            const chartDataTime = [{
-                name: 'Session Share',
-                labels: ['Morning', 'Evening', 'Weekend'],
-                values: [timings.Morning, timings.Evening, timings.Weekend]
+        // 2. Payment-status distribution pie (Paid / Pending / Due / Overdue)
+        if (pptCharts.PIE || pptCharts.DOUGHNUT) {
+            const chartDataPay = [{
+                name: 'Payment Status',
+                labels: ['Paid', 'Pending', 'Due', 'Overdue'],
+                values: [pPaid, pPending, pDue, pOverdue]
             }];
 
-            slide4.addChart(pptx.charts.PIE, chartDataTime, {
+            slide4.addChart((pptx.charts.DOUGHNUT || pptx.charts.PIE), chartDataPay, {
                 x: 5.2, y: 1.2, w: 4.2, h: 3.6,
                 showLegend: true,
+                legendPos: 'r',
                 legendColor: 'FFFFFF',
                 legendFontSize: 9,
-                chartColors: ['5A9FFF', '#fbbf24', '10B981'],
-                title: 'Batch Schedule Timings Share',
+                chartColors: ['10B981', 'E8A830', 'F59E0B', 'EF4444'],
+                showValue: true,
+                dataLabelColor: 'FFFFFF',
+                dataLabelFontSize: 9,
+                holeSize: 55,
+                title: 'Fee Payment Status Distribution',
                 titleColor: 'FFFFFF',
                 titleFontSize: 11
             });
