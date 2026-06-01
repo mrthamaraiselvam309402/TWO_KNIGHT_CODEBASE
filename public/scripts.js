@@ -7584,9 +7584,14 @@ Best regards,
     const coachName = coach ? getCoachName(coach) : 'Not Assigned';
     if ($('c-coach')) $('c-coach').textContent = coachName;
 
-    // Latest coach notes/review (from student notes field or messages)
+    // Latest coach notes/review (from student notes field or messages).
+    // Use the shared remover so both the legacy [SCHEDULE:{...}] and the new
+    // [SCHEDULE64:...] tags are stripped from the parent-facing review text.
     const rawNotes = s.notes || '';
-    const latestNotes = rawNotes.replace(/\[SCHEDULE:({.*?})\]/g, '').trim() || 'No recent review available';
+    const stripSchedule = window.removeScheduleJSON
+      ? window.removeScheduleJSON(rawNotes)
+      : rawNotes.replace(/\[SCHEDULE64:[A-Za-z0-9+/=]+\]/g, '').replace(/\[SCHEDULE:({.*?})\]/g, '').trim();
+    const latestNotes = (stripSchedule || '').trim() || 'No recent review available';
     if ($('c-notes')) $('c-notes').textContent = latestNotes;
 
     // Skill breakdown (based on level)

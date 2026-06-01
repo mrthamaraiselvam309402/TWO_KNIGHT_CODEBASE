@@ -7,6 +7,25 @@
 (function () {
     let currentScheduleData = {};
 
+    // Single source of truth for the schedule's coach name. Prefers the coach
+    // chosen in the Schedule Manager (schedData.coachId / coachName), then the
+    // student's globally-assigned coach, then 'TBD'. Used by the admin preview,
+    // the parent schedule card, and the .ics calendar export so they always agree.
+    function resolveScheduleCoachName(schedData, student) {
+        const coaches = window.allCoaches || window.coaches || [];
+        if (schedData && schedData.coachId) {
+            const c = coaches.find(c => String(c.id) === String(schedData.coachId));
+            if (c) return c.name;
+        }
+        if (schedData && schedData.coachName) return schedData.coachName;
+        if (student && student.coach_id) {
+            const c = coaches.find(c => String(c.id) === String(student.coach_id));
+            if (c) return c.name;
+        }
+        return 'TBD';
+    }
+    window.resolveScheduleCoachName = resolveScheduleCoachName;
+
     window.initSchedulePage = function () {
         populateStudentSelect();
         populateCoachSelect();
@@ -55,15 +74,40 @@
         if(document.getElementById('sch-footnote')) document.getElementById('sch-footnote').value = 'Kindly ensure student joins on time for the demo session. Looking forward to a great learning journey ahead. – Chesskidoo Academy';
     }
 
-    // This parses the embedded JSON [SCHEDULE:{...}] tag from the notes column
+    // UTF-8 safe base64 helpers. The server sanitizes the `notes` column and
+    // strips quotes (" ' ` < > ;), which would corrupt a raw [SCHEDULE:{json}]
+    // tag. So we persist the schedule as [SCHEDULE64:<base64>] — base64's
+    // alphabet (A-Za-z0-9+/=) survives sanitization intact.
+    function encodeSchedulePayload(obj) {
+        try {
+            return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+        } catch (e) {
+            return '';
+        }
+    }
+    function decodeSchedulePayload(b64) {
+        try {
+            return JSON.parse(decodeURIComponent(escape(atob(b64))));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // Parses the embedded schedule tag from the notes column. Supports the new
+    // sanitization-safe [SCHEDULE64:...] format and the legacy [SCHEDULE:{...}].
     window.extractScheduleJSON = function (notesString) {
         if (!notesString) return null;
+        const m64 = notesString.match(/\[SCHEDULE64:([A-Za-z0-9+/=]+)\]/);
+        if (m64 && m64[1]) {
+            const decoded = decodeSchedulePayload(m64[1]);
+            if (decoded) return decoded;
+        }
         const match = notesString.match(/\[SCHEDULE:({.*?})\]/);
         if (match && match[1]) {
             try {
                 return JSON.parse(match[1]);
             } catch (e) {
-                console.error("Failed to parse schedule JSON", e);
+                console.warn("Failed to parse legacy schedule JSON", e);
                 return null;
             }
         }
@@ -72,7 +116,10 @@
 
     window.removeScheduleJSON = function (notesString) {
         if (!notesString) return notesString;
-        return notesString.replace(/\[SCHEDULE:({.*?})\]/g, '').trim();
+        return notesString
+            .replace(/\[SCHEDULE64:[A-Za-z0-9+/=]+\]/g, '')
+            .replace(/\[SCHEDULE:({.*?})\]/g, '')
+            .trim();
     };
 
     window.loadStudentScheduleData = function (studentId) {
@@ -234,43 +281,53 @@
         const studentId = document.getElementById('sch-student-select').value;
         if (!studentId) return window.toast('Please select a student', 'error');
 
+        const coachId = document.getElementById('sch-coach-select').value;
+        const coachObj = (window.allCoaches || window.coaches || []).find(c => String(c.id) === String(coachId));
         const schedData = {
             demoDate: document.getElementById('sch-demo-date').value,
             demoTime: document.getElementById('sch-demo-time').value,
             regDays: document.getElementById('sch-reg-days').value,
             regTime: document.getElementById('sch-reg-time').value,
             meetLink: document.getElementById('sch-meet-link') ? document.getElementById('sch-meet-link').value : '',
-            coachId: document.getElementById('sch-coach-select').value,
+            coachId: coachId,
+            coachName: coachObj ? coachObj.name : '', // denormalized so the parent card is correct even if rosters change
             footnote: document.getElementById('sch-footnote').value
         };
 
         const student = (window.allStudents || []).find(s => s.id == studentId);
         if (!student) return;
 
-        let notesWithoutSchedule = window.removeScheduleJSON(student.notes || '');
-        const newNotes = notesWithoutSchedule + `\n[SCHEDULE:${JSON.stringify(schedData)}]`;
+        // Preserve the existing coach-review text, drop any prior schedule tag,
+        // then append the sanitization-safe base64 schedule payload.
+        const notesWithoutSchedule = window.removeScheduleJSON(student.notes || '');
+        const newNotes = (notesWithoutSchedule + ` [SCHEDULE64:${encodeSchedulePayload(schedData)}]`).trim();
 
         window.toast('Saving schedule...', 'info');
-        
+
         try {
-            const res = await window.apiCall('/api/students', {
-                method: 'POST', // or whatever your update endpoint takes, existing API logic in scripts.js handles UPSERT based on id
+            // Use PUT (update) with the id in the query string — POST creates a
+            // brand-new student. Send learning_mode so the server re-applies the
+            // [LM:] prefix it strips on read.
+            const res = await window.apiCall('/api/students?id=' + encodeURIComponent(student.id), {
+                method: 'PUT',
                 body: JSON.stringify({
-                    id: student.id,
-                    notes: newNotes.trim()
+                    notes: newNotes,
+                    learning_mode: student.learning_mode || 'online'
                 })
             });
 
-            if(res.ok) {
-                // Update local memory
-                student.notes = newNotes.trim();
+            if (res.ok) {
+                // Update local memory so the preview / parent card reflect it immediately.
+                student.notes = newNotes;
                 window.toast('Schedule saved successfully!', 'success');
             } else {
-                throw new Error('Server error');
+                let msg = 'Server error';
+                try { const j = await res.json(); msg = j.error || msg; } catch (e) {}
+                throw new Error(msg);
             }
-        } catch(e) {
-            console.error(e);
-            window.toast('Failed to save schedule.', 'error');
+        } catch (e) {
+            console.error('[Schedule] save failed:', e);
+            window.toast('Failed to save schedule: ' + (e.message || 'error'), 'error');
         }
     };
 
@@ -350,7 +407,11 @@
         }
 
         const schedData = window.extractScheduleJSON(student.notes);
-        
+
+        // Resolve the coach actually chosen for this schedule (falls back to the
+        // student's assigned coach / passed-in name).
+        const resolvedCoachName = resolveScheduleCoachName(schedData, student) || coachName || 'TBD';
+
         // Generate Weekly Calendar View HTML
         const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -418,7 +479,7 @@
                 </div>
                 <div style="display:flex; justify-content:space-between; padding-top:8px; margin-top:8px; border-top:1px dashed rgba(255,255,255,0.1);">
                     <span style="color:rgba(255,255,255,0.7); font-size:13px;">Coach:</span>
-                    <span style="font-weight:bold; font-size:13px; color:var(--gold);">${coachName}</span>
+                    <span style="font-weight:bold; font-size:13px; color:var(--gold);">${resolvedCoachName}</span>
                 </div>
                 <div style="display:flex; gap:10px; margin-top:16px; justify-content:center;">
                     ${schedData.meetLink ? `<a href="${schedData.meetLink}" target="_blank" style="background:var(--gold); color:#000; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; box-shadow:0 4px 10px rgba(218,163,62,0.3);">Join Class 🎥</a>` : ''}
@@ -463,7 +524,7 @@ DTSTAMP:${startStr}
 DTSTART:${startStr}
 SUMMARY:Chesskidoo Class
 LOCATION:${schedData.meetLink ? schedData.meetLink : 'Online / Academy'}
-DESCRIPTION:Regular chess class timing: ${schedData.regTime}. Coach: ${document.getElementById('sch-coach-select')?.options?.[document.getElementById('sch-coach-select')?.selectedIndex]?.text || 'Assigned'}
+DESCRIPTION:Regular chess class timing: ${schedData.regTime || 'TBD'}. Coach: ${resolveScheduleCoachName(schedData, student)}
 `;
         
         if (byDayStr) {
