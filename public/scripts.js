@@ -287,16 +287,31 @@
   // ── NEW ADVANCED LOGIC ──
   function setChildTab(tabId, btn) {
     document.querySelectorAll('.child-tab-content').forEach(c => c.classList.remove('active'));
-    if (btn) {
-      const parentNav = btn.parentElement;
-      if (parentNav) {
-        parentNav.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+
+    // Sync the in-page tab bar highlight. When called from the sidebar nav
+    // (no btn), locate the matching tab-link by its onclick target.
+    const tabBar = document.querySelector('#page-child .tabs-nav');
+    if (tabBar) {
+      tabBar.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+      if (btn) {
+        btn.classList.add('active');
+      } else {
+        const match = Array.from(tabBar.querySelectorAll('.tab-link'))
+          .find(l => (l.getAttribute('onclick') || '').includes("'" + tabId + "'"));
+        if (match) match.classList.add('active');
       }
-      btn.classList.add('active');
     }
+
     const target = document.getElementById('child-tab-' + tabId);
     if (target) target.classList.add('active');
+
     if (tabId === 'overview') renderChildBilling();
+    if (tabId === 'billing') renderChildBilling();
+    if (tabId === 'attendance') renderChildAttendance();
+    if (tabId === 'schedule' && typeof window.renderChildSchedule === 'function' && currentStudent) {
+      const coach = (allCoaches || []).find(c => String(c.id) === String(currentStudent.coach_id));
+      window.renderChildSchedule(currentStudent, coach ? getCoachName(coach) : 'Not Assigned');
+    }
     if (tabId === 'growth') renderChildGrowth();
     if (tabId === 'learning') renderChildResources();
     if (tabId === 'events') {
@@ -305,6 +320,44 @@
     }
     if (tabId === 'productivity' && typeof window.renderChildProductivity === 'function') window.renderChildProductivity();
   }
+
+  // Populates the parent-portal Attendance tab (was previously never rendered).
+  function renderChildAttendance() {
+    if (!currentStudent) return;
+    const s = currentStudent;
+    const myAtt = (allAttendance || [])
+      .filter(a => String(a.student_id) === String(s.id))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const present = myAtt.filter(a => (a.status || '').toLowerCase() === 'present').length;
+    const absent = myAtt.filter(a => (a.status || '').toLowerCase() === 'absent').length;
+    const total = myAtt.length;
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+
+    if ($('c-att-total')) $('c-att-total').textContent = total;
+    if ($('c-att-present')) $('c-att-present').textContent = present;
+    if ($('c-att-absent')) $('c-att-absent').textContent = absent;
+    if ($('c-att-rate')) $('c-att-rate').textContent = rate + '%';
+
+    const body = $('child-att-body');
+    if (body) {
+      if (total === 0) {
+        body.innerHTML = '<tr><td colspan="3"><div class="empty-state" style="padding:24px"><span class="empty-icon">📅</span><p>No attendance records yet.</p></div></td></tr>';
+      } else {
+        body.innerHTML = myAtt.map(a => {
+          const st = (a.status || '').toLowerCase();
+          const badge = st === 'present'
+            ? '<span class="badge badge-success">Present</span>'
+            : st === 'absent'
+              ? '<span class="badge badge-danger">Absent</span>'
+              : `<span class="badge">${escapeHtml(a.status || '—')}</span>`;
+          const dateStr = a.date ? new Date(a.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+          return `<tr><td>${dateStr}</td><td>${badge}</td><td style="color:var(--ivory-dim)">${escapeHtml(a.notes || a.note || '—')}</td></tr>`;
+        }).join('');
+      }
+    }
+  }
+  window.renderChildAttendance = renderChildAttendance;
 
   function setDashTab(tabId, btn) {
     document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
@@ -3594,7 +3647,7 @@ function initUI() {
     insights: 'AI Academy Insights',
     exp: 'Expenditure Management',
     msgs: 'Messages', ai: 'AI Assistant', access: 'Access Control', schedules: 'Schedule Manager',
-    productivity: 'Operations Productivity Center'
+    productivity: 'Operations Productivity Center', 'parent-ai': 'Ask TOM AI'
   };
 
   function setPage(p) {
@@ -3683,6 +3736,7 @@ function initUI() {
       }
       if (p === 'bills') renderBills();
       if (p === 'child') renderChild();
+      if (p === 'parent-ai' && window.setAIModule) window.setAIModule('parent');
       if (p === 'insights' && window.generateAcademyInsights) window.generateAcademyInsights();
       if (p === 'msgs') renderMsgs();
       if (p === 'exp' && window.initExpPage) window.initExpPage();
@@ -7556,8 +7610,29 @@ Best regards,
 
     if (loadingEl) loadingEl.style.display = 'none';
     if (contentEl) contentEl.style.display = 'block';
-    setChildTab('overview');
+    // Honor a requested sub-tab from the sidebar nav, otherwise default to overview.
+    const intent = window.childTabIntent || 'overview';
+    window.childTabIntent = null;
+    setChildTab(intent);
   }
+
+  // Navigate to the parent portal and open a specific sub-tab from the sidebar.
+  window.goChildTab = function (tab) {
+    const childPage = document.getElementById('page-child');
+    const alreadyOnChild = childPage && childPage.classList.contains('active');
+    // Close the mobile sidebar for a smooth transition.
+    if (window.innerWidth <= 768) {
+      const sb = document.getElementById('sidebar'); if (sb) sb.classList.remove('open');
+      const ov = document.getElementById('sidebar-overlay'); if (ov) ov.classList.remove('active');
+    }
+    if (alreadyOnChild && currentStudent) {
+      // Already viewing the portal — switch tab instantly without a full re-render.
+      setChildTab(tab);
+    } else {
+      window.childTabIntent = tab;
+      setPage('child');
+    }
+  };
 
   function openStudentEditPortalModal() {
     if (!currentStudent) return;

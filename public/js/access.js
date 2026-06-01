@@ -12,7 +12,7 @@ window.loadAccessControl = async function() {
     tbody.innerHTML = '<tr><td colspan="5"><div class="loading-state"><span class="spinner"></span> Loading users...</div></td></tr>';
 
     try {
-        const response = await fetch('/api/access_control', { // Re-using local dev proxy or Edge function
+        const response = await window.apiCall('/api/access_control', { // Re-using local dev proxy or Edge function
             headers: {
                 'Content-Type': 'application/json',
                 'role': window.role
@@ -94,7 +94,7 @@ window.promptCreateUser = function() {
 
 window.createAccessUser = async function(email, password, role) {
     try {
-        const response = await fetch('/api/access_control', {
+        const response = await window.apiCall('/api/access_control', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'role': window.role },
             body: JSON.stringify({ email, password, role })
@@ -120,7 +120,7 @@ window.promptEditUserRole = function(id, currentRole) {
 
 window.updateAccessUser = async function(id, role, password) {
     try {
-        const response = await fetch('/api/access_control', {
+        const response = await window.apiCall('/api/access_control', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'role': window.role },
             body: JSON.stringify({ id, role, password })
@@ -141,7 +141,7 @@ window.deleteUserAccess = async function(id, email) {
     if (!confirm(`Are you SURE you want to revoke access for ${email}? This cannot be undone.`)) return;
     
     try {
-        const response = await fetch('/api/access_control', {
+        const response = await window.apiCall('/api/access_control', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json', 'role': window.role },
             body: JSON.stringify({ id })
@@ -287,7 +287,7 @@ window.loadAuditLogs = async function() {
 
     try {
         let fetchedLogs = [];
-        const res = await fetch('/api/audit?limit=250').catch(() => null);
+        const res = await window.apiCall('/api/audit?limit=250').catch(() => null);
         if (res && res.ok) {
             const result = await res.json().catch(() => ({}));
             fetchedLogs = result.data || result || [];
@@ -520,7 +520,7 @@ window.startSecurityLogsSimulation = function() {
     // Poll the database every 4 seconds for fresh real audit logs
     simulationInterval = setInterval(async () => {
         try {
-            const res = await fetch('/api/audit?limit=80').catch(() => null);
+            const res = await window.apiCall('/api/audit?limit=80').catch(() => null);
             if (res && res.ok) {
                 const result = await res.json().catch(() => ([]));
                 const fetchedLogs = result.data || result || [];

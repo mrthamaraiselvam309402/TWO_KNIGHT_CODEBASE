@@ -736,12 +736,21 @@ window.generateReportPDF = async function() {
 // =========================================================================
 
 async function loadPptxGenLibrary() {
-    if (window.pptxgen) return;
+    // Normalize the global regardless of the casing the bundle exposes.
+    if (window.pptxgen || window.PptxGenJS) {
+        window.pptxgen = window.pptxgen || window.PptxGenJS;
+        return;
+    }
     toast('Loading presentation engine...', 'info');
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS@3.12.0/dist/pptxgen.bundle.js';
-        script.onload = () => resolve();
+        // Self-hosted (offline-first, CSP-safe — served from same origin).
+        script.src = '/lib/pptxgen.bundle.min.js';
+        script.onload = () => {
+            window.pptxgen = window.pptxgen || window.PptxGenJS;
+            if (window.pptxgen) resolve();
+            else reject(new Error('PowerPoint engine loaded but global not found'));
+        };
         script.onerror = () => reject(new Error('Failed to load PowerPoint engine'));
         document.head.appendChild(script);
     });
