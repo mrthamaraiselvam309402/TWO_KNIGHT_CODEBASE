@@ -152,13 +152,21 @@
       throw err;
     }
 
-    const url = (endpoint.startsWith('http') || endpoint.startsWith(API_BASE)) 
-      ? endpoint 
+    const url = (endpoint.startsWith('http') || endpoint.startsWith(API_BASE))
+      ? endpoint
       : `${API_BASE}${endpoint}`;
+    // The Supabase edge gateway requires a VALID JWT as the Bearer token. Our
+    // custom auth stores a non-JWT placeholder ("admin-token-…") under
+    // sb-access-token, which the gateway rejects with INVALID_JWT_FORMAT (401).
+    // Only forward the stored token if it's a real JWT; otherwise use the anon
+    // key (a valid JWT). Edge functions authorize via the `role` header / their
+    // own checks, so the anon key Bearer is correct here.
+    const storedTok = localStorage.getItem('sb-access-token');
+    const bearer = (storedTok && storedTok.startsWith('eyJ')) ? storedTok : SUPABASE_ANON_KEY;
     const headers = {
       'Content-Type': 'application/json',
       'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${localStorage.getItem('sb-access-token') || SUPABASE_ANON_KEY}`,
+      'Authorization': `Bearer ${bearer}`,
       ...options.headers
     };
 

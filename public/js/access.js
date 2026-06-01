@@ -67,7 +67,7 @@ window.renderAccessTable = function() {
             <td style="color:var(--slate); font-size:12px;">${signInDate}</td>
             <td style="text-align:center;">
                 <div style="display:flex; justify-content:center; gap:6px;">
-                    <button class="btn btn-outline-grey btn-sm" onclick="promptEditUserRole('${u.id}', '${u.role}')" style="padding:4px;" title="Edit Role" ${isMaster ? 'disabled' : ''}>✏️</button>
+                    <button class="btn btn-outline-grey btn-sm" onclick="promptEditUserRole('${u.id}', '${u.role}', '${window.escapeHtml(u.email)}')" style="padding:4px;" title="Edit Role" ${isMaster ? 'disabled' : ''}>✏️</button>
                     <button class="btn btn-outline-grey btn-sm text-danger" onclick="deleteUserAccess('${u.id}', '${window.escapeHtml(u.email)}')" style="padding:4px; border-color:var(--danger);" title="Revoke Access" ${isMaster ? 'disabled' : ''}>🗑️</button>
                 </div>
             </td>
@@ -76,20 +76,46 @@ window.renderAccessTable = function() {
     tbody.innerHTML = html;
 };
 
-window.promptCreateUser = function() {
-    const email = prompt("Enter new user's email/username:");
-    if (!email) return;
-    
-    const password = prompt("Enter temporary password (min 6 chars):");
-    if (!password || password.length < 6) {
-        alert("Password must be at least 6 characters.");
-        return;
-    }
-    
-    const role = prompt("Enter role (admin, coach, parent):", "coach");
-    if (!role) return;
+// ── Create / Edit user via proper modal (replaces prompt() dialogs) ──
+function setAccessUserError(msg) {
+    const el = document.getElementById('acc-user-error');
+    if (!el) return;
+    if (msg) { el.textContent = msg; el.style.display = 'block'; }
+    else { el.textContent = ''; el.style.display = 'none'; }
+}
 
-    createAccessUser(email, password, role);
+window.promptCreateUser = function() {
+    document.getElementById('acc-user-modal-title').textContent = 'Create User';
+    document.getElementById('acc-user-modal-sub').textContent = 'Add a new admin, coach, or parent account.';
+    document.getElementById('acc-user-id').value = '';
+    const emailEl = document.getElementById('acc-user-email');
+    emailEl.value = ''; emailEl.disabled = false;
+    document.getElementById('acc-user-password').value = '';
+    document.getElementById('acc-user-pass-label').textContent = 'Temporary Password *';
+    document.getElementById('acc-user-role').value = 'coach';
+    document.getElementById('acc-user-submit-btn').textContent = 'Create User';
+    setAccessUserError('');
+    if (window.openModal) window.openModal('access-user-modal');
+};
+
+window.submitAccessUserForm = function() {
+    const id = document.getElementById('acc-user-id').value;
+    const email = document.getElementById('acc-user-email').value.trim();
+    const password = document.getElementById('acc-user-password').value;
+    const role = document.getElementById('acc-user-role').value;
+    const isEdit = !!id;
+
+    if (!isEdit) {
+        if (!email) return setAccessUserError('Email / username is required.');
+        if (!password || password.length < 6) return setAccessUserError('Password must be at least 6 characters.');
+        if (window.closeModals) window.closeModals();
+        createAccessUser(email, password, role);
+    } else {
+        // Edit: role always sent; password only if provided (reset)
+        if (password && password.length < 6) return setAccessUserError('Password must be at least 6 characters (or leave blank).');
+        if (window.closeModals) window.closeModals();
+        updateAccessUser(id, role, password || null);
+    }
 };
 
 window.createAccessUser = async function(email, password, role) {
@@ -111,11 +137,19 @@ window.createAccessUser = async function(email, password, role) {
     }
 };
 
-window.promptEditUserRole = function(id, currentRole) {
-    const newRole = prompt(`Enter new role for user (current: ${currentRole}):\nOptions: admin, coach, parent`);
-    if (!newRole || newRole === currentRole) return;
-    
-    updateAccessUser(id, newRole, null);
+window.promptEditUserRole = function(id, currentRole, email) {
+    document.getElementById('acc-user-modal-title').textContent = 'Edit User';
+    document.getElementById('acc-user-modal-sub').textContent = 'Change the role or reset the password.';
+    document.getElementById('acc-user-id').value = id;
+    const emailEl = document.getElementById('acc-user-email');
+    emailEl.value = email || ''; emailEl.disabled = true; // email can't be changed via the API
+    document.getElementById('acc-user-password').value = '';
+    document.getElementById('acc-user-pass-label').textContent = 'New Password (leave blank to keep current)';
+    const roleSel = document.getElementById('acc-user-role');
+    roleSel.value = (currentRole && ['admin','coach','parent'].includes(currentRole)) ? currentRole : 'coach';
+    document.getElementById('acc-user-submit-btn').textContent = 'Save Changes';
+    setAccessUserError('');
+    if (window.openModal) window.openModal('access-user-modal');
 };
 
 window.updateAccessUser = async function(id, role, password) {

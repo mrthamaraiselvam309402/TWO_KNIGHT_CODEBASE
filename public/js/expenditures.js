@@ -47,11 +47,14 @@
   // ─── API Helper (re-uses global apiCall from scripts.js) ────────
   async function apiCall(endpoint, opts = {}) {
     if (window.apiCall) return window.apiCall(endpoint, opts);
-    // fallback
+    // fallback — only forward a stored token if it's a real JWT (the custom
+    // auth stores a non-JWT placeholder which the gateway rejects).
+    const _tok = localStorage.getItem('sb-access-token');
+    const _bearer = (_tok && _tok.startsWith('eyJ')) ? _tok : (window.SUPABASE_ANON_KEY || '');
     const headers = {
       'Content-Type': 'application/json',
       'apikey':        window.SUPABASE_ANON_KEY || '',
-      'Authorization': `Bearer ${localStorage.getItem('sb-access-token') || window.SUPABASE_ANON_KEY || ''}`
+      'Authorization': `Bearer ${_bearer}`
     };
     return fetch(endpoint, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
   }

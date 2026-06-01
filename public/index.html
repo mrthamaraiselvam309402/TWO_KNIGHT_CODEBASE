@@ -1776,6 +1776,42 @@
       </div>
     </div>
 
+<!-- Access Control: Create / Edit User Modal -->
+<div class="modal" id="access-user-modal">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-title" id="acc-user-modal-title">Create User</div>
+    <div class="modal-sub" id="acc-user-modal-sub">Add a new admin, coach, or parent account.</div>
+
+    <input type="hidden" id="acc-user-id">
+
+    <div class="form-group">
+      <label class="label">Email / Username *</label>
+      <input type="email" id="acc-user-email" placeholder="user@example.com" autocomplete="off">
+    </div>
+
+    <div class="form-group">
+      <label class="label" id="acc-user-pass-label">Temporary Password *</label>
+      <input type="text" id="acc-user-password" placeholder="Minimum 6 characters" autocomplete="new-password">
+    </div>
+
+    <div class="form-group">
+      <label class="label">Role *</label>
+      <select id="acc-user-role">
+        <option value="admin">Admin — full academy access</option>
+        <option value="coach">Coach</option>
+        <option value="parent">Parent</option>
+      </select>
+    </div>
+
+    <div class="exp-form-error" id="acc-user-error" style="display:none"></div>
+
+    <div style="display:flex;gap:12px;margin-top:8px">
+      <button class="btn btn-outline-grey" style="flex:1" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" id="acc-user-submit-btn" onclick="submitAccessUserForm()">Create User</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="exp-modal">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-title" id="exp-modal-title">Add Expense</div>
@@ -2785,10 +2821,10 @@
       <script src="js/telemetry.js?v=1.0" charset="utf-8"></script>
       <script src="js/productivity.js?v=1.2&t=20260601c" charset="utf-8"></script>
       <script src="js/tournaments.js?v=1.1&t=20260531" charset="utf-8"></script>
-      <script src="js/access.js?v=1.2&t=20260601"></script>
+      <script src="js/access.js?v=1.3&t=20260601c"></script>
       <script src="js/tom-brain.js?v=1.0&t=20260601" charset="utf-8"></script>
-      <script src="scripts.js?v=6.6&t=20260601c" charset="utf-8"></script>
-      <script src="js/expenditures.js?v=1.0&t=20260529" charset="utf-8"></script>
+      <script src="scripts.js?v=6.7&t=20260601d" charset="utf-8"></script>
+      <script src="js/expenditures.js?v=1.1&t=20260601d" charset="utf-8"></script>
       <script src="js/calculator.js?v=1.0" charset="utf-8"></script>
       <script src="js/reporting.js?v=v9&t=20260601" charset="utf-8"></script>
       <script src="js/ai-assistant.js?v=v4&t=20260601" charset="utf-8"></script>
