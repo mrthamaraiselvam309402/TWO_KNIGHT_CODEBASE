@@ -379,15 +379,24 @@
             return window.toast('Student does not have a parent phone number saved', 'error');
         }
 
-        let msg = `Hello Sir/Madam, 👑\n\n`;
-        msg += `We are happy to inform you that *${stName}* has been scheduled for a demo chess class.\n\n`;
-        if (demoDate && demoDate !== 'TBD') msg += `📅 *Demo Date:* ${demoDate}\n`;
-        msg += `⏰ *Demo Timing:* ${demoTime}\n\n`;
-        msg += `♟️ *Regular Class Timing:* ${regTime}\n`;
-        msg += `🗓️ *Days:* ${regDays}\n`;
-        msg += `🎓 *Assigned Coach:* ${coachName}\n\n`;
-        if (meetLink) msg += `🔗 *Join Class Link:* ${meetLink}\n\n`;
-        if (footnote) msg += `${footnote}\n`;
+        // Strip any internal learning-mode marker that may have leaked into the
+        // stored name (e.g. "Prajesh --offline academy") for a clean parent message.
+        const cleanName = (stName || 'Student').replace(/\s*-+\s*(offline|online)(\s+academy)?\s*$/i, '').trim() || stName;
+
+        // NOTE: emojis are written as \u{...} escapes (pure ASCII in source) so
+        // they can never be corrupted to "?" by file-encoding / build / transport.
+        let msg = `\u{1F451} *CHESSKIDOO ACADEMY*\n_Official Class Schedule_\n\n`;            // 👑
+        msg += `Hello Sir/Madam, \u{1F44B}\n\n`;                                              // 👋
+        msg += `We are happy to inform you that *${cleanName}* has been scheduled for chess classes at our academy. \u{265F}\u{FE0F}\n\n`; // ♟️
+        msg += `\u{1F4D6} *DEMO CLASS*\n`;                                                     // 📖
+        if (demoDate && demoDate !== 'TBD') msg += `\u{1F4C5} Date: ${demoDate}\n`;            // 📅
+        msg += `\u{23F0} Timing: ${demoTime}\n\n`;                                             // ⏰
+        msg += `\u{1F5D3}\u{FE0F} *REGULAR CLASS*\n`;                                          // 🗓️
+        msg += `\u{1F4C6} Days: ${regDays}\n`;                                                 // 📆
+        msg += `\u{23F1}\u{FE0F} Timing: ${regTime}\n`;                                        // ⏱️
+        msg += `\u{1F393} Coach: ${coachName}\n\n`;                                            // 🎓
+        if (meetLink) msg += `\u{1F3A5} *Join Online Class:* ${meetLink}\n\n`;                 // 🎥
+        if (footnote) msg += `\u{2728} _${footnote}_\n`;                                       // ✨
 
         const waUrl = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
         window.open(waUrl, '_blank');

@@ -1093,6 +1093,36 @@
     } catch (e) { toast('Promotion failed', 'error'); }
   }
 
+  // Shared, friendly fee-reminder message builder used by all reminder flows.
+  // Emojis are \u{...} escapes (pure ASCII source) so they can never be
+  // corrupted to "?" by file encoding / build / transport.
+  function buildFeeMessage(s, name, amount, dueDateStr, isDueOrOverdue) {
+    const amountText = '\u{20B9}' + Number(amount || 0).toLocaleString() + getStudentLocalCurrencyAmount(s, amount);
+    const cn = cleanText(name);
+    if (isDueOrOverdue) {
+      return `\u{1F534} *FEE PAYMENT DUE*\n` +                                  // 🔴
+        `\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\n\n` +
+        `Hello Sir/Madam, \u{1F44B}\n\n` +                                      // 👋
+        `\u{265F}\u{FE0F} This is a gentle note that the chess class fee for *${cn}* is currently *due*.\n\n` + // ♟️
+        `\u{1F4B0} *Amount Due:* ${amountText}\n` +                            // 💰
+        `\u{1F4C5} *Due Date:* ${dueDateStr}\n\n` +                            // 📅
+        `Kindly complete the payment on or before the due date to avoid any interruption in class participation. \u{1F64F}\n\n` + // 🙏
+        `\u{1F4F2} *Pay via UPI / GPay / PhonePe:* 9025846663 (Ranjith)\n\n` + // 📲
+        `Thank you for your continued support! \u{1F31F}\n` +                  // 🌟
+        `\u{265F}\u{FE0F} *Chesskidoo Academy*`;                               // ♟️
+    }
+    return `\u{1F4E2} *UPCOMING FEE REMINDER*\n` +                              // 📢
+      `\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\n\n` +
+      `Hello Sir/Madam, \u{1F44B}\n\n` +                                        // 👋
+      `We hope you are doing well! \u{1F60A} This is a friendly reminder that the chess class fee for *${cn}* is coming up soon. \u{265F}\u{FE0F}\n\n` + // 😊 ♟️
+      `\u{1F4B0} *Fee Amount:* ${amountText}\n` +                              // 💰
+      `\u{1F4C5} *Due Date:* ${dueDateStr}\n\n` +                              // 📅
+      `Kindly complete the payment on or before the due date. \u{1F64F}\n\n` + // 🙏
+      `\u{1F4F2} *Pay via UPI / GPay / PhonePe:* 9025846663 (Ranjith)\n\n` +   // 📲
+      `Thank you so much for your support and cooperation! \u{1F31F}\n` +      // 🌟
+      `\u{265F}\u{FE0F} *Chesskidoo Academy*`;                                 // ♟️
+  }
+
   function sendPaymentReminder(id) {
     const s = allStudents.find(x => String(x.id) === String(id));
     if (!s) return;
@@ -1152,37 +1182,7 @@
       totalPending = monthlyFee || 1500;
     }
 
-    let msg = '';
-    if (isDueOrOverdue) {
-      msg = `FEE PAYMENT DUE\n` +
-        `\n` +
-        `Hello Sir/Madam,\n` +
-        `\n` +
-        `This is to inform you that the chess class fee for ${cleanText(name)} is currently due.\n` +
-        `Amount Due: \u{20B9}${totalPending.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalPending)}\n` +
-        `\n` +
-        `We kindly request you to complete the payment on or before ${dueDateStr} to avoid any interruption in class participation.\n` +
-        `\n` +
-        `You may make the payment to: 9025846663 (Ranjith)\n` +
-        `\n` +
-        `Thank you for your understanding.\n` +
-        `– Chesskidoo Academy`;
-    } else {
-      msg = `UPCOMING FEE REMINDER\n` +
-        `\n` +
-        `Hello Sir/Madam,\n` +
-        `\n` +
-        `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(name)} is coming up soon.\n` +
-        `Fee Amount: \u{20B9}${totalPending.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalPending)}\n` +
-        `Due Date: ${dueDateStr}\n` +
-        `\n` +
-        `We kindly request you to complete the payment on or before the due date.\n` +
-        `\n` +
-        `You may make the payment to: 9025846663 (Ranjith)\n` +
-        `\n` +
-        `Thank you so much for your support and cooperation!\n` +
-        `– Chesskidoo Academy`;
-    }
+    const msg = buildFeeMessage(s, name, totalPending, dueDateStr, isDueOrOverdue);
 
     const parsed = parseStoredPhone(phone);
     const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -1384,37 +1384,7 @@
           totalDebt = fee || 1500;
         }
 
-        let msg = '';
-        if (isDueOrOverdue) {
-          msg = `FEE PAYMENT DUE\n` +
-            `\n` +
-            `Hello Sir/Madam,\n` +
-            `\n` +
-            `This is to inform you that the chess class fee for ${cleanText(name)} is currently due.\n` +
-            `Amount Due: \u{20B9}${totalDebt.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalDebt)}\n` +
-            `\n` +
-            `We kindly request you to complete the payment on or before ${dueDateStr} to avoid any interruption in class participation.\n` +
-            `\n` +
-            `You may make the payment to: 9025846663 (Ranjith)\n` +
-            `\n` +
-            `Thank you for your understanding.\n` +
-            `– Chesskidoo Academy`;
-        } else {
-          msg = `UPCOMING FEE REMINDER\n` +
-            `\n` +
-            `Hello Sir/Madam,\n` +
-            `\n` +
-            `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(name)} is coming up soon.\n` +
-            `Fee Amount: \u{20B9}${totalDebt.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalDebt)}\n` +
-            `Due Date: ${dueDateStr}\n` +
-            `\n` +
-            `We kindly request you to complete the payment on or before the due date.\n` +
-            `\n` +
-            `You may make the payment to: 9025846663 (Ranjith)\n` +
-            `\n` +
-            `Thank you so much for your support and cooperation!\n` +
-            `– Chesskidoo Academy`;
-        }
+        const msg = buildFeeMessage(s, name, totalDebt, dueDateStr, isDueOrOverdue);
 
       const parsed = parseStoredPhone(phone);
       const inferredCountry = (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN');
@@ -6331,36 +6301,7 @@ Best regards,
 
         // Build notification content
         let message = customMsg ? `${customMsg}\n\n` : '';
-        if (isDueOrOverdue) {
-          message += `FEE PAYMENT DUE\n` +
-            `\n` +
-            `Hello Sir/Madam,\n` +
-            `\n` +
-            `This is to inform you that the chess class fee for ${cleanText(studentName)} is currently due.\n` +
-            `Amount Due: \u{20B9}${totalDue.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalDue)}\n` +
-            `\n` +
-            `We kindly request you to complete the payment on or before ${dueDateStr} to avoid any interruption in class participation.\n` +
-            `\n` +
-            `You may make the payment to: 9025846663 (Ranjith)\n` +
-            `\n` +
-            `Thank you for your understanding.\n` +
-            `– Chesskidoo Academy`;
-        } else {
-          message += `UPCOMING FEE REMINDER\n` +
-            `\n` +
-            `Hello Sir/Madam,\n` +
-            `\n` +
-            `We hope you are doing well! This is a gentle reminder that the chess class fee for ${cleanText(studentName)} is coming up soon.\n` +
-            `Fee Amount: \u{20B9}${totalDue.toLocaleString()}${getStudentLocalCurrencyAmount(s, totalDue)}\n` +
-            `Due Date: ${dueDateStr}\n` +
-            `\n` +
-            `We kindly request you to complete the payment on or before the due date.\n` +
-            `\n` +
-            `You may make the payment to: 9025846663 (Ranjith)\n` +
-            `\n` +
-            `Thank you so much for your support and cooperation!\n` +
-            `– Chesskidoo Academy`;
-        }
+        message += buildFeeMessage(s, studentName, totalDue, dueDateStr, isDueOrOverdue);
 
       try {
         let sent = false;
