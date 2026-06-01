@@ -5044,6 +5044,15 @@ function initUI() {
       if (!validation.valid) { toast(validation.error, 'error'); return; }
       const fullPhone = getFullInternationalPhoneDigits(rawPhone, countryCode);
 
+      // Due-date sanity: it must not fall before the enrollment date.
+      const _eEnroll = $('e-join') ? $('e-join').value : '';
+      const _eDue = $('e-due-date') ? $('e-due-date').value : '';
+      if (_eEnroll && _eDue && _eDue < _eEnroll) {
+        toast('Due date cannot be before the enrollment date.', 'error');
+        if ($('e-due-date')) $('e-due-date').focus();
+        return;
+      }
+
       // Send fee under every possible field name so whichever Supabase column exists gets updated
       const data = {
         full_name: $('e-name').value,
@@ -5249,6 +5258,14 @@ function initUI() {
      if (!data.full_name) { toast('Student name is required', 'error'); return; }
      if (!rawPhone) { toast('Parent phone is required', 'error'); return; }
      if (!validation.valid) { toast(validation.error, 'error'); return; }
+     // Due-date sanity: must not be before the enrollment date.
+     const _mEnroll = $('m-join') ? $('m-join').value : '';
+     const _mDue = $('m-due-date') ? $('m-due-date').value : '';
+     if (_mEnroll && _mDue && _mDue < _mEnroll) {
+       toast('Due date cannot be before the enrollment date.', 'error');
+       if ($('m-due-date')) $('m-due-date').focus();
+       return;
+     }
 
       try {
         const res = await apiCall('/api/students', { method: 'POST', body: JSON.stringify(data) });
