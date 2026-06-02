@@ -4425,6 +4425,22 @@ function initUI() {
   }
   window.cycleRevenue = cycleRevenue;
 
+  // Collected-revenue view mode: 'cycle' (default — fee counted in the billing
+  // cycle it covers) or 'cash' (fee counted in the calendar month the payment
+  // was received). Persisted so the admin's choice sticks.
+  window.revenueViewMode = localStorage.getItem('revenue_view_mode') || 'cycle';
+  function revenueFor(year, month) {
+    return window.revenueViewMode === 'cash'
+      ? calculateSlotRevenue(year, month)
+      : cycleRevenue(year, month);
+  }
+  window.toggleRevenueView = function () {
+    window.revenueViewMode = (window.revenueViewMode === 'cash') ? 'cycle' : 'cash';
+    localStorage.setItem('revenue_view_mode', window.revenueViewMode);
+    try { renderDash(); } catch (e) {}
+    if (window.toast) window.toast('Revenue view: ' + (window.revenueViewMode === 'cash' ? 'Cash (received this month)' : 'Cycle (billed for this month)'), 'info');
+  };
+
   function calculateSlotRevenue(year, month, studentIdMap) {
     if (!allPayments) return 0;
     const seenStuds = new Set();
@@ -4537,7 +4553,7 @@ function initUI() {
     // cycle it covers, counting forward from the student's billing anchor — so an
     // advance payment (e.g. paid in May for the June cycle) is counted in June,
     // the month it pays FOR, rather than the calendar month the cash arrived.
-    const paidRevenue = cycleRevenue(targetYear, targetMonth);
+    const paidRevenue = revenueFor(targetYear, targetMonth);
 
     let totalArrears = 0;
     let currMonthPending = 0;
@@ -4580,7 +4596,7 @@ function initUI() {
 
     // --- Growth Calculation (MoM Slot-Based) ---
     const prevMonthDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1));
-    const prevRevenue = cycleRevenue(prevMonthDate.getUTCFullYear(), prevMonthDate.getUTCMonth());
+    const prevRevenue = revenueFor(prevMonthDate.getUTCFullYear(), prevMonthDate.getUTCMonth());
 
     const rawRate = totalPotential > 0 ? (paidRevenue / totalPotential) * 100 : 0;
     const collectionRate = Math.min(rawRate, 100).toFixed(1);
@@ -4602,6 +4618,7 @@ function initUI() {
 
     // Update UI
     if ($('s-rev')) $('s-rev').textContent = '₹' + paidRevenue.toLocaleString();
+    if ($('s-rev-mode')) $('s-rev-mode').textContent = '⇄ ' + (window.revenueViewMode === 'cash' ? 'cash' : 'cycle');
     if ($('s-total-revenue')) $('s-total-revenue').textContent = '₹' + totalPotential.toLocaleString();
 
     const growthEl = $('s-due');

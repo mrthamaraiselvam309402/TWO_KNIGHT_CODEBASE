@@ -175,7 +175,7 @@
         <div class="card card-clickable" onclick="setPage('coach-mgmt')"><div class="stat-label">Active Coaches</div><div class="stat-value" id="s-coaches">—</div></div>
       </div>
       <div class="dash-grid" style="margin-bottom:14px">
-        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Collected Revenue</div><div class="stat-value text-success" id="s-rev">—</div></div>
+        <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label" style="display:flex;align-items:center;justify-content:space-between;gap:6px;">Collected Revenue <span id="s-rev-mode" onclick="event.stopPropagation(); toggleRevenueView();" title="Toggle: Cash (received this month) vs Cycle (billed for this month)" style="cursor:pointer;font-size:9px;font-weight:700;color:var(--gold);border:1px solid var(--border);border-radius:10px;padding:1px 7px;text-transform:none;letter-spacing:0;">⇄ cycle</span></div><div class="stat-value text-success" id="s-rev">—</div></div>
         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Revenue Growth (MoM)</div><div class="stat-value" id="s-due">—</div></div>
         <div class="card"><div class="stat-label">Collection Rate</div><div class="stat-value" style="color:var(--blue)" id="s-rate">—</div></div>
       </div>
@@ -2910,7 +2910,7 @@
       <script src="js/tournaments.js?v=1.2&t=20260601j" charset="utf-8"></script>
       <script src="js/access.js?v=1.4&t=20260601i"></script>
       <script src="js/tom-brain.js?v=1.0&t=20260601" charset="utf-8"></script>
-      <script src="scripts.js?v=8.6&t=20260602m" charset="utf-8"></script>
+      <script src="scripts.js?v=8.8&t=20260602o" charset="utf-8"></script>
       <script src="js/expenditures.js?v=1.1&t=20260601d" charset="utf-8"></script>
       <script src="js/calculator.js?v=1.0" charset="utf-8"></script>
       <script src="js/reporting.js?v=v13&t=20260602c" charset="utf-8"></script>
