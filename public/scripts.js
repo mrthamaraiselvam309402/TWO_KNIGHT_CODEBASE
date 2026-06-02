@@ -5500,58 +5500,64 @@ function initUI() {
 
   function viewCoachSchedule(id) {
     const c = allCoaches.find(x => String(x.id) === String(id));
-    if (c) $('sched-coach-name').innerText = getCoachName(c);
+    const coachName = c ? getCoachName(c) : 'Coach';
+    if ($('sched-coach-name')) $('sched-coach-name').innerText = coachName;
 
-    const assignedStudents = allStudents.filter(s => String(s.coach_id) === String(id));
     const container = $('schedule-container');
-
     if (!container) { openModal('coach-schedule-modal'); return; }
 
-    if (assignedStudents.length === 0) {
-      container.innerHTML = '<div class="empty-state"><span class="empty-icon">📅</span><p>No students assigned to this coach</p></div>';
+    // Reuse the Master Schedule data + a clean calendar-pill theme, matched to
+    // this coach by name. Falls back to the assigned-students roster otherwise.
+    const sched = (window.hardcodedSchedule || []).find(e =>
+      (e.coach || '').toLowerCase().trim() === coachName.toLowerCase().trim());
+
+    const daysFull = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const shortDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+    const dayPills = (scheduleStr) => {
+      const low = (scheduleStr || '').toLowerCase();
+      return `<div style="display:flex; gap:5px; margin:10px 0 8px;">` + daysFull.map((d, i) => {
+        const active = low.includes(d.toLowerCase()) || low.includes(d.slice(0, 3).toLowerCase());
+        return `<div style="flex:1; text-align:center; padding:7px 0; border-radius:7px; font-size:11px; font-weight:800; ${active
+          ? 'background:linear-gradient(135deg,var(--gold) 0%,#b8860b 100%); color:#000; box-shadow:0 2px 8px rgba(218,163,62,0.35);'
+          : 'background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.35);'}">${shortDays[i]}</div>`;
+      }).join('') + `</div>`;
+    };
+    const timePart = (scheduleStr) => {
+      const p = (scheduleStr || '').split('|');
+      return (p[1] ? p[1].trim() : (scheduleStr || 'TBD'));
+    };
+
+    let html = '';
+    if (sched && sched.batches && sched.batches.length) {
+      html = sched.batches.map(b => `
+        <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span style="font-weight:700; color:var(--gold); font-family:var(--font-head); font-size:15px;">${escapeHtml(b.name)}</span>
+            <span style="font-size:12px; color:var(--blue); font-family:var(--font-mono);">⏰ ${escapeHtml(timePart(b.schedule))}</span>
+          </div>
+          ${dayPills(b.schedule)}
+          <div style="font-size:12px; color:var(--ivory-dim); margin-top:10px; line-height:1.6;">
+            <b style="color:var(--ivory);">${b.students.length} student${b.students.length === 1 ? '' : 's'}:</b> ${b.students.map(escapeHtml).join(', ')}
+          </div>
+        </div>`).join('');
     } else {
-      // Group by Day
-      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      let scheduleHtml = `<div class="schedule-grid-premium">`;
-
-       days.forEach(day => {
-         const daySlots = assignedStudents.filter(s => s.batch_day === day || s.session_day === day);
-         if (daySlots.length > 0) {
-           scheduleHtml += `
-             <div class="schedule-day-column">
-               <div class="schedule-day-header">${day}</div>
-               ${daySlots.sort((a, b) => (a.batch_time || '').localeCompare(b.batch_time || '')).map(s => `
-                 <div class="schedule-slot-card">
-                   <div class="slot-time">${s.batch_time ? formatTime(s.batch_time) : 'TBD'}</div>
-                   <div class="slot-stud">${escapeHtml(getStudentName(s))}</div>
-                   <div class="slot-lvl">${escapeHtml(getStudentLevel(s))}</div>
-                 </div>
-               `).join('')}
-             </div>
-           `;
-         }
-       });
-
-       // Handle Unscheduled (TBD)
-       const unscheduled = assignedStudents.filter(s => !s.batch_day && !s.session_day);
-       if (unscheduled.length > 0) {
-         scheduleHtml += `
-           <div class="schedule-day-column tbd">
-             <div class="schedule-day-header">Unscheduled / TBD</div>
-             ${unscheduled.map(s => `
-               <div class="schedule-slot-card">
-                 <div class="slot-time">TBD</div>
-                 <div class="slot-stud">${escapeHtml(getStudentName(s))}</div>
-                 <div class="slot-lvl">${escapeHtml(getStudentLevel(s))}</div>
-               </div>
-             `).join('')}
-           </div>
-         `;
-       }
-
-      scheduleHtml += `</div>`;
-      container.innerHTML = scheduleHtml;
+      // Fallback: build cards from the live roster (students assigned to this coach).
+      const assigned = allStudents.filter(s => String(s.coach_id) === String(id));
+      if (assigned.length === 0) {
+        html = '<div class="empty-state"><span class="empty-icon">📅</span><p>No students assigned to this coach</p></div>';
+      } else {
+        html = `<div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px;">
+          <div style="font-weight:700; color:var(--gold); margin-bottom:10px; font-family:var(--font-head);">Assigned Students (${assigned.length})</div>
+          ${assigned.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b))).map(s => `
+            <div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px;">
+              <span style="color:var(--ivory); font-weight:600;">${escapeHtml(getStudentName(s))}</span>
+              <span style="color:var(--ivory-dim);">${escapeHtml(getStudentBatchType(s))} &middot; ${escapeHtml(getStudentSessionTime(s))}</span>
+            </div>`).join('')}
+        </div>`;
+      }
     }
+    container.innerHTML = html;
     openModal('coach-schedule-modal');
   }
 

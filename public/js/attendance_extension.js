@@ -133,6 +133,9 @@ const hardcodedSchedule = [
   ] }
 ];
 
+// Expose the master schedule data so the per-coach schedule view can reuse it.
+window.hardcodedSchedule = hardcodedSchedule;
+
 window.openMasterSchedule = function() {
   const container = document.getElementById('master-schedule-container');
   if (!container) return;
