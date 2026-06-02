@@ -51,6 +51,7 @@ h1, h2, h3, h4, h5, h6 {
   --ivory: #f0ede4;
   --ivory2: #c8c4b8;
   --ivory3: #7a7870;
+  --ivory-dim: #9a978c;
 
    --accent: #5a9fff;
    --info: #17a2b8;
@@ -92,6 +93,7 @@ body[data-theme="light"] {
   --ivory: #1a1a1a;
   --ivory2: #4a4a4a;
   --ivory3: #757575;
+  --ivory-dim: #6b6b6b;
   --glass: rgba(255,255,255,0.9);
   --border: rgba(179,133,27,0.15);
   --shadow: 0 8px 30px rgba(0,0,0,0.08);
@@ -1691,6 +1693,11 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
   border: 1px solid rgba(232, 168, 48, 0.18) !important;
   box-shadow: var(--shadow-deep), 0 0 50px rgba(232, 168, 48, 0.05);
   transition: all 0.3s ease;
+}
+/* Light theme: the manage view must NOT stay dark navy or its dark text vanishes. */
+body[data-theme="light"] #ev-manage-view {
+  background: linear-gradient(135deg, #ffffff, #f7f4ec) !important;
+  border: 1px solid var(--border) !important;
 }
 
 /* Operational Groups Action Bar */
