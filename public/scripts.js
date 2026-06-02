@@ -1358,7 +1358,7 @@
   window.bulkInformNext = function () {
     const next = bulkInformQueue.findIndex(q => !q.sent);
     if (next === -1) { toast('All coaches have been informed! ✅', 'success'); return; }
-    bulkInformSend(next);
+    window.bulkInformSend(next);
   };
 
   window.informAllDueStudents = function () {
