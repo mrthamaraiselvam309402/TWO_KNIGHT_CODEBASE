@@ -5404,7 +5404,22 @@ function initUI() {
           rating: parseInt($('m-elo').value) || 0,
           coach_id: $('m-coach').value,
           enrollment_date: $('m-join').value || new Date().toISOString().split('T')[0],
-          due_date: $('m-due-date')?.value || null,
+          // If no due date is entered, default it to the student's billing-anchor
+          // month on their enrollment day (so a June enrolment is due in June, not
+          // July via the server's "5th of next month" fallback). Late-month joins
+          // (grace) correctly anchor to the next month.
+          due_date: (function(){
+            const explicit = $('m-due-date')?.value;
+            if (explicit) return explicit;
+            const enrollStr = $('m-join').value || new Date().toISOString().split('T')[0];
+            const ed = new Date(enrollStr);
+            if (isNaN(ed.getTime())) return null;
+            const a = window.getBillingAnchor ? window.getBillingAnchor({ enrollment_date: enrollStr })
+              : { year: ed.getUTCFullYear(), month: ed.getUTCMonth() };
+            const daysIn = new Date(a.year, a.month + 1, 0).getDate();
+            const day = Math.min(ed.getUTCDate(), daysIn);
+            return a.year + '-' + String(a.month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+          })(),
           batch_type: $('m-batch-type').value,
           batch_time: $('m-batch-time').value,
           monthly_fee: parseInt($('m-fee').value) || 0,
