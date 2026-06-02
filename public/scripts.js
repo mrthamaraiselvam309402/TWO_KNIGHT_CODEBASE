@@ -4307,6 +4307,41 @@ function initUI() {
     }
   }
 
+  // Count a student's distinct PAID billing months (max one per calendar month)
+  // — i.e. how many billing cycles their payments cover.
+  function getStudentPaidInvoiceCount(s) {
+    if (!s || !allPayments) return 0;
+    const sid = String(s.id || '').trim().toLowerCase();
+    const months = new Set();
+    allPayments.forEach(p => {
+      if (p.status === 'paid' && String(p.student_id || '').trim().toLowerCase() === sid) {
+        const d = new Date(p.payment_date || p.created_at);
+        if (!isNaN(d.getTime())) months.add(d.getUTCFullYear() + '-' + d.getUTCMonth());
+      }
+    });
+    return months.size;
+  }
+  window.getStudentPaidInvoiceCount = getStudentPaidInvoiceCount;
+
+  // Cycle-based collected revenue: a student's monthly fee is attributed to the
+  // billing CYCLE it covers (counting forward from their billing anchor), not the
+  // calendar month the cash arrived — so an advance payment shows up in the month
+  // it pays FOR (e.g. a May payment for the June cycle counts toward June).
+  function cycleRevenue(year, month) {
+    const baseline = new Date(Date.UTC(2026, 3, 1));
+    let sum = 0;
+    (allStudents || []).forEach(s => {
+      const st = getStudentStatus(s);
+      if (['archived', 'pending', 'waitlist', 'upcoming', 'inactive'].includes(st)) return;
+      const anchor = getBillingAnchor(s, baseline);
+      const k = (year - anchor.year) * 12 + (month - anchor.month); // 0-based cycle index for this month
+      if (k < 0) return; // month precedes the student's first billed cycle
+      if (k < getStudentPaidInvoiceCount(s)) sum += (getStudentMonthlyFee(s) || 0);
+    });
+    return sum;
+  }
+  window.cycleRevenue = cycleRevenue;
+
   function calculateSlotRevenue(year, month, studentIdMap) {
     if (!allPayments) return 0;
     const seenStuds = new Set();
@@ -4415,23 +4450,11 @@ function initUI() {
     if ($('s-total')) $('s-total').textContent = targetStudents.length;
     if ($('s-elo')) $('s-elo').textContent = targetStudents.length ? Math.round(targetStudents.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / targetStudents.length) : 0;
 
-    const paidStudentIds = new Set();
-    const paidRevenue = (allPayments || []).reduce((sum, p) => {
-      const pDate = new Date(p.payment_date || p.created_at);
-      if (pDate.getUTCMonth() === targetMonth && pDate.getUTCFullYear() === targetYear && p.status === 'paid') {
-        const sid = String(p.student_id).toLowerCase();
-        if (paidStudentIds.has(sid)) return sum; // Fuzzy deduplication: 1 payment per student per month
-
-        const s = targetStudents.find(x => String(x.id).toLowerCase() === sid);
-        if (s) {
-          if (getStudentPaymentStatus(s, targetMonth, targetYear) === 'Paid') {
-            paidStudentIds.add(sid);
-            return sum + getStudentMonthlyFee(s); // Enforce 1x monthly fee logic
-          }
-        }
-      }
-      return sum;
-    }, 0);
+    // Collected Revenue (cycle-based): each fee is attributed to the billing
+    // cycle it covers, counting forward from the student's billing anchor — so an
+    // advance payment (e.g. paid in May for the June cycle) is counted in June,
+    // the month it pays FOR, rather than the calendar month the cash arrived.
+    const paidRevenue = cycleRevenue(targetYear, targetMonth);
 
     let totalArrears = 0;
     let currMonthPending = 0;
@@ -4470,7 +4493,7 @@ function initUI() {
 
     // --- Growth Calculation (MoM Slot-Based) ---
     const prevMonthDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1));
-    const prevRevenue = calculateSlotRevenue(prevMonthDate.getUTCFullYear(), prevMonthDate.getUTCMonth(), s_id_map);
+    const prevRevenue = cycleRevenue(prevMonthDate.getUTCFullYear(), prevMonthDate.getUTCMonth());
 
     const rawRate = totalPotential > 0 ? (paidRevenue / totalPotential) * 100 : 0;
     const collectionRate = Math.min(rawRate, 100).toFixed(1);

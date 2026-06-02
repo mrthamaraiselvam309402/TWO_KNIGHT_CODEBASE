@@ -109,7 +109,7 @@ window.generateReportPDF = async function() {
     }
 
     // Sum actual cash collected matching the dashboard's s-rev calculation
-    const collected = calculateSlotRevenue(targetYear, targetMonth);
+    const collected = (window.cycleRevenue ? window.cycleRevenue(targetYear, targetMonth) : calculateSlotRevenue(targetYear, targetMonth));
     const monthlyPayments = allPayments.filter(p => getYM(p.payment_date || p.created_at) === targetYM && p.status === 'paid');
 
     let lastDueAmount = 0;
@@ -256,7 +256,7 @@ window.generateReportPDF = async function() {
         let mCollected = 0;
         let mOutstanding = 0;
         
-        mCollected = calculateSlotRevenue(y, m);
+        mCollected = (window.cycleRevenue ? window.cycleRevenue(y, m) : calculateSlotRevenue(y, m));
 
         allStudents.forEach(s => {
             const sStatus = getStudentStatus(s);
@@ -915,7 +915,7 @@ window.generateReportPPT = async function() {
             }, 0);
         }
 
-        const collected = calculateSlotRevenue(targetYear, targetMonth);
+        const collected = (window.cycleRevenue ? window.cycleRevenue(targetYear, targetMonth) : calculateSlotRevenue(targetYear, targetMonth));
 
         // Deduplication structure for arrears
         const totalPaymentsMap = {};
@@ -1052,7 +1052,7 @@ window.generateReportPPT = async function() {
             const mEnd = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59));
             
             let mPotential = 0;
-            let mCollected = calculateSlotRevenue(y, m);
+            let mCollected = (window.cycleRevenue ? window.cycleRevenue(y, m) : calculateSlotRevenue(y, m));
             let mOutstanding = 0;
             
             allStudents.forEach(s => {
