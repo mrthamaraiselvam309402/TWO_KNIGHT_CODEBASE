@@ -4703,10 +4703,16 @@ function initUI() {
     const sorted = Object.entries(coachData).sort((a, b) => b[1].revenue - a[1].revenue);
 
     tbody.innerHTML = sorted.map(([id, d]) => {
-      const netProfit = d.revenue - d.cost;  // Current cash flow
-      const potentialNetProfit = d.projected - d.cost;  // Projected
-      const roi = d.cost > 0 ? ((d.revenue / d.cost) * 100).toFixed(1) : 0;
-      const potentialRoi = d.cost > 0 ? ((d.projected / d.cost) * 100).toFixed(1) : 0;
+      const netProfit = d.revenue - d.cost;  // Current cash flow (collected − salary)
+      const potentialNetProfit = d.projected - d.cost;  // If every student pays
+      // ROI shown as an intuitive multiplier: "for every ₹1 of salary, the coach
+      // earns the academy ₹X". e.g. 3.5× now / 4.2× at full collection.
+      const roiX = d.cost > 0 ? (d.revenue / d.cost).toFixed(1) : null;
+      const potRoiX = d.cost > 0 ? (d.projected / d.cost).toFixed(1) : null;
+      const roiClass = (roiX !== null && parseFloat(roiX) >= 1) ? 'text-success' : 'text-danger';
+      const roiCell = (roiX === null)
+        ? '<span style="color:var(--ivory-dim)">—</span>'
+        : `<span class="${roiClass}" style="font-weight:700">${roiX}×</span> <span style="color:var(--ivory3)">now</span> / <span class="text-gold" style="font-weight:700">${potRoiX}×</span> <span style="color:var(--ivory3)">max</span>`;
       const profitClass = netProfit >= 0 ? 'text-success' : 'text-danger';
       const potentialProfitClass = potentialNetProfit >= 0 ? 'text-success' : 'text-danger';
       return `<tr>
@@ -4715,9 +4721,9 @@ function initUI() {
         <td>₹${d.revenue.toLocaleString()}</td>
         <td>₹${d.pending.toLocaleString()}</td>
         <td>₹${d.cost.toLocaleString()}</td>
-        <td class="${profitClass}">₹${netProfit.toLocaleString()}</td>
-        <td class="${potentialProfitClass}">₹${potentialNetProfit.toLocaleString()}</td>
-        <td>${roi}% / <span class="text-gold">${potentialRoi}%</span></td>
+        <td class="${profitClass}" title="Collected revenue minus salary">₹${netProfit.toLocaleString()}</td>
+        <td class="${potentialProfitClass}" title="Profit if every assigned student pays (projected − salary)">₹${potentialNetProfit.toLocaleString()}</td>
+        <td title="Times the coach earns back their salary — collected now, and projected at full collection. 1× = breaks even.">${roiCell}</td>
         <td><button class="btn btn-gold btn-sm" onclick="informCoachFees('${id}')">📢 Inform</button></td>
       </tr>`;
     }).join('');
@@ -5541,6 +5547,22 @@ function initUI() {
   // schedule — taken from the student's saved [SCHEDULE64] (regDays/regTime)
   // when present, else their session day/time. Reflects reassignments,
   // deletions and new enrolments automatically.
+  // Pretty-print a time token/range: "17:00" -> "5:00 PM",
+  // "17:00-18:00" -> "5:00 PM – 6:00 PM"; leaves "7:00 PM" / "Weekend" untouched.
+  function prettyTime(str) {
+    if (!str) return '';
+    return String(str).trim().split(/\s*[–-]\s*/).map(tok => {
+      const m = tok.trim().match(/^(\d{1,2}):(\d{2})$/);
+      if (m) {
+        let h = parseInt(m[1], 10); const mm = m[2];
+        const ap = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h}:${mm} ${ap}`;
+      }
+      return tok.trim();
+    }).filter(Boolean).join(' – ');
+  }
+
   function buildCoachBatches(coachId) {
     const students = (allStudents || []).filter(s =>
       String(s.coach_id) === String(coachId) && getStudentStatus(s) !== 'archived');
@@ -5550,7 +5572,9 @@ function initUI() {
       const sd = window.extractScheduleJSON ? window.extractScheduleJSON(s.notes) : null;
       if (sd && (sd.regDays || sd.regTime)) { days = sd.regDays || ''; time = sd.regTime || ''; }
       else { const t = getStudentSessionTime(s); time = (t && t !== 'TBD') ? t : ''; }
+      time = prettyTime(time);
       const mode = getStudentBatchType(s) || 'Class';
+      // Lead with the class days when known, else fall back to the session mode.
       const label = (days || mode);
       const scheduleStr = (days || time) ? (label + (time ? ' | ' + time : '')) : 'Day & time not set yet';
       const key = scheduleStr.toLowerCase();
