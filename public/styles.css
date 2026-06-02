@@ -1698,11 +1698,24 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  background: rgba(0, 0, 0, 0.25);
-  padding: 8px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: linear-gradient(145deg, rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.02));
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(232, 168, 48, 0.12);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
+
+/* Modern micro-interaction: action buttons lift & glow on hover. */
+.ev-action-bar .btn {
+  transition: transform 0.15s ease, box-shadow 0.22s ease, filter 0.2s ease;
+}
+.ev-action-bar .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+  filter: brightness(1.06);
+}
+.ev-action-bar .btn:active { transform: translateY(0); }
 
 .ev-action-group {
   display: flex;
