@@ -4462,19 +4462,23 @@ function initUI() {
 
     targetStudents.forEach(s => {
       const fee = getStudentMonthlyFee(s) || 0;
-      totalPotential += fee;
 
       const status = getStudentPaymentStatus(s, targetMonth, targetYear);
-      
+
       const enrollDateStr = getStudentDate(s);
       const baseline = new Date(Date.UTC(2026, 3, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       const effectiveEnroll = (function(){ var _a = window.getBillingAnchor && window.getBillingAnchor(s, baseline); return _a ? new Date(Date.UTC(_a.year, _a.month, 1)) : (enrollDate < baseline ? baseline : enrollDate); })();
       const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
-      
+
+      // Only count students whose billing has STARTED by this month (respects the
+      // late-join grace anchor), so Projected = Collected + Outstanding stays
+      // consistent — a grace-month student isn't yet "expected" revenue.
+      if (monthsRequired >= 1) totalPotential += fee;
+
       const sid = String(s.id).toLowerCase();
       const totalCredits = s_id_map[sid] || 0;
-      
+
       const totalMonthsUnpaid = Math.max(0, monthsRequired - totalCredits);
       if (totalMonthsUnpaid > 0) {
         const isPaidThisMonth = (status === 'Paid');
