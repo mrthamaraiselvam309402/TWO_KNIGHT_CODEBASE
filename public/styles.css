@@ -1699,6 +1699,14 @@ body[data-theme="light"] #ev-manage-view {
   background: linear-gradient(135deg, #ffffff, #f7f4ec) !important;
   border: 1px solid var(--border) !important;
 }
+/* Mobile: keep the Event Manager inside the viewport. The registry/expenditure
+   grid items were forced wide by their inner tables (default min-width:auto),
+   pushing the whole page into horizontal scroll. min-width:0 lets them shrink,
+   and the tables scroll inside their own wrapper instead. */
+#ev-manage-view { overflow-x: hidden; }
+#ev-registry-section, #ev-expenditures-section { min-width: 0; max-width: 100%; }
+#ev-manage-view .table-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+#ev-manage-view > div[style*="grid"] { min-width: 0; }
 
 /* Operational Groups Action Bar */
 .ev-action-bar {
