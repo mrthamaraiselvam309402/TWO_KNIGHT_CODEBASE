@@ -215,10 +215,32 @@
 
       <!-- Coach Financial Table -->
       <div style="margin-top:20px">
-        <h3 style="color:var(--gold);margin-bottom:18px;font-family:var(--font-head);letter-spacing:1px">Coach Financial Performance</h3>
+        <h3 style="color:var(--gold);margin-bottom:8px;font-family:var(--font-head);letter-spacing:1px">Coach Financial Performance</h3>
+        <details style="margin-bottom:14px; font-size:12px; color:var(--ivory-dim); background:rgba(232,168,48,0.04); border:1px solid var(--border); border-radius:8px; padding:8px 12px;">
+          <summary style="cursor:pointer; color:var(--gold); font-weight:600; list-style:none;">ⓘ What do these columns mean? (tap to expand)</summary>
+          <div style="padding:10px 2px 2px; line-height:1.8;">
+            <b style="color:var(--ivory)">Students</b> — active students assigned to the coach this month.<br>
+            <b style="color:var(--ivory)">Revenue</b> — fees actually <em>collected</em> from this coach's students this month.<br>
+            <b style="color:var(--ivory)">Pending</b> — fees <em>not yet collected</em> (students still due) this month.<br>
+            <b style="color:var(--ivory)">Salary Cost</b> — the fixed salary you pay this coach per month.<br>
+            <b style="color:var(--ivory)">Net Profit</b> — Revenue − Salary Cost (real profit from this coach right now).<br>
+            <b style="color:var(--ivory)">Potential Net</b> — what Net Profit becomes <em>if every assigned student pays</em>.<br>
+            <b style="color:var(--ivory)">ROI / Pot.ROI</b> — how many times the coach earns back their salary: collected ÷ salary now / projected ÷ salary at full collection. <em>Above 100% = profitable.</em>
+          </div>
+        </details>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Coach</th><th>Students</th><th>Revenue</th><th>Pending</th><th>Salary Cost</th><th>Net Profit</th><th>Potential Net</th><th>ROI / Pot.ROI</th><th>Action</th></tr></thead>
+            <thead><tr>
+              <th title="Coach name">Coach</th>
+              <th title="Active students assigned to this coach in the selected month">Students</th>
+              <th title="Fees actually COLLECTED from this coach's students this month">Revenue <span style="color:var(--ivory3);font-weight:400">(collected)</span></th>
+              <th title="Fees still UNCOLLECTED — students not yet paid this month">Pending <span style="color:var(--ivory3);font-weight:400">(uncollected)</span></th>
+              <th title="The fixed monthly salary you pay this coach">Salary Cost</th>
+              <th title="Revenue minus Salary Cost — the actual profit from this coach right now">Net Profit</th>
+              <th title="Projected fees (if every student pays) minus Salary Cost — the profit potential">Potential Net</th>
+              <th title="Return on salary investment. Collected÷Salary now / Projected÷Salary at full collection. Above 100% means the coach earns the academy more than their salary.">ROI / Pot.ROI</th>
+              <th>Action</th>
+            </tr></thead>
             <tbody id="coach-finance-body"><tr><td colspan="9"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
           </table>
         </div>
@@ -1828,6 +1850,19 @@
       </div>
     </div>
 
+<!-- Bulk "Inform Coaches" queue (reliable click-through, no popup blocking) -->
+<div class="modal" id="bulk-inform-modal">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-title">📢 Inform Coaches — Pending Fees</div>
+    <div class="modal-sub" id="bulk-inform-sub">Send each coach a WhatsApp summary of their students' pending fees.</div>
+    <div style="display:flex; gap:8px; margin:14px 0;">
+      <button class="btn btn-gold" style="flex:1" onclick="bulkInformNext()">Send to Next Coach ▶</button>
+      <button class="btn btn-outline-grey" onclick="closeModals()">Done</button>
+    </div>
+    <div id="bulk-inform-list" style="max-height:52vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
+  </div>
+</div>
+
 <!-- Access Control: Create / Edit User Modal -->
 <div class="modal" id="access-user-modal">
   <div class="modal-box" style="max-width:460px">
@@ -2875,7 +2910,7 @@
       <script src="js/tournaments.js?v=1.2&t=20260601j" charset="utf-8"></script>
       <script src="js/access.js?v=1.4&t=20260601i"></script>
       <script src="js/tom-brain.js?v=1.0&t=20260601" charset="utf-8"></script>
-      <script src="scripts.js?v=8.0&t=20260602g" charset="utf-8"></script>
+      <script src="scripts.js?v=8.1&t=20260602h" charset="utf-8"></script>
       <script src="js/expenditures.js?v=1.1&t=20260601d" charset="utf-8"></script>
       <script src="js/calculator.js?v=1.0" charset="utf-8"></script>
       <script src="js/reporting.js?v=v13&t=20260602c" charset="utf-8"></script>

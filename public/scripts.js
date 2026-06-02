@@ -1299,32 +1299,66 @@
     return waUrl;
   };
 
-  window.informAllCoaches = function () {
-    const pendingCoaches = (allCoaches || []).filter(coach => {
+  // Coaches whose students have any unpaid (Pending/Due/Overdue) fees this month.
+  function getCoachesWithPending() {
+    return (allCoaches || []).filter(coach => {
+      if (getCoachStatus(coach) === 'archived') return false;
       const myStudents = (allStudents || []).filter(s => String(s.coach_id) === String(coach.id));
       return myStudents.some(s => {
         const st = getStudentPaymentStatus(s);
-        return st === 'Due' || st === 'Pending';
+        return st === 'Due' || st === 'Pending' || st === 'Overdue';
       });
     });
+  }
 
+  let bulkInformQueue = [];
+
+  // New workflow: instead of auto-opening many WhatsApp tabs (which browsers
+  // block), present a reliable click-through queue. Each "Send" is a direct user
+  // gesture, so the WhatsApp tab always opens.
+  window.informAllCoaches = function () {
+    const pendingCoaches = getCoachesWithPending();
     if (pendingCoaches.length === 0) {
       toast('All coaches are up to date!', 'success');
       return;
     }
+    bulkInformQueue = pendingCoaches.map(c => ({ id: c.id, name: getCoachName(c), sent: false }));
+    renderBulkInformList();
+    openModal('bulk-inform-modal');
+  };
 
-    if (!confirm(`Found ${pendingCoaches.length} coaches with arrears. Open all WhatsApp tabs at once? (Note: Your browser may block popups)`)) return;
+  function renderBulkInformList() {
+    const el = $('bulk-inform-list');
+    if (!el) return;
+    const sentCount = bulkInformQueue.filter(q => q.sent).length;
+    const sub = $('bulk-inform-sub');
+    if (sub) sub.textContent = `${sentCount}/${bulkInformQueue.length} sent. Tap each coach to open a pre-filled WhatsApp message (reliable — no popup blocking).`;
+    el.innerHTML = bulkInformQueue.map((q, i) => {
+      const studs = (allStudents || []).filter(s => String(s.coach_id) === String(q.id) &&
+        ['Due', 'Pending', 'Overdue'].includes(getStudentPaymentStatus(s)));
+      const total = studs.reduce((a, s) => a + (getStudentMonthlyFee(s) || 0), 0);
+      return `<div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:${q.sent ? 'rgba(16,185,129,0.07)' : 'rgba(255,255,255,0.02)'};">
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:600; color:var(--ivory);">${escapeHtml(q.name)} ${q.sent ? '<span style="color:var(--emerald); font-size:11px;">✓ sent</span>' : ''}</div>
+          <div style="font-size:11px; color:var(--ivory-dim);">${studs.length} student${studs.length === 1 ? '' : 's'} pending &middot; ₹${total.toLocaleString()}</div>
+        </div>
+        <button class="btn ${q.sent ? 'btn-outline-grey' : 'btn-gold'} btn-sm" style="flex-shrink:0;" onclick="bulkInformSend(${i})">${q.sent ? 'Resend' : 'Send WhatsApp'}</button>
+      </div>`;
+    }).join('');
+  }
 
-    pendingCoaches.forEach((coach, idx) => {
-      const url = informCoachFees(coach.id, true);
-      if (url) {
-        setTimeout(() => {
-          window.open(url, '_blank');
-        }, idx * 1000);
-      }
-    });
+  window.bulkInformSend = function (i) {
+    const q = bulkInformQueue[i];
+    if (!q) return;
+    informCoachFees(q.id); // direct user gesture -> WhatsApp opens reliably
+    q.sent = true;
+    renderBulkInformList();
+  };
 
-    toast(`Initiated ${pendingCoaches.length} notifications.`, 'success');
+  window.bulkInformNext = function () {
+    const next = bulkInformQueue.findIndex(q => !q.sent);
+    if (next === -1) { toast('All coaches have been informed! ✅', 'success'); return; }
+    bulkInformSend(next);
   };
 
   window.informAllDueStudents = function () {
