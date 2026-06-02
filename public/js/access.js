@@ -38,6 +38,63 @@ window.loadAccessControl = async function() {
     }
 };
 
+// Parent/student portal accounts — derived from the Students registry, since
+// parents authenticate with the child's name + registered phone (custom auth),
+// not Supabase Auth. Read-only overview for the admin.
+window.renderParentAccounts = function() {
+    const tbody = document.getElementById('parent-accounts-tbody');
+    if (!tbody) return;
+    const students = (window.allStudents || []).slice();
+    const coaches = window.allCoaches || [];
+    const q = (document.getElementById('parent-accounts-search')?.value || '').toLowerCase().trim();
+
+    const coachName = (cid) => {
+        const c = coaches.find(x => String(x.id) === String(cid));
+        return c ? (c.name || '—') : 'Unassigned';
+    };
+
+    let rows = students.filter(s => (s.status || '').toLowerCase() !== 'archived');
+    if (q) {
+        rows = rows.filter(s =>
+            (s.name || '').toLowerCase().includes(q) ||
+            (s.parent_name || '').toLowerCase().includes(q) ||
+            String(s.parent_phone || s.phone || '').toLowerCase().includes(q)
+        );
+    }
+    rows.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    const countEl = document.getElementById('parent-accounts-count');
+    if (countEl) countEl.textContent = `${rows.length} account${rows.length === 1 ? '' : 's'}`;
+
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No parent accounts found.</div></td></tr>';
+        return;
+    }
+
+    const esc = window.escapeHtml || (x => x);
+    const statusBadge = (st) => {
+        const s = (st || 'active').toLowerCase();
+        if (s === 'active') return '<span class="badge badge-success" style="font-size:10px;">Active</span>';
+        if (s === 'pending') return '<span class="badge" style="font-size:10px; background:rgba(245,158,11,0.15); color:var(--warning);">Pending</span>';
+        if (s === 'archived') return '<span class="badge badge-danger" style="font-size:10px;">Archived</span>';
+        return `<span class="badge" style="font-size:10px;">${esc(st || '—')}</span>`;
+    };
+
+    tbody.innerHTML = rows.map(s => {
+        const phone = s.parent_phone || s.phone || '—';
+        return `<tr>
+            <td style="font-weight:600; color:var(--ivory);">${esc(s.name || '—')}</td>
+            <td style="color:var(--slate);">${esc(s.parent_name || '—')}</td>
+            <td style="font-family:var(--font-mono); font-size:12px; color:var(--ivory-dim);">${esc(String(phone))}</td>
+            <td style="color:var(--slate); font-size:12px;">${esc(coachName(s.coach_id))}</td>
+            <td>${statusBadge(s.status)}</td>
+            <td style="text-align:center;">
+                <button class="btn btn-outline-grey btn-sm" style="padding:4px 10px; font-size:11px;" onclick="window.quickSwitchPreviewStudent && window.quickSwitchPreviewStudent('${s.id}'); window.setPage && window.setPage('child');" title="Open portal preview">Open ↗</button>
+            </td>
+        </tr>`;
+    }).join('');
+};
+
 window.renderAccessTable = function() {
     const tbody = document.getElementById('access-users-tbody');
     if (!tbody) return;

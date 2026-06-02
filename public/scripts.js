@@ -1107,28 +1107,27 @@
   function buildFeeMessage(s, name, amount, dueDateStr, isDueOrOverdue) {
     const amountText = '\u{20B9}' + Number(amount || 0).toLocaleString() + getStudentLocalCurrencyAmount(s, amount);
     const cn = cleanText(name);
+    const payTo = (window.getPaymentPayeeText ? window.getPaymentPayeeText() : '9025846663 (Ranjith)');
     if (isDueOrOverdue) {
-      return `\u{1F534} *FEE PAYMENT DUE*\n` +                                  // 🔴
-        `\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\n\n` +
-        `Hello Sir/Madam, \u{1F44B}\n\n` +                                      // 👋
-        `\u{265F}\u{FE0F} This is a gentle note that the chess class fee for *${cn}* is currently *due*.\n\n` + // ♟️
-        `\u{1F4B0} *Amount Due:* ${amountText}\n` +                            // 💰
-        `\u{1F4C5} *Due Date:* ${dueDateStr}\n\n` +                            // 📅
+      return `\u{1F534} FEE PAYMENT DUE\n\n` +                                  // 🔴
+        `Hello Sir/Madam, \u{1F44B}\n\n` +                                     // 👋
+        `\u{265F}\u{FE0F} This is a gentle note that the chess class fee for ${cn} is currently due.\n\n` + // ♟️
+        `\u{1F4B0} Amount Due: ${amountText}\n` +                              // 💰
+        `\u{1F4C5} Due Date: ${dueDateStr}\n\n` +                              // 📅
         `Kindly complete the payment on or before the due date to avoid any interruption in class participation. \u{1F64F}\n\n` + // 🙏
-        `\u{1F4F2} *Pay via UPI / GPay / PhonePe:* ${(window.getPaymentPayeeText ? window.getPaymentPayeeText() : '9025846663 (Ranjith)')}\n\n` + // 📲
+        `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n\n` +               // 📲
         `Thank you for your continued support! \u{1F31F}\n` +                  // 🌟
-        `\u{265F}\u{FE0F} *Chesskidoo Academy*`;                               // ♟️
+        `\u{265F}\u{FE0F} Chesskidoo Academy`;                                 // ♟️
     }
-    return `\u{1F4E2} *UPCOMING FEE REMINDER*\n` +                              // 📢
-      `\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\u{2014}\n\n` +
-      `Hello Sir/Madam, \u{1F44B}\n\n` +                                        // 👋
-      `We hope you are doing well! \u{1F60A} This is a friendly reminder that the chess class fee for *${cn}* is coming up soon. \u{265F}\u{FE0F}\n\n` + // 😊 ♟️
-      `\u{1F4B0} *Fee Amount:* ${amountText}\n` +                              // 💰
-      `\u{1F4C5} *Due Date:* ${dueDateStr}\n\n` +                              // 📅
+    return `\u{1F4E2} UPCOMING FEE REMINDER\n\n` +                              // 📢
+      `Hello Sir/Madam, \u{1F44B}\n\n` +                                       // 👋
+      `We hope you are doing well! \u{1F60A} This is a friendly reminder that the chess class fee for ${cn} is coming up soon. \u{265F}\u{FE0F}\n\n` + // 😊 ♟️
+      `\u{1F4B0} Fee Amount: ${amountText}\n` +                                // 💰
+      `\u{1F4C5} Due Date: ${dueDateStr}\n\n` +                                // 📅
       `Kindly complete the payment on or before the due date. \u{1F64F}\n\n` + // 🙏
-      `\u{1F4F2} *Pay via UPI / GPay / PhonePe:* ${(window.getPaymentPayeeText ? window.getPaymentPayeeText() : '9025846663 (Ranjith)')}\n\n` + // 📲
+      `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n\n` +                 // 📲
       `Thank you so much for your support and cooperation! \u{1F31F}\n` +      // 🌟
-      `\u{265F}\u{FE0F} *Chesskidoo Academy*`;                                 // ♟️
+      `\u{265F}\u{FE0F} Chesskidoo Academy`;                                   // ♟️
   }
 
   function sendPaymentReminder(id) {
@@ -1623,21 +1622,25 @@ function initUI() {
       }
     }
 
+    let hasExplicitDue = false;
     if (s.due_date) {
       const parsedDay = parseInt(s.due_date);
-      if (!isNaN(parsedDay) && parsedDay >= 1 && parsedDay <= 31) {
-        day = parsedDay;
+      if (!isNaN(parsedDay) && parsedDay >= 1 && parsedDay <= 31 && String(s.due_date).length <= 2) {
+        day = parsedDay; hasExplicitDue = true;
       } else {
         try {
-          day = new Date(s.due_date).getUTCDate() || day;
+          const dd = new Date(s.due_date).getUTCDate();
+          if (dd) { day = dd; hasExplicitDue = true; }
         } catch (e) {
           // ignore
         }
       }
     }
-    
-    // First Month Override: If this is the student's first month of enrollment, their due date is their enrollment date
-    if (enrollStr) {
+
+    // First-Month Override: a student's first month is due on their enrollment
+    // day — UNLESS the admin set an explicit due_date, which is authoritative
+    // (keeps the status consistent with the exact date shown in the registry).
+    if (enrollStr && !hasExplicitDue) {
       try {
         const enrollDate = new Date(enrollStr);
         if (enrollDate.getUTCFullYear() === year && enrollDate.getUTCMonth() === month) {
@@ -1647,7 +1650,7 @@ function initUI() {
         // ignore
       }
     }
-    
+
     return { day, feeOverride };
   }
   
@@ -3750,6 +3753,7 @@ function initUI() {
       if (p === 'productivity' && window.initProductivityPage) window.initProductivityPage();
       if (p === 'access') {
         if (window.loadAccessControl) window.loadAccessControl();
+        if (window.renderParentAccounts) window.renderParentAccounts();
         if (window.loadAuditLogs) window.loadAuditLogs();
         if (window.startSecurityLogsSimulation) window.startSecurityLogsSimulation();
       } else {
