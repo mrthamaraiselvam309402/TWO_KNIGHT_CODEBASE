@@ -5498,6 +5498,43 @@ function initUI() {
     openModal('coach-view-modal');
   };
 
+  // ─── Dynamic Schedule (live data, not hardcoded) ────────────────
+  // Groups a coach's CURRENT students into batches by their actual class
+  // schedule — taken from the student's saved [SCHEDULE64] (regDays/regTime)
+  // when present, else their session day/time. Reflects reassignments,
+  // deletions and new enrolments automatically.
+  function buildCoachBatches(coachId) {
+    const students = (allStudents || []).filter(s =>
+      String(s.coach_id) === String(coachId) && getStudentStatus(s) !== 'archived');
+    const groups = {};
+    students.forEach(s => {
+      let days = '', time = '';
+      const sd = window.extractScheduleJSON ? window.extractScheduleJSON(s.notes) : null;
+      if (sd && (sd.regDays || sd.regTime)) { days = sd.regDays || ''; time = sd.regTime || ''; }
+      else { const t = getStudentSessionTime(s); time = (t && t !== 'TBD') ? t : ''; }
+      const mode = getStudentBatchType(s) || 'Class';
+      const label = (days || mode);
+      const scheduleStr = (days || time) ? (label + (time ? ' | ' + time : '')) : 'Day & time not set yet';
+      const key = scheduleStr.toLowerCase();
+      if (!groups[key]) groups[key] = { schedule: scheduleStr, students: [] };
+      groups[key].students.push(getStudentName(s));
+    });
+    // Stable order: scheduled batches first, "not set" last.
+    return Object.values(groups)
+      .sort((a, b) => (a.schedule === 'Day & time not set yet' ? 1 : 0) - (b.schedule === 'Day & time not set yet' ? 1 : 0))
+      .map((g, i) => ({ name: 'Batch ' + (i + 1), schedule: g.schedule, students: g.students }));
+  }
+  window.buildCoachBatches = buildCoachBatches;
+
+  function buildDynamicSchedule() {
+    return (allCoaches || [])
+      .filter(c => getCoachStatus(c) !== 'archived')
+      .map(c => ({ coach: getCoachName(c), coachId: c.id, batches: buildCoachBatches(c.id) }))
+      .filter(e => e.batches.length > 0)
+      .sort((a, b) => a.coach.localeCompare(b.coach));
+  }
+  window.buildDynamicSchedule = buildDynamicSchedule;
+
   function viewCoachSchedule(id) {
     const c = allCoaches.find(x => String(x.id) === String(id));
     const coachName = c ? getCoachName(c) : 'Coach';
@@ -5506,10 +5543,9 @@ function initUI() {
     const container = $('schedule-container');
     if (!container) { openModal('coach-schedule-modal'); return; }
 
-    // Reuse the Master Schedule data + a clean calendar-pill theme, matched to
-    // this coach by name. Falls back to the assigned-students roster otherwise.
-    const sched = (window.hardcodedSchedule || []).find(e =>
-      (e.coach || '').toLowerCase().trim() === coachName.toLowerCase().trim());
+    // Build this coach's batches from LIVE data (reflects reassignments etc.).
+    const batches = buildCoachBatches(id);
+    const sched = batches.length ? { coach: coachName, batches: batches } : null;
 
     const daysFull = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const shortDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];

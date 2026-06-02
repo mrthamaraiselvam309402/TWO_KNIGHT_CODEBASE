@@ -139,9 +139,14 @@ window.hardcodedSchedule = hardcodedSchedule;
 window.openMasterSchedule = function() {
   const container = document.getElementById('master-schedule-container');
   if (!container) return;
-  
+
+  // Prefer LIVE data (reflects coach reassignments, deletions, new enrolments).
+  // Fall back to the bundled sample only if live data isn't available yet.
+  let scheduleData = (typeof window.buildDynamicSchedule === 'function') ? window.buildDynamicSchedule() : null;
+  if (!scheduleData || scheduleData.length === 0) scheduleData = hardcodedSchedule;
+
   let html = '';
-  hardcodedSchedule.forEach(c => {
+  scheduleData.forEach(c => {
     html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:15px">`;
     html += `<h3 style="color:var(--gold);margin-top:0;margin-bottom:10px;font-family:var(--font-head)">Coach: ${c.coach}</h3>`;
     
