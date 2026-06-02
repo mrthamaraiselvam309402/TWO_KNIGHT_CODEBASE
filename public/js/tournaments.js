@@ -374,19 +374,26 @@
           </div>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:4px; min-width:120px;">
-          <label style="font-size:11px; color:var(--ivory-dim); font-weight:700;">Radius Limit:</label>
+        <div style="display:flex; flex-direction:column; gap:4px; min-width:140px;">
+          <label style="font-size:11px; color:var(--ivory-dim); font-weight:700;">Coverage Radius:</label>
           <select id="tf-radius-select" class="premium-select" onchange="window.filterTournaments(${isChildView})" style="padding:7px; font-size:12px;">
-            <option value="50">Within 50 km</option>
-            <option value="100">Within 100 km</option>
-            <option value="200" selected>Within 200 km</option>
-            <option value="all">National / All India</option>
+            <option value="50">📍 Local — within 50 km</option>
+            <option value="100">📍 Nearby — within 100 km</option>
+            <option value="200" selected>🚗 Regional — within 200 km</option>
+            <option value="500">🛣️ State — within 500 km</option>
+            <option value="all">🇮🇳 National — All India</option>
+            <option value="world">🌍 Worldwide — All Events</option>
           </select>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:4px; min-width:160px; flex:1;">
+          <label style="font-size:11px; color:var(--ivory-dim); font-weight:700;">Search Events:</label>
+          <input type="text" id="tf-search" placeholder="Name, venue, city, category…" oninput="window.filterTournaments(${isChildView})" style="padding:7px 10px; font-size:12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px;">
         </div>
 
         ${studentSelectHtml}
 
-        <div style="flex:1; text-align:right;">
+        <div style="flex:1; text-align:right; min-width:160px;">
           <span class="badge" style="background:rgba(218,163,62,0.1); color:var(--gold); border:1px solid rgba(218,163,62,0.2); font-size:11px; padding:6px 12px;">
             ● AI Sync: Auto-scraping active (6h interval)
           </span>
@@ -497,19 +504,28 @@
       return { ...t, distance: dist };
     });
 
-    // Apply radius filter
+    // Free-text search across the visible events
+    const query = (document.getElementById('tf-search')?.value || '').toLowerCase().trim();
+
+    // Apply radius + search filters. 'all' and 'world' show every event
+    // (radius unbounded); 'world' is the global view.
     const filtered = listings.filter(t => {
-      if (radiusVal === 'all') return true;
-      const radiusKm = parseInt(radiusVal);
-      return t.distance <= radiusKm;
+      // A text search looks across ALL events (ignores the radius) so users can
+      // find a named event anywhere; otherwise the radius applies.
+      if (query) {
+        const hay = `${t.title} ${t.location} ${t.category} ${t.federation}`.toLowerCase();
+        return hay.includes(query);
+      }
+      return (radiusVal === 'all' || radiusVal === 'world') ? true : (t.distance <= parseInt(radiusVal));
     });
 
     if (filtered.length === 0) {
+      const reason = query ? `matching "${escapeHtml(query)}"` : `within the selected ${radiusVal === 'world' ? 'worldwide' : radiusVal + ' km'} range`;
       gridEl.innerHTML = `
         <div class="empty-state" style="grid-column:1/-1;">
           <span class="empty-icon">🏆</span>
-          <p>No chess tournaments found within the selected ${radiusVal} km radius.</p>
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('tf-radius-select').value='all'; window.filterTournaments(${isChildView});" style="margin-top:10px;">View National Tournaments</button>
+          <p>No chess tournaments found ${reason}.</p>
+          <button class="btn btn-outline btn-sm" onclick="var r=document.getElementById('tf-radius-select'); if(r) r.value='world'; var sb=document.getElementById('tf-search'); if(sb) sb.value=''; window.filterTournaments(${isChildView});" style="margin-top:10px;">🌍 View All Worldwide Events</button>
         </div>
       `;
       return;
@@ -589,8 +605,9 @@
           <!-- Actions -->
           <div style="display:flex; gap:8px; margin-top:4px;">
             <a href="${t.regLink}" target="_blank" class="btn btn-gold btn-sm" style="flex:1; text-align:center; padding:6px; font-size:11px; border-radius:6px;">Register</a>
-            <button class="btn btn-outline btn-sm" onclick="window.syncTournamentCalendar('${t.id}')" style="padding:6px 10px; font-size:11px;" title="Sync to Calendar">📅 Calendar</button>
-            <button class="btn btn-outline btn-sm" onclick="window.sendTournamentWhatsAppReminder('${t.id}')" style="padding:6px 10px; font-size:11px;" title="WhatsApp Reminder">💬 WhatsApp</button>
+            <button class="btn btn-outline btn-sm" onclick="window.syncTournamentCalendar('${t.id}')" style="padding:6px 10px; font-size:11px;" title="Sync to Calendar">📅</button>
+            <button class="btn btn-outline btn-sm" onclick="window.sendTournamentWhatsAppReminder('${t.id}')" style="padding:6px 10px; font-size:11px;" title="WhatsApp Reminder">💬</button>
+            <button class="btn btn-outline btn-sm" onclick="window.downloadTournamentPoster('${t.id}')" style="padding:6px 10px; font-size:11px;" title="Download Event Poster">🖼️</button>
           </div>
         </div>
       `;
@@ -598,6 +615,57 @@
   };
 
   // Calendar Sync (Downloads .ics file)
+  // Generate & download a shareable event poster (uses html2canvas, already loaded).
+  window.downloadTournamentPoster = function (tournamentId) {
+    const t = tournamentsData.find(x => String(x.id) === String(tournamentId));
+    if (!t) return;
+    if (typeof html2canvas === 'undefined') {
+      if (window.toast) window.toast('Poster engine not loaded yet, please retry.', 'error');
+      return;
+    }
+    const eventDate = new Date(t.date).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' });
+    const feeText = t.fee > 0 ? `Entry Fee: ₹${t.fee}` : 'FREE ENTRY';
+
+    const poster = document.createElement('div');
+    poster.style.cssText = 'position:fixed; left:-9999px; top:0; width:600px; height:800px; box-sizing:border-box;';
+    poster.innerHTML = `
+      <div style="width:600px; height:800px; background:linear-gradient(160deg,#0f1117 0%,#1a1d29 55%,#0b0d13 100%); color:#fff; font-family:Arial,sans-serif; padding:48px 44px; box-sizing:border-box; position:relative; overflow:hidden;">
+        <div style="position:absolute; top:-40px; right:-30px; font-size:260px; opacity:0.05;">♟️</div>
+        <div style="text-align:center; border-bottom:2px solid #DAA33E; padding-bottom:18px;">
+          <div style="font-size:13px; letter-spacing:5px; color:#DAA33E; font-weight:700;">CHESSKIDOO ACADEMY</div>
+          <div style="font-size:11px; letter-spacing:3px; color:#9aa0ad; margin-top:6px;">TOURNAMENT ANNOUNCEMENT</div>
+        </div>
+        <div style="margin-top:46px; text-align:center;">
+          <div style="display:inline-block; background:rgba(218,163,62,0.14); border:1px solid rgba(218,163,62,0.4); color:#DAA33E; font-size:12px; font-weight:700; padding:6px 16px; border-radius:20px; letter-spacing:1px;">${escapeHtml(t.federation)} · ${escapeHtml(t.category)}</div>
+          <h1 style="font-size:36px; line-height:1.25; margin:26px 10px 0; color:#fff; font-weight:800;">${escapeHtml(t.title)}</h1>
+        </div>
+        <div style="margin-top:48px; display:flex; flex-direction:column; gap:20px; font-size:18px;">
+          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">📅</span><span><b style="color:#DAA33E;">When:</b> ${eventDate} &nbsp;@&nbsp; ${escapeHtml(t.time || '09:00')}</span></div>
+          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">📍</span><span><b style="color:#DAA33E;">Venue:</b> ${escapeHtml(t.location)}</span></div>
+          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">🏆</span><span><b style="color:#DAA33E;">Category:</b> ${escapeHtml(t.category)}</span></div>
+          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">💰</span><span><b style="color:#DAA33E;">${feeText}</b></span></div>
+        </div>
+        <div style="position:absolute; left:44px; right:44px; bottom:44px; text-align:center;">
+          <div style="background:#DAA33E; color:#000; font-weight:800; font-size:18px; padding:14px; border-radius:10px; letter-spacing:1px;">REGISTER NOW</div>
+          <div style="font-size:12px; color:#9aa0ad; margin-top:14px; word-break:break-all;">${escapeHtml(t.regLink)}</div>
+        </div>
+      </div>`;
+    document.body.appendChild(poster);
+    if (window.toast) window.toast('Generating poster…', 'info');
+    html2canvas(poster.firstElementChild, { backgroundColor: null, scale: 2 }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = `Chesskidoo_${t.title.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      document.body.removeChild(poster);
+      if (window.toast) window.toast('Poster downloaded!', 'success');
+    }).catch(err => {
+      console.error('Poster generation failed:', err);
+      if (poster.parentNode) document.body.removeChild(poster);
+      if (window.toast) window.toast('Could not generate poster.', 'error');
+    });
+  };
+
   window.syncTournamentCalendar = function (tournamentId) {
     const t = tournamentsData.find(x => x.id === tournamentId);
     if (!t) return;
