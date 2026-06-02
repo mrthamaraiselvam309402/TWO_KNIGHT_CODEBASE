@@ -5397,9 +5397,9 @@ function initUI() {
              </div>
            </div>
            <div class="coach-card-actions" style="grid-template-columns: 1fr 1fr; gap: 8px;">
-             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">👁️ View</button>
-             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">✏️ Edit</button>
-             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="viewCoach('${c.id}')" title="View Profile">View</button>
+             <button class="btn btn-outline-grey btn-sm" onclick="openCoachModal('${c.id}')" title="Edit Coach">Edit</button>
+             <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">Inform</button>
              <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${escapeHtml(getCoachName(c)).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
            </div>
            <div style="display:flex; gap:8px; margin-top:12px;">
@@ -5440,9 +5440,9 @@ function initUI() {
             <div style="font-size:12px; font-weight:600; color:var(--ivory); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(getStudentName(s))}</div>
             <div style="font-size:10px; color:var(--ivory-dim);">${getStudentRating(s)} ELO &middot; <span style="color:${stColor};">${st}</span></div>
           </div>
-          <button class="btn btn-outline-grey btn-sm" style="padding:3px 7px; font-size:10px;" onclick="viewStudent('${s.id}')" title="View">👁️</button>
-          <button class="btn btn-outline-grey btn-sm" style="padding:3px 7px; font-size:10px;" onclick="openEdit('${s.id}')" title="Edit">✏️</button>
-          <button class="btn btn-outline-grey btn-sm text-danger" style="padding:3px 7px; font-size:10px;" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')" title="Delete">🗑️</button>
+          <button class="btn btn-outline-grey btn-sm" style="padding:3px 7px; font-size:10px;" onclick="viewStudent('${s.id}')" title="View">View</button>
+          <button class="btn btn-outline-grey btn-sm" style="padding:3px 7px; font-size:10px;" onclick="openEdit('${s.id}')" title="Edit">Edit</button>
+          <button class="btn btn-outline-grey btn-sm text-danger" style="padding:3px 7px; font-size:10px;" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')" title="Delete">Del</button>
         </div>`;
       }).join('');
     }
