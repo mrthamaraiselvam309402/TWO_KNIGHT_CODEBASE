@@ -278,13 +278,12 @@
         `;
     };
 
-    window.saveStudentSchedule = async function () {
-        const studentId = document.getElementById('sch-student-select').value;
-        if (!studentId) return window.toast('Please select a student', 'error');
-
+    // Reads the current schedule form into a schedData object (shared by the
+    // single-student save and the group save).
+    function buildScheduleDataFromForm() {
         const coachId = document.getElementById('sch-coach-select').value;
         const coachObj = (window.allCoaches || window.coaches || []).find(c => String(c.id) === String(coachId));
-        const schedData = {
+        return {
             demoDate: document.getElementById('sch-demo-date').value,
             demoTime: document.getElementById('sch-demo-time').value,
             regDays: document.getElementById('sch-reg-days').value,
@@ -294,42 +293,84 @@
             coachName: coachObj ? coachObj.name : '', // denormalized so the parent card is correct even if rosters change
             footnote: document.getElementById('sch-footnote').value
         };
+    }
 
+    // Persists a schedData payload onto one student's notes (PUT). Returns true on success.
+    async function persistScheduleForStudent(student, schedData) {
+        if (!student) return false;
+        const notesWithoutSchedule = window.removeScheduleJSON(student.notes || '');
+        const newNotes = (notesWithoutSchedule + ` [SCHEDULE64:${encodeSchedulePayload(schedData)}]`).trim();
+        try {
+            const res = await window.apiCall('/api/students?id=' + encodeURIComponent(student.id), {
+                method: 'PUT',
+                body: JSON.stringify({ notes: newNotes, learning_mode: student.learning_mode || 'online' })
+            });
+            if (res.ok) { student.notes = newNotes; return true; }
+            return false;
+        } catch (e) {
+            console.error('[Schedule] save failed for', student.id, e);
+            return false;
+        }
+    }
+
+    window.saveStudentSchedule = async function () {
+        const studentId = document.getElementById('sch-student-select').value;
+        if (!studentId) return window.toast('Please select a student', 'error');
         const student = (window.allStudents || []).find(s => s.id == studentId);
         if (!student) return;
 
-        // Preserve the existing coach-review text, drop any prior schedule tag,
-        // then append the sanitization-safe base64 schedule payload.
-        const notesWithoutSchedule = window.removeScheduleJSON(student.notes || '');
-        const newNotes = (notesWithoutSchedule + ` [SCHEDULE64:${encodeSchedulePayload(schedData)}]`).trim();
-
         window.toast('Saving schedule...', 'info');
+        const ok = await persistScheduleForStudent(student, buildScheduleDataFromForm());
+        window.toast(ok ? 'Schedule saved successfully!' : 'Failed to save schedule.', ok ? 'success' : 'error');
+    };
 
-        try {
-            // Use PUT (update) with the id in the query string — POST creates a
-            // brand-new student. Send learning_mode so the server re-applies the
-            // [LM:] prefix it strips on read.
-            const res = await window.apiCall('/api/students?id=' + encodeURIComponent(student.id), {
-                method: 'PUT',
-                body: JSON.stringify({
-                    notes: newNotes,
-                    learning_mode: student.learning_mode || 'online'
-                })
-            });
-
-            if (res.ok) {
-                // Update local memory so the preview / parent card reflect it immediately.
-                student.notes = newNotes;
-                window.toast('Schedule saved successfully!', 'success');
-            } else {
-                let msg = 'Server error';
-                try { const j = await res.json(); msg = j.error || msg; } catch (e) {}
-                throw new Error(msg);
-            }
-        } catch (e) {
-            console.error('[Schedule] save failed:', e);
-            window.toast('Failed to save schedule: ' + (e.message || 'error'), 'error');
+    // ─── Group / Batch Class Scheduling ─────────────────────────────
+    // Toggle the group panel and (re)build the multi-select student list.
+    window.toggleScheduleGroup = function () {
+        const panel = document.getElementById('sch-group-panel');
+        if (!panel) return;
+        if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+        const students = window.allStudents || [];
+        const list = students
+            .filter(s => (s.status || 'active').toLowerCase() !== 'archived')
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        const listEl = document.getElementById('sch-group-list');
+        if (listEl) {
+            listEl.innerHTML = list.map(s =>
+                `<label style="display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:6px; font-size:12px; color:var(--ivory); cursor:pointer;">
+                   <input type="checkbox" class="sch-group-cb" value="${s.id}" style="accent-color:var(--gold);">
+                   <span>${(window.escapeHtml ? window.escapeHtml(s.name) : s.name)}${s.session_mode ? ` <span style="color:var(--ivory-dim); font-size:10px;">(${s.session_mode})</span>` : ''}</span>
+                 </label>`
+            ).join('');
         }
+        panel.style.display = 'block';
+    };
+
+    // Quick-select helpers for the group list.
+    window.schGroupSelect = function (mode) {
+        const cbs = document.querySelectorAll('.sch-group-cb');
+        const students = window.allStudents || [];
+        cbs.forEach(cb => {
+            if (mode === 'all') cb.checked = true;
+            else if (mode === 'none') cb.checked = false;
+            else if (mode === 'group') {
+                const s = students.find(x => String(x.id) === String(cb.value));
+                cb.checked = !!(s && String(s.session_mode || s.batch_type || '').toLowerCase() === 'group');
+            }
+        });
+    };
+
+    window.saveScheduleToGroup = async function () {
+        const ids = Array.from(document.querySelectorAll('.sch-group-cb:checked')).map(cb => cb.value);
+        if (ids.length === 0) return window.toast('Select at least one student for the group.', 'error');
+        const schedData = buildScheduleDataFromForm();
+        window.toast(`Saving schedule to ${ids.length} students...`, 'info');
+        let ok = 0;
+        for (const id of ids) {
+            const student = (window.allStudents || []).find(s => String(s.id) === String(id));
+            if (await persistScheduleForStudent(student, schedData)) ok++;
+        }
+        window.toast(`Group schedule saved to ${ok}/${ids.length} students.`, ok === ids.length ? 'success' : 'warning');
     };
 
     window.downloadScheduleCardImage = function () {

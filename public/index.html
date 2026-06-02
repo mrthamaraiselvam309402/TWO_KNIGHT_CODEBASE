@@ -1084,6 +1084,25 @@
             <button class="btn btn-outline" style="flex:1" onclick="generateSchedulePreview()">Preview Card</button>
             <button class="btn btn-gold" style="flex:1" onclick="saveStudentSchedule()">Save Schedule</button>
           </div>
+
+          <!-- Group / Batch Class Scheduling -->
+          <div style="margin-top:16px; border-top:1px dashed var(--border); padding-top:16px;">
+            <button class="btn btn-outline" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="toggleScheduleGroup()">
+              👥 Apply this Schedule to a Group / Batch
+            </button>
+            <div id="sch-group-panel" style="display:none; margin-top:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:14px;">
+              <p style="font-size:11px; color:var(--ivory-dim); margin:0 0 10px; line-height:1.5;">
+                Configure the schedule above, then pick the students who share this group class. The same demo/class timings & coach will be saved to everyone selected.
+              </p>
+              <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+                <button class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('group')">Select all Group students</button>
+                <button class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('all')">Select all</button>
+                <button class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('none')">Clear</button>
+              </div>
+              <div id="sch-group-list" style="max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:6px; margin-bottom:12px; background:rgba(0,0,0,0.15);"></div>
+              <button class="btn btn-gold" style="width:100%;" onclick="saveScheduleToGroup()">💾 Save Schedule to Selected Group</button>
+            </div>
+          </div>
         </div>
 
         <!-- Right Side: Preview & Sharing -->
@@ -2856,7 +2875,7 @@
       <script src="js/tournaments.js?v=1.2&t=20260601j" charset="utf-8"></script>
       <script src="js/access.js?v=1.4&t=20260601i"></script>
       <script src="js/tom-brain.js?v=1.0&t=20260601" charset="utf-8"></script>
-      <script src="scripts.js?v=7.3&t=20260601j" charset="utf-8"></script>
+      <script src="scripts.js?v=7.4&t=20260602a" charset="utf-8"></script>
       <script src="js/expenditures.js?v=1.1&t=20260601d" charset="utf-8"></script>
       <script src="js/calculator.js?v=1.0" charset="utf-8"></script>
       <script src="js/reporting.js?v=v12&t=20260601g" charset="utf-8"></script>
@@ -2871,7 +2890,7 @@
       <script src="js/encryption.js?v=20260529" charset="utf-8"></script>
       <script src="js/scripts_patch.js?v=2.3&t=20260529" charset="utf-8"></script>
       <script src="js/automation.js?v=3.9&t=20260529" charset="utf-8"></script>
-      <script src="js/schedule.js?v=1.4&t=20260601c" charset="utf-8"></script>
+      <script src="js/schedule.js?v=1.5&t=20260602a" charset="utf-8"></script>
  
       <script src="js/attendance_extension.js?v=1.0&t=20260529" charset="utf-8"></script>
 

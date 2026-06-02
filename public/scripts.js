@@ -5379,11 +5379,66 @@ function initUI() {
              <button class="btn btn-gold btn-sm" onclick="informCoachFees('${c.id}')" title="Inform Fees">📢 Inform</button>
              <button class="btn btn-outline-grey btn-sm" onclick="confirmDeleteCoach('${c.id}', '${escapeHtml(getCoachName(c)).replace(/'/g, "\\'")}')" title="Delete Coach">Delete</button>
            </div>
-           <button class="btn btn-outline btn-sm" style="width:100%;margin-top:12px" onclick="viewCoachSchedule('${c.id}')">📅 View Schedule</button>
+           <div style="display:flex; gap:8px; margin-top:12px;">
+             <button class="btn btn-outline btn-sm" style="flex:1" onclick="toggleCoachStudents('${c.id}')" id="coach-toggle-${c.id}">👥 Students (${studentCount})</button>
+             <button class="btn btn-outline btn-sm" style="flex:1" onclick="viewCoachSchedule('${c.id}')">📅 Schedule</button>
+           </div>
+           <div class="coach-students-panel" id="coach-students-${c.id}" style="display:none; margin-top:12px; border-top:1px solid var(--border); padding-top:12px;"></div>
          </div>
        `;
     }).join('');
   }
+
+  // Expandable per-coach student roster with view / edit / delete + add.
+  window.toggleCoachStudents = function (coachId) {
+    const panel = document.getElementById('coach-students-' + coachId);
+    const toggleBtn = document.getElementById('coach-toggle-' + coachId);
+    if (!panel) return;
+    if (panel.style.display !== 'none') {
+      panel.style.display = 'none';
+      if (toggleBtn) toggleBtn.classList.remove('active');
+      return;
+    }
+    const coach = allCoaches.find(c => String(c.id) === String(coachId));
+    const coachName = coach ? getCoachName(coach) : 'Coach';
+    const studs = allStudents
+      .filter(s => String(s.coach_id) === String(coachId))
+      .sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
+
+    let rows;
+    if (studs.length === 0) {
+      rows = `<div style="text-align:center; padding:12px; color:var(--ivory-dim); font-size:12px;">No students assigned yet.</div>`;
+    } else {
+      rows = studs.map(s => {
+        const st = getStudentPaymentStatus(s);
+        const stColor = st === 'Paid' ? 'var(--emerald)' : (st === 'Overdue' || st === 'Due') ? 'var(--danger)' : 'var(--warning)';
+        return `<div style="display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:8px; background:rgba(255,255,255,0.02); margin-bottom:6px;">
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:12px; font-weight:600; color:var(--ivory); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(getStudentName(s))}</div>
+            <div style="font-size:10px; color:var(--ivory-dim);">${getStudentRating(s)} ELO &middot; <span style="color:${stColor};">${st}</span></div>
+          </div>
+          <button class="btn btn-outline-grey btn-sm" style="padding:3px 7px; font-size:10px;" onclick="viewStudent('${s.id}')" title="View">👁️</button>
+          <button class="btn btn-outline-grey btn-sm" style="padding:3px 7px; font-size:10px;" onclick="openEdit('${s.id}')" title="Edit">✏️</button>
+          <button class="btn btn-outline-grey btn-sm text-danger" style="padding:3px 7px; font-size:10px;" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')" title="Delete">🗑️</button>
+        </div>`;
+      }).join('');
+    }
+
+    panel.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--gold); font-weight:700;">Students under ${escapeHtml(coachName)}</span>
+        <button class="btn btn-gold btn-sm" style="padding:4px 10px; font-size:11px;" onclick="addStudentForCoach('${coachId}')" title="Enroll a new student under this coach">+ Add</button>
+      </div>
+      <div style="max-height:260px; overflow-y:auto;">${rows}</div>`;
+    panel.style.display = 'block';
+    if (toggleBtn) toggleBtn.classList.add('active');
+  };
+
+  // Open the enrollment modal pre-set to a specific coach.
+  window.addStudentForCoach = function (coachId) {
+    if (typeof openEnroll === 'function') openEnroll();
+    setTimeout(() => { const sel = $('m-coach'); if (sel) sel.value = coachId; }, 120);
+  };
 
   window.viewCoach = function (id) {
     const c = allCoaches.find(x => String(x.id) === String(id));
