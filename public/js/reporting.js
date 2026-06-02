@@ -123,12 +123,14 @@ window.generateReportPDF = async function() {
         if (isNaN(enrollDate.getTime())) {
             enrollDate = baseline;
         }
-        const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-        
-        const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+        // Billing anchor applies the late-join grace rule for consistency with
+        // the registry status (a late-month join's first billed month is next month).
+        const _anchor = window.getBillingAnchor ? window.getBillingAnchor(s, baseline)
+          : { year: (enrollDate < baseline ? baseline : enrollDate).getUTCFullYear(), month: (enrollDate < baseline ? baseline : enrollDate).getUTCMonth() };
+        const monthsRequired = ((targetYear - _anchor.year) * 12) + (targetMonth - _anchor.month) + 1;
         const s_id_key = String(s.id || '').trim().toLowerCase();
         const totalCredits = totalPaymentsMap[s_id_key] || 0;
-        
+
         potential += fee;
         const totalMonthsUnpaid = Math.max(0, monthsRequired - totalCredits);
         if (totalMonthsUnpaid > 0) {
@@ -944,8 +946,9 @@ window.generateReportPPT = async function() {
             const enrollDateStr = getStudentDate(s);
             let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
             if (isNaN(enrollDate.getTime())) enrollDate = baseline;
-            const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
-            const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+            const _anchor = window.getBillingAnchor ? window.getBillingAnchor(s, baseline)
+              : { year: (enrollDate < baseline ? baseline : enrollDate).getUTCFullYear(), month: (enrollDate < baseline ? baseline : enrollDate).getUTCMonth() };
+            const monthsRequired = ((targetYear - _anchor.year) * 12) + (targetMonth - _anchor.month) + 1;
             const s_id_key = String(s.id || '').trim().toLowerCase();
             const totalCredits = totalPaymentsMap[s_id_key] || 0;
             const totalMonthsUnpaid = Math.max(0, monthsRequired - totalCredits);

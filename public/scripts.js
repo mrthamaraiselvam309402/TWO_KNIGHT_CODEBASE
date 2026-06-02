@@ -1145,7 +1145,7 @@
     const enrollDateStr = getStudentDate(s);
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : new Date(Date.UTC(2026, 2, 1)); // Fallback to March 1, 2026
     const baselineDate = new Date(Date.UTC(2026, 3, 1)); // Global System Baseline (April 1st, 2026)
-    const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
+    const effectiveEnroll = (function(){ var _a = window.getBillingAnchor && window.getBillingAnchor(s, baselineDate); return _a ? new Date(Date.UTC(_a.year, _a.month, 1)) : (enrollDate < baselineDate ? baselineDate : enrollDate); })();
 
     // FIX #5: Always rebuild — never trust a cached map for financial calculations
     const freshPaymentsMap = {};
@@ -1356,7 +1356,7 @@
       const enrollDateStr = getStudentDate(s);
       const baseline = new Date(Date.UTC(2026, 3, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+      const effectiveEnroll = (function(){ var _a = window.getBillingAnchor && window.getBillingAnchor(s, baseline); return _a ? new Date(Date.UTC(_a.year, _a.month, 1)) : (enrollDate < baseline ? baseline : enrollDate); })();
       const monthsReq = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
       
       const sid = String(s.id).toLowerCase();
@@ -1585,6 +1585,29 @@ function initUI() {
     return parseInt(s.monthly_fee || s.fee || s.fees || 0) || DEFAULT_MONTHLY_FEE;
   }
 
+  // Joins on/after this day get the remaining days of the join month as a free
+  // grace period — billing starts the FOLLOWING month. Handles the common case
+  // of "joined May 29, first paid cycle is June" so a late-month join doesn't
+  // get charged a full month for a few days and mis-attribute the first payment.
+  const LATE_JOIN_GRACE_DAY = 26;
+
+  // Returns the first BILLED month {year, month} for a student (0-indexed month),
+  // applying the late-join grace rule and the academy baseline.
+  function getBillingAnchor(s, baselineDate) {
+    const baseline = baselineDate || new Date(Date.UTC(2026, 3, 1));
+    const enrollStr = getStudentDate(s);
+    let e = enrollStr ? new Date(enrollStr) : baseline;
+    if (isNaN(e.getTime())) e = baseline;
+    if (e < baseline) e = baseline;
+    let y = e.getUTCFullYear();
+    let m = e.getUTCMonth();
+    if (e.getUTCDate() >= LATE_JOIN_GRACE_DAY) {
+      m += 1; if (m > 11) { m = 0; y += 1; }
+    }
+    return { year: y, month: m };
+  }
+  window.getBillingAnchor = getBillingAnchor;
+
   function getStudentDueConfig(s, coachName, month = 4, year = 2026) {
     if (!s) return { day: 5, feeOverride: null };
     let day = 5;
@@ -1673,8 +1696,13 @@ function initUI() {
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
     if (!enrollDate || enrollDate > targetMonthEnd) return 'Not Enrolled';
 
-    const effectiveEnroll = enrollDate < baselineDate ? baselineDate : enrollDate;
-    const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
+    // Billing anchor applies the late-join grace rule (see getBillingAnchor):
+    // late-month joins start billing the following month.
+    const _anchor = getBillingAnchor(s, baselineDate);
+    const monthsRequired = ((targetYear - _anchor.year) * 12) + (targetMonth - _anchor.month) + 1;
+    // Target period precedes the first billed month (the free grace month) →
+    // nothing is due yet.
+    if (monthsRequired <= 0) return 'Pending';
 
     // 3. Status Determination Logic:
 
@@ -1708,7 +1736,7 @@ function initUI() {
     const isFuturePeriod = (targetYear > currentUTCFullYear) || 
                            (targetYear === currentUTCFullYear && targetMonth > currentUTCMonth);
     if (isFuturePeriod) {
-       const currentMonthsRequired = ((currentUTCFullYear - effectiveEnroll.getUTCFullYear()) * 12) + (currentUTCMonth - effectiveEnroll.getUTCMonth()) + 1;
+       const currentMonthsRequired = ((currentUTCFullYear - _anchor.year) * 12) + (currentUTCMonth - _anchor.month) + 1;
        if (totalPaidInvoices < currentMonthsRequired) {
          return 'Overdue';
        }
@@ -4355,7 +4383,7 @@ function initUI() {
           const enrollDateStr = getStudentDate(s);
           const baseline = new Date(Date.UTC(2026, 3, 1));
           const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-          const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+          const effectiveEnroll = (function(){ var _a = window.getBillingAnchor && window.getBillingAnchor(s, baseline); return _a ? new Date(Date.UTC(_a.year, _a.month, 1)) : (enrollDate < baseline ? baseline : enrollDate); })();
 
           const pDate = new Date(p.payment_date || p.created_at);
           if (pDate <= targetMonthEnd) {
@@ -4414,7 +4442,7 @@ function initUI() {
       const enrollDateStr = getStudentDate(s);
       const baseline = new Date(Date.UTC(2026, 3, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+      const effectiveEnroll = (function(){ var _a = window.getBillingAnchor && window.getBillingAnchor(s, baseline); return _a ? new Date(Date.UTC(_a.year, _a.month, 1)) : (enrollDate < baseline ? baseline : enrollDate); })();
       const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
       
       const sid = String(s.id).toLowerCase();
@@ -6252,7 +6280,7 @@ Best regards,
      const enrollDateStr = getStudentDate(s);
      const baseline = new Date(Date.UTC(2026, 3, 1));
      const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-     const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+     const effectiveEnroll = (function(){ var _a = window.getBillingAnchor && window.getBillingAnchor(s, baseline); return _a ? new Date(Date.UTC(_a.year, _a.month, 1)) : (enrollDate < baseline ? baseline : enrollDate); })();
      const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
      const sid = String(s.id).toLowerCase();
@@ -6299,7 +6327,7 @@ Best regards,
       const enrollDateStr = getStudentDate(s);
       const baseline = new Date(Date.UTC(2026, 3, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+      const effectiveEnroll = (function(){ var _a = window.getBillingAnchor && window.getBillingAnchor(s, baseline); return _a ? new Date(Date.UTC(_a.year, _a.month, 1)) : (enrollDate < baseline ? baseline : enrollDate); })();
       const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
        const sid = String(s.id).toLowerCase();
@@ -9320,7 +9348,7 @@ Best regards,
 
       const enrollDateStr = getStudentDate(s);
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-      const effectiveEnroll = enrollDate < baseline ? baseline : enrollDate;
+      const effectiveEnroll = (function(){ var _a = window.getBillingAnchor && window.getBillingAnchor(s, baseline); return _a ? new Date(Date.UTC(_a.year, _a.month, 1)) : (enrollDate < baseline ? baseline : enrollDate); })();
       const monthsRequired = ((targetYear - effectiveEnroll.getUTCFullYear()) * 12) + (targetMonth - effectiveEnroll.getUTCMonth()) + 1;
 
       const sid = String(s.id).toLowerCase();
