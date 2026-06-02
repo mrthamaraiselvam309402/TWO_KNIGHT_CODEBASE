@@ -4699,8 +4699,13 @@ function initUI() {
       coachData['unassigned'] = unassignedData;
     }
 
-    // Sort by revenue (descending)
-    const sorted = Object.entries(coachData).sort((a, b) => b[1].revenue - a[1].revenue);
+    // Sort alphabetically by coach name (keep "Unassigned / Academy" last).
+    const sorted = Object.entries(coachData).sort((a, b) => {
+      const an = (a[1].name || '').toLowerCase(), bn = (b[1].name || '').toLowerCase();
+      const aUn = an.includes('unassigned'), bUn = bn.includes('unassigned');
+      if (aUn !== bUn) return aUn ? 1 : -1;
+      return an.localeCompare(bn);
+    });
 
     tbody.innerHTML = sorted.map(([id, d]) => {
       const netProfit = d.revenue - d.cost;  // Current cash flow (collected − salary)
@@ -5397,7 +5402,7 @@ function initUI() {
       return;
     }
 
-    grid.innerHTML = allCoaches.map(c => {
+    grid.innerHTML = allCoaches.slice().sort((a, b) => getCoachName(a).localeCompare(getCoachName(b))).map(c => {
       const studs = allStudents.filter(s => String(s.coach_id) === String(c.id));
       const studentCount = studs.length;
       const avgRating = studs.length ? Math.round(studs.reduce((a, s) => a + (getStudentRating(s) || 0), 0) / studs.length) : 800;
