@@ -1,5 +1,5 @@
 /**
- * Chesskidoo Authentication Module
+ * Two Knights Authentication Module
  * Handles secure backend login, role-based access, and session persistence.
  */
 

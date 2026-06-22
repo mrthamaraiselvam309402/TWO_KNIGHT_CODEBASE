@@ -76,15 +76,4 @@ CREATE POLICY "Allow all on productivity_notes" ON public.productivity_notes FOR
 DROP POLICY IF EXISTS "Allow all on tournaments_discovery" ON public.tournaments;
 CREATE POLICY "Allow all on tournaments_discovery" ON public.tournaments FOR ALL USING (true);
 
--- Seed Data for Tournaments
-TRUNCATE TABLE public.tournaments;
-
-INSERT INTO public.tournaments (title, organizer, location, city, state, country, start_date, end_date, entry_fee, tournament_type, rating_required, elo_limit, registration_url, source)
-VALUES 
-('Chennai Open FIDE Rated Grandmaster Tournament', 'FIDE', 'Jawaharlal Nehru Stadium', 'Chennai', 'Tamil Nadu', 'India', '2026-06-15', '2026-06-20', 1500.00, 'Swiss', 'Open FIDE Rated', 9999, 'https://aicf.in/tournament/chennai-open-2026', 'FIDE'),
-('Tamil Nadu State Under-16 Championship', 'AICF', 'PSG College of Technology', 'Coimbatore', 'Tamil Nadu', 'India', '2026-06-22', '2026-06-25', 500.00, 'Swiss', 'Under 1600 ELO Only', 1600, 'https://tamilnaduchess.com/u16-state-2026', 'AICF'),
-('Karnataka FIDE Rated Under-12 Talent Search', 'AICF', 'Kanteerava Indoor Stadium', 'Bangalore', 'Karnataka', 'India', '2026-06-28', '2026-07-02', 1200.00, 'Swiss', 'Under 1200 ELO Only', 1200, 'https://karnatakachess.org/u12-fide-2026', 'AICF'),
-('Delhi Chess League Challenger Swiss', 'AICF', 'Indira Gandhi Arena', 'New Delhi', 'Delhi', 'India', '2026-07-05', '2026-07-08', 800.00, 'Swiss', 'Under 1400 ELO Only', 1400, 'https://delhichess.com/challengers-2026', 'AICF'),
-('Mumbai Blitz Arena Showdown', 'Chess.com', 'Online / Mumbai Chess Club Meetup', 'Mumbai', 'Maharashtra', 'India', '2026-07-12', '2026-07-12', 0.00, 'Arena', 'Open Blitz', 9999, 'https://chess.com/play/tournament/mumbai-blitz-2026', 'Chess.com'),
-('Chesskidoo Junior Rapid Cup (Coimbatore Zonal)', 'AICF', 'Chesskidoo Zonal Academy', 'Coimbatore', 'Tamil Nadu', 'India', '2026-07-18', '2026-07-18', 400.00, 'Swiss', 'Under 1200 ELO Only', 1200, 'https://chesskidoo.com/tournaments/junior-cup', 'AICF'),
-('FIDE World Amateur Championship (South Zone)', 'FIDE', 'Taj Connemara', 'Chennai', 'Tamil Nadu', 'India', '2026-07-25', '2026-07-30', 2500.00, 'Swiss', 'Under 2000 FIDE', 2000, 'https://fide.com/calendar/amateur-south-2026', 'FIDE');
+-- No seed data for Tournaments

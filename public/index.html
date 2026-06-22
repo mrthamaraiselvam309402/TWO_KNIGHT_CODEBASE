@@ -4,8 +4,8 @@
   <meta charset="UTF-8"/>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Chesskidoo — Premium Chess Academy</title>
-  <meta name="description" content="Chesskidoo Academy — Premium chess coaching management system for students, coaches, and parents."/>
+  <title>Two Knights — Premium Chess Academy</title>
+  <meta name="description" content="Two Knights Academy — Premium chess coaching management system for students, coaches, and parents."/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <!-- Force UTF-8 encoding for all browsers including Edge -->
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
@@ -43,7 +43,7 @@
     <div class="chat-head">
       <div class="chat-head-av">⚡</div>
       <div class="chat-head-info">
-        <h4>Chesskidoo AI</h4>
+        <h4>Two Knights AI</h4>
         <p><span style="display:inline-block;width:6px;height:6px;background:var(--emerald);border-radius:50%;margin-right:4px;"></span>Online</p>
       </div>
     </div>
@@ -58,8 +58,8 @@
 
   <div class="login-box">
     <div class="logo-area">
-      <div class="logo-chess-large">♟</div>
-      <span class="logo-name">CHESSKIDOO</span>
+      <img src="/assets/logo1.png" alt="Two Knights Chess Academy" style="width: 120px; height: auto; margin: 0 auto 15px; display: block;" />
+      <span class="logo-name">TWO KNIGHTS</span>
       <span class="logo-tagline">Premium Chess Academy</span>
     </div>
 
@@ -106,7 +106,7 @@
 
 <!-- Sidebar -->
 <nav class="sidebar" id="sidebar">
-  <div class="logo"><span class="logo-icon">♚</span><span class="logo-text">CHESSKIDOO</span></div>
+  <div class="logo"><img src="/assets/logo2.png" alt="Logo" style="height: 30px; margin-right: 10px;" /><span class="logo-text">TWO KNIGHTS</span></div>
   <div class="nav-group">
     <div class="nav-item admin-only" id="nav-dash" onclick="setPage('dash')"><span class="ico">📊</span> Dashboard</div>
     <div class="nav-item admin-only" id="nav-stud" onclick="setPage('stud')"><span class="ico">👥</span> Students</div>
@@ -283,24 +283,24 @@
       <div id="child-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
       <div id="child-content" style="display:none">
         <!-- Admin Preview Banner -->
-        <div id="preview-mode-banner" class="preview-banner" style="display: none; background: linear-gradient(135deg, rgba(218, 163, 62, 0.12), rgba(218, 163, 62, 0.04)); border: 1px solid var(--gold); padding: 14px 20px; border-radius: 12px; margin-bottom: 24px; justify-content: space-between; align-items: center; box-shadow: var(--shadow-amber); transition: all 0.3s ease; flex-wrap: wrap; gap: 12px;">
+        <div id="preview-mode-banner" class="preview-banner" style="display: none; background: linear-gradient(135deg, rgba(51, 145, 255, 0.12), rgba(51, 145, 255, 0.04)); border: 1px solid var(--gold); padding: 14px 20px; border-radius: 12px; margin-bottom: 24px; justify-content: space-between; align-items: center; box-shadow: var(--shadow-amber); transition: all 0.3s ease; flex-wrap: wrap; gap: 12px;">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <span style="font-size: 22px; filter: drop-shadow(0 2px 4px rgba(218,163,62,0.2));">👑</span>
+            <span style="font-size: 22px; filter: drop-shadow(0 2px 4px rgba(51, 145, 255,0.2));">👑</span>
             <div style="margin-right: 12px;">
               <h4 style="color: var(--gold); margin: 0; font-size: 14px; font-weight: 700; font-family: var(--font-head); letter-spacing: 0.5px;">Admin Portal Preview</h4>
               <p style="margin: 2px 0 0; font-size: 11.5px; color: var(--ivory-dim); opacity: 0.85;">Impersonating parent/student dashboard. Live view of analytics & learning resources.</p>
             </div>
             <!-- Quick Switcher -->
-            <div style="display: flex; align-items: center; gap: 8px; background: rgba(218, 163, 62, 0.08); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(218, 163, 62, 0.25);">
+            <div style="display: flex; align-items: center; gap: 8px; background: rgba(51, 145, 255, 0.08); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(51, 145, 255, 0.25);">
               <span style="font-size: 11px; color: var(--gold); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">Quick Switch:</span>
-              <select id="preview-student-switcher" onchange="quickSwitchPreviewStudent(this.value)" style="margin-bottom: 0; padding: 4px 8px; font-size: 12px; background: var(--surface2); color: var(--ivory); border: 1px solid rgba(218, 163, 62, 0.3); border-radius: 6px; width: auto; max-width: 180px; font-weight: 600; cursor: pointer; outline: none; height: 28px; line-height: 1;">
+              <select id="preview-student-switcher" onchange="quickSwitchPreviewStudent(this.value)" style="margin-bottom: 0; padding: 4px 8px; font-size: 12px; background: var(--surface2); color: var(--ivory); border: 1px solid rgba(51, 145, 255, 0.3); border-radius: 6px; width: auto; max-width: 180px; font-weight: 600; cursor: pointer; outline: none; height: 28px; line-height: 1;">
                 <!-- Dynamically populated -->
               </select>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
             <button class="btn btn-gold btn-sm" onclick="setPage('stud')" style="display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-amber-sm);"><span style="font-size: 11px;">🔙</span> Back to Students</button>
-            <button onclick="setPage('stud')" title="Exit Preview Mode" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(218, 163, 62, 0.3); background: rgba(218, 163, 62, 0.08); color: var(--gold); cursor: pointer; font-size: 18px; line-height: 1; transition: all 0.2s; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.15); outline: none; padding: 0;" onmouseover="this.style.background='rgba(218, 163, 62, 0.2)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.background='rgba(218, 163, 62, 0.08)'; this.style.borderColor='rgba(218, 163, 62, 0.3)';">✕</button>
+            <button onclick="setPage('stud')" title="Exit Preview Mode" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(51, 145, 255, 0.3); background: rgba(51, 145, 255, 0.08); color: var(--gold); cursor: pointer; font-size: 18px; line-height: 1; transition: all 0.2s; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.15); outline: none; padding: 0;" onmouseover="this.style.background='rgba(51, 145, 255, 0.2)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.background='rgba(51, 145, 255, 0.08)'; this.style.borderColor='rgba(51, 145, 255, 0.3)';">✕</button>
           </div>
         </div>
 
@@ -453,7 +453,7 @@
               <div class="stat-label">Absent</div>
               <div class="stat-value text-danger" id="c-att-absent">0</div>
             </div>
-            <div class="card" style="border-left: 4px solid var(--gold); background: linear-gradient(145deg, var(--bg2), rgba(218, 163, 62, 0.04));">
+            <div class="card" style="border-left: 4px solid var(--gold); background: linear-gradient(145deg, var(--bg2), rgba(51, 145, 255, 0.04));">
               <div class="stat-label">Attendance Rate</div>
               <div class="stat-value" id="c-att-rate" style="color:var(--gold)">0%</div>
             </div>
@@ -642,7 +642,7 @@
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px; flex-wrap: wrap; gap: 15px;">
         <div>
           <h2 style="color:var(--gold); margin:0; font-size:24px; font-weight:700;">Champions Gallery</h2>
-          <p style="color:var(--ivory-dim);font-size:14px; margin-top:5px;">Celebrating the proudest victories and top-rated players of Chesskidoo.</p>
+          <p style="color:var(--ivory-dim);font-size:14px; margin-top:5px;">Celebrating the proudest victories and top-rated players of Two Knights.</p>
         </div>
         <button class="btn btn-gold admin-only" onclick="openAwardModal()">+ Add Achievement</button>
       </div>
@@ -653,7 +653,7 @@
         
         <!-- Live Leaderboard Sidebar -->
         <div class="card" style="padding: 0; overflow: hidden; position: sticky; top: 20px;">
-          <div style="background: linear-gradient(90deg, #b9935a 0%, #d4af37 100%); padding: 15px; text-align: center;">
+          <div style="background: linear-gradient(90deg, #1180ff 0%, #3391ff 100%); padding: 15px; text-align: center;">
             <h3 style="margin: 0; color: #1a1a1a; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Top Rated Players</h3>
           </div>
           <div id="fame-leaderboard" style="padding: 10px;">
@@ -776,7 +776,7 @@
                 <span style="color:var(--slate); font-size:12px; font-weight: 500;">or</span>
                 
                 <!-- External Register Button -->
-                <button class="btn btn-outline btn-sm" onclick="promptRegisterGuestEvent()" style="border-radius:8px; border:1px solid rgba(232,168,48,0.35); color:var(--gold); padding:8px 14px; font-size:12px; font-weight: 500; cursor:pointer; background: transparent; transition: all 0.2s ease;">
+                <button class="btn btn-outline btn-sm" onclick="promptRegisterGuestEvent()" style="border-radius:8px; border:1px solid rgba(51, 145, 255,0.35); color:var(--gold); padding:8px 14px; font-size:12px; font-weight: 500; cursor:pointer; background: transparent; transition: all 0.2s ease;">
                   + Register External Student
                 </button>
               </div>
@@ -894,7 +894,7 @@
       <div id="bills-tab-gateway-monitor" class="bill-tab-content" style="display:none;">
         <div class="virtual-table-container" style="border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: rgba(10, 10, 20, 0.4);">
           <!-- Table System Header -->
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(232, 168, 48, 0.04); border-bottom: 1px solid var(--border); flex-wrap:wrap; gap:8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(51, 145, 255, 0.04); border-bottom: 1px solid var(--border); flex-wrap:wrap; gap:8px;">
             <div style="font-size:11px; font-weight:600; color:var(--ivory-dim); text-transform:uppercase; font-family:var(--font-mono); letter-spacing:0.05em">
               Live Payment Security Trace (DOM Virtualized)
             </div>
@@ -920,7 +920,7 @@
 
     <!-- Student Schedule Manager -->
     <div id="page-schedules" class="page admin-only">
-      <div style="background: linear-gradient(135deg, rgba(218, 163, 62, 0.08) 0%, rgba(218, 163, 62, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
+      <div style="background: linear-gradient(135deg, rgba(51, 145, 255, 0.08) 0%, rgba(51, 145, 255, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
         <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none; font-family: sans-serif;">🗓️</div>
         <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">
           <span>🗓️</span> Student Schedule Manager
@@ -995,7 +995,7 @@
           <!-- Footnote / Extra info -->
           <div class="form-group" style="margin-top:20px;">
             <label class="label">Custom Welcoming Footnote</label>
-            <textarea id="sch-footnote" class="input-field" style="height:70px; resize:none;">Kindly ensure student joins on time for the demo session. Looking forward to a great learning journey ahead. – Chesskidoo Academy</textarea>
+            <textarea id="sch-footnote" class="input-field" style="height:70px; resize:none;">Kindly ensure student joins on time for the demo session. Looking forward to a great learning journey ahead. – Two Knights Academy</textarea>
           </div>
 
           <!-- Action buttons -->
@@ -1058,7 +1058,7 @@
 
     <!-- AI Insights -->
     <div id="page-insights" class="page admin-only">
-      <div style="background: linear-gradient(135deg, rgba(232, 168, 48, 0.08) 0%, rgba(232, 168, 48, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
+      <div style="background: linear-gradient(135deg, rgba(51, 145, 255, 0.08) 0%, rgba(51, 145, 255, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
         <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none; font-family: sans-serif;">🤖</div>
         <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">
           <span>🤖</span> AI Academy Insights Feed
@@ -1070,7 +1070,7 @@
 
       <!-- Quick Metrics Grid -->
       <div class="dash-grid" style="margin-bottom: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
-        <div class="card" style="border-left: 4px solid var(--amber); background: linear-gradient(145deg, var(--surface), rgba(232, 168, 48, 0.02));">
+        <div class="card" style="border-left: 4px solid var(--amber); background: linear-gradient(145deg, var(--surface), rgba(51, 145, 255, 0.02));">
           <div class="stat-label">Promotion Candidates</div>
           <div class="stat-value text-warning" id="ins-promo-count" style="font-size: 28px;">0</div>
         </div>
@@ -1332,7 +1332,7 @@
         <!-- High-Performance Virtualized Table -->
         <div class="virtual-table-container" style="border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: rgba(10, 10, 20, 0.4);">
           <!-- Table System Header -->
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(232, 168, 48, 0.04); border-bottom: 1px solid var(--border); flex-wrap:wrap; gap:8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(51, 145, 255, 0.04); border-bottom: 1px solid var(--border); flex-wrap:wrap; gap:8px;">
             <div style="font-size:11px; font-weight:600; color:var(--ivory-dim); text-transform:uppercase; font-family:var(--font-mono); letter-spacing:0.05em">
               Live Observability Trace Log (DOM Virtualized)
             </div>
@@ -1372,9 +1372,9 @@
       </div>
 
       <!-- Motivation Quote strip -->
-      <div style="background: rgba(232, 168, 48, 0.05); border-left: 4px solid var(--gold); border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 24px; font-style: italic; font-size: 13px; color: var(--ivory); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="background: rgba(51, 145, 255, 0.05); border-left: 4px solid var(--gold); border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 24px; font-style: italic; font-size: 13px; color: var(--ivory); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
         <span id="productivity-quote">"Every chess master was once a beginner." — Irving Chernev</span>
-        <button class="btn btn-outline btn-sm" onclick="refreshMotivationQuote()" style="padding:4px 8px; font-size:11px; border-color:rgba(232, 168, 48, 0.2); color:var(--gold)">🔄 Next Quote</button>
+        <button class="btn btn-outline btn-sm" onclick="refreshMotivationQuote()" style="padding:4px 8px; font-size:11px; border-color:rgba(51, 145, 255, 0.2); color:var(--gold)">🔄 Next Quote</button>
       </div>
 
       <!-- Main Layout Grid -->
@@ -1674,7 +1674,7 @@
             <div class="ai-ws-msg bot">
               <div class="ai-ws-avatar">🤖</div>
               <div class="ai-ws-bubble">
-                Hello! I am TOM AI, your personal Chesskidoo Assistant. I can help you with updates on your child's progress, class timings, and general chess training concepts. What would you like to know today?
+                Hello! I am TOM AI, your personal Two Knights Assistant. I can help you with updates on your child's progress, class timings, and general chess training concepts. What would you like to know today?
               </div>
             </div>
           </div>
@@ -2835,7 +2835,7 @@
   <div class="modal-box" style="max-width:500px;padding:0;overflow:hidden">
     <div style="background:linear-gradient(135deg,#dca33e,#b8922e);padding:30px;text-align:center;color:#000">
       <div style="font-size:36px">♚</div>
-      <div style="font-family:var(--font-head);font-size:24px;font-weight:700">CHESSKIDOO</div>
+      <div style="font-family:var(--font-head);font-size:24px;font-weight:700">TWO KNIGHTS</div>
       <div style="font-size:13px;opacity:0.8">Payment Receipt</div>
     </div>
     <div style="padding:24px">

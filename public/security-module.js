@@ -1,4 +1,4 @@
-// Chesskidoo Security Module - Brute Force Protection
+// Two Knights Security Module - Brute Force Protection
 (function() {
   'use strict';
   
@@ -12,7 +12,7 @@
   var lockedAccounts = {};
 
   function initSecurity() {
-    console.log('Chesskidoo Security Module Active');
+    console.log('Two Knights Security Module Active');
     loadSecurityState();
   }
 

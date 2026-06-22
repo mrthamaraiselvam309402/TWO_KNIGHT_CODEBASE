@@ -62,39 +62,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger on students table
-DROP TRIGGER IF EXISTS encrypt_student_pii_trigger ON students;
-CREATE TRIGGER encrypt_student_pii_trigger
-  BEFORE INSERT OR UPDATE OF phone, parent_phone, email, address
-  ON students
-  FOR EACH ROW
-  EXECUTE FUNCTION encrypt_student_pii();
-
--- View to decrypt PII for authorized users
-CREATE OR REPLACE VIEW students_decrypted AS
-SELECT 
-  id,
-  name,
-  decrypt_pii(phone) as phone,
-  decrypt_pii(parent_phone) as parent_phone,
-  decrypt_pii(email) as email,
-  age,
-  grade,
-  parent_name,
-  decrypt_pii(address) as address,
-  enrollment_date,
-  status,
-  coach_id,
-  rating,
-  session_mode,
-  session_time,
-  monthly_fee,
-  notes,
-  account_status,
-  due_date,
-  created_at,
-  updated_at
-FROM students;
 
 -- =====================================================
 
@@ -195,3 +162,37 @@ END $$;
 SELECT table_name, table_schema 
 FROM information_schema.tables 
 WHERE table_name IN ('coaches', 'students', 'payments');
+
+-- Create trigger on students table
+DROP TRIGGER IF EXISTS encrypt_student_pii_trigger ON students;
+CREATE TRIGGER encrypt_student_pii_trigger
+  BEFORE INSERT OR UPDATE OF phone, parent_phone, email, address
+  ON students
+  FOR EACH ROW
+  EXECUTE FUNCTION encrypt_student_pii();
+
+-- View to decrypt PII for authorized users
+CREATE OR REPLACE VIEW students_decrypted AS
+SELECT 
+  id,
+  name,
+  decrypt_pii(phone) as phone,
+  decrypt_pii(parent_phone) as parent_phone,
+  decrypt_pii(email) as email,
+  age,
+  grade,
+  parent_name,
+  decrypt_pii(address) as address,
+  enrollment_date,
+  status,
+  coach_id,
+  rating,
+  session_mode,
+  session_time,
+  monthly_fee,
+  notes,
+  account_status,
+  due_date,
+  created_at,
+  updated_at
+FROM students;

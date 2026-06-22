@@ -8,8 +8,8 @@
       width: 140px;
       height: 140px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(218, 163, 62, 0.05) 0%, rgba(218, 163, 62, 0.15) 70%, rgba(0,0,0,0.4) 100%);
-      border: 1px dashed rgba(218, 163, 62, 0.3);
+      background: radial-gradient(circle, rgba(51, 145, 255, 0.05) 0%, rgba(51, 145, 255, 0.15) 70%, rgba(0,0,0,0.4) 100%);
+      border: 1px dashed rgba(51, 145, 255, 0.3);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -20,7 +20,7 @@
       position: absolute;
       width: 100%;
       height: 100%;
-      background: conic-gradient(from 0deg, rgba(218, 163, 62, 0.3) 0deg, rgba(218, 163, 62, 0) 120deg);
+      background: conic-gradient(from 0deg, rgba(51, 145, 255, 0.3) 0deg, rgba(51, 145, 255, 0) 120deg);
       border-radius: 50%;
       animation: tf-sweep 3s linear infinite;
       transform-origin: center;
@@ -65,7 +65,7 @@
     .tf-card:hover {
       transform: translateY(-4px);
       background: rgba(255, 255, 255, 0.04);
-      border-color: rgba(218, 163, 62, 0.4);
+      border-color: rgba(51, 145, 255, 0.4);
       box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     }
     .tf-badge {
@@ -171,16 +171,16 @@
     },
     {
       id: 'ext_tour_6',
-      title: 'Chesskidoo Junior Rapid Cup (Coimbatore Zonal)',
+      title: 'Two Knights Junior Rapid Cup (Coimbatore Zonal)',
       federation: 'AICF',
       date: '2026-07-18',
       time: '09:00',
-      location: 'Coimbatore (Chesskidoo Zonal Academy)',
+      location: 'Coimbatore (Two Knights Zonal Academy)',
       coords: { lat: 11.0168, lon: 76.9558 },
       fee: 400,
       category: 'Under 1200 ELO Only',
       eloLimit: 1200,
-      regLink: 'https://chesskidoo.com/tournaments/junior-cup'
+      regLink: 'https://twoknightschess.com/tournaments/junior-cup'
     },
     {
       id: 'ext_tour_7',
@@ -394,7 +394,7 @@
         ${studentSelectHtml}
 
         <div style="flex:1; text-align:right; min-width:160px;">
-          <span class="badge" style="background:rgba(218,163,62,0.1); color:var(--gold); border:1px solid rgba(218,163,62,0.2); font-size:11px; padding:6px 12px;">
+          <span class="badge" style="background:rgba(51, 145, 255,0.1); color:var(--gold); border:1px solid rgba(51, 145, 255,0.2); font-size:11px; padding:6px 12px;">
             ● AI Sync: Auto-scraping active (6h interval)
           </span>
         </div>
@@ -631,22 +631,22 @@
     poster.innerHTML = `
       <div style="width:600px; height:800px; background:linear-gradient(160deg,#0f1117 0%,#1a1d29 55%,#0b0d13 100%); color:#fff; font-family:Arial,sans-serif; padding:48px 44px; box-sizing:border-box; position:relative; overflow:hidden;">
         <div style="position:absolute; top:-40px; right:-30px; font-size:260px; opacity:0.05;">♟️</div>
-        <div style="text-align:center; border-bottom:2px solid #DAA33E; padding-bottom:18px;">
-          <div style="font-size:13px; letter-spacing:5px; color:#DAA33E; font-weight:700;">CHESSKIDOO ACADEMY</div>
+        <div style="text-align:center; border-bottom:2px solid #3391ff; padding-bottom:18px;">
+          <div style="font-size:13px; letter-spacing:5px; color:#3391ff; font-weight:700;">TWO KNIGHTS ACADEMY</div>
           <div style="font-size:11px; letter-spacing:3px; color:#9aa0ad; margin-top:6px;">TOURNAMENT ANNOUNCEMENT</div>
         </div>
         <div style="margin-top:46px; text-align:center;">
-          <div style="display:inline-block; background:rgba(218,163,62,0.14); border:1px solid rgba(218,163,62,0.4); color:#DAA33E; font-size:12px; font-weight:700; padding:6px 16px; border-radius:20px; letter-spacing:1px;">${escapeHtml(t.federation)} · ${escapeHtml(t.category)}</div>
+          <div style="display:inline-block; background:rgba(51, 145, 255,0.14); border:1px solid rgba(51, 145, 255,0.4); color:#3391ff; font-size:12px; font-weight:700; padding:6px 16px; border-radius:20px; letter-spacing:1px;">${escapeHtml(t.federation)} · ${escapeHtml(t.category)}</div>
           <h1 style="font-size:36px; line-height:1.25; margin:26px 10px 0; color:#fff; font-weight:800;">${escapeHtml(t.title)}</h1>
         </div>
         <div style="margin-top:48px; display:flex; flex-direction:column; gap:20px; font-size:18px;">
-          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">📅</span><span><b style="color:#DAA33E;">When:</b> ${eventDate} &nbsp;@&nbsp; ${escapeHtml(t.time || '09:00')}</span></div>
-          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">📍</span><span><b style="color:#DAA33E;">Venue:</b> ${escapeHtml(t.location)}</span></div>
-          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">🏆</span><span><b style="color:#DAA33E;">Category:</b> ${escapeHtml(t.category)}</span></div>
-          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">💰</span><span><b style="color:#DAA33E;">${feeText}</b></span></div>
+          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">📅</span><span><b style="color:#3391ff;">When:</b> ${eventDate} &nbsp;@&nbsp; ${escapeHtml(t.time || '09:00')}</span></div>
+          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">📍</span><span><b style="color:#3391ff;">Venue:</b> ${escapeHtml(t.location)}</span></div>
+          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">🏆</span><span><b style="color:#3391ff;">Category:</b> ${escapeHtml(t.category)}</span></div>
+          <div style="display:flex; gap:14px; align-items:center;"><span style="font-size:24px;">💰</span><span><b style="color:#3391ff;">${feeText}</b></span></div>
         </div>
         <div style="position:absolute; left:44px; right:44px; bottom:44px; text-align:center;">
-          <div style="background:#DAA33E; color:#000; font-weight:800; font-size:18px; padding:14px; border-radius:10px; letter-spacing:1px;">REGISTER NOW</div>
+          <div style="background:#3391ff; color:#000; font-weight:800; font-size:18px; padding:14px; border-radius:10px; letter-spacing:1px;">REGISTER NOW</div>
           <div style="font-size:12px; color:#9aa0ad; margin-top:14px; word-break:break-all;">${escapeHtml(t.regLink)}</div>
         </div>
       </div>`;
@@ -654,7 +654,7 @@
     if (window.toast) window.toast('Generating poster…', 'info');
     html2canvas(poster.firstElementChild, { backgroundColor: null, scale: 2 }).then(canvas => {
       const link = document.createElement('a');
-      link.download = `Chesskidoo_${t.title.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+      link.download = `Two Knights_${t.title.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       document.body.removeChild(poster);
@@ -693,15 +693,15 @@
     const icsContent = 
 `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Chesskidoo Academy//Tournament Finder//EN
+PRODID:-//Two Knights Academy//Tournament Finder//EN
 BEGIN:VEVENT
-UID:${t.id}@chesskidoo.com
+UID:${t.id}@twoknightschess.com
 DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'}
 DTSTART:${startDate}
 DTEND:${endDate}
 SUMMARY:${t.title}
 LOCATION:${t.location}
-DESCRIPTION:Aggregated by Chesskidoo. Fee: Rs.${t.fee}. Class eligibility rating bracket: ${t.category}. Registration: ${t.regLink}
+DESCRIPTION:Aggregated by Two Knights. Fee: Rs.${t.fee}. Class eligibility rating bracket: ${t.category}. Registration: ${t.regLink}
 END:VEVENT
 END:VCALENDAR`;
 
@@ -725,7 +725,7 @@ END:VCALENDAR`;
     const studentName = studentObj ? (studentObj.name || studentObj.full_name) : 'Student';
     const eventDate = new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-    const msg = `🏆 *CHESSKIDOO TOURNAMENT REMINDER*\n\nHello Parent,\n\nWe found a highly compatible chess event for *${studentName}* nearby:\n\n📌 *Tournament:* ${t.title}\n📅 *Date:* ${eventDate} @ ${t.time}\n📍 *Venue:* ${t.location}\n💰 *Entry Fee:* ${t.fee > 0 ? `Rs.${t.fee}` : 'Free Entry'}\n🔥 *Category:* ${t.category}\n\n🔗 *Register Here:* ${t.regLink}\n\nGood luck! Chesskidoo Academy Team`;
+    const msg = `🏆 *TWO KNIGHTS TOURNAMENT REMINDER*\n\nHello Parent,\n\nWe found a highly compatible chess event for *${studentName}* nearby:\n\n📌 *Tournament:* ${t.title}\n📅 *Date:* ${eventDate} @ ${t.time}\n📍 *Venue:* ${t.location}\n💰 *Entry Fee:* ${t.fee > 0 ? `Rs.${t.fee}` : 'Free Entry'}\n🔥 *Category:* ${t.category}\n\n🔗 *Register Here:* ${t.regLink}\n\nGood luck! Two Knights Academy Team`;
 
     const phone = studentObj ? (studentObj.parent_phone || studentObj.phone || '') : '';
     const parsed = window.parseStoredPhone ? window.parseStoredPhone(phone) : { countryCode: 'IN', localNumber: phone };

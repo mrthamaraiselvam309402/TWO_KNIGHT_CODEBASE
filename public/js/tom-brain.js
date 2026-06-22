@@ -39,12 +39,12 @@
     {
       id: 'identity',
       keys: ['who are you', 'what are you', 'your name', 'what can you do', 'what do you do', 'help me with', 'capabilities'],
-      a: () => `🤖 **I'm TOM AI** — the Training Operations Manager for **Chesskidoo Academy**.\n\nI can help with:\n• **Chess knowledge** — openings, tactics, rules, endgames, study tips\n• **Your portal** — ${roleScope()}\n\nJust ask me anything, like *"Explain the Sicilian Defense"* or *"How is my child progressing?"*`
+      a: () => `🤖 **I'm TOM AI** — the Training Operations Manager for **Two Knights Academy**.\n\nI can help with:\n• **Chess knowledge** — openings, tactics, rules, endgames, study tips\n• **Your portal** — ${roleScope()}\n\nJust ask me anything, like *"Explain the Sicilian Defense"* or *"How is my child progressing?"*`
     },
     {
       id: 'greeting',
       keys: ['hello', 'hi ', 'hey', 'good morning', 'good evening', 'good afternoon', 'greetings', 'namaste', 'how are you', "what's up", 'whats up'],
-      a: () => `👋 **Hello!** I'm TOM AI, your Chesskidoo assistant. I'm doing great and ready to help.\n\nYou can ask me about chess (openings, tactics, rules) or about ${roleScope()} How can I help today?`
+      a: () => `👋 **Hello!** I'm TOM AI, your Two Knights assistant. I'm doing great and ready to help.\n\nYou can ask me about chess (openings, tactics, rules) or about ${roleScope()} How can I help today?`
     },
     {
       id: 'thanks',
@@ -54,7 +54,7 @@
     {
       id: 'elo',
       keys: ['elo', 'rating system', 'what is rating', 'how rating', 'fide rating', 'rating mean'],
-      a: () => `📈 **Chess Rating (ELO)**\n\nELO is a number that estimates a player's strength. Win against stronger players → gain more points; lose to weaker players → lose more.\n\n**Rough guide:**\n• **800–1200** — Beginner / improving\n• **1200–1600** — Intermediate club player\n• **1600–2000** — Strong club player\n• **2000–2200** — Expert\n• **2200+** — Candidate Master / Master\n• **2500+** — Grandmaster (GM)\n\n💡 At Chesskidoo we track each student's rating so progress is always visible.`
+      a: () => `📈 **Chess Rating (ELO)**\n\nELO is a number that estimates a player's strength. Win against stronger players → gain more points; lose to weaker players → lose more.\n\n**Rough guide:**\n• **800–1200** — Beginner / improving\n• **1200–1600** — Intermediate club player\n• **1600–2000** — Strong club player\n• **2000–2200** — Expert\n• **2200+** — Candidate Master / Master\n• **2500+** — Grandmaster (GM)\n\n💡 At Two Knights we track each student's rating so progress is always visible.`
     },
     {
       id: 'sicilian',

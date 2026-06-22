@@ -1,5 +1,5 @@
 /**
- * CHESSKIDOO ACADEMY - Complete Admin Panel Scripts
+ * TWO KNIGHTS ACADEMY - Complete Admin Panel Scripts
  * Fixed version - Academy Expansion Logic Integrated
  */
 
@@ -450,7 +450,7 @@
       const data = history.length ? history.map(h => h.rating) : [getStudentRating(s)];
       chartInstances.childElo = new Chart(ctx, {
         type: 'line',
-        data: { labels, datasets: [{ label: 'ELO', data, borderColor: '#dca33e', backgroundColor: 'rgba(220,161,62,0.1)', fill: true, tension: 0.4 }] },
+        data: { labels, datasets: [{ label: 'ELO', data, borderColor: '#dca33e', backgroundColor: 'rgba(51, 145, 255,0.1)', fill: true, tension: 0.4 }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
       });
     }
@@ -584,8 +584,8 @@
         // Create premium gradient
         const barCtx = trendCtx.getContext('2d');
         const barGradient = barCtx.createLinearGradient(0, 0, 0, 180);
-        barGradient.addColorStop(0, 'rgba(218, 163, 62, 0.85)'); // Vibrant Gold
-        barGradient.addColorStop(1, 'rgba(218, 163, 62, 0.15)'); // Translucent Fade
+        barGradient.addColorStop(0, 'rgba(51, 145, 255, 0.85)'); // Vibrant Gold
+        barGradient.addColorStop(1, 'rgba(51, 145, 255, 0.15)'); // Translucent Fade
 
         window.childPaymentChart = new Chart(trendCtx, {
           type: 'bar',
@@ -719,7 +719,7 @@
 
     if (showCurrentRow) {
       rows += `
-        <tr style="background: rgba(218, 163, 62, 0.02)">
+        <tr style="background: rgba(51, 145, 255, 0.02)">
           <td style="font-weight:600">${new Date().toLocaleDateString()}</td>
           <td><span class="badge" style="background:var(--surface);border:1px solid var(--border);color:var(--ivory)">Current Period</span></td>
           <td style="font-weight:700;color:var(--gold)">₹${fee.toLocaleString()}</td>
@@ -860,9 +860,9 @@
         <title>Tuition Financial Statement - ${getStudentName(s)}</title>
         <style>
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #2c3e50; margin: 40px; line-height: 1.6; }
-          .header { display: flex; justify-content: space-between; border-bottom: 3px solid #daa33e; padding-bottom: 20px; margin-bottom: 30px; }
+          .header { display: flex; justify-content: space-between; border-bottom: 3px solid #3391ff; padding-bottom: 20px; margin-bottom: 30px; }
           .logo { font-size: 24px; font-weight: 800; color: #1a252f; letter-spacing: 0.5px; }
-          .logo span { color: #daa33e; }
+          .logo span { color: #3391ff; }
           .meta-box { margin-bottom: 35px; display: flex; justify-content: space-between; font-size: 14px; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
           th { background: #f8f9fa; padding: 12px 10px; text-align: left; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #e9ecef; color: #495057; font-weight: 700; }
@@ -878,7 +878,7 @@
           <span style="font-size: 13px; color: #744210; font-weight: 600; display: flex; align-items: center; gap: 6px;">
             📄 Annual Tuition Investment Statement is prepared for print.
           </span>
-          <button onclick="window.print()" style="background: #daa33e; border: none; color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; box-shadow: 0 2px 4px rgba(218,163,62,0.3);">🖨️ Print Statement / Save PDF</button>
+          <button onclick="window.print()" style="background: #3391ff; border: none; color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; box-shadow: 0 2px 4px rgba(51, 145, 255,0.3);">🖨️ Print Statement / Save PDF</button>
         </div>
         
         <div class="header">
@@ -887,7 +887,7 @@
             <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px; font-weight: 500;">Premium Scholastic Chess Mentorship & Coaching</div>
           </div>
           <div style="text-align: right;">
-            <h2 style="margin: 0; color: #daa33e; font-size: 20px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Tuition Financial Report</h2>
+            <h2 style="margin: 0; color: #3391ff; font-size: 20px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Tuition Financial Report</h2>
             <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px; font-weight: 500;">Date Generated: ${new Date().toLocaleDateString()}</div>
           </div>
         </div>
@@ -902,10 +902,10 @@
           </div>
           <div style="text-align: right; font-size: 13px; color: #7f8c8d;">
             <strong style="color: #34495e; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Academy Registry Issuer</strong><br>
-            <span style="font-size: 15px; font-weight: 700; color: #2c3e50; display: inline-block; margin: 4px 0;">Chesskidoo Academy Pvt Ltd</span><br>
+            <span style="font-size: 15px; font-weight: 700; color: #2c3e50; display: inline-block; margin: 4px 0;">Two Knights Academy Pvt Ltd</span><br>
             Corporate GSTIN: <strong>33AAFCK0012C1ZP</strong><br>
-            Email: billing@chesskidoo.com<br>
-            Web: www.chesskidoo.com
+            Email: billing@twoknightschess.com<br>
+            Web: www.twoknightschess.com
           </div>
         </div>
 
@@ -924,7 +924,7 @@
         </table>
 
         <div class="totals">
-          <div class="total-row" style="border-top: 2px solid #daa33e; padding-top: 10px; margin-top: 10px; font-weight: 800; font-size: 17px; color: #1a252f;">
+          <div class="total-row" style="border-top: 2px solid #3391ff; padding-top: 10px; margin-top: 10px; font-weight: 800; font-size: 17px; color: #1a252f;">
             <span>Total Tuition Paid:</span>
             <span>₹${baseSum.toLocaleString()}</span>
           </div>
@@ -933,7 +933,7 @@
         <div style="clear: both;"></div>
 
         <div class="footer">
-          This is an official annual statement issued electronically by the accounting division of Chesskidoo Academy Pvt Ltd.<br>
+          This is an official annual statement issued electronically by the accounting division of Two Knights Academy Pvt Ltd.<br>
           We appreciate your dedication and scholastic investment in our master chess training program!
         </div>
       </body>
@@ -1118,7 +1118,7 @@
         `Kindly complete the payment on or before the due date to avoid any interruption in class participation. \u{1F64F}\n\n` + // 🙏
         `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n\n` +               // 📲
         `Thank you for your continued support! \u{1F31F}\n` +                  // 🌟
-        `\u{265F}\u{FE0F} Chesskidoo Academy`;                                 // ♟️
+        `\u{265F}\u{FE0F} Two Knights Academy`;                                 // ♟️
     }
     return `\u{1F4E2} UPCOMING FEE REMINDER\n\n` +                              // 📢
       `Hello Sir/Madam, \u{1F44B}\n\n` +                                       // 👋
@@ -1128,7 +1128,7 @@
       `Kindly complete the payment on or before the due date. \u{1F64F}\n\n` + // 🙏
       `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n\n` +                 // 📲
       `Thank you so much for your support and cooperation! \u{1F31F}\n` +      // 🌟
-      `\u{265F}\u{FE0F} Chesskidoo Academy`;                                   // ♟️
+      `\u{265F}\u{FE0F} Two Knights Academy`;                                   // ♟️
   }
 
   function sendPaymentReminder(id) {
@@ -1250,7 +1250,7 @@
       return `${EMOJI.alert} ${sName} — ${label} (Due: ${dueDateStr})`;
     });
 
-    let msg = `${EMOJI.warning} CHESSKIDOO ACADEMY – FEE AUDIT REPORT ${EMOJI.chart}\n\n` +
+    let msg = `${EMOJI.warning} TWO KNIGHTS ACADEMY – FEE AUDIT REPORT ${EMOJI.chart}\n\n` +
         `Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} ${EMOJI.teacher},\n\n` +
         `The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle ${EMOJI.calendar}:\n\n` +
         studentLines.join('\n') +
@@ -1261,7 +1261,7 @@
         `${EMOJI.siren} ARREARS = Unpaid fees from previous months\n` +
         `${EMOJI.pending} PENDING = Current month's unpaid fee\n\n` +
         `Regards,\n` +
-        `Administrative Team | Chesskidoo Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
+        `Administrative Team | Two Knights Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
 
     const phone = c.phone || c.contact || '0000000000';
     const parsed = parseStoredPhone(phone);
@@ -3163,7 +3163,7 @@ function initUI() {
       
       html += `<h1>Event Report: ${escapeHtml(e.title)}</h1><p><strong>Date:</strong> ${new Date(e.date || e.event_date).toLocaleDateString()}</p>`;
       html += `<h2>Registered Students</h2><table border="1" cellspacing="0" cellpadding="5" style="border-collapse:collapse;width:100%;">`;
-      html += `<tr style="background:#d4af37;color:#fff;"><th>Name</th><th>Level</th><th>Payment</th><th>Attendance</th><th>Status</th></tr>`;
+      html += `<tr style="background:#3391ff;color:#fff;"><th>Name</th><th>Level</th><th>Payment</th><th>Attendance</th><th>Status</th></tr>`;
       
       regs.forEach(r => {
           const student = allStudents.find(s => s.id === r.student_id);
@@ -4262,7 +4262,7 @@ function initUI() {
             label: 'New Students',
             data,
             borderColor: '#e8a830',
-            backgroundColor: 'rgba(232, 168, 48, 0.15)',
+            backgroundColor: 'rgba(51, 145, 255, 0.15)',
             tension: 0.4,
             pointBackgroundColor: '#e8a830',
             fill: true
@@ -5746,7 +5746,7 @@ function initUI() {
       return `<div style="display:flex; gap:5px; margin:10px 0 8px;">` + daysFull.map((d, i) => {
         const active = low.includes(d.toLowerCase()) || low.includes(d.slice(0, 3).toLowerCase());
         return `<div style="flex:1; text-align:center; padding:7px 0; border-radius:7px; font-size:11px; font-weight:800; ${active
-          ? 'background:linear-gradient(135deg,var(--gold) 0%,#b8860b 100%); color:#000; box-shadow:0 2px 8px rgba(218,163,62,0.35);'
+          ? 'background:linear-gradient(135deg,var(--gold) 0%,#b8860b 100%); color:#000; box-shadow:0 2px 8px rgba(51, 145, 255,0.35);'
           : 'background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.35);'}">${shortDays[i]}</div>`;
       }).join('') + `</div>`;
     };
@@ -6159,7 +6159,7 @@ window.deleteCoach = deleteCoach;
         leaderboardEl.innerHTML = topPlayers.map((s, index) => {
           let rankColor = 'var(--ivory-dim)';
           let rankBadge = `${index + 1}`;
-          if (index === 0) { rankColor = '#d4af37'; rankBadge = '🥇'; } // Gold
+          if (index === 0) { rankColor = '#3391ff'; rankBadge = '🥇'; } // Gold
           else if (index === 1) { rankColor = '#c0c0c0'; rankBadge = '🥈'; } // Silver
           else if (index === 2) { rankColor = '#cd7f32'; rankBadge = '🥉'; } // Bronze
 
@@ -6374,10 +6374,10 @@ ${EMOJI.tear_calendar} Confirmed On: ${formattedDate}
 ${EMOJI.link} Download Your Official Receipt:
 ${receiptUrl}
 
-Thank you for your prompt payment and continued support of Chesskidoo Academy! ${EMOJI.grad}${EMOJI.trophy}
+Thank you for your prompt payment and continued support of Two Knights Academy! ${EMOJI.grad}${EMOJI.trophy}
 
 Best regards,
-– Chesskidoo Academy ${EMOJI.knight}`;
+– Two Knights Academy ${EMOJI.knight}`;
 
     const studentPhone = getStudentPhone(s);
     const parsed = parseStoredPhone(studentPhone);
@@ -6766,9 +6766,9 @@ Best regards,
                 `We are pleased to inform you that your salary of ₹${salary.toLocaleString()} for this period has been successfully processed and credited to your account! 💳💸\n\n` +
                 `📄 View/Download your Official Salary Slip here:\n` +
                 `${receiptUrl}\n\n` +
-                `Thank you so much for your incredible dedication, training expertise, and mentorship. You make Chesskidoo Academy shine! 🏆🎓\n\n` +
+                `Thank you so much for your incredible dedication, training expertise, and mentorship. You make Two Knights Academy shine! 🏆🎓\n\n` +
                 `Warm regards,\n` +
-                `– Chesskidoo Academy Team 👑✓¨`;
+                `– Two Knights Academy Team 👑✓¨`;
     openWhatsApp(dialCode, parsed.localNumber, msg);
   }
 
@@ -7170,7 +7170,7 @@ Best regards,
       optionsEl.style.display = 'block';
       let optionsHtml = '';
       if (isRazorpayConfigured) {
-        optionsHtml += `<div class="upi-item" onclick="initiateRazorpayPay()" style="background:rgba(232,168,48,0.1); border-color:var(--gold); color:var(--gold); display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px;">🛡️ <b>Pay via Razorpay (Card/UPI)</b></div>`;
+        optionsHtml += `<div class="upi-item" onclick="initiateRazorpayPay()" style="background:rgba(51, 145, 255,0.1); border-color:var(--gold); color:var(--gold); display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px;">🛡️ <b>Pay via Razorpay (Card/UPI)</b></div>`;
       }
       optionsHtml += `
         <div class="upi-item" onclick="initiatePay('Google Pay')"><b>Google Pay</b></div>
@@ -7330,7 +7330,7 @@ Best regards,
         key: razorpayKeyId,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: 'Chesskidoo Academy',
+        name: 'Two Knights Academy',
         description: 'Tuition Fee - ' + studentName,
         order_id: orderData.id,
         handler: async function (response) {
@@ -7489,7 +7489,7 @@ Best regards,
 
         const actionColor = log.status === 'FAILED' 
           ? 'color: #f87171; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.1);' 
-          : 'color: #fbbf24; border-color: rgba(232,168,48,0.3); background: rgba(232,168,48,0.05);';
+          : 'color: #fbbf24; border-color: rgba(51, 145, 255,0.3); background: rgba(51, 145, 255,0.05);';
         
         row.innerHTML = `
           <div style="flex: 0 0 40px; display:flex; align-items:center; justify-content:center;">${statusIcon}</div>
@@ -8533,7 +8533,7 @@ Best regards,
 
       if (!response) {
         // Default comprehensive response
-        response = `🏫 **Chesskidoo Academy Report**
+        response = `🏫 **Two Knights Academy Report**
 `;
         response += `${TEMPORAL_ENGINE.getTimeBasedGreeting()}! Here's your academy overview:
 
@@ -8967,7 +8967,7 @@ Best regards,
 
       XLSX.utils.book_append_sheet(wb, ws, "Academy Registry");
 
-      const fileName = `Chesskidoo_Academy_Data_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const fileName = `Two Knights_Academy_Data_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
 
       toast('Academy Data Exported (Excel)', 'success');
@@ -9122,7 +9122,7 @@ Best regards,
       XLSX.utils.book_append_sheet(wb, wsRate, "Rating Performance");
 
       // Export file
-      XLSX.writeFile(wb, `Chesskidoo_Strategic_Archive_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.writeFile(wb, `Two Knights_Strategic_Archive_${new Date().toISOString().split('T')[0]}.xlsx`);
       toast('Strategic Archive Exported Successfully!', 'success');
 
     } catch (err) {
@@ -9410,7 +9410,7 @@ Best regards,
       bar.classList.toggle('active');
       const btn = document.getElementById('filter-toggle-btn');
       if (bar.classList.contains('active')) {
-        btn.style.background = 'rgba(232,168,48,0.15)';
+        btn.style.background = 'rgba(51, 145, 255,0.15)';
         btn.style.borderColor = 'var(--gold)';
       } else {
         btn.style.background = 'transparent';
@@ -9615,7 +9615,7 @@ Best regards,
                   labels: ['Promotions', 'Attendance', 'Arrears', 'General'],
                   datasets: [{
                       data: [promoCount, attCount, arrearsCount, insights.filter(x => x.type === 'all' && x.severity === 'info').length],
-                      backgroundColor: ['#daa33e', '#ff4d4f', '#cf1322', '#52c41a'],
+                      backgroundColor: ['#3391ff', '#ff4d4f', '#cf1322', '#52c41a'],
                       borderWidth: 0,
                       hoverOffset: 4
                   }]
@@ -9648,7 +9648,7 @@ Best regards,
                   datasets: [{
                       label: 'Candidates',
                       data: [promoLevels.Elite, promoLevels.Advanced, promoLevels.Intermediate, promoLevels.Beginner],
-                      backgroundColor: '#daa33e',
+                      backgroundColor: '#3391ff',
                       borderRadius: 4
                   }]
               },

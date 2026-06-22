@@ -25,7 +25,7 @@ h1, h2, h3, h4, h5, h6 {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   CHESSKIDOO ACADEMY - Premium Admin Panel Styles
+   TWO KNIGHTS ACADEMY - Premium Admin Panel Styles
    Modern design with gold accents and dark theme
    Professional fonts: Cormorant Garamond (headings), Syne (UI), JetBrains Mono
    ═══════════════════════════════════════════════════════════════ */
@@ -363,7 +363,7 @@ tbody tr:hover { background: var(--gold-mist); }
 .badge-level { background: var(--gold-glow); color: var(--gold); text-transform: uppercase; }
 .badge-danger { background: rgba(255,77,79,0.15); color: var(--danger); }
 .badge-grey { background: rgba(140, 140, 140, 0.15); color: #8c8c8c; }
-.badge-gold { background: rgba(218, 163, 62, 0.15); color: var(--gold); }
+.badge-gold { background: rgba(51, 145, 255, 0.15); color: var(--gold); }
 .badge-purple { background: rgba(114, 46, 209, 0.15); color: #722ed1; }
 
 /* ── PROFILE HEADER ── */
@@ -397,7 +397,7 @@ tbody tr:hover { background: var(--gold-mist); }
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  border-bottom: 1px solid rgba(232, 168, 48, 0.15);
+  border-bottom: 1px solid rgba(51, 145, 255, 0.15);
   padding-bottom: 12px;
 }
 .modal-title { font-family: var(--font-head); font-size: 24px; color: var(--gold); margin: 0; font-weight: 600; }
@@ -416,7 +416,7 @@ tbody tr:hover { background: var(--gold-mist); }
   transition: all 0.2s ease;
 }
 .close-btn:hover {
-  background: rgba(232, 168, 48, 0.12);
+  background: rgba(51, 145, 255, 0.12);
   color: var(--gold);
 }
 .modal-body {
@@ -439,7 +439,7 @@ tbody tr:hover { background: var(--gold-mist); }
   gap: 12px;
   justify-content: flex-end;
   margin-top: 24px;
-  border-top: 1px solid rgba(232, 168, 48, 0.15);
+  border-top: 1px solid rgba(51, 145, 255, 0.15);
   padding-top: 20px;
 }
 .modal-sub { color: var(--ivory3); font-size: 14px; margin-bottom: 22px; }
@@ -526,13 +526,13 @@ input[type='month']::-webkit-calendar-picker-indicator { filter: invert(0.8) sep
 /* ── PREMIUM EVENT CARDS ── */
 .ev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 24px; }
 .ev-card {
-  background: var(--surface); border: 1px solid rgba(232,168,62,0.12);
+  background: var(--surface); border: 1px solid rgba(51, 145, 255,0.12);
   border-radius: 16px; overflow: hidden; transition: all 0.3s ease;
   display: flex; flex-direction: column;
   transform-style: preserve-3d; perspective: 1000px;
 }
-.ev-card:hover { transform: translateY(-8px) rotateX(3deg); box-shadow: 0 24px 50px rgba(0,0,0,0.5), 0 0 30px rgba(51,145,255,0.15); border-color: rgba(232,168,62,0.3); }
-.ev-header { background: linear-gradient(135deg, rgba(0,112,255,0.15) 0%, rgba(0,112,255,0.05) 100%); border-radius: 16px 16px 0 0; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(232,168,62,0.1); }
+.ev-card:hover { transform: translateY(-8px) rotateX(3deg); box-shadow: 0 24px 50px rgba(0,0,0,0.5), 0 0 30px rgba(51,145,255,0.15); border-color: rgba(51, 145, 255,0.3); }
+.ev-header { background: linear-gradient(135deg, rgba(0,112,255,0.15) 0%, rgba(0,112,255,0.05) 100%); border-radius: 16px 16px 0 0; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(51, 145, 255,0.1); }
 .ev-type-badge { background: linear-gradient(135deg, var(--gold), var(--gold2)); color: #000; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
 .ev-date-badge { background: var(--surface3); color: var(--ivory); font-family: var(--font-mono); font-size: 12px; padding: 6px 14px; border-radius: 8px; }
 .ev-body { padding: 22px; flex: 1; }
@@ -548,7 +548,7 @@ input[type='month']::-webkit-calendar-picker-indicator { filter: invert(0.8) sep
 .ev-progress-label span:last-child { color: var(--gold); font-family: var(--font-mono); font-weight: 600; }
 .ev-progress-track { background: var(--surface2); height: 8px; border-radius: 4px; overflow: hidden; }
 .ev-progress-bar { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold2)); border-radius: 4px; transition: width 0.5s ease; }
-.ev-footer { padding: 18px 22px; border-top: 1px solid rgba(232,168,62,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); }
+.ev-footer { padding: 18px 22px; border-top: 1px solid rgba(51, 145, 255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); }
 .ev-spots { font-size: 13px; color: var(--ivory3); }
 .ev-spots strong { color: var(--ivory); font-family: var(--font-mono); }
 .ev-poster { width: 100%; height: 180px; object-fit: cover; border-radius: 12px 12px 0 0; border-bottom: 1px solid var(--border); }
@@ -602,12 +602,12 @@ body[data-theme="light"] .login-logo-light { display: block; }
 .logo-crest {
   width: 76px; height: 76px; display: inline-flex; align-items: center; justify-content: center;
   font-size: 44px; line-height: 1; margin-bottom: 14px; border-radius: 18px;
-  background: linear-gradient(135deg, #f3cf6b 0%, var(--gold, #c9a227) 55%, #9a7b1d 100%);
+  background: linear-gradient(135deg, #80bfff 0%, var(--gold, #3391ff) 55%, #0059b3 100%);
   color: #15233b; box-shadow: 0 10px 28px rgba(201,162,39,0.38); border: 1px solid rgba(255,255,255,0.25);
 }
 .logo-wordmark { font-family: var(--font-head); font-size: 30px; font-weight: 700; letter-spacing: 1px; line-height: 1; }
 .logo-wordmark .lw-chess { color: var(--ivory, #f4ecd8); }
-.logo-wordmark .lw-kidoo { color: var(--gold, #c9a227); }
+.logo-wordmark .lw-kidoo { color: var(--gold, #3391ff); }
 .logo-fallback .logo-tagline { margin-top: 8px; font-size: 11px; color: var(--ivory3); text-transform: uppercase; letter-spacing: 4px; font-weight: 600; }
 /* Light theme: pale crest + dark wordmark, gold accent kept. */
 body[data-theme="light"] .logo-crest {
@@ -619,8 +619,8 @@ body[data-theme="light"] .logo-wordmark .lw-kidoo { color: #b8860b; }
 
 /* On-brand text selection (replaces the harsh default blue that washed out the
    login labels/placeholders). Readable in both light and dark themes. */
-::selection { background: rgba(218,163,62,0.35); color: var(--ivory); }
-::-moz-selection { background: rgba(218,163,62,0.35); color: var(--ivory); }
+::selection { background: rgba(51, 145, 255,0.35); color: var(--ivory); }
+::-moz-selection { background: rgba(51, 145, 255,0.35); color: var(--ivory); }
 
 /* Login form labels — brighter so they're clearly visible on the dark login box. */
 #login-screen .label { color: var(--amber); opacity: 0.95; font-weight: 600; }
@@ -724,7 +724,7 @@ body.admin-mode:not(.master-mode) .master-only { display: none !important; }
 .ai-ws-menu { display: flex; flex-direction: column; gap: 6px; }
 .ai-ws-btn { background: transparent; color: var(--ivory3); border: 1px solid transparent; padding: 12px 16px; text-align: left; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-family: var(--font-ui); font-size: 14px; }
 .ai-ws-btn:hover { background: var(--gold-mist); color: var(--ivory); }
-.ai-ws-btn.active { background: rgba(220,161,62,0.12); color: var(--gold); border: 1px solid rgba(220,161,62,0.3); }
+.ai-ws-btn.active { background: rgba(51, 145, 255,0.12); color: var(--gold); border: 1px solid rgba(51, 145, 255,0.3); }
 .ai-ws-main { flex: 1; display: flex; flex-direction: column; background: var(--obsidian); }
 .ai-ws-header { padding: 20px 40px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); display: flex; justify-content: space-between; align-items: center; }
 .ai-ws-header h2 { font-family: var(--font-head); font-size: 24px; color: var(--ivory); margin-bottom: 4px; }
@@ -740,7 +740,7 @@ body.admin-mode:not(.master-mode) .master-only { display: none !important; }
 .ai-ws-msg.user .ai-ws-bubble { background: linear-gradient(135deg, var(--gold), var(--gold2)); color: #000; font-weight: 600; border-bottom-right-radius: 2px; }
 .ai-ws-input-area { padding: 20px 24px; background: var(--surface2); border-top: 1px solid var(--border); }
 .ai-ws-input-box { display: flex; gap: 12px; background: var(--surface); padding: 8px 16px; border-radius: 30px; border: 1px solid var(--border); }
-.ai-ws-input-box:focus-within { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 8px 30px rgba(220,161,62,0.15); }
+.ai-ws-input-box:focus-within { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 8px 30px rgba(51, 145, 255,0.15); }
 .ai-ws-input-box input { flex: 1; background: transparent; border: none; margin-bottom: 0; padding: 8px 0; color: var(--ivory); font-size: 16px; outline: none; font-family: var(--font-ui); }
 .ai-ws-input-box input:focus { box-shadow: none; }
 .ai-ws-input-box input::placeholder { color: var(--ivory3); }
@@ -1324,7 +1324,7 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
   gap: 12px;
   padding: 14px 18px;
   background: var(--surface2);
-  border: 1px solid rgba(232, 168, 48, 0.08);
+  border: 1px solid rgba(51, 145, 255, 0.08);
   border-radius: 12px;
   cursor: pointer;
   user-select: none;
@@ -1335,7 +1335,7 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
 
 .channel-card:hover {
   background: var(--surface3);
-  border-color: rgba(232, 168, 48, 0.25);
+  border-color: rgba(51, 145, 255, 0.25);
   transform: translateY(-2px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 10px var(--gold-mist);
 }
@@ -1411,7 +1411,7 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
 
 .channel-card[data-channel="email"]:has(input[type="radio"]:checked) {
   border-color: var(--amber) !important;
-  background: linear-gradient(135deg, rgba(232, 168, 48, 0.08) 0%, rgba(232, 168, 48, 0.01) 100%) !important;
+  background: linear-gradient(135deg, rgba(51, 145, 255, 0.08) 0%, rgba(51, 145, 255, 0.01) 100%) !important;
 }
 .channel-card[data-channel="email"]:has(input[type="radio"]:checked) input[type="radio"] {
   border-color: var(--amber) !important;
@@ -1592,8 +1592,8 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
 }
 
 .calc-header {
-  background: rgba(232, 168, 48, 0.08);
-  border-bottom: 1px solid rgba(232, 168, 48, 0.1);
+  background: rgba(51, 145, 255, 0.08);
+  border-bottom: 1px solid rgba(51, 145, 255, 0.1);
   padding: 10px 14px;
   display: flex;
   justify-content: space-between;
@@ -1735,8 +1735,8 @@ textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--gold
 #ev-manage-view {
   background: linear-gradient(135deg, rgba(24, 24, 36, 0.95), rgba(19, 19, 31, 0.98)) !important;
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(232, 168, 48, 0.18) !important;
-  box-shadow: var(--shadow-deep), 0 0 50px rgba(232, 168, 48, 0.05);
+  border: 1px solid rgba(51, 145, 255, 0.18) !important;
+  box-shadow: var(--shadow-deep), 0 0 50px rgba(51, 145, 255, 0.05);
   transition: all 0.3s ease;
 }
 /* Light theme: the manage view must NOT stay dark navy or its dark text vanishes. */
@@ -1761,7 +1761,7 @@ body[data-theme="light"] #ev-manage-view {
   background: linear-gradient(145deg, rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.02));
   padding: 10px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(232, 168, 48, 0.12);
+  border: 1px solid rgba(51, 145, 255, 0.12);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
@@ -1839,7 +1839,7 @@ body[data-theme="light"] #ev-manage-view {
   background: rgba(0, 0, 0, 0.15);
   padding: 12px 18px;
   border-radius: 12px;
-  border: 1px solid rgba(232, 168, 48, 0.12);
+  border: 1px solid rgba(51, 145, 255, 0.12);
   flex-wrap: wrap;
   margin-bottom: 20px;
 }
@@ -1848,7 +1848,7 @@ body[data-theme="light"] #ev-manage-view {
   display: flex;
   align-items: center;
   background: var(--surface2);
-  border: 1px solid rgba(232, 168, 48, 0.25);
+  border: 1px solid rgba(51, 145, 255, 0.25);
   border-radius: 8px;
   padding: 2px;
   transition: all 0.2s ease;
@@ -1879,7 +1879,7 @@ body[data-theme="light"] #ev-manage-view {
   width: 105px !important;
   background: var(--surface3) !important;
   color: var(--ivory) !important;
-  border: 1px solid rgba(232, 168, 48, 0.2) !important;
+  border: 1px solid rgba(51, 145, 255, 0.2) !important;
   border-radius: 6px !important;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -2111,7 +2111,7 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
   .tom-kpi-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* ── CHESSKIDOO INVITATION CARD ── */
+/* ── TWO KNIGHTS INVITATION CARD ── */
 .chesskidoo-schedule-card {
   background: #ffffff;
   border: 8px solid #064e3b; /* Dark green border */
@@ -2240,8 +2240,8 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
 
 /* ── CONTEXTUAL AI INSIGHTS BOX ── */
 .ai-insight-box {
-  background: linear-gradient(135deg, rgba(218, 163, 62, 0.08) 0%, rgba(218, 163, 62, 0.02) 100%);
-  border: 1px solid rgba(218, 163, 62, 0.2);
+  background: linear-gradient(135deg, rgba(51, 145, 255, 0.08) 0%, rgba(51, 145, 255, 0.02) 100%);
+  border: 1px solid rgba(51, 145, 255, 0.2);
   border-radius: 12px;
   padding: 16px;
   font-size: 13px;
@@ -2267,21 +2267,21 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
 }
 
 .badge-ai-suggest {
-  background: rgba(218, 163, 62, 0.15);
+  background: rgba(51, 145, 255, 0.15);
   color: var(--gold);
-  border: 1px solid rgba(218, 163, 62, 0.35);
+  border: 1px solid rgba(51, 145, 255, 0.35);
   font-size: 10px;
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 700;
-  box-shadow: 0 0 8px rgba(218, 163, 62, 0.2);
+  box-shadow: 0 0 8px rgba(51, 145, 255, 0.2);
   animation: ai-glow-pulse 2s infinite alternate;
   display: inline-block;
 }
 
 @keyframes ai-glow-pulse {
-  0% { box-shadow: 0 0 4px rgba(218, 163, 62, 0.2); }
-  100% { box-shadow: 0 0 10px rgba(218, 163, 62, 0.5); }
+  0% { box-shadow: 0 0 4px rgba(51, 145, 255, 0.2); }
+  100% { box-shadow: 0 0 10px rgba(51, 145, 255, 0.5); }
 }
 
 .modal-content, .modal-box { max-height: 85vh; overflow-y: auto; } 

@@ -1,5 +1,5 @@
 /**
- * CHESSKIDOO ACADEMY — Expenditure Management Module
+ * TWO KNIGHTS ACADEMY — Expenditure Management Module
  * Frontend JS: expenditures.js
  * Handles: Add, List, Edit, Delete, Charts, Dashboard Widgets
  */

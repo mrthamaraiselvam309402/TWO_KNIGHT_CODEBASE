@@ -5,6 +5,9 @@
 -- 1. Enable pg_cron if available (requires superuser in some environments)
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
+-- 1.5 Add payment_status column to students table
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'Pending';
+
 -- 2. Refined Automation Function
 -- This handles the transition from Pending to Due and resets Paid to Pending on the 1st
 CREATE OR REPLACE FUNCTION public.automate_payment_rollover()

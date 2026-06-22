@@ -1,5 +1,5 @@
 /**
- * Chesskidoo AI Assistant Module
+ * Two Knights AI Assistant Module
  * Handles floating chat interactions and AI queries with High-Fidelity Intelligence.
  */
 
@@ -280,7 +280,7 @@ function escapeHtml(text) {
                     message: msg,
                     role: window.role || 'admin',
                     context: snapshot || { status: 'contextual_insight' },
-                    systemPrompt: "You are TOM AI, the Chesskidoo Academy Advisor. Provide a very short, direct, and helpful insight based on the prompt. No pleasantries, just the insight."
+                    systemPrompt: "You are TOM AI, the Two Knights Academy Advisor. Provide a very short, direct, and helpful insight based on the prompt. No pleasantries, just the insight."
                 })
             });
 

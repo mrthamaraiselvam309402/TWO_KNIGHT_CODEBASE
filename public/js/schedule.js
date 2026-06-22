@@ -71,7 +71,7 @@
         if(document.getElementById('sch-reg-time')) document.getElementById('sch-reg-time').value = '';
         if(document.getElementById('sch-meet-link')) document.getElementById('sch-meet-link').value = '';
         if(document.getElementById('sch-coach-select')) document.getElementById('sch-coach-select').value = '';
-        if(document.getElementById('sch-footnote')) document.getElementById('sch-footnote').value = 'Kindly ensure student joins on time for the demo session. Looking forward to a great learning journey ahead. – Chesskidoo Academy';
+        if(document.getElementById('sch-footnote')) document.getElementById('sch-footnote').value = 'Kindly ensure student joins on time for the demo session. Looking forward to a great learning journey ahead. – Two Knights Academy';
     }
 
     // UTF-8 safe base64 helpers. The server sanitizes the `notes` column and
@@ -204,7 +204,7 @@
         for (let i = 0; i < 7; i++) {
             const isActive = activeDaysStr.includes(daysOfWeek[i].toLowerCase()) || activeDaysStr.includes(shortDays[i].toLowerCase());
             if (isActive) {
-                weekGridHtml += `<div style="flex:1; text-align:center; padding:8px 0; border-radius:8px; background:linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color:#000; font-weight:900; font-size:11px; box-shadow:0 2px 8px rgba(218,163,62,0.4); border:1px solid #ffdf00;">${shortDays[i][0]}</div>`;
+                weekGridHtml += `<div style="flex:1; text-align:center; padding:8px 0; border-radius:8px; background:linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color:#000; font-weight:900; font-size:11px; box-shadow:0 2px 8px rgba(51, 145, 255,0.4); border:1px solid #ffdf00;">${shortDays[i][0]}</div>`;
             } else {
                 weekGridHtml += `<div style="flex:1; text-align:center; padding:8px 0; border-radius:8px; background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-size:11px; border:1px solid rgba(255,255,255,0.05);">${shortDays[i][0]}</div>`;
             }
@@ -230,8 +230,8 @@
             <!-- Decorative background elements -->
             <div style="position:absolute; top:-20px; right:-20px; font-size:120px; opacity:0.03; pointer-events:none;">♟️</div>
             
-            <div style="text-align:center; border-bottom:1px solid rgba(218, 163, 62, 0.3); padding-bottom:16px; margin-bottom:20px;">
-                <h2 style="color:var(--gold); margin:0; font-family:var(--font-head); font-size:24px; text-transform:uppercase; letter-spacing:1px;">Chesskidoo Academy</h2>
+            <div style="text-align:center; border-bottom:1px solid rgba(51, 145, 255, 0.3); padding-bottom:16px; margin-bottom:20px;">
+                <h2 style="color:var(--gold); margin:0; font-family:var(--font-head); font-size:24px; text-transform:uppercase; letter-spacing:1px;">Two Knights Academy</h2>
                 <div style="color:rgba(255,255,255,0.7); font-size:12px; letter-spacing:3px; margin-top:4px;">OFFICIAL SCHEDULE</div>
             </div>
 
@@ -240,7 +240,7 @@
                 <div style="font-size:28px; font-weight:bold; color:#fff; margin-top:4px;">${stName}</div>
             </div>
 
-            <div style="background:rgba(218, 163, 62, 0.08); border:1px solid rgba(218, 163, 62, 0.2); border-radius:12px; padding:16px; margin-bottom:16px;">
+            <div style="background:rgba(51, 145, 255, 0.08); border:1px solid rgba(51, 145, 255, 0.2); border-radius:12px; padding:16px; margin-bottom:16px;">
                 <div style="font-size:11px; text-transform:uppercase; color:var(--gold); font-weight:bold; letter-spacing:1px; margin-bottom:8px;">Demo Class</div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
                     <span style="color:rgba(255,255,255,0.7); font-size:13px;">Date:</span>
@@ -269,7 +269,7 @@
                 </div>
                 ${meetLink ? `
                 <div style="margin-top:16px; text-align:center;">
-                    <a href="${meetLink}" target="_blank" style="display:inline-block; background:var(--gold); color:#000; padding:8px 20px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:13px; box-shadow:0 4px 10px rgba(218,163,62,0.3);">Join Class 🎥</a>
+                    <a href="${meetLink}" target="_blank" style="display:inline-block; background:var(--gold); color:#000; padding:8px 20px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:13px; box-shadow:0 4px 10px rgba(51, 145, 255,0.3);">Join Class 🎥</a>
                 </div>` : ''}
             </div>
 
@@ -385,7 +385,7 @@
         window.toast('Generating image...', 'info');
         html2canvas(target, { backgroundColor: null, scale: 2 }).then(canvas => {
             const link = document.createElement('a');
-            link.download = `Chesskidoo_Schedule_${stName.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+            link.download = `Two Knights_Schedule_${stName.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
             window.toast('Image downloaded!', 'success');
@@ -427,7 +427,7 @@
 
         // NOTE: emojis are written as \u{...} escapes (pure ASCII in source) so
         // they can never be corrupted to "?" by file-encoding / build / transport.
-        let msg = `\u{1F451} *CHESSKIDOO ACADEMY*\n_Official Class Schedule_\n\n`;            // 👑
+        let msg = `\u{1F451} *TWO KNIGHTS ACADEMY*\n_Official Class Schedule_\n\n`;            // 👑
         msg += `Hello Sir/Madam, \u{1F44B}\n\n`;                                              // 👋
         msg += `We are happy to inform you that *${cleanName}* has been scheduled for chess classes at our academy. \u{265F}\u{FE0F}\n\n`; // ♟️
         msg += `\u{1F4D6} *DEMO CLASS*\n`;                                                     // 📖
@@ -472,7 +472,7 @@
         for (let i = 0; i < 7; i++) {
             const isActive = activeDaysStr.includes(daysOfWeek[i].toLowerCase()) || activeDaysStr.includes(shortDays[i].toLowerCase());
             if (isActive) {
-                weekGridHtml += `<div style="flex:1; text-align:center; padding:8px 0; border-radius:8px; background:linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color:#000; font-weight:900; font-size:11px; box-shadow:0 2px 8px rgba(218,163,62,0.4); border:1px solid #ffdf00;">${shortDays[i][0]}</div>`;
+                weekGridHtml += `<div style="flex:1; text-align:center; padding:8px 0; border-radius:8px; background:linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color:#000; font-weight:900; font-size:11px; box-shadow:0 2px 8px rgba(51, 145, 255,0.4); border:1px solid #ffdf00;">${shortDays[i][0]}</div>`;
             } else {
                 weekGridHtml += `<div style="flex:1; text-align:center; padding:8px 0; border-radius:8px; background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-size:11px; border:1px solid rgba(255,255,255,0.05);">${shortDays[i][0]}</div>`;
             }
@@ -496,8 +496,8 @@
         ">
             <div style="position:absolute; top:-20px; right:-20px; font-size:120px; opacity:0.03; pointer-events:none;">♟️</div>
             
-            <div style="text-align:center; border-bottom:1px solid rgba(218, 163, 62, 0.3); padding-bottom:16px; margin-bottom:20px;">
-                <h2 style="color:var(--gold); margin:0; font-family:var(--font-head); font-size:24px; text-transform:uppercase; letter-spacing:1px;">Chesskidoo Academy</h2>
+            <div style="text-align:center; border-bottom:1px solid rgba(51, 145, 255, 0.3); padding-bottom:16px; margin-bottom:20px;">
+                <h2 style="color:var(--gold); margin:0; font-family:var(--font-head); font-size:24px; text-transform:uppercase; letter-spacing:1px;">Two Knights Academy</h2>
                 <div style="color:rgba(255,255,255,0.7); font-size:12px; letter-spacing:3px; margin-top:4px;">OFFICIAL SCHEDULE</div>
             </div>
 
@@ -506,7 +506,7 @@
                 <div style="font-size:28px; font-weight:bold; color:#fff; margin-top:4px;">${student.name}</div>
             </div>
 
-            <div style="background:rgba(218, 163, 62, 0.08); border:1px solid rgba(218, 163, 62, 0.2); border-radius:12px; padding:16px; margin-bottom:16px;">
+            <div style="background:rgba(51, 145, 255, 0.08); border:1px solid rgba(51, 145, 255, 0.2); border-radius:12px; padding:16px; margin-bottom:16px;">
                 <div style="font-size:11px; text-transform:uppercase; color:var(--gold); font-weight:bold; letter-spacing:1px; margin-bottom:8px;">Demo Class</div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
                     <span style="color:rgba(255,255,255,0.7); font-size:13px;">Date:</span>
@@ -534,7 +534,7 @@
                     <span style="font-weight:bold; font-size:13px; color:var(--gold);">${resolvedCoachName}</span>
                 </div>
                 <div style="display:flex; gap:10px; margin-top:16px; justify-content:center;">
-                    ${schedData.meetLink ? `<a href="${schedData.meetLink}" target="_blank" style="background:var(--gold); color:#000; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; box-shadow:0 4px 10px rgba(218,163,62,0.3);">Join Class 🎥</a>` : ''}
+                    ${schedData.meetLink ? `<a href="${schedData.meetLink}" target="_blank" style="background:var(--gold); color:#000; padding:8px 16px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; box-shadow:0 4px 10px rgba(51, 145, 255,0.3);">Join Class 🎥</a>` : ''}
                     <button onclick="window.syncClassCalendar('${student.id}')" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#fff; padding:8px 16px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; transition:all 0.2s;">Add to Calendar 📅</button>
                 </div>
             </div>
@@ -569,12 +569,12 @@
         let icsContent = 
 `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Chesskidoo Academy//Class Schedule//EN
+PRODID:-//Two Knights Academy//Class Schedule//EN
 BEGIN:VEVENT
-UID:class-${student.id}@chesskidoo.com
+UID:class-${student.id}@twoknightschess.com
 DTSTAMP:${startStr}
 DTSTART:${startStr}
-SUMMARY:Chesskidoo Class
+SUMMARY:Two Knights Class
 LOCATION:${schedData.meetLink ? schedData.meetLink : 'Online / Academy'}
 DESCRIPTION:Regular chess class timing: ${schedData.regTime || 'TBD'}. Coach: ${resolveScheduleCoachName(schedData, student)}
 `;
@@ -588,7 +588,7 @@ DESCRIPTION:Regular chess class timing: ${schedData.regTime || 'TBD'}. Coach: ${
         const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `Chesskidoo_Classes_${student.name.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+        link.download = `Two Knights_Classes_${student.name.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

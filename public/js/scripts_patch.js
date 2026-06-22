@@ -1,5 +1,5 @@
 /**
- * CHESSKIDOO SCRIPTS PATCH v2.1
+ * TWO KNIGHTS SCRIPTS PATCH v2.1
  * 
  * Include this AFTER scripts.js in index.html.
  * Fixes: master-only nav visibility, toggleAllStud scope, notification badge.
@@ -114,5 +114,5 @@
     };
   }
 
-  console.log('[Chesskidoo Patch v2.1] Applied successfully.');
+  console.log('[Two Knights Patch v2.1] Applied successfully.');
 })();

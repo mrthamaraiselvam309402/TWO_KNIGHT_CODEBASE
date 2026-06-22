@@ -1,5 +1,5 @@
 /**
- * Chesskidoo Security & Telemetry Engine
+ * Two Knights Security & Telemetry Engine
  * Extracts client-side device footprints, browser signatures, and geographical data.
  */
 (function() {

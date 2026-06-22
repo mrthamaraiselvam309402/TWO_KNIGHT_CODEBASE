@@ -467,7 +467,7 @@ function initVirtualizer(container, spacer) {
 
             const actionColor = alert.status === 'FAILED' 
                 ? 'color: #f87171; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.1);' 
-                : 'color: #fbbf24; border-color: rgba(232,168,48,0.3); background: rgba(232,168,48,0.05);';
+                : 'color: #fbbf24; border-color: rgba(51, 145, 255,0.3); background: rgba(51, 145, 255,0.05);';
             
             row.innerHTML = `
                 <div style="flex: 0 0 40px; display:flex; align-items:center; justify-content:center;">${statusIcon}</div>

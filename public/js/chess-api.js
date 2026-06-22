@@ -226,12 +226,12 @@ function renderChessChart(data) {
         {
           label: 'Lichess Blitz',
           data: data.lichessBlitz,
-          backgroundColor: 'rgba(218, 163, 62, 0.7)',
+          backgroundColor: 'rgba(51, 145, 255, 0.7)',
         },
         {
           label: 'Lichess Rapid',
           data: data.lichessRapid,
-          backgroundColor: 'rgba(218, 163, 62, 0.4)',
+          backgroundColor: 'rgba(51, 145, 255, 0.4)',
         }
       ]
     },
