@@ -128,7 +128,15 @@ window.doLogin = async function() {
     }
 };
 
- window.doLogout = function() {
+ window.doLogout = async function() {
+     const token = localStorage.getItem('sb-access-token');
+     if (token && token.startsWith('eyJ')) {
+       await apiCall('/api/auth', {
+         method: 'POST',
+         body: JSON.stringify({ action: 'logout', token })
+       }).catch(() => {});
+     }
+
      localStorage.removeItem('twoknights_auth');
      localStorage.removeItem('sb-access-token');
      role = null;

@@ -568,7 +568,7 @@ window.generateReportPDF = async function() {
     </table>
 
     <div class="footer">
-      <div>© TWO KNIGHTS ACADEMY MANAGEMENT</div>
+      <div>© Two Knights ACADEMY MANAGEMENT</div>
       <div>CLASSIFICATION: EXECUTIVE</div>
       <div>PAGE 01 / 03</div>
     </div>
@@ -669,7 +669,7 @@ window.generateReportPDF = async function() {
     </div>
 
     <div class="footer">
-      <div>© TWO KNIGHTS ACADEMY MANAGEMENT</div>
+      <div>© Two Knights ACADEMY MANAGEMENT</div>
       <div>AUTHENTICATED BY: CKD-AI-CORE</div>
       <div>PAGE 02 / 03</div>
     </div>
@@ -722,7 +722,7 @@ window.generateReportPDF = async function() {
     </div>
 
     <div class="footer">
-      <div>&copy; TWO KNIGHTS ACADEMY MANAGEMENT</div>
+      <div>&copy; Two Knights ACADEMY MANAGEMENT</div>
       <div>AUDIT TRAIL: ${generatedAt.toISOString()}</div>
       <div>PAGE 03 / 03</div>
     </div>
@@ -1164,7 +1164,7 @@ window.generateReportPPT = async function() {
         
         slide1.addShape('rect', { x: 0.5, y: 0.5, w: 9.0, h: 4.625, line: { color: goldAccent, width: 2 } });
         
-        slide1.addText("TWO KNIGHTS ACADEMY", {
+        slide1.addText("Two Knights ACADEMY", {
             x: 1.0, y: 1.6, w: 8.0, h: 0.8,
             fontSize: 36, fontFace: 'Georgia', color: goldAccent, bold: true, align: 'center'
         });
@@ -1192,7 +1192,7 @@ window.generateReportPPT = async function() {
 
         // Helper function to add footer info
         function addSlideFooter(slide, pageNum) {
-            slide.addText("TWO KNIGHTS EXECUTIVE AUDIT  |  CONFIDENTIAL", {
+            slide.addText("Two Knights EXECUTIVE AUDIT  |  CONFIDENTIAL", {
                 x: 0.6, y: 5.25, w: 7.0, h: 0.2,
                 fontSize: 8, fontFace: 'Arial', color: textMuted
             });
@@ -1478,7 +1478,7 @@ window.generateReportPPT = async function() {
         addSlideFooter(slide7, 7);
 
         // 3. Save File
-        pptx.writeFile({ fileName: `Two Knights_Executive_Slides_${monthStr}.pptx` });
+        pptx.writeFile({ fileName: `twoknights_Executive_Slides_${monthStr}.pptx` });
         toast('Presentation generated! PowerPoint slides downloaded. ✨', 'success');
 
     } catch (err) {
@@ -1726,13 +1726,13 @@ window.generateEventCertificates = async function() {
        
        certHTML += `<div class="cert-page">
          <div class="c-title">CERTIFICATE OF PARTICIPATION</div>
-         <div class="c-sub">TWO KNIGHTS ACADEMY</div>
+         <div class="c-sub">Two Knights ACADEMY</div>
          <div style="font-family: Montserrat; font-size: 16px; margin-bottom: 20px;">This is to proudly certify that</div>
          <div class="c-name">${name}</div>
          <div class="c-body">has successfully participated and demonstrated excellent sportsmanship in the <strong>${e.title}</strong> held on ${new Date(e.date || e.event_date).toLocaleDateString()}.</div>
          <div class="c-footer">
            <div class="c-sig">${new Date().toLocaleDateString()}<br><span style="font-weight:normal; font-size:12px;">Date</span></div>
-           <div class="c-sig" style="font-family: Great Vibes; font-size: 30px; padding-top:0; border:none; line-height:0.8;">Two Knights<br><span style="font-family: Montserrat; font-size:12px; font-weight:normal; border-top: 1px solid #333; display:block; padding-top:10px; margin-top:10px;">Academy Director</span></div>
+           <div class="c-sig" style="font-family: Great Vibes; font-size: 30px; padding-top:0; border:none; line-height:0.8;">TWO KNIGHTS<br><span style="font-family: Montserrat; font-size:12px; font-weight:normal; border-top: 1px solid #333; display:block; padding-top:10px; margin-top:10px;">Academy Director</span></div>
          </div>
        </div>`;
     });

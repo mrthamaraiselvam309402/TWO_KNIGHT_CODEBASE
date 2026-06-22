@@ -1,5 +1,5 @@
 /**
- * TWO KNIGHTS ACADEMY — Expenditure Management Module
+ * Two Knights ACADEMY — Expenditure Management Module
  * Frontend JS: expenditures.js
  * Handles: Add, List, Edit, Delete, Charts, Dashboard Widgets
  */

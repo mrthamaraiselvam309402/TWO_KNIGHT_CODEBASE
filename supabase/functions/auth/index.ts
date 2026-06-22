@@ -1,5 +1,120 @@
 import { checkRateLimit } from './rate_limit.js';
 
+function base64UrlEncode(input: Uint8Array): string {
+  let binary = '';
+  input.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlDecode(value: string) {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function tokenLifetimeSeconds(role: string) {
+  if (role === 'admin') return 15 * 60;
+  if (role === 'master') return 4 * 60 * 60;
+  if (role === 'parent') return 10 * 60;
+  return 15 * 60;
+}
+
+async function createSignedToken(payload: Record<string, unknown>) {
+  const secret = Deno.env.get('JWT_SECRET') || '';
+  if (!secret) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+
+  const encoder = new TextEncoder();
+  const header = { alg: 'HS256', typ: 'JWT', aud: 'twoknights-api', iss: 'twoknights-auth' };
+  const headerPart = base64UrlEncode(encoder.encode(JSON.stringify(header)));
+  const payloadPart = base64UrlEncode(encoder.encode(JSON.stringify(payload)));
+  const signingInput = `${headerPart}.${payloadPart}`;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(signingInput));
+
+  return `${signingInput}.${base64UrlEncode(new Uint8Array(signature))}`;
+}
+
+async function verifySignedToken(token: string) {
+  const secret = Deno.env.get('JWT_SECRET') || '';
+  if (!secret || !token.includes('.')) return null;
+
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+
+  try {
+    const header = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[0])));
+    if (header?.alg !== 'HS256' || header?.typ !== 'JWT' || header?.aud !== 'twoknights-api' || header?.iss !== 'twoknights-auth') return null;
+
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+    const signature = base64UrlDecode(parts[2]);
+    const verified = await crypto.subtle.verify('HMAC', key, signature, encoder.encode(`${parts[0]}.${parts[1]}`));
+    if (!verified) return null;
+
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[1])));
+    const exp = Number(payload.exp || 0);
+    if (exp && exp < Math.floor(Date.now() / 1000)) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+async function createCustomTokenSession(supabase: any, role: string, username: string, studentId: string | null = null) {
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + tokenLifetimeSeconds(role);
+  const jti = crypto.randomUUID();
+  const token = await createSignedToken({
+    sub: studentId ? `student:${studentId}` : `env:${role}:${username}`,
+    role,
+    user: username,
+    student_id: studentId,
+    jti,
+    aud: 'twoknights-api',
+    iss: 'twoknights-auth',
+    iat: now,
+    exp
+  });
+
+  const { error } = await supabase
+    .from('token_sessions')
+    .insert({
+      jti,
+      role,
+      user_name: username,
+      student_id: studentId,
+      expires_at: new Date(exp * 1000).toISOString()
+    });
+
+  if (error) throw error;
+  return token;
+}
+
+async function createEnvAdminToken(supabase: any, role: string, username: string) {
+  return createCustomTokenSession(supabase, role, username);
+}
+
+async function createParentToken(supabase: any, studentId: string, username: string) {
+  return createCustomTokenSession(supabase, 'parent', username, studentId);
+}
+
 Deno.serve(async (req) => {
   const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
   
@@ -61,6 +176,20 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { action, username, password } = body;
 
+    if (action === 'logout') {
+      const token = String(body.token || '');
+      const payload = await verifySignedToken(token);
+      const jti = payload?.jti;
+      if (jti) {
+        await supabase
+          .from('token_sessions')
+          .update({ revoked_at: new Date().toISOString() })
+          .eq('jti', jti)
+          .is('revoked_at', null);
+      }
+      return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+    }
+
     if (action !== 'login') {
       return new Response(JSON.stringify({ error: 'Unknown action' }), { 
         status: 400, 
@@ -86,9 +215,10 @@ Deno.serve(async (req) => {
 
     if (masterUser && masterPass && String(username) === String(masterUser) && String(password) === String(masterPass)) {
       console.log("Master login successful");
+      const token = await createEnvAdminToken(supabase, 'master', masterUser);
       return new Response(JSON.stringify({
         success: true,
-        token: 'master-token-' + Date.now(),
+        token,
         role: 'master',
         user: masterUser
       }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
@@ -96,9 +226,10 @@ Deno.serve(async (req) => {
 
     if (adminUser && adminPass && String(username) === String(adminUser) && String(password) === String(adminPass)) {
       console.log("Admin login successful");
+      const token = await createEnvAdminToken(supabase, 'admin', adminUser);
       return new Response(JSON.stringify({
         success: true,
-        token: 'admin-token-' + Date.now(),
+        token,
         role: 'admin',
         user: adminUser
       }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
@@ -120,10 +251,17 @@ Deno.serve(async (req) => {
           headers: { 'Content-Type': 'application/json', ...corsHeaders } 
         });
       }
+      const accessToken = authData.session?.access_token;
+      if (!accessToken) {
+        return new Response(JSON.stringify({ error: 'Server configuration error: missing Supabase session token.' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
       
       return new Response(JSON.stringify({
         success: true,
-        token: authData.session?.access_token || 'session-' + Date.now(),
+        token: accessToken,
         role: userRole,
         user: authData.user.email
        }), { 
@@ -137,52 +275,38 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 4. Check parent credentials (username = student name, password = parent phone or portal_password)
+    // 4. Check parent credentials (username = student name, password = parent phone)
     const cleanUsername = String(username).trim();
     const inputDigits = String(password).replace(/\D/g, '');
-    const rawPassword = String(password).trim();
     
-    console.log(`[Auth] Checking parent credentials. Name: "${cleanUsername}"`);
+    console.log(`[Auth] Checking parent credentials. Name: "${cleanUsername}", Phone digits: "${inputDigits}"`);
 
-    // First try with portal_password
     let { data: students, error: studentError } = await supabase
       .from('students_decrypted')
-      .select('id, name, parent_phone, phone, portal_password')
+      .select('id, name, parent_phone, phone')
       .or(`name.ilike.%${cleanUsername}%,name.ilike.${cleanUsername}`);
 
     if (studentError) {
-      console.warn('[Auth] decrypted view query failed (portal_password may be missing), retrying without portal_password:', studentError.message);
-      
-      const retryRes = await supabase
-        .from('students_decrypted')
+      console.warn('[Auth] decrypted view query failed, trying raw students table:', studentError.message);
+      const fallbackRes = await supabase
+        .from('students')
         .select('id, name, parent_phone, phone')
         .or(`name.ilike.%${cleanUsername}%,name.ilike.${cleanUsername}`);
       
-      students = retryRes.data;
-      
-      if (retryRes.error) {
-        console.warn('[Auth] decrypted view fallback failed, trying raw students table:', retryRes.error.message);
-        const fallbackRes = await supabase
-          .from('students')
-          .select('id, name, parent_phone, phone')
-          .or(`name.ilike.%${cleanUsername}%,name.ilike.${cleanUsername}`);
-        
+      if (!fallbackRes.error) {
         students = fallbackRes.data;
+      } else {
+        console.error('[Auth] Fallback query to students table failed:', fallbackRes.error.message);
       }
     }
 
     if (students && students.length > 0) {
-      console.log(`[Auth] Found ${students.length} matching student records. Verifying credentials.`);
+      console.log(`[Auth] Found ${students.length} matching student records. Verifying phone numbers.`);
       const matchedStudent = students.find(s => {
-        // Check portal_password first (if it exists)
-        if (s.portal_password && s.portal_password === rawPassword) {
-            console.log(`[Auth] Password match via portal_password`);
-            return true;
-        }
-        
-        // Fallback to phone number matching
         const pDigits = s.parent_phone ? String(s.parent_phone).replace(/\D/g, '') : '';
         const fDigits = s.phone ? String(s.phone).replace(/\D/g, '') : '';
+        
+        console.log(`[Auth] Verifying "${s.name}" (parent_phone="${pDigits}", student_phone="${fDigits}") against input="${inputDigits}"`);
         
         if (inputDigits.length >= 8) {
           if (pDigits.length >= 8 && (pDigits.endsWith(inputDigits) || inputDigits.endsWith(pDigits))) return true;
@@ -194,9 +318,10 @@ Deno.serve(async (req) => {
 
       if (matchedStudent) {
         console.log(`[Auth] Successful parent login for student: ${matchedStudent.name}`);
+        const token = await createParentToken(supabase, matchedStudent.id, matchedStudent.name);
         return new Response(JSON.stringify({
           success: true,
-          token: 'parent-token-' + Date.now(),
+          token,
           role: 'parent',
           student_id: matchedStudent.id,
           user: matchedStudent.name

@@ -15,7 +15,7 @@
   let initialLeft = 0;
   let initialTop = 0;
 
-  window.dragStart = function (e) {
+  function dragStart(e) {
     const calc = document.getElementById('floating-calc');
     if (!calc || calc.classList.contains('minimized')) return;
     
@@ -39,7 +39,7 @@
     document.addEventListener('mousemove', dragMove);
     document.addEventListener('mouseup', dragEnd);
     e.preventDefault();
-  };
+  }
 
   function dragMove(e) {
     if (!isDragging) return;
@@ -73,7 +73,7 @@
   }
 
   // UI Control Logic
-  window.toggleCalculator = function () {
+  function toggleCalculator() {
     const calc = document.getElementById('floating-calc');
     if (!calc) return;
     if (calc.style.display === 'none') {
@@ -88,18 +88,7 @@
     } else {
       calc.style.display = 'none';
     }
-  };
-
-  window.minimizeCalculator = function () {
-    const calc = document.getElementById('floating-calc');
-    if (!calc) return;
-    calc.classList.toggle('minimized');
-    if (calc.classList.contains('minimized')) {
-      calc.style.bottom = '110px';
-    } else {
-      calc.style.bottom = '175px';
-    }
-  };
+  }
 
   // Calculator Math Operations
   function updateDisplay() {
@@ -109,7 +98,7 @@
     if (prevExpr) prevExpr.textContent = expressionStr;
   }
 
-  window.calcInput = function (char) {
+  function calcInput(char) {
     if (shouldResetDisplay) {
       if (/[0-9(]/.test(char)) {
         currentValue = '';
@@ -123,9 +112,9 @@
       currentValue += char;
     }
     updateDisplay();
-  };
+  }
 
-  window.calcOperator = function (op) {
+  function calcOperator(op) {
     if (shouldResetDisplay) {
       shouldResetDisplay = false;
     }
@@ -143,16 +132,16 @@
       currentValue += op;
     }
     updateDisplay();
-  };
+  }
 
-  window.calcClear = function () {
+  function calcClear() {
     currentValue = '0';
     expressionStr = '';
     shouldResetDisplay = false;
     updateDisplay();
-  };
+  }
 
-  window.calcBackspace = function () {
+  function calcBackspace() {
     if (shouldResetDisplay) {
       calcClear();
       return;
@@ -163,9 +152,9 @@
       currentValue = '0';
     }
     updateDisplay();
-  };
+  }
 
-  window.calcMemory = function(action) {
+  function calcMemory(action) {
     if (action === 'mc') {
       memoryValue = 0;
       if(window.toast) window.toast('Memory Cleared', 'info');
@@ -180,11 +169,11 @@
       memoryValue -= parseFloat(currentValue || 0);
       if(window.toast) window.toast('Subtracted from Memory', 'info');
     }
-  };
+  }
 
   function safeEvaluateBase(expr) {
-    expr = expr.replace(/([0-9.]+)\%/g, (match, num) => String(parseFloat(num) / 100));
-    expr = expr.replace(/\-\-/g, '+').replace(/\+\-/g, '-').replace(/\-\+/g, '-');
+    expr = expr.replace(/([0-9.]+)%/g, (match, num) => String(parseFloat(num) / 100));
+    expr = expr.replace(/--/g, '+').replace(/\+-/g, '-').replace(/-\+/g, '-');
     
     const tokens = expr.match(/([+-]?(?:[0-9]*\.[0-9]+|[0-9]+))|([*/])/g) || [];
     
@@ -225,7 +214,7 @@
     return safeEvaluateBase(expr);
   }
 
-  window.calcEvaluate = function () {
+  function calcEvaluate() {
     if (!currentValue) return;
 
     let evalExpr = currentValue;
@@ -249,7 +238,18 @@
       shouldResetDisplay = true;
     }
     updateDisplay();
-  };
+  }
+
+  function minimizeCalculator() {
+    const calc = document.getElementById('floating-calc');
+    if (!calc) return;
+    calc.classList.toggle('minimized');
+    if (calc.classList.contains('minimized')) {
+      calc.style.bottom = '110px';
+    } else {
+      calc.style.bottom = '175px';
+    }
+  }
 
   // Keyboard Event Handlers
   document.addEventListener('keydown', function (e) {
@@ -288,7 +288,7 @@
   let iconInitialLeft = 0, iconInitialTop = 0;
   let iconIsClick = true;
 
-  window.dragStartCalcIcon = function(e) {
+  function dragStartCalcIcon(e) {
     if (e.button !== 0) return;
     const btn = document.getElementById('calc-toggle-btn');
     if (!btn) return;
@@ -312,7 +312,7 @@
     document.addEventListener('mousemove', dragMoveCalcIcon);
     document.addEventListener('mouseup', dragEndCalcIcon);
     e.preventDefault();
-  };
+  }
 
   function dragMoveCalcIcon(e) {
     if (!isIconDragging) return;
@@ -337,7 +337,7 @@
     }
   }
 
-  function dragEndCalcIcon(e) {
+  function dragEndCalcIcon() {
     if (!isIconDragging) return;
     isIconDragging = false;
     document.removeEventListener('mousemove', dragMoveCalcIcon);
@@ -361,4 +361,15 @@
     }
   });
 
+  // Expose public functions to window
+  window.dragStart = dragStart;
+  window.toggleCalculator = toggleCalculator;
+  window.minimizeCalculator = minimizeCalculator;
+  window.calcInput = calcInput;
+  window.calcOperator = calcOperator;
+  window.calcClear = calcClear;
+  window.calcBackspace = calcBackspace;
+  window.calcMemory = calcMemory;
+  window.calcEvaluate = calcEvaluate;
+  window.dragStartCalcIcon = dragStartCalcIcon;
 })();

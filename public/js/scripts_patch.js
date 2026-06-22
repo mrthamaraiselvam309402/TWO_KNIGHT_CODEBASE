@@ -1,5 +1,5 @@
 /**
- * TWO KNIGHTS SCRIPTS PATCH v2.1
+ * Two Knights SCRIPTS PATCH v2.1
  * 
  * Include this AFTER scripts.js in index.html.
  * Fixes: master-only nav visibility, toggleAllStud scope, notification badge.

@@ -1,5 +1,5 @@
 /**
- * TWO KNIGHTS AUTOMATION ENGINE v3.0
+ * Two Knights AUTOMATION ENGINE v3.0
  */
 
 (function () {
@@ -300,7 +300,7 @@
       };
       const lastDateToPayStr = `${getOrdinal(minDueDay)} ${dateStr}`;
 
-      let msg = `${EMOJI.warning} TWO KNIGHTS ACADEMY – FEE AUDIT REPORT ${EMOJI.chart}\n\n`;
+      let msg = `${EMOJI.warning} Two Knights ACADEMY – FEE AUDIT REPORT ${EMOJI.chart}\n\n`;
       msg += `Hello Coach ${cleanText(coach.name || 'Coach').toUpperCase()} ${EMOJI.teacher},\n\n`;
       msg += `The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle ${EMOJI.calendar}:\n\n`;
 
@@ -382,7 +382,7 @@
 
     const receiptUrl = `${window.location.origin}/receipt.html?id=${id}&name=${encodeURIComponent(cleanName)}&amount=${fee}&date=${new Date().toISOString()}&level=${encodeURIComponent(cleanLevel)}&coach=${encodeURIComponent(cleanCoach)}`;
 
-    const waMsg = `${EMOJI.check} *TWO KNIGHTS ACADEMY - PAYMENT CONFIRMATION*\n\nStudent: ${cleanName}\nAmount Paid: INR ${Number(fee).toLocaleString()}\nDate: ${cleanText(today)}\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Two Knights Academy.`;
+    const waMsg = `${EMOJI.check} *Two Knights ACADEMY - PAYMENT CONFIRMATION*\n\nStudent: ${cleanName}\nAmount Paid: INR ${Number(fee).toLocaleString()}\nDate: ${cleanText(today)}\n\nDownload Official Receipt:\n${receiptUrl}\n\nThank you for choosing Two Knights Academy.`;
 
         const parsed = window.parseStoredPhone ? window.parseStoredPhone(phone) : { countryCode: 'IN', localNumber: phone };
     if (parsed.localNumber) {
