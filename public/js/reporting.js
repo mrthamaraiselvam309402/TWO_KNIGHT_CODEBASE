@@ -67,23 +67,31 @@ window.generateReportPDF = async function() {
     const totalStudents = allStudents.length;
     const activeStudents = targetStudents.length;
 
-    // Map total payments per student up to target month end (Deduplicated by month)
+    // Map total payments per student up to target month end (advance-aware)
+    // Uses applied_month metadata when present; falls back to billing anchor + payment date.
     const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
     const totalPaymentsMap = {};
-    const seenMonthsGlobal = new Set();
+    const seenApplied = new Set();
     allPayments.forEach(p => {
-      if (p.status === 'paid') {
-        const sid = String(p.student_id || '').trim().toLowerCase();
-        const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate <= targetMonthEnd) {
-          const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
-          if (seenMonthsGlobal.has(mKey)) return;
-          seenMonthsGlobal.add(mKey);
-          
-          if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
-          totalPaymentsMap[sid]++;
-        }
+      if (p.status !== 'paid') return;
+      const sid = String(p.student_id || '').trim().toLowerCase();
+      if (!sid) return;
+
+      // Primary: applied_month metadata (set by debt-first engine)
+      if (p.applied_month && String(p.applied_month).trim()) {
+        const key = `${sid}_${p.applied_month}`;
+        if (seenApplied.has(key)) return;
+        seenApplied.add(key);
+        totalPaymentsMap[sid] = (totalPaymentsMap[sid] || 0) + 1;
+        return;
       }
+
+      // Fallback: legacy calendar-month counting for old payment records
+      const pDate = new Date(p.payment_date || p.created_at);
+      const mKey = `${sid}_${pDate.getUTCFullYear()}-${String(pDate.getUTCMonth() + 1).padStart(2, '0')}`;
+      if (seenApplied.has(mKey)) return;
+      seenApplied.add(mKey);
+      totalPaymentsMap[sid] = (totalPaymentsMap[sid] || 0) + 1;
     });
 
     // Helper function to match dashboard slot-based revenue calculation
@@ -917,23 +925,31 @@ window.generateReportPPT = async function() {
 
         const collected = (window.cycleRevenue ? window.cycleRevenue(targetYear, targetMonth) : calculateSlotRevenue(targetYear, targetMonth));
 
-        // Deduplication structure for arrears
+        // Deduplication structure for arrears (advance-aware)
         const totalPaymentsMap = {};
-        const seenMonthsGlobal = new Set();
+        const seenApplied = new Set();
         const targetMonthEnd = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59));
         
         allPayments.forEach(p => {
-            if (p.status === 'paid') {
-                const sid = String(p.student_id || '').trim().toLowerCase();
-                const pDate = new Date(p.payment_date || p.created_at);
-                if (pDate <= targetMonthEnd) {
-                    const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
-                    if (seenMonthsGlobal.has(mKey)) return;
-                    seenMonthsGlobal.add(mKey);
-                    if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
-                    totalPaymentsMap[sid]++;
-                }
+            if (p.status !== 'paid') return;
+            const sid = String(p.student_id || '').trim().toLowerCase();
+            if (!sid) return;
+
+            if (p.applied_month && String(p.applied_month).trim()) {
+                const key = `${sid}_${p.applied_month}`;
+                if (seenApplied.has(key)) return;
+                seenApplied.add(key);
+                if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
+                totalPaymentsMap[sid]++;
+                return;
             }
+
+            const pDate = new Date(p.payment_date || p.created_at);
+            const mKey = `${sid}_${pDate.getUTCFullYear()}-${String(pDate.getUTCMonth() + 1).padStart(2, '0')}`;
+            if (seenApplied.has(mKey)) return;
+            seenApplied.add(mKey);
+            if (!totalPaymentsMap[sid]) totalPaymentsMap[sid] = 0;
+            totalPaymentsMap[sid]++;
         });
 
         let lastDueAmount = 0;

@@ -83,6 +83,7 @@
       calc.style.bottom = '175px';
       calc.style.left = 'auto';
       calc.style.top = 'auto';
+      calc.style.zIndex = '999999';
       calcClear();
     } else {
       calc.style.display = 'none';

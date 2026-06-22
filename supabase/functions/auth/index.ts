@@ -137,38 +137,52 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 4. Check parent credentials (username = student name, password = parent phone)
+    // 4. Check parent credentials (username = student name, password = parent phone or portal_password)
     const cleanUsername = String(username).trim();
     const inputDigits = String(password).replace(/\D/g, '');
+    const rawPassword = String(password).trim();
     
-    console.log(`[Auth] Checking parent credentials. Name: "${cleanUsername}", Phone digits: "${inputDigits}"`);
+    console.log(`[Auth] Checking parent credentials. Name: "${cleanUsername}"`);
 
+    // First try with portal_password
     let { data: students, error: studentError } = await supabase
       .from('students_decrypted')
-      .select('id, name, parent_phone, phone')
+      .select('id, name, parent_phone, phone, portal_password')
       .or(`name.ilike.%${cleanUsername}%,name.ilike.${cleanUsername}`);
 
     if (studentError) {
-      console.warn('[Auth] decrypted view query failed, trying raw students table:', studentError.message);
-      const fallbackRes = await supabase
-        .from('students')
+      console.warn('[Auth] decrypted view query failed (portal_password may be missing), retrying without portal_password:', studentError.message);
+      
+      const retryRes = await supabase
+        .from('students_decrypted')
         .select('id, name, parent_phone, phone')
         .or(`name.ilike.%${cleanUsername}%,name.ilike.${cleanUsername}`);
       
-      if (!fallbackRes.error) {
+      students = retryRes.data;
+      
+      if (retryRes.error) {
+        console.warn('[Auth] decrypted view fallback failed, trying raw students table:', retryRes.error.message);
+        const fallbackRes = await supabase
+          .from('students')
+          .select('id, name, parent_phone, phone')
+          .or(`name.ilike.%${cleanUsername}%,name.ilike.${cleanUsername}`);
+        
         students = fallbackRes.data;
-      } else {
-        console.error('[Auth] Fallback query to students table failed:', fallbackRes.error.message);
       }
     }
 
     if (students && students.length > 0) {
-      console.log(`[Auth] Found ${students.length} matching student records. Verifying phone numbers.`);
+      console.log(`[Auth] Found ${students.length} matching student records. Verifying credentials.`);
       const matchedStudent = students.find(s => {
+        // Check portal_password first (if it exists)
+        if (s.portal_password && s.portal_password === rawPassword) {
+            console.log(`[Auth] Password match via portal_password`);
+            return true;
+        }
+        
+        // Fallback to phone number matching
         const pDigits = s.parent_phone ? String(s.parent_phone).replace(/\D/g, '') : '';
         const fDigits = s.phone ? String(s.phone).replace(/\D/g, '') : '';
-        
-        console.log(`[Auth] Verifying "${s.name}" (parent_phone="${pDigits}", student_phone="${fDigits}") against input="${inputDigits}"`);
         
         if (inputDigits.length >= 8) {
           if (pDigits.length >= 8 && (pDigits.endsWith(inputDigits) || inputDigits.endsWith(pDigits))) return true;

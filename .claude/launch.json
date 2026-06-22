@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "chesskidoo-admin",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server_proxy.js"],
+      "port": 3000
+    }
+  ]
+}

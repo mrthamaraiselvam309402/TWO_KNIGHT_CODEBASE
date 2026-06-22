@@ -166,16 +166,26 @@
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Running…'; }
     try {
       const today = new Date();
-      const result = await rpc('update_payment_status', {
-        p_year:   today.getUTCFullYear(),
-        p_month1: today.getUTCMonth() + 1,
-        p_month2: today.getUTCMonth() + 2 > 12 ? 1 : today.getUTCMonth() + 2
-      });
-      toast(`✅ Classified: Paid=${result.paid}, Pending=${result.pending}, Due=${result.due}`, 'success');
+      const result = await rpc('monthly_rollover_job_v4', {});
+      if (result && result.error) throw new Error(result.error);
+      toast(`✅ Rollover complete: old=${result.old_month || '?'} → new=${result.new_month || '?'} (${result.count || 0} students)`, 'success');
       loadMorningSummary();
       if (window.loadAllData) window.loadAllData(true);
     } catch (e) {
-      toast('Classification failed: ' + e.message, 'error');
+      // Fallback to v3 if v4 is not yet deployed
+      try {
+        const today = new Date();
+        const fallback = await rpc('update_payment_status', {
+          p_year:   today.getUTCFullYear(),
+          p_month1: today.getUTCMonth() + 1,
+          p_month2: today.getUTCMonth() + 2 > 12 ? 1 : today.getUTCMonth() + 2
+        });
+        toast(`✅ Classification (v3 fallback): Paid=${fallback.paid}, Pending=${fallback.pending}, Due=${fallback.due}`, 'success');
+        loadMorningSummary();
+        if (window.loadAllData) window.loadAllData(true);
+      } catch (e2) {
+        toast('Rollover failed: ' + e.message, 'error');
+      }
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '🔄 Re-run Status Classification Now'; }
     }

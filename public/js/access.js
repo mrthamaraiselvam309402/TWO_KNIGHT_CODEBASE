@@ -673,3 +673,79 @@ window.stopSecurityLogsSimulation = function() {
     }
 };
 
+// ─── Batch Password Logic ──────────────────────────────────────────
+window.openBatchPasswordModal = function() {
+    const errorEl = document.getElementById('batch-pass-error');
+    if (errorEl) { errorEl.style.display = 'none'; errorEl.textContent = ''; }
+    
+    const inputEl = document.getElementById('batch-pass-input');
+    if (inputEl) inputEl.value = '';
+    
+    const select = document.getElementById('batch-pass-group');
+    if (select) {
+        select.innerHTML = '<option value="all">All Active Students</option>';
+        if (window.allCoaches && window.allCoaches.length > 0) {
+            const optGroup = document.createElement('optgroup');
+            optGroup.label = 'By Coach';
+            window.allCoaches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = `coach_${c.id}`;
+                opt.textContent = `Students of ${c.name}`;
+                optGroup.appendChild(opt);
+            });
+            select.appendChild(optGroup);
+        }
+    }
+    
+    if (window.openModal) window.openModal('batch-password-modal');
+};
+
+window.submitBatchPassword = async function() {
+    const groupEl = document.getElementById('batch-pass-group');
+    const passEl = document.getElementById('batch-pass-input');
+    const errorEl = document.getElementById('batch-pass-error');
+    
+    if (!groupEl || !passEl || !errorEl) return;
+    
+    const group = groupEl.value;
+    const pass = passEl.value.trim();
+    
+    if (pass.length > 0 && pass.length < 4) {
+        errorEl.textContent = 'Password must be at least 4 characters if provided.';
+        errorEl.style.display = 'block';
+        return;
+    }
+    
+    if (!window.supabaseClient) {
+        errorEl.textContent = 'Database connection error. Ensure Supabase is connected.';
+        errorEl.style.display = 'block';
+        return;
+    }
+    
+    const confirmMsg = pass === '' 
+        ? `Are you sure you want to CLEAR the portal passwords for the selected group?`
+        : `Are you sure you want to set the password to "${pass}" for the selected group?`;
+        
+    if (!confirm(confirmMsg)) return;
+    
+    try {
+        let query = window.supabaseClient.from('students').update({ portal_password: pass || null });
+        
+        if (group.startsWith('coach_')) {
+            const coachId = group.replace('coach_', '');
+            query = query.eq('coach_id', coachId);
+        } else if (group === 'all') {
+            query = query.neq('status', 'archived');
+        }
+
+        const { error } = await query;
+        if (error) throw error;
+        
+        if (window.toast) window.toast('Batch passwords updated successfully!', 'success');
+        if (window.closeModals) window.closeModals();
+    } catch (e) {
+        console.error('Batch password error:', e);
+        errorEl.textContent = 'Error updating passwords: ' + e.message;
+        errorEl.style.display = 'block';
+    }
+};

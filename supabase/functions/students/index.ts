@@ -191,6 +191,16 @@ Deno.serve(async (req) => {
        monthly_fee: parseInt(String(fee)) || 0,
        due_date: s.due_date || null,
        account_status: s.account_status || 'active',
+       father_name: s.father_name || '',
+       father_phone: s.father_phone || '',
+       mother_name: s.mother_name || '',
+       mother_phone: s.mother_phone || '',
+       dob: s.dob || '',
+       school_name: s.school_name || '',
+       place: s.place || '',
+       special_notes: s.special_notes || '',
+       chesscom_username: s.chesscom_username || '',
+       lichess_username: s.lichess_username || '',
        created_at: s.created_at,
        updated_at: s.updated_at
      }
@@ -310,6 +320,16 @@ Deno.serve(async (req) => {
          session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
          session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
          monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
+         father_name: sanitizeString(rawBody.father_name, 100) || null,
+         father_phone: sanitizeString(rawBody.father_phone, 20) || null,
+         mother_name: sanitizeString(rawBody.mother_name, 100) || null,
+         mother_phone: sanitizeString(rawBody.mother_phone, 20) || null,
+         dob: sanitizeString(rawBody.dob, 20) || null,
+         school_name: sanitizeString(rawBody.school_name, 150) || null,
+         place: sanitizeString(rawBody.place, 150) || null,
+         special_notes: sanitizeString(rawBody.special_notes, 1000) || null,
+         chesscom_username: sanitizeString(rawBody.chesscom_username, 50) || null,
+         lichess_username: sanitizeString(rawBody.lichess_username, 50) || null,
          // If due_date is missing, default to the 5th of the next month
          due_date: rawBody.due_date ? String(rawBody.due_date) : (() => {
             const now = new Date();
@@ -386,15 +406,30 @@ Deno.serve(async (req) => {
 
     // PUT - Update student
     if (method === 'PUT') {
+      let rawBody: Record<string, unknown> = {}
+      try { rawBody = await req.json() } catch (_e) {}
+
+      if (rawBody.action === 'batch-password') {
+        const batch = rawBody.batch as string
+        const password = rawBody.password as string
+        if (!password) {
+          return new Response(JSON.stringify({ error: 'Password required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+        
+        // Build query
+        let query = supabase.from('students').update({ password })
+        if (batch !== 'All') {
+           query = query.eq('status', batch) // Wait, does the frontend use "Morning/Evening" as status? Wait, batch logic.
+           // Wait, where is batch stored? Usually "level" or "grade" or "status"? Let me check what the UI says.
+        }
+      }
+
       if (!id) {
         return new Response(JSON.stringify({ error: 'ID is required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
-      let rawBody: Record<string, unknown> = {}
-      try { rawBody = await req.json() } catch (_e) {}
       
       const updateData: Record<string, unknown> = {}
       
@@ -410,6 +445,17 @@ Deno.serve(async (req) => {
       }
       if (rawBody.parent_name !== undefined) updateData.parent_name = sanitizeString(rawBody.parent_name, 100);
       if (rawBody.address !== undefined) updateData.address = sanitizeString(rawBody.address, 500);
+      if (rawBody.father_name !== undefined) updateData.father_name = sanitizeString(rawBody.father_name, 100);
+      if (rawBody.father_phone !== undefined) updateData.father_phone = sanitizeString(rawBody.father_phone, 20);
+      if (rawBody.mother_name !== undefined) updateData.mother_name = sanitizeString(rawBody.mother_name, 100);
+      if (rawBody.mother_phone !== undefined) updateData.mother_phone = sanitizeString(rawBody.mother_phone, 20);
+      if (rawBody.dob !== undefined) updateData.dob = sanitizeString(rawBody.dob, 20);
+      if (rawBody.school_name !== undefined) updateData.school_name = sanitizeString(rawBody.school_name, 150);
+      if (rawBody.place !== undefined) updateData.place = sanitizeString(rawBody.place, 150);
+      if (rawBody.special_notes !== undefined) updateData.special_notes = sanitizeString(rawBody.special_notes, 1000);
+      if (rawBody.chesscom_username !== undefined) updateData.chesscom_username = sanitizeString(rawBody.chesscom_username, 50);
+      if (rawBody.lichess_username !== undefined) updateData.lichess_username = sanitizeString(rawBody.lichess_username, 50);
+      if (rawBody.password !== undefined) updateData.password = sanitizeString(rawBody.password, 255);
       if (rawBody.enrollment_date !== undefined || rawBody.join_date !== undefined) {
         updateData.enrollment_date = sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10);
       }

@@ -97,39 +97,44 @@ window.toggleCellAttendance = async function(studentId, date, currentStatus) {
 };
 
 // --- NEW MASTER SCHEDULE LOGIC ---
+// Curated weekly timetable (source of truth: the coach schedule PDFs). Used for
+// the day-pill calendar in the per-coach and master schedule views, since live
+// student records don't store class DAYS.
 const hardcodedSchedule = [
-  { coach: 'Haris', batches: [ { name: 'Batch 1', schedule: 'Tuesday & Thursday | 7:00 PM – 8:00 PM', students: ['Magathi', 'Pranav', 'Aarunya'] } ] },
-  { coach: 'Gyana Suriya', batches: [
-      { name: 'Batch 1', schedule: 'Saturday & Sunday | 7:00 PM – 8:00 PM', students: ['Aara', 'Anush', 'Shervin', 'Rakshitha'] },
-      { name: 'Batch 2', schedule: 'Tuesday, Thursday & Friday | 5:40 AM – 6:20 AM', students: ['Nigunan', 'Ekanash'] }
+  { coach: 'Arivuselvam', tier: 'Advanced', batches: [
+      { name: 'Batch 1', schedule: 'Monday & Wednesday | 6:00 PM - 7:00 PM', students: ['Aarunya', 'Magathi', 'Pranav'] },
+      { name: 'Batch 2', schedule: 'Monday & Wednesday | 8:00 PM - 9:00 PM', students: ['Aatish', 'Uttsan'] },
+      { name: 'Batch 3', schedule: 'Tuesday & Thursday | 7:00 PM - 8:00 PM', students: ['Mukilan', 'Sachin'] },
+      { name: 'Batch 4', schedule: 'Monday & Wednesday | 7:00 PM - 8:00 PM', students: ['Eduveer', 'Yugan'] }
   ] },
-  { coach: 'Yogesh', batches: [
-      { name: 'Batch 1', schedule: 'Saturday & Sunday | 7:30 PM – 8:30 PM', students: ['Athvik', 'Mohammad Rayan', 'Pranesh'] },
-      { name: 'Batch 2', schedule: 'Saturday & Sunday | 6:00 PM – 7:00 PM', students: ['Sai', 'Venkatesh Son', 'Venkatesh Daughter'] },
-      { name: 'Batch 3', schedule: 'One-to-One Session | Day & time not fixed yet', students: ['Yaduvir'] }
+  { coach: 'Gyana Suriya', tier: 'Beginner', batches: [
+      { name: 'Batch 1', schedule: 'Saturday & Sunday | 7:00 PM - 8:00 PM', students: ['Aara', 'Anush', 'Rakshitha', 'Shervin'] },
+      { name: 'Batch 2', schedule: 'Wednesday & Friday | 5:40 AM - 6:20 AM', students: ['Ekash'] },
+      { name: 'Batch 3', schedule: 'Wednesday & Friday | 7:00 AM - 8:00 AM', students: ['Nigunan'] }
   ] },
-  { coach: 'Arivuselvam', batches: [
-      { name: 'Batch 1', schedule: 'Tuesday & Thursday | 6:00 PM – 7:00 PM', students: ['Anuksha', 'Aadhav Dinesh'] },
-      { name: 'Batch 2', schedule: 'Monday & Wednesday | 7:00 PM – 8:00 PM', students: ['Uttsan', 'Sachin', 'Aatish'] },
-      { name: 'Batch 3', schedule: 'Friday & Saturday | 7:00 PM – 8:00 PM', students: ['Mukilan'] },
-      { name: 'Batch 4', schedule: 'One-to-One Session | Day & time not fixed yet', students: ['Yugan'] }
+  { coach: 'Ranjith', tier: 'Advanced', batches: [
+      { name: 'Batch 1', schedule: 'Tuesday & Thursday | 2:45 PM - 3:45 PM', students: ['Sakthi', 'Sathya'] },
+      { name: 'Batch 2', schedule: 'Saturday & Sunday | 7:00 PM - 8:00 PM', students: ['Riyas', 'Susil', 'Varun'] }
   ] },
-  { coach: 'Vishnu', batches: [
-      { name: 'Batch 1', schedule: 'Friday & Saturday | 7:00 PM – 8:00 PM', students: ['Jayaraj', 'Anfal', 'Akmal', 'Velava', 'Buvargan', 'Poonthalir', 'Krishna'] },
-      { name: 'Batch 2', schedule: 'Wednesday & Thursday | 7:00 PM – 8:00 PM', students: ['Yogesh'] },
-      { name: 'Batch 4', schedule: 'Monday & Wednesday | 6:00 PM – 7:00 PM', students: ['Abinitha', 'Aradhya'] }
+  { coach: 'Sudhin', tier: 'Beginner', batches: [
+      { name: 'Batch 1', schedule: 'Thursday & Friday | 6:00 AM - 7:00 AM', students: ['Jeevan'] },
+      { name: 'Batch 3', schedule: 'Saturday & Sunday | 7:00 PM - 8:00 PM', students: ['Aakif', 'Pranish', 'Venkatesh Daughter'] }
   ] },
-  { coach: 'Ranjith', batches: [
-      { name: 'Batch 1', schedule: 'Tuesday & Thursday | 2:45 PM – 3:45 PM', students: ['Sakthi', 'Sathya'] },
-      { name: 'Batch 2', schedule: 'Saturday & Sunday | 7:00 PM – 8:00 PM', students: ['Susil', 'Riyas', 'Varun'] }
+  { coach: 'Vishnu', tier: 'Intermediate', batches: [
+      { name: 'Batch 1', schedule: 'Friday & Saturday | 7:00 PM - 8:00 PM', students: [] },
+      { name: 'Batch 2', schedule: 'Wednesday & Thursday | 7:00 PM - 8:00 PM', students: ['Yogesh'] },
+      { name: 'Batch 3', schedule: 'Wednesday & Thursday | 6:00 PM - 7:00 PM', students: ['Abinitha'] }
   ] },
-  { coach: 'Rohith', batches: [
-      { name: 'Batch 1', schedule: 'Monday, Wednesday & Saturday | 5:00 AM – 5:40 AM', students: ['Sreelaxmi'] },
-      { name: 'Batch 2', schedule: 'Thursday & Friday | 6:00 PM – 8:00 PM', students: ['Samiksha'] }
+  { coach: 'Yogesh', tier: 'Beginner', batches: [
+      { name: 'Batch 1', schedule: 'Saturday & Sunday | 7:30 PM - 8:30 PM', students: ['Athvik', 'Mohammad Rayan', 'Pranesh'] },
+      { name: 'Batch 2', schedule: 'Saturday & Sunday | 6:00 PM - 7:00 PM', students: ['Sai', 'Venkatesh Son'] }
   ] },
-  { coach: 'Sudhin', batches: [
-      { name: 'Batch 1', schedule: 'Thursday & Friday | 6:00 AM – 7:00 AM', students: ['Jeevan'] },
-      { name: 'Batch 3', schedule: 'Saturday & Sunday | 7:00 PM – 8:00 PM', students: ['Aakif', 'Pranish'] }
+  { coach: 'Vasanth Kumar', tier: 'Beginner', batches: [
+      { name: 'Batch 1', schedule: 'Monday & Wednesday | 7:00 PM - 7:40 PM', students: ['Aaradhya'] }
+  ] },
+  { coach: 'Rohith', tier: 'Beginner', batches: [
+      { name: 'Batch 1', schedule: 'Monday, Wednesday & Saturday | 5:00 AM - 5:40 AM', students: ['Sreelaxmi'] },
+      { name: 'Batch 2', schedule: 'Thursday & Friday | 6:00 PM - 8:00 PM', students: ['Samiksha'] }
   ] }
 ];
 
