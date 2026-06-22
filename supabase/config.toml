@@ -55,3 +55,9 @@ verify_jwt = false
 
 [functions.games]
 verify_jwt = false
+
+[functions.bob-payment-init]
+verify_jwt = false
+
+[functions.bob-payment-webhook]
+verify_jwt = false

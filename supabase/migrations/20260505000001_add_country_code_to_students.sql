@@ -11,6 +11,7 @@ SET country_code = 'IN'
 WHERE country_code IS NULL;
 
 -- 3. Update the decrypt view to include country_code
+DROP VIEW IF EXISTS students_decrypted;
 CREATE OR REPLACE VIEW students_decrypted AS
 SELECT 
   id,

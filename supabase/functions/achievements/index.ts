@@ -1,5 +1,14 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { validateAuth } from './rate_limit.js';
+
+import { validateAuth } from './rate_limit.js';
+
+import { validateAuth } from './rate_limit.js';
+
+import { validateAuth } from './rate_limit.js';
+
 Deno.serve(async (req) => {
-  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  
   
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -14,7 +23,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
   
   // --- Authentication ---
-  const { validateAuth } = await import('./rate_limit.js')
+  
   const auth = await validateAuth(req, supabase)
   if (!auth.allowed) {
     return new Response(JSON.stringify({ error: auth.error }), {

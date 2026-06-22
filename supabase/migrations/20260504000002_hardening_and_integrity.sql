@@ -1,4 +1,99 @@
 -- 🛠️ Complete Hardening & Integrity Fix
+-- 0. Create Missing Tables First
+
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  event_date DATE,
+  event_time TEXT,
+  type TEXT DEFAULT 'Tournament',
+  location TEXT,
+  prize TEXT,
+  prize_pool TEXT,
+  fee INTEGER DEFAULT 0,
+  current_participants INTEGER DEFAULT 0,
+  registered_students JSONB DEFAULT '[]'::jsonb,
+  registrations_data JSONB DEFAULT '[]'::jsonb,
+  max_participants INTEGER DEFAULT 50,
+  status TEXT DEFAULT 'upcoming',
+  img_url TEXT,
+  qr_poster_url TEXT,
+  map_url TEXT,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
+  updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS event_registrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id TEXT REFERENCES events(id) ON DELETE CASCADE,
+  student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+  student_name TEXT,
+  payment_status TEXT DEFAULT 'pending',
+  attendance TEXT DEFAULT 'absent',
+  status TEXT DEFAULT 'confirmed',
+  custom_fee NUMERIC,
+  registered_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
+  UNIQUE(event_id, student_id)
+);
+
+CREATE TABLE IF NOT EXISTS achievements (
+  id TEXT PRIMARY KEY,
+  student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  date_achieved DATE,
+  category TEXT,
+  level TEXT,
+  img_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  sender_type TEXT,
+  sender_id TEXT,
+  sender_name TEXT,
+  receiver_type TEXT,
+  receiver_id TEXT,
+  subject TEXT,
+  message TEXT,
+  is_read BOOLEAN DEFAULT false,
+  read_at TIMESTAMPTZ,
+  priority TEXT DEFAULT 'normal',
+  reply_to TEXT,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS resources (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  title TEXT NOT NULL,
+  description TEXT,
+  type TEXT DEFAULT 'document',
+  url TEXT,
+  level_requirement TEXT DEFAULT 'Beginner',
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS audit (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  table_name TEXT NOT NULL,
+  record_id TEXT,
+  action TEXT NOT NULL,
+  old_value JSONB,
+  new_value JSONB,
+  user_name TEXT,
+  user_role TEXT,
+  timestamp TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS rate_limits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT NOT NULL,
+  endpoint TEXT NOT NULL DEFAULT 'default',
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
 -- 1. Deduplicate payments (keeping only the earliest record per transaction_id)
 DELETE FROM payments a
 USING payments b

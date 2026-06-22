@@ -2,13 +2,20 @@
 -- Adds persistent homework assignments that can target a batch, an individual student,
 -- or all active students. Parent-facing access is handled by the homework Edge Function.
 
+CREATE TABLE IF NOT EXISTS batches (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name TEXT NOT NULL,
+  student_ids JSONB DEFAULT '[]'::jsonb,
+  status TEXT DEFAULT 'active'
+);
+
 CREATE TABLE IF NOT EXISTS homework_assignments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT DEFAULT '',
   target_type TEXT NOT NULL DEFAULT 'student' CHECK (target_type IN ('student', 'batch', 'all')),
-  student_id UUID REFERENCES students(id) ON DELETE CASCADE,
-  batch_id UUID REFERENCES batches(id) ON DELETE CASCADE,
+  student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+  batch_id TEXT REFERENCES batches(id) ON DELETE CASCADE,
   due_date DATE,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'archived')),
   created_by TEXT,

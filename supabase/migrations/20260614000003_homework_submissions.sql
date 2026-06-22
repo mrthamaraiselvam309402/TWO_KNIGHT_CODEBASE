@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS homework_submissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   assignment_id UUID NOT NULL REFERENCES homework_assignments(id) ON DELETE CASCADE,
-  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'needs_revision', 'approved', 'closed')),
   submission_text TEXT DEFAULT '',
   submission_url TEXT DEFAULT '',

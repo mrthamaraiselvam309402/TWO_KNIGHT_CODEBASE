@@ -97,27 +97,27 @@
     // Parses the embedded schedule tag from the notes column. Supports the new
     // sanitization-safe [SCHEDULE64:...] format and the legacy [SCHEDULE:{...}].
     window.extractScheduleJSON = function (notesString, student = null) {
-        // OVERRIDE: Prioritize exact hardcoded Master Matrix if available
-        if (student && student.name && window.STATIC_MASTER_MATRIX) {
-            const studentName = student.name.trim().toLowerCase();
-            for (const coachObj of window.STATIC_MASTER_MATRIX) {
-                for (const batch of coachObj.batches) {
-                    for (const std of batch.students) {
-                        const stdLower = std.toLowerCase();
-                        if (stdLower.includes(studentName) || studentName.includes(stdLower)) {
-                            return {
-                                regDays: batch.days,
-                                regTime: batch.time,
-                                regCoachName: coachObj.coach,
-                                isMatrixOverride: true
-                            };
-                        }
-                    }
+        if (!notesString) {
+            // FALLBACK: Look up student's live batch schedule dynamically
+            if (student && student.id && window.allBatches) {
+                const myBatch = window.allBatches.find(b => {
+                    const ids = Array.isArray(b.student_ids) ? b.student_ids.map(String) : [];
+                    return ids.includes(String(student.id));
+                });
+                if (myBatch) {
+                    const coaches = window.allCoaches || window.coaches || [];
+                    const c = coaches.find(co => String(co.id) === String(myBatch.coach_id));
+                    return {
+                        regDays: myBatch.days || 'TBD',
+                        regTime: myBatch.time_slot || 'TBD',
+                        regCoachName: c ? c.name : 'TBD',
+                        meetLink: myBatch.notes || '',
+                        isMatrixOverride: false
+                    };
                 }
             }
+            return null;
         }
-
-        if (!notesString) return null;
         const m64 = notesString.match(/\[SCHEDULE64:([A-Za-z0-9+/=]+)\]/);
         if (m64 && m64[1]) {
             const decoded = decodeSchedulePayload(m64[1]);

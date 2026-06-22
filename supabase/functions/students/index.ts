@@ -1,7 +1,8 @@
-import { checkRateLimit } from './rate_limit.js'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkRateLimit, validateAuth } from './rate_limit.js';
 
 Deno.serve(async (req) => {
-  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
+  
   
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
 
   // --- Authentication ---
   const { import_rate_limit } = await import('./rate_limit.js') // Just in case it needs explicit import, but it's already imported at top
-  const { validateAuth } = await import('./rate_limit.js')
+  
   
   const auth = await validateAuth(req, supabase)
   if (!auth.allowed) {
@@ -178,7 +179,7 @@ Deno.serve(async (req) => {
        address: s.address || '',
        country_code: (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN'),
        status: status,
-       payment_status: s.payment_status || (status === 'active' ? 'Paid' : (['pending', 'waitlist', 'upcoming'].includes(status) ? 'Pending' : 'Due')),
+       payment_status: s.payment_status || null,
        coach_id: s.coach_id || null,
        rating: s.rating || 800,
        current_rating: s.rating || 800,
@@ -343,31 +344,47 @@ Deno.serve(async (req) => {
          created_at: new Date().toISOString()
         }
       
-      let { data: insertedStudent, error: insertError } = await supabase
-        .from('students')
-        .insert(newStudent)
-        .select('id')
-        .single()
+      let insertedStudent = null
+      let insertError = null
+      const insertPayload = { ...newStudent }
+      let attempts = 0
       
-      if (insertError) {
-        if (insertError.message.includes('country_code') || insertError.code === 'PGRST204') {
-          console.warn('country_code column not found, retrying insert without it')
-          const fallbackStudent = { ...newStudent }
-          delete fallbackStudent.country_code
+      while (attempts < 10) {
+        attempts++
+        const { data, error } = await supabase
+          .from('students')
+          .insert(insertPayload)
+          .select('id')
+          .single()
           
-          const retryRes = await supabase
-            .from('students')
-            .insert(fallbackStudent)
-            .select('id')
-            .single()
-          
-          insertedStudent = retryRes.data
-          insertError = retryRes.error
+        if (!error) {
+          insertedStudent = data
+          insertError = null
+          break
+        }
+        
+        insertError = error
+        console.warn(`[students] Insert attempt ${attempts} failed:`, error.message)
+        
+        // Extract column name from PostgREST cache error: "Could not find the 'column_name' column of..."
+        const match = error.message.match(/Could not find the '([^']+)' column/)
+        if (match && match[1]) {
+          const colName = match[1]
+          console.warn(`[students] Removing missing column '${colName}' from insert payload and retrying`)
+          delete (insertPayload as any)[colName]
+        } else if (error.message.includes('country_code')) {
+          delete insertPayload.country_code
+        } else {
+          break // Unrecoverable or different error type
         }
       }
       
       if (insertError) {
-        return new Response(JSON.stringify({ error: insertError.message }), {
+        return new Response(JSON.stringify({ 
+          error: insertError.message,
+          attempts: attempts,
+          remaining_keys: Object.keys(insertPayload)
+        }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
@@ -507,28 +524,39 @@ Deno.serve(async (req) => {
       
       updateData.updated_at = new Date().toISOString();
       
-      let { data: updatedStudent, error: updateError } = await supabase
-        .from('students')
-        .update(updateData)
-        .eq('id', id)
-        .select('id')
-        .single()
+      let updatedStudent = null
+      let updateError = null
+      const updatePayload = { ...updateData }
+      let attempts = 0
       
-      if (updateError) {
-        if (updateError.message.includes('country_code') || updateError.code === 'PGRST204') {
-          console.warn('country_code column not found, retrying update without it')
-          const fallbackData = { ...updateData }
-          delete fallbackData.country_code
+      while (attempts < 10) {
+        attempts++
+        const { data, error } = await supabase
+          .from('students')
+          .update(updatePayload)
+          .eq('id', id)
+          .select('id')
+          .single()
           
-          const retryRes = await supabase
-            .from('students')
-            .update(fallbackData)
-            .eq('id', id)
-            .select('id')
-            .single()
-          
-          updatedStudent = retryRes.data
-          updateError = retryRes.error
+        if (!error) {
+          updatedStudent = data
+          updateError = null
+          break
+        }
+        
+        updateError = error
+        console.warn(`[students] Update attempt ${attempts} failed:`, error.message)
+        
+        // Extract column name from PostgREST cache error: "Could not find the 'column_name' column of..."
+        const match = error.message.match(/Could not find the '([^']+)' column/)
+        if (match && match[1]) {
+          const colName = match[1]
+          console.warn(`[students] Removing missing column '${colName}' from update payload and retrying`)
+          delete (updatePayload as any)[colName]
+        } else if (error.message.includes('country_code')) {
+          delete updatePayload.country_code
+        } else {
+          break // Unrecoverable or different error type
         }
       }
       

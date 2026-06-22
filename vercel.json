@@ -89,6 +89,10 @@
     { "source": "/api/expenditures/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/expenditures/:match*" },
     { "source": "/api/upload", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/upload" },
     { "source": "/api/access_control", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/access_control" },
-    { "source": "/api/access_control/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/access_control/:match*" }
+    { "source": "/api/access_control/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/access_control/:match*" },
+    { "source": "/api/bob-payment-init", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-init" },
+    { "source": "/api/bob-payment-init/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-init/:match*" },
+    { "source": "/api/bob-payment-webhook", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-webhook" },
+    { "source": "/api/bob-payment-webhook/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-webhook/:match*" }
   ]
 }

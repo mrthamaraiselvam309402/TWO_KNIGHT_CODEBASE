@@ -57,16 +57,17 @@
   </div>
 
   <div class="login-box">
-    <div class="logo-area">
-      <!-- Brand logo: gold-knight on dark for the dark theme, dark-knight on light
-           for the light theme. Falls back to the text logo if images are missing. -->
-      <img class="login-logo login-logo-dark" src="/images/logo-dark.png" alt="Two Knights — Strategize & Seize It" onerror="this.closest('.logo-area').classList.add('logo-img-missing')">
-      <img class="login-logo login-logo-light" src="/images/logo-light.png" alt="Two Knights — Strategize & Seize It" onerror="this.closest('.logo-area').classList.add('logo-img-missing')">
+    <div class="logo-area" style="text-align:center; margin-bottom: 32px;">
+      <!-- Brand logo -->
+      <div style="background: #ffffff; width: 110px; height: 110px; border-radius: 16px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(0,0,0,0.05);">
+        <img class="login-logo login-logo-dark" src="/assets/logo1.png" alt="Two Knights" style="max-width: 90px; margin: 0;">
+        <img class="login-logo login-logo-light" src="/assets/logo1.png" alt="Two Knights" style="max-width: 90px; margin: 0;">
+      </div>
       <div class="logo-fallback">
         <div class="logo-crest">♞</div>
-        <div class="logo-wordmark"><span class="lw-chess">TWO</span><span class="lw-kidoo">KNIGHTS</span></div>
-        <span class="logo-tagline">Strategize & Seize It</span>
       </div>
+      <h2 style="font-family: var(--font-head); font-size: 28px; font-weight: 800; color: var(--brand-blue, #3b82f6); letter-spacing: 2px; margin: 0 0 4px 0; text-transform: uppercase;">TWO KNIGHTS</h2>
+      <p style="font-size: 11px; color: var(--ivory3); text-transform: uppercase; letter-spacing: 3px; font-weight: 600; margin: 0;">Premium Chess Academy</p>
     </div>
 
     <form onsubmit="event.preventDefault(); window.doLogin();">
@@ -112,7 +113,7 @@
 
 <!-- Sidebar -->
 <nav class="sidebar" id="sidebar">
-  <div class="logo"><span class="logo-icon">♚</span><span class="logo-text">TWO KNIGHTS</span></div>
+  <div class="logo" style="padding: 16px 20px;"><img src="/assets/logo1.png" alt="Two Knights Academy" style="max-height: 54px; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></div>
   <div class="nav-group">
     <div class="nav-item admin-only" id="nav-dash" onclick="setPage('dash')"><span class="ico">📊</span> Dashboard</div>
     <div class="nav-item admin-only" id="nav-stud" onclick="setPage('stud')"><span class="ico">👥</span> Students</div>
@@ -238,7 +239,7 @@
       <!-- Coach Financial Table -->
       <div style="margin-top:20px">
         <h3 style="color:var(--gold);margin-bottom:8px;font-family:var(--font-head);letter-spacing:1px">Coach Financial Performance</h3>
-        <details style="margin-bottom:14px; font-size:12px; color:var(--ivory-dim); background:rgba(232,168,48,0.04); border:1px solid var(--border); border-radius:8px; padding:8px 12px;">
+        <details style="margin-bottom:14px; font-size:12px; color:var(--ivory-dim); background:rgba(59, 130, 246,0.04); border:1px solid var(--border); border-radius:8px; padding:8px 12px;">
           <summary style="cursor:pointer; color:var(--gold); font-weight:600; list-style:none;">ⓘ What do these columns mean? (tap to expand)</summary>
           <div style="padding:10px 2px 2px; line-height:1.8;">
             <b style="color:var(--ivory)">Students</b> — active students assigned to the coach this month.<br>
@@ -425,7 +426,7 @@
 
     <!-- Homework Manager Page -->
     <div id="page-homework" class="page admin-only">
-      <div style="background: linear-gradient(135deg, rgba(218, 163, 62, 0.08) 0%, rgba(218, 163, 62, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
+      <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
         <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none;">📝</div>
         <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">
           <span>📝</span> Homework Manager
@@ -549,24 +550,24 @@
       <div id="child-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
       <div id="child-content" style="display:none">
         <!-- Admin Preview Banner -->
-        <div id="preview-mode-banner" class="preview-banner" style="display: none; background: linear-gradient(135deg, rgba(218, 163, 62, 0.12), rgba(218, 163, 62, 0.04)); border: 1px solid var(--gold); padding: 14px 20px; border-radius: 12px; margin-bottom: 24px; justify-content: space-between; align-items: center; box-shadow: var(--shadow-amber); transition: all 0.3s ease; flex-wrap: wrap; gap: 12px;">
+        <div id="preview-mode-banner" class="preview-banner" style="display: none; background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.04)); border: 1px solid var(--gold); padding: 14px 20px; border-radius: 12px; margin-bottom: 24px; justify-content: space-between; align-items: center; box-shadow: var(--shadow-amber); transition: all 0.3s ease; flex-wrap: wrap; gap: 12px;">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <span style="font-size: 22px; filter: drop-shadow(0 2px 4px rgba(218,163,62,0.2));">👑</span>
+            <span style="font-size: 22px; filter: drop-shadow(0 2px 4px rgba(59, 130, 246,0.2));">👑</span>
             <div style="margin-right: 12px;">
               <h4 style="color: var(--gold); margin: 0; font-size: 14px; font-weight: 700; font-family: var(--font-head); letter-spacing: 0.5px;">Admin Portal Preview</h4>
               <p style="margin: 2px 0 0; font-size: 11.5px; color: var(--ivory-dim); opacity: 0.85;">Impersonating parent/student dashboard. Live view of analytics & learning resources.</p>
             </div>
             <!-- Quick Switcher -->
-            <div style="display: flex; align-items: center; gap: 8px; background: rgba(218, 163, 62, 0.08); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(218, 163, 62, 0.25);">
+            <div style="display: flex; align-items: center; gap: 8px; background: rgba(59, 130, 246, 0.08); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.25);">
               <span style="font-size: 11px; color: var(--gold); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">Quick Switch:</span>
-              <select id="preview-student-switcher" onchange="quickSwitchPreviewStudent(this.value)" style="margin-bottom: 0; padding: 4px 8px; font-size: 12px; background: var(--surface2); color: var(--ivory); border: 1px solid rgba(218, 163, 62, 0.3); border-radius: 6px; width: auto; max-width: 180px; font-weight: 600; cursor: pointer; outline: none; height: 28px; line-height: 1;">
+              <select id="preview-student-switcher" onchange="quickSwitchPreviewStudent(this.value)" style="margin-bottom: 0; padding: 4px 8px; font-size: 12px; background: var(--surface2); color: var(--ivory); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; width: auto; max-width: 180px; font-weight: 600; cursor: pointer; outline: none; height: 28px; line-height: 1;">
                 <!-- Dynamically populated -->
               </select>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
             <button class="btn btn-gold btn-sm" onclick="setPage('stud')" style="display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-amber-sm);"><span style="font-size: 11px;">🔙</span> Back to Students</button>
-            <button onclick="setPage('stud')" title="Exit Preview Mode" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(218, 163, 62, 0.3); background: rgba(218, 163, 62, 0.08); color: var(--gold); cursor: pointer; font-size: 18px; line-height: 1; transition: all 0.2s; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.15); outline: none; padding: 0;" onmouseover="this.style.background='rgba(218, 163, 62, 0.2)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.background='rgba(218, 163, 62, 0.08)'; this.style.borderColor='rgba(218, 163, 62, 0.3)';">✕</button>
+            <button onclick="setPage('stud')" title="Exit Preview Mode" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.08); color: var(--gold); cursor: pointer; font-size: 18px; line-height: 1; transition: all 0.2s; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.15); outline: none; padding: 0;" onmouseover="this.style.background='rgba(59, 130, 246, 0.2)'; this.style.borderColor='var(--gold)';" onmouseout="this.style.background='rgba(59, 130, 246, 0.08)'; this.style.borderColor='rgba(59, 130, 246, 0.3)';">✕</button>
           </div>
         </div>
 
@@ -668,8 +669,9 @@
               <div class="stat-label" style="text-transform: uppercase; font-size: 10px; letter-spacing: 1px; color: var(--ivory-dim);">Outstanding / Due</div>
               <div class="stat-value text-danger" id="cb-total-due" style="font-size: 24px; font-weight: 800; margin: 6px 0 2px;">₹0</div>
               <div class="stat-desc" id="cb-due-date" style="font-size: 11px; color: var(--ivory-dim); opacity: 0.75;">Due date: Not set</div>
+              <button class="btn btn-gold btn-sm" style="margin-top:10px; width:100%; box-shadow:var(--shadow-amber-sm)" onclick="if(window.currentStudent) initiateBobPayment(getStudentMonthlyFee(window.currentStudent))">Pay Fees Securely</button>
             </div>
-            <div class="card" style="border-left: 4px solid var(--gold); background: linear-gradient(145deg, var(--bg2), rgba(218, 163, 62, 0.04)); box-shadow: var(--shadow);">
+            <div class="card" style="border-left: 4px solid var(--gold); background: linear-gradient(145deg, var(--bg2), rgba(59, 130, 246, 0.04)); box-shadow: var(--shadow);">
               <div class="stat-label" style="text-transform: uppercase; font-size: 10px; letter-spacing: 1px; color: var(--ivory-dim);">Session ROI & Value</div>
               <div class="stat-value" id="cb-roi-value" style="font-size: 24px; font-weight: 800; color: var(--gold); margin: 6px 0 2px;">₹0 Unlocked</div>
               <div class="stat-desc" id="cb-roi-desc" style="font-size: 11px; color: var(--ivory-dim); opacity: 0.75;">0/8 sessions attended (ROI: 0%)</div>
@@ -809,7 +811,7 @@
               <div class="stat-label">Absent</div>
               <div class="stat-value text-danger" id="c-att-absent">0</div>
             </div>
-            <div class="card" style="border-left: 4px solid var(--gold); background: linear-gradient(145deg, var(--bg2), rgba(218, 163, 62, 0.04));">
+            <div class="card" style="border-left: 4px solid var(--gold); background: linear-gradient(145deg, var(--bg2), rgba(59, 130, 246, 0.04));">
               <div class="stat-label">Attendance Rate</div>
               <div class="stat-value" id="c-att-rate" style="color:var(--gold)">0%</div>
             </div>
@@ -1103,7 +1105,7 @@
         
         <!-- Premium Analytics KPIs Cards Grid -->
         <div class="dash-grid" style="margin: 30px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
-          <div class="card ev-manage-card" style="--card-accent: var(--gold); --card-accent-glow: rgba(220,163,62,0.25);">
+          <div class="card ev-manage-card" style="--card-accent: var(--gold); --card-accent-glow: rgba(59, 130, 246,0.25);">
             <div style="font-size:10px; text-transform:uppercase; color:var(--slate); letter-spacing:1px; margin-bottom:8px; font-weight:700;">Fill Rate / Waitlist</div>
             <div style="font-size:24px; font-weight:700; color:var(--gold);" id="ev-m-fill">0 / 0</div>
             <div style="font-size:11px; color:var(--warning); margin-top:4px;" id="ev-m-waitlist">0 Waitlisted</div>
@@ -1151,7 +1153,7 @@
                 <span style="color:var(--slate); font-size:12px; font-weight: 500;">or</span>
                 
                 <!-- External Register Button -->
-                <button class="btn btn-outline btn-sm" onclick="promptRegisterGuestEvent()" style="border-radius:8px; border:1px solid rgba(232,168,48,0.35); color:var(--gold); padding:8px 14px; font-size:12px; font-weight: 500; cursor:pointer; background: transparent; transition: all 0.2s ease;">
+                <button class="btn btn-outline btn-sm" onclick="promptRegisterGuestEvent()" style="border-radius:8px; border:1px solid rgba(59, 130, 246,0.35); color:var(--gold); padding:8px 14px; font-size:12px; font-weight: 500; cursor:pointer; background: transparent; transition: all 0.2s ease;">
                   + Register External Student
                 </button>
               </div>
@@ -1295,7 +1297,7 @@
 
     <!-- Classroom / Batch Manager -->
     <div id="page-batches" class="page admin-only">
-      <div style="background: linear-gradient(135deg, rgba(218, 163, 62, 0.08) 0%, rgba(218, 163, 62, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
+      <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
         <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none; font-family: sans-serif;">🏫</div>
         <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">
           <span>🏫</span> Classroom / Batch Manager
@@ -1330,7 +1332,7 @@
 
     <!-- Student Schedule Manager -->
     <div id="page-schedules" class="page admin-only">
-      <div style="background: linear-gradient(135deg, rgba(218, 163, 62, 0.08) 0%, rgba(218, 163, 62, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
+      <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
         <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none; font-family: sans-serif;">🗓️</div>
         <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">
           <span>🗓️</span> Student Schedule Manager
@@ -1935,7 +1937,7 @@
           <div class="tom-kpi-label">Weak Students</div>
         </div>
         <div class="tom-kpi-card" onclick="setPage('coach-mgmt')">
-          <div class="tom-kpi-icon" style="background:rgba(220,163,62,0.12);color:var(--gold)">🎯</div>
+          <div class="tom-kpi-icon" style="background:rgba(59, 130, 246,0.12);color:var(--gold)">🎯</div>
           <div class="tom-kpi-value" id="tom-coach-perf">—</div>
           <div class="tom-kpi-label">Coach Performance</div>
         </div>
@@ -1955,7 +1957,7 @@
           <div class="tom-kpi-label">Tournament Ready</div>
         </div>
         <div class="tom-kpi-card" onclick="setPage('insights')">
-          <div class="tom-kpi-icon" style="background:rgba(220,163,62,0.12);color:var(--gold)">💡</div>
+          <div class="tom-kpi-icon" style="background:rgba(59, 130, 246,0.12);color:var(--gold)">💡</div>
           <div class="tom-kpi-value" id="tom-ai-recommendations">—</div>
           <div class="tom-kpi-label">AI Recommendations</div>
         </div>
@@ -2044,7 +2046,7 @@
       <!-- Parent-Specific Child KPI Cards -->
       <div class="tom-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
         <div class="tom-kpi-card" onclick="setPage('child'); setChildTab('overview');" style="cursor:pointer">
-          <div class="tom-kpi-icon" style="background:rgba(220,163,62,0.12);color:var(--gold)">📈</div>
+          <div class="tom-kpi-icon" style="background:rgba(59, 130, 246,0.12);color:var(--gold)">📈</div>
           <div class="tom-kpi-value" id="tp-elo">—</div>
           <div class="tom-kpi-label">Current ELO</div>
         </div>
@@ -3207,8 +3209,8 @@
 <!-- Receipt Preview Modal -->
 <div class="modal" id="receipt-preview-modal">
   <div class="modal-box" style="max-width:500px;padding:0;overflow:hidden">
-    <div style="background:linear-gradient(135deg,#dca33e,#b8922e);padding:30px;text-align:center;color:#000">
-      <div style="font-size:36px">♚</div>
+    <div style="background:linear-gradient(135deg,var(--brand-blue),#b8922e);padding:30px;text-align:center;color:#000">
+      <div style="font-size:36px">♞</div>
       <div style="font-family:var(--font-head);font-size:24px;font-weight:700">TWO KNIGHTS</div>
       <div style="font-size:13px;opacity:0.8">Payment Receipt</div>
     </div>
@@ -3329,6 +3331,7 @@
       <script src="js/access.js?v=1.4&t=20260601i"></script>
       <script src="js/tom-brain.js?v=1.0&t=20260601" charset="utf-8"></script>
       <script src="scripts.js?v=9.1&t=20260614_homework" charset="utf-8"></script>
+      <script src="js/chess-api.js"></script>
       <script src="js/homework.js?v=1.0&t=20260614" charset="utf-8"></script>
       <script src="js/expenditures.js?v=1.1&t=20260601d" charset="utf-8"></script>
       <script src="js/calculator.js?v=1.0" charset="utf-8"></script>

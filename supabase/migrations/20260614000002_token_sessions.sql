@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS token_sessions (
   jti UUID PRIMARY KEY,
   role TEXT NOT NULL CHECK (role IN ('admin', 'master', 'parent')),
   user_name TEXT NOT NULL,
-  student_id UUID REFERENCES students(id) ON DELETE CASCADE,
+  student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
   issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL,
   revoked_at TIMESTAMPTZ,

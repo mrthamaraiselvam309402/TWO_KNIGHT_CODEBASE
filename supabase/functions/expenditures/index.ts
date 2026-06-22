@@ -1,4 +1,5 @@
-import { checkRateLimit, validateAuth } from './rate_limit.js'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkRateLimit, validateAuth } from './rate_limit.js';
 
 // ─── Sanitization Helpers ───────────────────────────────────────
 function sanitizeString(str: unknown, maxLength = 255): string {
@@ -42,7 +43,7 @@ function transformExpenditure(e: Record<string, unknown>) {
 
 // ─── Main Handler ───────────────────────────────────────────────
 Deno.serve(async (req) => {
-  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2')
+  
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')

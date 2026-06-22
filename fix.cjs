@@ -1,14 +1,19 @@
 const fs = require('fs');
-let content = fs.readFileSync('d:/MY/chesskidoo-ai-admin/public/scripts.js', 'utf8');
 
-content = content.replace(/toast\(New/g, "toast('New");
-content = content.replace(/toast\(Failed login attempt/g, "toast(Failed login attempt");
-content = content.replace(/toast\(Failed login:/g, "toast(Failed login:");
-content = content.replace(/toast\(\$\{newDue\}/g, "toast(${newDue}");
-content = content.replace(/toast\(\$\{displayName\}/g, "toast(${displayName}");
-content = content.replace(/toast\(New Message/g, "toast(New Message");
-content = content.replace(/toast\(\$\{newCount\}/g, "toast(${newCount}");
-content = content.replace(/toast\(Sent/g, "toast(Sent");
+let html = fs.readFileSync('public/index.html', 'utf8');
 
-fs.writeFileSync('d:/MY/chesskidoo-ai-admin/public/scripts.js', content);
-console.log('Fixed syntax errors');
+// Add chess-api.js
+if (!html.includes('chess-api.js')) {
+    html = html.replace('<script src="js/homework.js', '<script src="js/chess-api.js"></script>\n      <script src="js/homework.js');
+}
+
+// Replace old blue
+html = html.replace(/rgba\(0,0,255/g, 'rgba(59, 130, 246');
+
+fs.writeFileSync('public/index.html', html);
+console.log('Fixed index.html');
+
+let css = fs.readFileSync('public/styles.css', 'utf8');
+css = css.replace(/#0A1172/g, 'var(--primary)');
+fs.writeFileSync('public/styles.css', css);
+console.log('Fixed styles.css');

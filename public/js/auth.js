@@ -49,14 +49,14 @@ window.doLogin = async function() {
                 // but the pattern is fragile.
                 window.role = data.role;
                 // Store both the full auth object and a separate token for API calls
-                localStorage.setItem('twoknights_auth', JSON.stringify({
+                sessionStorage.setItem('twoknights_auth', JSON.stringify({
                     role: data.role,
                     user: data.user || user,
                     studentId: data.student_id,
                     token: data.token
                 }));
                 // Store token separately for API Authorization header
-                localStorage.setItem('sb-access-token', data.token);
+                sessionStorage.setItem('sb-access-token', data.token);
                 finishLogin(data.user || user, data.role, data.student_id);
                 toast(`Welcome back, ${data.role}!`, 'success');
 
@@ -129,7 +129,7 @@ window.doLogin = async function() {
 };
 
  window.doLogout = async function() {
-     const token = localStorage.getItem('sb-access-token');
+     const token = sessionStorage.getItem('sb-access-token');
      if (token && token.startsWith('eyJ')) {
        await apiCall('/api/auth', {
          method: 'POST',
@@ -137,8 +137,8 @@ window.doLogin = async function() {
        }).catch(() => {});
      }
 
-     localStorage.removeItem('twoknights_auth');
-     localStorage.removeItem('sb-access-token');
+     sessionStorage.removeItem('twoknights_auth');
+     sessionStorage.removeItem('sb-access-token');
      role = null;
      if (window.role) window.role = null;
      

@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS homework_reminders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   assignment_id UUID NOT NULL REFERENCES homework_assignments(id) ON DELETE CASCADE,
-  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   reminder_type TEXT NOT NULL CHECK (reminder_type IN ('assignment', 'due_soon', 'overdue', 'submission_confirmation', 'final_feedback')),
   message_id TEXT,
   sent_at TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -172,6 +172,18 @@
   let loadingStates = {};
   // Optimized cache for faster dashboard loading
   const CACHE_DURATION = 30000; // 30 seconds cache for better performance
+  // ── XSS MITIGATION UTILITY ──
+  window.sanitizeHTML = function (str) {
+    if (!str || typeof str !== "string") return "";
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#x27;")
+      .replace(/\//g, "&#x2F;");
+  };
+
   // ── CORE UTILITIES ──
   window.apiCall = async function (endpoint, options = {}) {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -186,10 +198,10 @@
         : `${API_BASE}${endpoint}`;
     // Forward a real Supabase JWT when available. Supabase Auth and the secure
     // signed login tokens both start with "eyJ"; otherwise use the anon key.
-    const storedTok = localStorage.getItem("sb-access-token");
+    const storedTok = sessionStorage.getItem("sb-access-token");
     let auth = {};
     try {
-      auth = JSON.parse(localStorage.getItem("twoknights_auth") || "{}");
+      auth = JSON.parse(sessionStorage.getItem("twoknights_auth") || "{}");
     } catch (e) {}
     const bearer =
       storedTok && storedTok.startsWith("eyJ") ? storedTok : SUPABASE_ANON_KEY;
@@ -204,24 +216,30 @@
 
     try {
       const res = await fetch(url, { ...options, headers });
-      if (res.status === 401) {
-        res
-          .clone()
-          .text()
-          .then((txt) => {
-            console.warn(
-              `[Auth] 401 Unauthorized for ${endpoint}. Body: ${txt}`,
-            );
-          })
-          .catch(() => {
-            console.warn(
-              `[Auth] 401 Unauthorized for ${endpoint}. Possible token expiry.`,
-            );
-          });
+      if (!res.ok) {
+        // Log details to console and alert user/admin of server issues
+        console.error(`[API Error] ${res.status} ${res.statusText} on ${endpoint}`);
+        if (res.status >= 500) {
+          toast(`Server Error (${res.status}): Something went wrong. Please try again.`, "error");
+        } else if (res.status === 401) {
+          toast("Authentication session expired. Please sign in again.", "warning");
+          res
+            .clone()
+            .text()
+            .then((txt) => {
+              console.warn(
+                `[Auth] 401 Unauthorized for ${endpoint}. Body: ${txt}`,
+              );
+            })
+            .catch(() => {});
+        } else if (res.status === 403) {
+          toast("Access denied: You do not have permissions for this action.", "error");
+        }
       }
       return res;
     } catch (e) {
       console.warn(`[API] Connection failed for ${endpoint}:`, e.message || e);
+      toast("Network connection failed. Please check your internet connection.", "error");
       throw e;
     }
   };
@@ -1453,6 +1471,57 @@
     const printWin = window.open("", "_blank");
     printWin.document.write(html);
     printWin.document.close();
+  };
+
+  window.initiateBobPayment = async function (amount) {
+    if (!currentStudent) {
+      toast("No active student loaded", "error");
+      return;
+    }
+    
+    try {
+      toast("Initiating secure Bank of Baroda payment...", "info");
+      
+      const payload = {
+        studentId: currentStudent.id,
+        amount: amount,
+        batchDetails: getStudentLevel(currentStudent)
+      };
+      
+      // Call the Supabase edge function
+      const res = await apiCall('/api/bob-payment-init', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) {
+        throw new Error('Payment initiation failed');
+      }
+      
+      const data = await res.json();
+      
+      if (data.bankUrl && data.payload) {
+        // Create hidden form to POST to bank
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = data.bankUrl;
+        
+        // Add payload fields
+        Object.keys(data.payload).forEach(key => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = data.payload[key];
+          form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+      }
+    } catch (e) {
+      toast("Error initiating payment. Please try again.", "error");
+      console.error(e);
+    }
   };
 
   // ── ADMIN EXPANSION LOGIC ──
@@ -5482,7 +5551,7 @@
 
   function logAudit(table, recordId, action, oldValue, newValue) {
     // Save to Supabase database
-    const auth = JSON.parse(localStorage.getItem("twoknights_auth") || "{}");
+    const auth = JSON.parse(sessionStorage.getItem("twoknights_auth") || "{}");
     const data = {
       table_name: table,
       record_id: recordId,
@@ -5522,7 +5591,7 @@
     const activeList = $("active-users-list");
     const adminHistoryList = $("admin-history-list");
     const parentHistoryList = $("parent-history-list");
-    const auth = JSON.parse(localStorage.getItem("twoknights_auth") || "{}");
+    const auth = JSON.parse(sessionStorage.getItem("twoknights_auth") || "{}");
     const currentUser = auth.user || "Unknown";
     const sessions = getLoginHistory();
     const activeSessions = getActiveSessions();
@@ -5979,9 +6048,10 @@
     const seenStuds = new Set();
     return allPayments.reduce((sum, p) => {
       const pDate = new Date(p.payment_date || p.created_at);
+      const pMonthKey = p.applied_month || `${pDate.getUTCFullYear()}-${String(pDate.getUTCMonth() + 1).padStart(2, '0')}`;
+      const targetMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
       if (
-        pDate.getUTCMonth() === month &&
-        pDate.getUTCFullYear() === year &&
+        pMonthKey === targetMonthKey &&
         p.status === "paid"
       ) {
         const sid = String(p.student_id).toLowerCase();
@@ -6006,7 +6076,8 @@
           .toLowerCase();
         if (!sid) return;
         const pDate = new Date(p.payment_date || p.created_at);
-        const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+        const pMonthKey = p.applied_month || `${pDate.getUTCFullYear()}-${String(pDate.getUTCMonth() + 1).padStart(2, '0')}`;
+        const mKey = `${sid}_${pMonthKey}`;
         if (seenMonthsGlobal.has(mKey)) return;
         seenMonthsGlobal.add(mKey);
         pMap[sid] = (pMap[sid] || 0) + 1;
@@ -6087,7 +6158,8 @@
 
         const pDate = new Date(p.payment_date || p.created_at);
         if (pDate <= targetMonthEnd) {
-          const mKey = `${sid}_${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
+          const pMonthKey = p.applied_month || `${pDate.getUTCFullYear()}-${String(pDate.getUTCMonth() + 1).padStart(2, '0')}`;
+          const mKey = `${sid}_${pMonthKey}`;
           if (seenMonthsAudit.has(mKey)) return;
           seenMonthsAudit.add(mKey);
 
@@ -7633,88 +7705,32 @@
       .join(" – ");
   }
 
-  const STATIC_MASTER_MATRIX = [
-    {
-      coach: 'Rohith',
-      batches: [
-        { name: 'Batch 1', days: 'Tuesday, Wednesday, Saturday', time: '5:00 AM - 5:40 AM', students: ['Sreelaxmi'] },
-        { name: 'Batch 2', days: 'Wednesday, Thursday', time: '8:00 PM - 9:00 PM', students: ['Samiksha'] }
-      ]
-    },
-    {
-      coach: 'Ranjith',
-      batches: [
-        { name: 'Batch 1', days: 'Wednesday, Friday', time: '2:45 PM - 3:45 PM', students: ['Sakthi, Sathya'] },
-        { name: 'Batch 2', days: 'Saturday, Sunday', time: '7:00 PM - 8:00 PM', students: ['Riyas, Susil, Varun'] }
-      ]
-    },
-    {
-      coach: 'Gyana',
-      batches: [
-        { name: 'Batch 1', days: 'Wednesday, Friday', time: '5:40 AM - 6:20 AM', students: ['Ekash'] },
-        { name: 'Batch 2', days: 'Wednesday, Friday', time: '7:00 AM - 8:00 AM', students: ['Nigunan, Praneev'] },
-        { name: 'Batch 3', days: 'Saturday, Sunday', time: '7:00 PM - 8:00 PM', students: ['Aara, Anush, Rakshitha, Shervin'] }
-      ]
-    },
-    {
-      coach: 'Arivu',
-      batches: [
-        { name: 'Batch 1', days: 'Monday, Wednesday', time: '7:00 PM - 8:00 PM', students: ['Eduveer, Yugan'] },
-        { name: 'Batch 2', days: 'Monday, Wednesday', time: '8:00 PM - 9:00 PM', students: ['Aarunya, Magathi, Pranav'] },
-        { name: 'Batch 3', days: 'Monday, Wednesday', time: '8:00 PM - 9:00 PM', students: ['Aatish, Uttsan'] },
-        { name: 'Batch 4', days: 'Tuesday, Thursday', time: '7:00 PM - 8:00 PM', students: ['Mukilan, Sashwin'] }
-      ]
-    },
-    {
-      coach: 'Yogesh',
-      batches: [
-        { name: 'Batch 1', days: 'Thursday, Friday', time: '6:00 AM - 7:00 AM', students: ['Jeevan'] },
-        { name: 'Batch 2', days: 'Saturday, Sunday', time: '6:00 PM - 7:00 PM', students: ['Banu Priya, Dinesh, Sai, Venkatesh Son'] },
-        { name: 'Batch 3', days: 'Saturday, Sunday', time: '7:30 PM - 8:30 PM', students: ['Athvik, Mohammad Rayan, Pranesh'] },
-        { name: 'Batch 4', days: 'Monday, Wednesday', time: '7:30 PM - 8:30 PM', students: ['Poornima, Praveen, Magathi, Anush'] }
-      ]
-    },
-    {
-      coach: 'Sudhin',
-      batches: [
-        { name: 'Batch 1', days: 'Saturday, Sunday', time: '7:00 PM - 8:00 PM', students: ['Aakif, Pranish, Venkatesh Daughter'] }
-      ]
-    },
-    {
-      coach: 'Vasanth',
-      batches: [
-        { name: 'Batch 1 (Fri)', days: 'Friday', time: '6:00 PM - 7:00 PM', students: ['Harsha (Venkatesh Son)'] },
-        { name: 'Batch 1 (Sat)', days: 'Saturday', time: '8:00 AM - 9:00 AM', students: ['Harsha (Venkatesh Son)'] }
-      ]
-    },
-    {
-      coach: 'Vishnu',
-      batches: [
-        { name: 'Batch 1', days: 'Wednesday, Thursday', time: '6:00 PM - 7:00 PM', students: ['Abinitha'] },
-        { name: 'Batch 2', days: 'Wednesday, Thursday', time: '7:00 PM - 8:00 PM', students: ['Yogesh'] },
-        { name: 'Batch 3', days: 'Friday, Saturday', time: '7:00 PM - 8:00 PM', students: ['Akmal, Anfal, Buvargan'] }
-      ]
-    }
-  ];
-
-  window.STATIC_MASTER_MATRIX = STATIC_MASTER_MATRIX;
+  // Dynamic database-backed batch and schedule builder replaces the legacy hardcoded matrix.
 
   function buildCoachBatches(coachId) {
-    const c = (allCoaches || []).find((x) => String(x.id) === String(coachId));
-    if (!c) return [];
+    if (!window.allBatches) return [];
     
-    const cName = getCoachName(c).toLowerCase();
-    const matrixEntry = STATIC_MASTER_MATRIX.find(m => cName.includes(m.coach.toLowerCase()));
-    
-    if (matrixEntry && matrixEntry.batches.length > 0) {
-      return matrixEntry.batches.map(b => ({
-        name: b.name,
-        schedule: b.days + " | " + b.time,
-        students: b.students
-      }));
-    }
+    // Find all active batches belonging to this coach
+    const batches = window.allBatches.filter(
+      (b) => String(b.coach_id) === String(coachId) && b.status !== "archived"
+    );
 
-    return [];
+    return batches.map((b) => {
+      // Resolve student names from student_ids list
+      const studentIds = Array.isArray(b.student_ids) ? b.student_ids.map(String) : [];
+      const studentNames = studentIds
+        .map((sid) => {
+          const s = (window.allStudents || []).find((st) => String(st.id) === sid);
+          return s ? getStudentName(s) : null;
+        })
+        .filter(Boolean);
+
+      return {
+        name: b.name,
+        schedule: (b.days || "TBD") + " | " + (b.time_slot || "TBD"),
+        students: studentNames,
+      };
+    });
   }
   window.buildCoachBatches = buildCoachBatches;
 
@@ -12774,7 +12790,7 @@ Best regards,
   window.addEventListener("DOMContentLoaded", () => {
     initUI(); // Setup UI event handlers
 
-    const auth = localStorage.getItem("twoknights_auth");
+    const auth = sessionStorage.getItem("twoknights_auth");
     if (auth) {
       try {
         const data = JSON.parse(auth);
@@ -12782,7 +12798,7 @@ Best regards,
         finishLogin(data.user || "User", data.role, data.studentId);
         resetSessionTimer();
       } catch (e) {
-        localStorage.removeItem("twoknights_auth");
+        sessionStorage.removeItem("twoknights_auth");
         $("login-screen").style.display = "flex";
         document.body.classList.add("login-mode");
       }
