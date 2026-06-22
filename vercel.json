@@ -93,6 +93,8 @@
     { "source": "/api/bob-payment-init", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-init" },
     { "source": "/api/bob-payment-init/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-init/:match*" },
     { "source": "/api/bob-payment-webhook", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-webhook" },
-    { "source": "/api/bob-payment-webhook/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-webhook/:match*" }
+    { "source": "/api/bob-payment-webhook/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-webhook/:match*" },
+    { "source": "/api/batches", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/batches" },
+    { "source": "/api/batches/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/batches/:match*" }
   ]
 }
