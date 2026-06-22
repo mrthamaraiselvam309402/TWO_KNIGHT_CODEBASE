@@ -1,6 +1,6 @@
 export default async function handler(request, response) {
   // Handle CORS — restrict to known origins
-  const allowedOrigins = ['https://chesskidoo-ai-admin.vercel.app', 'http://localhost:3000', 'http://localhost:5000'];
+  const allowedOrigins = ['https://twoknights-ai-admin.vercel.app', 'http://localhost:3000', 'http://localhost:5000'];
   const origin = request.headers?.origin || '';
   const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
   response.setHeader('Access-Control-Allow-Origin', corsOrigin);

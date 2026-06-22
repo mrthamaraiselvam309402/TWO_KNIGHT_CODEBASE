@@ -1,5 +1,5 @@
 -- =====================================================
--- CHESSKIDOO ACADEMY — Expenditure Management Module
+-- TWO KNIGHTS ACADEMY — Expenditure Management Module
 -- Run in: Supabase SQL Editor (Dashboard → SQL Editor)
 -- Date: 2026-05-11
 -- =====================================================

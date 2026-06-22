@@ -420,7 +420,7 @@
     }
   };
 
-  const auth = localStorage.getItem('chesskidoo_auth');
+  const auth = localStorage.getItem('twoknights_auth');
   if (auth) {
     try {
       const data = JSON.parse(auth);

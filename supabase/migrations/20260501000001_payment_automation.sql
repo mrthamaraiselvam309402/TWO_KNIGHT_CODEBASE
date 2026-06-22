@@ -1,5 +1,5 @@
 -- ==========================================
--- CHESSKIDOO PAYMENT AUTOMATION (CRON JOB)
+-- TWO KNIGHTS PAYMENT AUTOMATION (CRON JOB)
 -- ==========================================
 
 -- 1. Enable pg_cron if available (requires superuser in some environments)

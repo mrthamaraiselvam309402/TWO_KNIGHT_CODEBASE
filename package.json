@@ -1,5 +1,5 @@
 {
-  "name": "chesskidoo-ai-admin",
+  "name": "twoknights-ai-admin",
   "version": "2.0.1",
   "description": "Comprehensive chess academy management system with AI assistant, payment processing, and Supabase cloud database",
   "scripts": {
@@ -20,7 +20,7 @@
     "cloud-database",
     "vercel"
   ],
-  "author": "Chesskidoo Team",
+  "author": "Two Knights Team",
   "license": "MIT",
   "type": "module",
   "dependencies": {
@@ -47,10 +47,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/THAMARAISELVAM-A/chesskidoo-ai-admin.git"
+    "url": "git+https://github.com/THAMARAISELVAM-A/twoknights-ai-admin.git"
   },
   "bugs": {
-    "url": "https://github.com/THAMARAISELVAM-A/chesskidoo-ai-admin/issues"
+    "url": "https://github.com/THAMARAISELVAM-A/twoknights-ai-admin/issues"
   },
-  "homepage": "https://github.com/THAMARAISELVAM-A/chesskidoo-ai-admin#readme"
+  "homepage": "https://github.com/THAMARAISELVAM-A/twoknights-ai-admin#readme"
 }

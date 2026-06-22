@@ -1,5 +1,5 @@
 /**
- * ChessKidoo Admin - Floating Premium Calculator Widget
+ * Two Knights Admin - Floating Premium Calculator Widget
  * Features: Sleek Glassmorphism UI, Draggable, Keyboard Support, Safe Math Evaluation, Memory, Parentheses, Percentages
  */
 (function () {

@@ -1,5 +1,5 @@
 -- SQL Migration for Productivity Sync & Tournament Discovery Engine
--- Run this in your Supabase SQL Editor: https://supabase.com/dashboard/project/vseombfkrvpffnpgbsnk/sql
+-- Run this in your Supabase SQL Editor: https://supabase.com/dashboard/project/zznbanjdkwofsvpzybtr/sql
 
 -- 1. Create Productivity Tasks table (For both admin and student goals)
 CREATE TABLE IF NOT EXISTS public.productivity_tasks (

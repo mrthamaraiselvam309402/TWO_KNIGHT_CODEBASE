@@ -35,7 +35,7 @@
   
   function getAdminTodosFromLocal() {
     try {
-      const saved = localStorage.getItem('chesskidoo_admin_todos');
+      const saved = localStorage.getItem('twoknights_admin_todos');
       return saved ? JSON.parse(saved) : [
         { id: uuidv4(), text: 'Verify CGST/SGST inclusive invoicing for tax compliance', priority: 'high', completed: true },
         { id: uuidv4(), text: 'Perform AI Guardian FinOps cost spike review', priority: 'high', completed: false },
@@ -66,7 +66,7 @@
           adminTodos = getAdminTodosFromLocal();
         } else {
           adminTodos = data || [];
-          localStorage.setItem('chesskidoo_admin_todos', JSON.stringify(adminTodos));
+          localStorage.setItem('twoknights_admin_todos', JSON.stringify(adminTodos));
         }
       } catch (e) {
         console.warn('[Supabase] Failed to fetch admin tasks. Local fallback:', e);
@@ -80,7 +80,7 @@
   }
 
   function saveAdminTodosLocalOnly() {
-    localStorage.setItem('chesskidoo_admin_todos', JSON.stringify(adminTodos));
+    localStorage.setItem('twoknights_admin_todos', JSON.stringify(adminTodos));
     updateAdminProgress();
   }
 
@@ -266,7 +266,7 @@
     if (!el) return;
 
     const val = el.value;
-    localStorage.setItem('chesskidoo_admin_notes', val);
+    localStorage.setItem('twoknights_admin_notes', val);
 
     clearTimeout(adminNotesTimeout);
     adminNotesTimeout = setTimeout(async () => {
@@ -299,14 +299,14 @@
           window.sbMarkTableMissing('productivity_notes');
         } else if (!error && data) {
           el.value = data.notes;
-          localStorage.setItem('chesskidoo_admin_notes', data.notes);
+          localStorage.setItem('twoknights_admin_notes', data.notes);
           return;
         }
       } catch (e) {
         if (window.sbIsTableMissing(e)) window.sbMarkTableMissing('productivity_notes');
       }
     }
-    el.value = localStorage.getItem('chesskidoo_admin_notes') || '';
+    el.value = localStorage.getItem('twoknights_admin_notes') || '';
   }
 
   // ─── Meeting Scheduler & Attendees Selector ─────────────────────
@@ -314,7 +314,7 @@
 
   function getScheduledMeetingsFromLocal() {
     try {
-      const saved = localStorage.getItem('chesskidoo_scheduled_meetings');
+      const saved = localStorage.getItem('twoknights_scheduled_meetings');
       return saved ? JSON.parse(saved) : [
         { id: uuidv4(), title: 'Intermediate Level Tactics Review', platform: 'gmeet', time: new Date(Date.now() + 86400000).toISOString().slice(0, 16), attendee: 'general', link: 'https://meet.google.com/abc-defg-hij' }
       ];
@@ -340,7 +340,7 @@
           scheduledMeetings = getScheduledMeetingsFromLocal();
         } else {
           scheduledMeetings = data || [];
-          localStorage.setItem('chesskidoo_scheduled_meetings', JSON.stringify(scheduledMeetings));
+          localStorage.setItem('twoknights_scheduled_meetings', JSON.stringify(scheduledMeetings));
         }
       } catch (e) {
         console.warn('[Supabase] Scheduled meetings fetch error. local fallback:', e);
@@ -386,7 +386,7 @@
     };
 
     scheduledMeetings.push(meeting);
-    localStorage.setItem('chesskidoo_scheduled_meetings', JSON.stringify(scheduledMeetings));
+    localStorage.setItem('twoknights_scheduled_meetings', JSON.stringify(scheduledMeetings));
     renderAdminMeetings();
 
     // Reset inputs
@@ -410,7 +410,7 @@
 
         if (!error && data && data.length > 0) {
           meeting.id = data[0].id;
-          localStorage.setItem('chesskidoo_scheduled_meetings', JSON.stringify(scheduledMeetings));
+          localStorage.setItem('twoknights_scheduled_meetings', JSON.stringify(scheduledMeetings));
         }
       } catch (e) {
         console.warn('[Supabase] Meeting sync error:', e);
@@ -422,7 +422,7 @@
     const meet = scheduledMeetings[idx];
     if (meet && confirm('Delete this scheduled call?')) {
       scheduledMeetings.splice(idx, 1);
-      localStorage.setItem('chesskidoo_scheduled_meetings', JSON.stringify(scheduledMeetings));
+      localStorage.setItem('twoknights_scheduled_meetings', JSON.stringify(scheduledMeetings));
       renderAdminMeetings();
 
       if (window.supabaseClient) {
@@ -542,7 +542,7 @@
 
   function getChildTodosFromLocal() {
     try {
-      const key = 'chesskidoo_child_todos_' + getActiveStudentId();
+      const key = 'twoknights_child_todos_' + getActiveStudentId();
       const saved = localStorage.getItem(key);
       return saved ? JSON.parse(saved) : getChildDefaultTodos();
     } catch (e) {
@@ -576,7 +576,7 @@
           childTodos = getChildTodosFromLocal();
         } else {
           childTodos = data || [];
-          localStorage.setItem('chesskidoo_child_todos_' + activeId, JSON.stringify(childTodos));
+          localStorage.setItem('twoknights_child_todos_' + activeId, JSON.stringify(childTodos));
         }
       } catch (e) {
         console.warn('[Supabase] Child tasks fetch failed. local fallback:', e);
@@ -590,7 +590,7 @@
   }
 
   function saveChildTodosLocalOnly() {
-    const key = 'chesskidoo_child_todos_' + getActiveStudentId();
+    const key = 'twoknights_child_todos_' + getActiveStudentId();
     localStorage.setItem(key, JSON.stringify(childTodos));
     updateChildProgress();
   }
@@ -813,7 +813,7 @@
     if (activeId === 'default') return;
 
     const val = el.value;
-    const key = 'chesskidoo_child_notes_' + activeId;
+    const key = 'twoknights_child_notes_' + activeId;
     localStorage.setItem(key, val);
 
     clearTimeout(childNotesTimeout);
@@ -853,14 +853,14 @@
           window.sbMarkTableMissing('productivity_notes');
         } else if (!error && data) {
           el.value = data.notes;
-          localStorage.setItem('chesskidoo_child_notes_' + activeId, data.notes);
+          localStorage.setItem('twoknights_child_notes_' + activeId, data.notes);
           return;
         }
       } catch (e) {
         if (window.sbIsTableMissing(e)) window.sbMarkTableMissing('productivity_notes');
       }
     }
-    const key = 'chesskidoo_child_notes_' + activeId;
+    const key = 'twoknights_child_notes_' + activeId;
     el.value = localStorage.getItem(key) || '';
   }
 

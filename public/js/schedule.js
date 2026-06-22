@@ -171,7 +171,7 @@
         if (!studentId || !wrapper) {
             if(wrapper) {
                 wrapper.innerHTML = `
-                <div class="chesskidoo-schedule-card" style="text-align:center; padding:40px; color:var(--ivory-dim); border:4px dashed var(--border); background:rgba(0,0,0,0.15)">
+                <div class="twoknights-schedule-card" style="text-align:center; padding:40px; color:var(--ivory-dim); border:4px dashed var(--border); background:rgba(0,0,0,0.15)">
                   <span style="font-size:40px; display:block; margin-bottom:12px;">♟️</span>
                   Select a student and click "Preview Card" to view the beautiful layout.
                 </div>`;

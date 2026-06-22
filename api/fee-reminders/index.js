@@ -82,7 +82,7 @@ function buildFeeMessage(name, amount, dueDateStr, isDueOrOverdue) {
       `Kindly complete the payment on or before the due date to avoid any interruption in class participation. 🙏\n\n` +
       `📲 Pay via UPI / GPay / PhonePe: ${payTo}\n\n` +
       `Thank you for your continued support! 🌟\n` +
-      `♟️ Chesskidoo Academy`;
+      `♟️ Two Knights Academy`;
   }
 
   return `📢 UPCOMING FEE REMINDER\n\n` +
@@ -93,7 +93,7 @@ function buildFeeMessage(name, amount, dueDateStr, isDueOrOverdue) {
     `Kindly complete the payment on or before the due date. 🙏\n\n` +
     `📲 Pay via UPI / GPay / PhonePe: ${payTo}\n\n` +
     `Thank you so much for your support and cooperation! 🌟\n` +
-    `♟️ Chesskidoo Academy`;
+    `♟️ Two Knights Academy`;
 }
 
 export async function GET(request) {

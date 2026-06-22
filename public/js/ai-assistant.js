@@ -82,7 +82,7 @@ async function handleAITask(inputId, bodyId) {
                 message: msg,
                 role: window.role || 'guest',
                 context: snapshot || { status: 'landing_page' },
-                systemPrompt: "You are the ChessKidoo Landing Assistant. Be welcoming, helpful, and encourage visitors to join the premium chess academy. If they ask about fees or schedule, suggest they log in or contact admin."
+                systemPrompt: "You are the Two Knights Landing Assistant. Be welcoming, helpful, and encourage visitors to join the premium chess academy. If they ask about fees or schedule, suggest they log in or contact admin."
             })
         });
 

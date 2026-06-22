@@ -1,5 +1,5 @@
 -- ============================================================
--- CHESSKIDOO PAYMENT AUTOMATION v3 — FULL SYSTEM
+-- TWO KNIGHTS PAYMENT AUTOMATION v3 — FULL SYSTEM
 -- ============================================================
 
 -- 1. Enable pg_cron extension

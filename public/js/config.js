@@ -1,5 +1,5 @@
 // Supabase configuration – read from environment (set on Vercel/Netlify)
-window.SUPABASE_URL = 'https://vseombfkrvpffnpgbsnk.supabase.co';
+window.SUPABASE_URL = 'https://zznbanjdkwofsvpzybtr.supabase.co';
 window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8';
 
 let supabaseClient = null;
@@ -56,7 +56,7 @@ window.sbMarkTableMissing = function (table) {
 // code change. Defaults preserve the previous hard-coded value.
 window.getPaymentPayee = function () {
   try {
-    const saved = JSON.parse(localStorage.getItem('chesskidoo_payment_payee') || 'null');
+    const saved = JSON.parse(localStorage.getItem('twoknights_payment_payee') || 'null');
     if (saved && saved.number) {
       return { number: String(saved.number), name: String(saved.name || '') };
     }
@@ -65,7 +65,7 @@ window.getPaymentPayee = function () {
 };
 
 window.setPaymentPayee = function (number, name) {
-  localStorage.setItem('chesskidoo_payment_payee', JSON.stringify({
+  localStorage.setItem('twoknights_payment_payee', JSON.stringify({
     number: String(number || '').trim(),
     name: String(name || '').trim()
   }));

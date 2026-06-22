@@ -1,5 +1,5 @@
 -- SQL to fix missing tables and schema mismatches
--- Run this in the Supabase SQL Editor: https://supabase.com/dashboard/project/vseombfkrvpffnpgbsnk/sql
+-- Run this in the Supabase SQL Editor: https://supabase.com/dashboard/project/zznbanjdkwofsvpzybtr/sql
 
 -- 1. Create Rating History Table (Correcting student_id type to TEXT to match students table)
 CREATE TABLE IF NOT EXISTS rating_history (

@@ -1732,7 +1732,7 @@ window.generateEventCertificates = async function() {
          <div class="c-body">has successfully participated and demonstrated excellent sportsmanship in the <strong>${e.title}</strong> held on ${new Date(e.date || e.event_date).toLocaleDateString()}.</div>
          <div class="c-footer">
            <div class="c-sig">${new Date().toLocaleDateString()}<br><span style="font-weight:normal; font-size:12px;">Date</span></div>
-           <div class="c-sig" style="font-family: Great Vibes; font-size: 30px; padding-top:0; border:none; line-height:0.8;">ChessKidoo<br><span style="font-family: Montserrat; font-size:12px; font-weight:normal; border-top: 1px solid #333; display:block; padding-top:10px; margin-top:10px;">Academy Director</span></div>
+           <div class="c-sig" style="font-family: Great Vibes; font-size: 30px; padding-top:0; border:none; line-height:0.8;">Two Knights<br><span style="font-family: Montserrat; font-size:12px; font-weight:normal; border-top: 1px solid #333; display:block; padding-top:10px; margin-top:10px;">Academy Director</span></div>
          </div>
        </div>`;
     });

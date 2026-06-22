@@ -598,7 +598,7 @@ body[data-theme="light"] .login-logo-light { display: block; }
 .logo-area.logo-img-missing .login-logo { display: none !important; }
 .logo-area.logo-img-missing .logo-fallback { display: flex; }
 
-/* Branded crest fallback — looks like the ChessKidoo mark, theme-aware. */
+/* Branded crest fallback — looks like the Two Knights mark, theme-aware. */
 .logo-crest {
   width: 76px; height: 76px; display: inline-flex; align-items: center; justify-content: center;
   font-size: 44px; line-height: 1; margin-bottom: 14px; border-radius: 18px;
@@ -2112,7 +2112,7 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
 }
 
 /* ── TWO KNIGHTS INVITATION CARD ── */
-.chesskidoo-schedule-card {
+.twoknights-schedule-card {
   background: #ffffff;
   border: 8px solid #064e3b; /* Dark green border */
   border-radius: 24px;
@@ -2127,7 +2127,7 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
   box-sizing: border-box;
 }
 
-.chesskidoo-schedule-card .card-logo-area {
+.twoknights-schedule-card .card-logo-area {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2135,12 +2135,12 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
   margin-bottom: 16px;
 }
 
-.chesskidoo-schedule-card .owl-logo-svg {
+.twoknights-schedule-card .owl-logo-svg {
   display: inline-block;
   vertical-align: middle;
 }
 
-.chesskidoo-schedule-card .brand-name {
+.twoknights-schedule-card .brand-name {
   font-family: 'Outfit', sans-serif;
   font-weight: 900;
   font-size: 28px;
@@ -2149,7 +2149,7 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
   text-shadow: 1px 1px 0px #facc15;
 }
 
-.chesskidoo-schedule-card .ribbon-banner {
+.twoknights-schedule-card .ribbon-banner {
   background: #064e3b;
   color: #ffffff;
   font-weight: 700;
@@ -2166,40 +2166,40 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
-.chesskidoo-schedule-card .ribbon-banner::before,
-.chesskidoo-schedule-card .ribbon-banner::after {
+.twoknights-schedule-card .ribbon-banner::before,
+.twoknights-schedule-card .ribbon-banner::after {
   content: '';
   position: absolute;
   border-style: solid;
   top: 100%;
 }
 
-.chesskidoo-schedule-card .ribbon-banner::before {
+.twoknights-schedule-card .ribbon-banner::before {
   left: 0;
   border-width: 6px 8px 0 0;
   border-color: #042f1a transparent transparent transparent;
 }
 
-.chesskidoo-schedule-card .ribbon-banner::after {
+.twoknights-schedule-card .ribbon-banner::after {
   right: 0;
   border-width: 6px 0 0 8px;
   border-color: #042f1a transparent transparent transparent;
 }
 
-.chesskidoo-schedule-card .schedule-section {
+.twoknights-schedule-card .schedule-section {
   border-bottom: 1.5px solid #e5e7eb;
   padding-bottom: 16px;
   margin-bottom: 16px;
   text-align: left;
 }
 
-.chesskidoo-schedule-card .schedule-section:last-child {
+.twoknights-schedule-card .schedule-section:last-child {
   border-bottom: none;
   padding-bottom: 0;
   margin-bottom: 0;
 }
 
-.chesskidoo-schedule-card .section-title {
+.twoknights-schedule-card .section-title {
   font-size: 16px;
   font-weight: 700;
   color: #064e3b;
@@ -2209,15 +2209,15 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
   margin-bottom: 8px;
 }
 
-.chesskidoo-schedule-card .section-title-icon {
+.twoknights-schedule-card .section-title-icon {
   font-size: 20px;
 }
 
-.chesskidoo-schedule-card .schedule-details {
+.twoknights-schedule-card .schedule-details {
   padding-left: 28px;
 }
 
-.chesskidoo-schedule-card .details-row {
+.twoknights-schedule-card .details-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2226,11 +2226,11 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
   color: #374151;
 }
 
-.chesskidoo-schedule-card .details-row:last-child {
+.twoknights-schedule-card .details-row:last-child {
   margin-bottom: 0;
 }
 
-.chesskidoo-schedule-card .details-row-bold {
+.twoknights-schedule-card .details-row-bold {
   font-weight: 800;
   font-size: 16px;
   color: #111827;

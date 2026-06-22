@@ -123,7 +123,7 @@
 
   function saveSecurityState() {
     try {
-      localStorage.setItem('chesskidoo_security', JSON.stringify({
+      localStorage.setItem('twoknights_security', JSON.stringify({
         failedAttempts: failedLoginAttempts,
         locked: lockedAccounts
       }));
@@ -132,7 +132,7 @@
 
   function loadSecurityState() {
     try {
-      var saved = localStorage.getItem('chesskidoo_security');
+      var saved = localStorage.getItem('twoknights_security');
       if (saved) {
         var data = JSON.parse(saved);
         failedLoginAttempts = data.failedAttempts || {};

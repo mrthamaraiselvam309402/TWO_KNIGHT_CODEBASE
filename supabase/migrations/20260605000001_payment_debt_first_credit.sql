@@ -1,5 +1,5 @@
 -- ============================================================
--- CHESSKIDOO PAYMENT SYSTEM v4 — DEBT-FIRST + CREDIT ENGINE
+-- TWO KNIGHTS PAYMENT SYSTEM v4 — DEBT-FIRST + CREDIT ENGINE
 -- ============================================================
 -- Adds: credit_balance, billing_anchor, allocation ledger,
 --       debt-first payment application, advance payment support.

@@ -156,7 +156,7 @@ window.exportEncryptionKey = function() {
   const blob = new Blob([key], {type: 'text/plain'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'chesskidoo_encryption_key_backup.txt';
+  a.download = 'twoknights_encryption_key_backup.txt';
   a.click();
   toast('Key exported. Store it securely!', 'success');
 };

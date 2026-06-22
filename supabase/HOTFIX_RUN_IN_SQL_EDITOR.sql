@@ -1,5 +1,5 @@
 -- =====================================================
--- ONE-SHOT HOTFIX for production: vseombfkrvpffnpgbsnk
+-- ONE-SHOT HOTFIX for production: zznbanjdkwofsvpzybtr
 -- Run this file in: Supabase Dashboard -> SQL Editor -> New Query
 -- =====================================================
 -- A live REST probe (2026-05-30) against the project found:

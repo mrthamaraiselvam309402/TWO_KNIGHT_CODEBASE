@@ -1,7 +1,7 @@
 -- =====================================================
--- CHESSKIDOO SECURE RLS POLICIES v2
+-- TWO KNIGHTS SECURE RLS POLICIES v2
 -- Run this in Supabase SQL Editor:
--- https://supabase.com/dashboard/project/vseombfkrvpffnpgbsnk/sql
+-- https://supabase.com/dashboard/project/zznbanjdkwofsvpzybtr/sql
 -- =====================================================
 
 -- Step 1: Enable RLS on all tables

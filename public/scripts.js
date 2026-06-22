@@ -1775,7 +1775,13 @@ function initUI() {
           const coachName = coach ? (coach.name || '') : '';
           const dueCfg = window.getStudentDueConfig ? window.getStudentDueConfig(s, coachName, m, y) : { day: 5 };
           const dueDateObj = new Date(y, m, dueCfg.day, 23, 59, 59);
-          status = (today >= dueDateObj) ? 'Overdue' : 'Due';
+          
+          if (today <= dueDateObj) {
+            status = 'Pending';
+          } else {
+            const daysLate = Math.floor((today - dueDateObj) / (1000 * 60 * 60 * 24));
+            status = (daysLate > 5) ? 'Overdue' : 'Due';
+          }
         } else {
           status = 'Overdue';
         }
@@ -3463,7 +3469,7 @@ function initUI() {
          }
 
          dataCache = { coaches: allCoaches, students: allStudents, achievements: achievementsData, events: eventsData, messages: allMessages, attendance: allAttendance, payments: allPayments, ratingHistory: allRatingHistory, resources: allResources, timestamp: now };
-          try { localStorage.setItem('chesskidoo_data_cache', JSON.stringify(dataCache)); } catch(e) {}
+          try { localStorage.setItem('twoknights_data_cache', JSON.stringify(dataCache)); } catch(e) {}
          syncCoachDropdowns();
 
          if (role === 'admin' || role === 'master') {
@@ -4015,7 +4021,7 @@ function initUI() {
   }
 
   function recordSession(action) {
-    const auth = JSON.parse(localStorage.getItem('chesskidoo_auth') || '{}');
+    const auth = JSON.parse(localStorage.getItem('twoknights_auth') || '{}');
     if (!auth.role) return;
 
     const sessions = JSON.parse(localStorage.getItem('user_sessions') || '[]');
@@ -4071,7 +4077,7 @@ function initUI() {
 
   function logAudit(table, recordId, action, oldValue, newValue) {
     // Save to Supabase database
-    const auth = JSON.parse(localStorage.getItem('chesskidoo_auth') || '{}');
+    const auth = JSON.parse(localStorage.getItem('twoknights_auth') || '{}');
     const data = {
       table_name: table,
       record_id: recordId,
@@ -4108,7 +4114,7 @@ function initUI() {
     const activeList = $('active-users-list');
     const adminHistoryList = $('admin-history-list');
     const parentHistoryList = $('parent-history-list');
-    const auth = JSON.parse(localStorage.getItem('chesskidoo_auth') || '{}');
+    const auth = JSON.parse(localStorage.getItem('twoknights_auth') || '{}');
     const currentUser = auth.user || 'Unknown';
     const sessions = getLoginHistory();
     const activeSessions = getActiveSessions();
@@ -8890,13 +8896,13 @@ Best regards,
   function toggleTheme() {
     const newTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
     document.body.dataset.theme = newTheme;
-    localStorage.setItem('chesskidoo_theme', newTheme);
+    localStorage.setItem('twoknights_theme', newTheme);
     // Re-render dashboard if visible to update chart colors
     if ($('page-dash').classList.contains('active')) renderDash();
   }
 
   // Load theme on page load
-  const savedTheme = localStorage.getItem('chesskidoo_theme');
+  const savedTheme = localStorage.getItem('twoknights_theme');
   if (savedTheme) document.body.dataset.theme = savedTheme;
 
   // BOARDROOM REPORTING LOGIC MOVED TO js/reporting.js
@@ -9165,7 +9171,7 @@ Best regards,
    window.addEventListener('DOMContentLoaded', () => {
      initUI(); // Setup UI event handlers
 
-     const auth = localStorage.getItem('chesskidoo_auth');
+     const auth = localStorage.getItem('twoknights_auth');
      if (auth) {
        try {
          const data = JSON.parse(auth);
@@ -9173,7 +9179,7 @@ Best regards,
          finishLogin(data.user || 'User', data.role, data.studentId);
          resetSessionTimer();
        } catch (e) {
-         localStorage.removeItem('chesskidoo_auth');
+         localStorage.removeItem('twoknights_auth');
          $('login-screen').style.display = 'flex';
          document.body.classList.add('login-mode');
        }
@@ -9825,7 +9831,7 @@ Best regards,
     
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dateStr = `${months[targetMonth]}_${targetYear}`;
-    link.setAttribute('download', `chesskidoo_students_export_${dateStr}.csv`);
+    link.setAttribute('download', `twoknights_students_export_${dateStr}.csv`);
     
     document.body.appendChild(link);
     link.click();

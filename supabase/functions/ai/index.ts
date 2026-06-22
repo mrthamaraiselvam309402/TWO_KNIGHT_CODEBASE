@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
 // TOM AI SYSTEM PROMPT BUILDER
 // ══════════════════════════════════════════
 function buildTOMSystemPrompt(role: string, moduleFocus: string, context: any): string {
-  const baseIdentity = `You are **TOM AI** (Training Operations Manager), the highly intelligent AI command center for Chesskidoo Chess Academy.
+  const baseIdentity = `You are **TOM AI** (Training Operations Manager), the highly intelligent AI command center for Two Knights Chess Academy.
 
 CRITICAL INTEL CORE:
 1. **Academy/Operational Mode**: For any queries related to students, attendance, schedules, payments, finances, or academy operations, you MUST strictly rely on the LIVE ACADEMY DATA provided. NEVER make up figures, ELO ratings, payment details, or names. If specific data is missing from context, state that honestly.
@@ -296,5 +296,5 @@ async function generateTOMResponse(message: string, role: string, moduleFocus: s
     return `🤖 **TOM AI — Parent Portal**\n\nI can help you track your child's chess journey. Ask me about:\n• Progress & ELO rating\n• Attendance records\n• Upcoming events\n• Payment status\n• Coach feedback`
   }
 
-  return `🤖 **Welcome to TOM AI** — the Training Operations Manager for Chesskidoo Academy.\n\nPlease sign in to access personalized insights and real-time analytics.`
+  return `🤖 **Welcome to TOM AI** — the Training Operations Manager for Two Knights Academy.\n\nPlease sign in to access personalized insights and real-time analytics.`
 }

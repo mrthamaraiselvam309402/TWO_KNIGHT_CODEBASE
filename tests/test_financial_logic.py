@@ -12,7 +12,7 @@ from decimal import Decimal
 from typing import Dict, Optional, Tuple
 
 # Direct Supabase Edge Functions (no Vercel proxy needed)
-SUPABASE_URL = "https://vseombfkrvpffnpgbsnk.supabase.co"
+SUPABASE_URL = "https://zznbanjdkwofsvpzybtr.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzZW9tYmZrcnZwZmZucGdic25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mzc0MjAsImV4cCI6MjA4OTUxMzQyMH0.wg0Azavs8Gfdbh6vbdjvM6juu45OwpCn4J5XN55tsc8"
 API_BASE = f"{SUPABASE_URL}/functions/v1"
 

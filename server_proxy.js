@@ -14,7 +14,7 @@ app.use(express.json());
 app.use('/api', async (req, res) => {
   // Reconstruct the sub-path from req.originalUrl or req.url
   const subPath = req.originalUrl.substring(5); // Strips "/api/"
-  const targetUrl = `https://vseombfkrvpffnpgbsnk.supabase.co/functions/v1/${subPath}`;
+  const targetUrl = `https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/${subPath}`;
   console.log(`[Proxy] ${req.method} ${req.originalUrl} -> ${targetUrl}`);
   
   const headers = { ...req.headers };

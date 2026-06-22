@@ -1,5 +1,5 @@
 -- =====================================================
--- CHESSKIDOO DATABASE SETUP - Run this in Supabase SQL Editor
+-- TWO KNIGHTS DATABASE SETUP - Run this in Supabase SQL Editor
 -- =====================================================
 
 -- 1. AUDIT LOGS TABLE - For tracking failed logins and actions

@@ -49,7 +49,7 @@ window.doLogin = async function() {
                 // but the pattern is fragile.
                 window.role = data.role;
                 // Store both the full auth object and a separate token for API calls
-                localStorage.setItem('chesskidoo_auth', JSON.stringify({
+                localStorage.setItem('twoknights_auth', JSON.stringify({
                     role: data.role,
                     user: data.user || user,
                     studentId: data.student_id,
@@ -129,7 +129,7 @@ window.doLogin = async function() {
 };
 
  window.doLogout = function() {
-     localStorage.removeItem('chesskidoo_auth');
+     localStorage.removeItem('twoknights_auth');
      localStorage.removeItem('sb-access-token');
      role = null;
      if (window.role) window.role = null;
