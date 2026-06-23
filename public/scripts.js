@@ -4716,6 +4716,7 @@
           else if (active === "page-fame") renderFame();
           else if (active === "page-events") renderEvents();
           else if (active === "page-batches") { if (window.renderBatchesGrid) window.renderBatchesGrid(); }
+          else if (active === "page-attendance" && window.renderAttendanceList) window.renderAttendanceList();
           else if (active === "page-homework") {
             if (window.loadHomeworkData) {
               window.loadHomeworkData().then(() => {
@@ -4723,15 +4724,28 @@
               });
             } else if (window.renderHomeworkPage) window.renderHomeworkPage();
           }
+          else if (active === "page-schedules" && window.initSchedulePage) window.initSchedulePage();
+          else if (active === "page-exp" && window.initExpPage) window.initExpPage();
+          else if (active === "page-access") {
+            if (window.loadAccessControl) window.loadAccessControl();
+            if (window.renderParentAccounts) window.renderParentAccounts();
+            if (window.loadAuditLogs) window.loadAuditLogs();
+            if (window.startSecurityLogsSimulation) window.startSecurityLogsSimulation();
+          }
+          else if (active === "page-productivity" && window.initProductivityPage) window.initProductivityPage();
+          else if (active === "page-chessable" && window.renderChessableProfiles) window.renderChessableProfiles();
           else if (active === "page-ai") {
             if (window.updateTomKpis) window.updateTomKpis();
-          } else renderDash();
+            if (window.initSmartPills) window.initSmartPills();
+          }
+          else if (active === "page-child" && role !== "parent") renderChild();
 
           updateMsgBadge();
           checkMonthlyRollover();
         } else if (role === "parent") {
           renderChild();
           renderEvents();
+          if (document.querySelector(".page.active")?.id === "page-parent-ai" && window.setAIModule) window.setAIModule("parent");
         }
 
         setLoading("data", false);
@@ -5163,6 +5177,7 @@
     access: "Access Control",
     schedules: "Schedule Manager",
     homework: "Homework Manager",
+    attendance: "Attendance Manager",
     productivity: "Operations Productivity Center",
     chessable: "Chessable Profiles",
     "parent-ai": "Ask TOM AI",
@@ -5343,6 +5358,13 @@
         }
       }
     }, 10);
+
+    window._lastSetPageTime = Date.now();
+    window._lastSetPageTarget = p;
+    if (window.location.hash !== '#' + p) {
+      window.location.hash = '#' + p;
+    }
+    window.scrollTo(0, 0);
   }
   window.setPage = setPage;
 
@@ -6676,8 +6698,15 @@
         }
 
         studs = studs.filter((s) => {
+          const name = getStudentName(s) || "";
+          const studentPhone = s.phone || "";
+          const parentPhone = s.parent_phone || "";
           const nameMatch =
-            !fSearch || getStudentName(s).toLowerCase().includes(fSearch);
+            !fSearch || name.toLowerCase().includes(fSearch);
+          const phoneMatch =
+            !fSearch ||
+            studentPhone.toLowerCase().includes(fSearch) ||
+            parentPhone.toLowerCase().includes(fSearch);
           const coachMatch = !fCoach || String(s.coach_id) === String(fCoach);
           const sessionMatch = !fSession || getStudentBatchType(s) === fSession;
           const statusMatch =
@@ -6714,6 +6743,7 @@
 
           return (
             nameMatch &&
+            phoneMatch &&
             coachMatch &&
             sessionMatch &&
             statusMatch &&
@@ -11015,6 +11045,11 @@ Best regards,
       window.childTabIntent = tab;
       setPage("child");
     }
+
+    document.querySelectorAll(".nav-item").forEach((ni) => ni.classList.remove("active"));
+    const targetId = tab === "overview" ? "nav-child" : "nav-parent-" + tab;
+    const targetNav = document.getElementById(targetId);
+    if (targetNav) targetNav.classList.add("active");
   };
 
   function openStudentEditPortalModal() {

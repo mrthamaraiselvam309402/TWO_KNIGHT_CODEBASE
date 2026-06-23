@@ -6,13 +6,35 @@ CK.navigate = function(sectionId) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
-CK.showPage = function(pageId) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const target = document.getElementById(pageId);
-  if (target) target.classList.add('active');
-  window.location.hash = pageId;
-  window.scrollTo(0, 0);
-};
+window._lastSetPageTime = 0;
+window._lastSetPageTarget = null;
+
+function resolvePageFromHash(hash) {
+  let raw = (hash || '').replace(/^#/, '');
+  if (!raw) return null;
+  // Accept both short names (#stud) and full DOM IDs (#page-stud).
+  // Always return the short name that setPage() expects.
+  if (raw.startsWith('page-')) raw = raw.slice(5);
+  if (document.getElementById('page-' + raw)) return raw;
+  return null;
+}
+
+window.addEventListener('hashchange', () => {
+  const resolved = resolvePageFromHash(window.location.hash);
+  if (resolved && typeof setPage === 'function') {
+    const now = Date.now();
+    if (now - window._lastSetPageTime > 100 || resolved !== window._lastSetPageTarget) {
+      setPage(resolved);
+    }
+  }
+});
+
+window.addEventListener('load', () => {
+  const resolved = resolvePageFromHash(window.location.hash);
+  if (resolved && typeof setPage === 'function') {
+    setPage(resolved);
+  }
+});
 
 CK.openModal = function(modalId) {
   const modal = document.getElementById(modalId);
@@ -39,14 +61,3 @@ CK.togglePassword = function(formId) {
 };
 
 CK.openDemoModal = () => CK.openModal('contactModal');
-
-window.addEventListener('hashchange', () => {
-  const page = window.location.hash.substring(1);
-  if (page && document.getElementById(page)) CK.showPage(page);
-});
-window.addEventListener('load', () => {
-  if (window.location.hash) {
-    const page = window.location.hash.substring(1);
-    if (document.getElementById(page)) CK.showPage(page);
-  }
-});
