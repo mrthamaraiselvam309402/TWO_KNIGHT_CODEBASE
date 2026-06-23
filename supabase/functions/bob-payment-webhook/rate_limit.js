@@ -3,6 +3,8 @@
  * Uses Supabase for distributed rate limiting
  */
 
+import { verifySignedToken } from '../_verify_token.js';
+
 // Rate limit configuration
 const RATE_LIMITS = {
   auth: { windowMs: 15 * 60 * 1000, max: 5 },        // 5 attempts per 15 minutes
@@ -89,20 +91,32 @@ export async function validateAuth(req, supabase) {
   
   const token = authHeader.replace('Bearer ', '');
   if (!token) return { allowed: false, error: 'Missing token' };
- 
+
   // 1. Check for hardcoded stabilization tokens
   if (token.startsWith('master-token-')) return { allowed: true, role: 'master' };
   if (token.startsWith('admin-token-')) return { allowed: true, role: 'admin' };
   if (token.startsWith('parent-token-')) return { allowed: true, role: 'parent' };
- 
-  // 2. Check for real Supabase JWT
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) {
-    if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || token === apiKey) {
-        return { allowed: true, role: 'service_role' };
-    }
-    return { allowed: false, error: 'Invalid or expired token' };
+
+  // Check service role key first (before calling supabase.auth.getUser to avoid exceptions)
+  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || token === apiKey) {
+    return { allowed: true, role: 'service_role' };
   }
- 
-  return { allowed: true, role: user.user_metadata?.role || 'authenticated', user };
+
+  // 2. Check for real Supabase JWT (must be caught - throws on invalid tokens)
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (!error && user) {
+      return { allowed: true, role: user.user_metadata?.role || 'authenticated', user };
+    }
+  } catch (e) {
+    // Supabase throws on non-Supabase JWTs (like HS256), ignore and try custom token
+  }
+
+  // 3. Fallback: check custom HS256 JWT (Two Knights signed tokens)
+  const customPayload = await verifySignedToken(token);
+  if (customPayload) {
+    return { allowed: true, role: customPayload.role || 'authenticated', user: customPayload };
+  }
+
+  return { allowed: false, error: 'Invalid or expired token' };
 }
