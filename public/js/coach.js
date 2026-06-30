@@ -30,7 +30,9 @@ const statHw = document.getElementById('coach-stat-hw');
    
    if (statStud) statStud.textContent = myStudents.length;
    if (statBatches) statBatches.textContent = myBatches.length;
-   if (statHw) statHw.textContent = myHomework.filter(h => h.status === 'submitted').length;
+   const pendingCount = (window.homeworkSubmissionCache || [])
+     .filter(s => s.status === 'submitted' || s.status === 'pending_review').length;
+   if (statHw) statHw.textContent = pendingCount;
 
   // 2. Render My Batches Table
   const batchesTbody = document.getElementById('coach-dash-batches-tbody');
@@ -51,33 +53,33 @@ const statHw = document.getElementById('coach-stat-hw');
     }
   }
 
-  // 3. Render Recent Homework
-  const hwTbody = document.getElementById('coach-dash-hw-tbody');
-  if (hwTbody) {
-    const recentHw = myHomework
-      .filter(h => h.status === 'pending_review' || h.status === 'submitted')
-      .sort((a,b) => new Date(b.submitted_at || b.created_at) - new Date(a.submitted_at || a.created_at))
-      .slice(0, 5);
-      
-    if (recentHw.length === 0) {
-      hwTbody.innerHTML = '<tr><td colspan="3" class="text-center text-slate">No pending homework to review.</td></tr>';
-    } else {
-hwTbody.innerHTML = recentHw.map(h => {
-         let studentName = "Unknown";
-         if (h.student_id) {
-           const s = myStudents.find(x => String(x.id) === String(h.student_id));
-           studentName = s ? (window.studentName ? window.studentName(s) : s.name) : "Unknown";
-         }
+// 3. Render Recent Homework
+   const hwTbody = document.getElementById('coach-dash-hw-tbody');
+   if (hwTbody) {
+     // Get pending submissions from cache
+     const pendingSubmissions = (window.homeworkSubmissionCache || [])
+       .filter(s => s.status === 'submitted' || s.status === 'pending_review')
+       .sort((a,b) => new Date(b.submitted_at || b.created_at) - new Date(a.submitted_at || a.created_at))
+       .slice(0, 5);
+       
+     if (pendingSubmissions.length === 0) {
+       hwTbody.innerHTML = '<tr><td colspan="3" class="text-center text-slate">No pending homework to review.</td></tr>';
+     } else {
+ hwTbody.innerHTML = pendingSubmissions.map(s => {
+         const assignment = (window.allHomework || []).find(h => String(h.id) === String(s.assignment_id));
+         const student = myStudents.find(x => String(x.id) === String(s.student_id));
+         const studentName = student ? (window.studentName ? window.studentName(student) : student.name) : "Unknown";
+         const title = assignment ? assignment.title : "Untitled Assignment";
          return `
            <tr>
              <td style="color:var(--ivory)">${window.escapeHtml ? window.escapeHtml(studentName) : studentName}</td>
-             <td>${window.escapeHtml ? window.escapeHtml(h.title || 'General') : h.title}</td>
-             <td><span class="badge badge-warning">Needs Review</span></td>
+             <td>${window.escapeHtml ? window.escapeHtml(title) : title}</td>
+             <td><span class="badge badge-warning">${s.status === 'submitted' ? 'Submitted' : 'Pending Review'}</span></td>
            </tr>
          `;
        }).join('');
-    }
-  }
+     }
+   }
 
   // Future feature: Schedule
 };

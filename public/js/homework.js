@@ -144,16 +144,18 @@
     }));
   }
 
-  let homeworkSubmissionCache = [];
-  async function loadHomeworkSubmissions(forceRefresh = false) {
-    if (!forceRefresh && homeworkSubmissionCache.length) return homeworkSubmissionCache;
-    try {
-      const res = await window.apiCall('/api/homework?view=submissions');
-      if (!res.ok) throw new Error(await res.text().catch(() => ''));
-      const data = await res.json();
-      homeworkSubmissionCache = data.data || [];
-      renderHomeworkSubmissionReview();
-      return homeworkSubmissionCache;
+let homeworkSubmissionCache = [];
+   window.homeworkSubmissionCache = homeworkSubmissionCache;  // Expose globally for coach dashboard
+async function loadHomeworkSubmissions(forceRefresh = false) {
+     if (!forceRefresh && homeworkSubmissionCache.length) return homeworkSubmissionCache;
+     try {
+       const res = await window.apiCall('/api/homework?view=submissions');
+       if (!res.ok) throw new Error(await res.text().catch(() => ''));
+       const data = await res.json().catch(() => ({}));
+       homeworkSubmissionCache = data.data || [];
+       window.homeworkSubmissionCache = homeworkSubmissionCache;  // Update global reference
+       renderHomeworkSubmissionReview();
+       return homeworkSubmissionCache;
     } catch (error) {
       if (window.toast) window.toast(`Failed to load homework submissions: ${error.message}`, 'error');
       return [];
@@ -175,15 +177,26 @@
     }
 
     if (studentSelect) {
-      studentSelect.innerHTML = '<option value="">Select Student</option>' + (window.allStudents || [])
+      const studs = window.role === 'coach' 
+        ? (window.allStudents || []).filter(s => String(s.coach_id) === String(window.userId))
+        : (window.allStudents || []);
+      const options = '<option value="">Select Student</option>' + studs
         .filter((student) => (student.status || 'active') !== 'archived')
         .sort((a, b) => studentName(a).localeCompare(studentName(b)))
         .map((student) => `<option value="${student.id}">${escapeValue(studentName(student))}</option>`)
         .join('');
+      studentSelect.innerHTML = options;
+      const progressStudentSelect = $('hw-progress-student');
+      if (progressStudentSelect) {
+        progressStudentSelect.innerHTML = options;
+      }
     }
 
     if (batchSelect) {
-      batchSelect.innerHTML = '<option value="">Select Batch</option>' + (window.allBatches || [])
+      const batches = window.role === 'coach' 
+        ? (window.allBatches || []).filter(b => String(b.coach_id) === String(window.userId))
+        : (window.allBatches || []);
+      batchSelect.innerHTML = '<option value="">Select Batch</option>' + batches
         .filter((batch) => (batch.status || 'active') !== 'archived')
         .sort((a, b) => batchName(a).localeCompare(batchName(b)))
         .map((batch) => `<option value="${batch.id}">${escapeValue(batchName(batch))}</option>`)
@@ -583,7 +596,10 @@
       .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')))
       .map((assignment) => `<option value="${assignment.id}">${escapeValue(assignment.title || 'Untitled Homework')}</option>`)
       .join('');
-    studentSelect.innerHTML = '<option value="">All Students</option>' + (window.allStudents || [])
+    const studs = window.role === 'coach'
+      ? (window.allStudents || []).filter(s => String(s.coach_id) === String(window.userId))
+      : (window.allStudents || []);
+    studentSelect.innerHTML = '<option value="">All Students</option>' + studs
       .filter((student) => (student.status || 'active') !== 'archived')
       .sort((a, b) => studentName(a).localeCompare(studentName(b)))
       .map((student) => `<option value="${student.id}">${escapeValue(studentName(student))}</option>`)
@@ -697,6 +713,84 @@
     list.innerHTML = items.map((item) => renderHomeworkCard(item, { showActions: false })).join('');
   }
 
+  function renderStudentHomeworkProgress() {
+    const list = $('hw-progress-list');
+    const studentId = $('hw-progress-student')?.value;
+    const searchTopic = ($('hw-progress-topic-search')?.value || '').toLowerCase().trim();
+
+    if (!list) return;
+
+    if (!studentId) {
+      list.innerHTML = '<div class="empty-state"><span class="empty-icon">👤</span><p>Select a student to view progress.</p></div>';
+      return;
+    }
+
+    const studentAssignments = sortHomework((window.allHomework || []).filter((assignment) => 
+      assignmentAppliesToStudent(assignment, studentId, window.allStudents || [])
+    ));
+
+    if (!studentAssignments.length) {
+      list.innerHTML = '<div class="empty-state"><span class="empty-icon">📝</span><p>No homework assigned to this student.</p></div>';
+      return;
+    }
+
+    // Filter by topic keyword
+    const filteredAssignments = studentAssignments.filter(a => {
+      if (!searchTopic) return true;
+      const title = (a.title || '').toLowerCase();
+      const desc = (a.description || '').toLowerCase();
+      return title.includes(searchTopic) || desc.includes(searchTopic);
+    });
+
+    if (!filteredAssignments.length) {
+      list.innerHTML = '<div class="empty-state"><span class="empty-icon">🔍</span><p>No matching topics found.</p></div>';
+      return;
+    }
+
+    let html = `
+      <div style="box-shadow: var(--shadow); border-radius: 10px; overflow-x: auto; border: 1px solid var(--border);">
+        <table style="width:100%; border-collapse:collapse; background:var(--surface); text-align:left;">
+          <thead>
+            <tr style="background:var(--bg3); border-bottom:1px solid var(--border);">
+              <th style="padding:10px 14px; font-weight:600; color:var(--ivory-dim); font-size:12px;">Topic / Title</th>
+              <th style="padding:10px 14px; font-weight:600; color:var(--ivory-dim); font-size:12px;">Due Date</th>
+              <th style="padding:10px 14px; font-weight:600; color:var(--ivory-dim); font-size:12px;">Status</th>
+              <th style="padding:10px 14px; font-weight:600; color:var(--ivory-dim); font-size:12px;">Score</th>
+              <th style="padding:10px 14px; font-weight:600; color:var(--ivory-dim); font-size:12px;">Submitted At</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    filteredAssignments.forEach(assignment => {
+      // Find submission in cache or assignment.student_submission
+      let submission = assignment.student_submission;
+      if (!submission && homeworkSubmissionCache.length > 0) {
+        submission = homeworkSubmissionCache.find(sub => 
+          String(sub.assignment_id) === String(assignment.id) && 
+          String(sub.student_id) === String(studentId)
+        );
+      }
+
+      const status = submission?.status || 'not_submitted';
+      const score = submission?.score !== null && submission?.score !== undefined ? escapeValue(submission.score) : '—';
+      const submittedAt = submission?.submitted_at ? escapeValue(formatDate(submission.submitted_at.slice(0, 10))) : '—';
+
+      html += `
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:10px 14px; color:var(--ivory); font-weight:500;">${escapeValue(assignment.title || 'Untitled')}</td>
+          <td style="padding:10px 14px; color:var(--ivory2); font-size:12px;">${formatDate(assignment.due_date)}</td>
+          <td style="padding:10px 14px;">${submissionStatusBadge(status)}</td>
+          <td style="padding:10px 14px; color:var(--ivory2); font-size:12px;">${score}</td>
+          <td style="padding:10px 14px; color:var(--ivory-dim); font-size:12px;">${submittedAt}</td>
+        </tr>
+      `;
+    });
+
+    html += `</tbody></table></div>`;
+    list.innerHTML = html;
+  }
+
   window.updateHomeworkTargetFields = updateHomeworkTargetFields;
   window.openHomeworkAssignmentModal = openHomeworkAssignmentModal;
   window.saveHomeworkAssignment = saveHomeworkAssignment;
@@ -715,4 +809,5 @@
   window.renderHomeworkPage = renderHomeworkPage;
   window.renderAdminHomeworkBatchPreview = renderAdminHomeworkBatchPreview;
   window.renderChildHomework = renderChildHomework;
+  window.renderStudentHomeworkProgress = renderStudentHomeworkProgress;
 })();
