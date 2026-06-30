@@ -14,23 +14,23 @@ window.renderCoachDashboard = function() {
   // 1. Calculate Stats
   const myStudents = (window.allStudents || []).filter(s => String(s.coach_id) === String(coachId));
   const myBatches = (window.allBatches || []).filter(b => String(b.coach_id) === String(coachId));
-  const myHomework = (window.allHomework || []).filter(h => {
-    // If homework was assigned to a student or batch belonging to this coach
-    if (h.target_type === 'student') {
-      return myStudents.some(s => String(s.id) === String(h.target_id));
-    } else if (h.target_type === 'batch') {
-      return myBatches.some(b => String(b.id) === String(h.target_id));
-    }
-    return false;
-  });
+const myHomework = (window.allHomework || []).filter(h => {
+     // If homework was assigned to a student or batch belonging to this coach
+     if (h.target_type === 'student') {
+       return myStudents.some(s => String(s.id) === String(h.student_id));
+     } else if (h.target_type === 'batch') {
+       return myBatches.some(b => String(b.id) === String(h.batch_id));
+     }
+     return false;
+   });
 
   const statStud = document.getElementById('coach-stat-students');
   const statBatches = document.getElementById('coach-stat-batches');
-  const statHw = document.getElementById('coach-stat-hw');
-  
-  if (statStud) statStud.textContent = myStudents.length;
-  if (statBatches) statBatches.textContent = myBatches.length;
-  if (statHw) statHw.textContent = myHomework.filter(h => h.status === 'pending_review' || h.status === 'submitted').length;
+const statHw = document.getElementById('coach-stat-hw');
+   
+   if (statStud) statStud.textContent = myStudents.length;
+   if (statBatches) statBatches.textContent = myBatches.length;
+   if (statHw) statHw.textContent = myHomework.filter(h => h.status === 'submitted').length;
 
   // 2. Render My Batches Table
   const batchesTbody = document.getElementById('coach-dash-batches-tbody');
@@ -62,20 +62,20 @@ window.renderCoachDashboard = function() {
     if (recentHw.length === 0) {
       hwTbody.innerHTML = '<tr><td colspan="3" class="text-center text-slate">No pending homework to review.</td></tr>';
     } else {
-      hwTbody.innerHTML = recentHw.map(h => {
-        let studentName = "Unknown";
-        if (h.student_id) {
-          const s = myStudents.find(x => String(x.id) === String(h.student_id));
-          studentName = s ? (window.studentName ? window.studentName(s) : s.name) : "Unknown";
-        }
-        return `
-          <tr>
-            <td style="color:var(--ivory)">${window.escapeHtml ? window.escapeHtml(studentName) : studentName}</td>
-            <td>${window.escapeHtml ? window.escapeHtml(h.topic || 'General') : h.topic}</td>
-            <td><span class="badge badge-warning">Needs Review</span></td>
-          </tr>
-        `;
-      }).join('');
+hwTbody.innerHTML = recentHw.map(h => {
+         let studentName = "Unknown";
+         if (h.student_id) {
+           const s = myStudents.find(x => String(x.id) === String(h.student_id));
+           studentName = s ? (window.studentName ? window.studentName(s) : s.name) : "Unknown";
+         }
+         return `
+           <tr>
+             <td style="color:var(--ivory)">${window.escapeHtml ? window.escapeHtml(studentName) : studentName}</td>
+             <td>${window.escapeHtml ? window.escapeHtml(h.title || 'General') : h.title}</td>
+             <td><span class="badge badge-warning">Needs Review</span></td>
+           </tr>
+         `;
+       }).join('');
     }
   }
 
