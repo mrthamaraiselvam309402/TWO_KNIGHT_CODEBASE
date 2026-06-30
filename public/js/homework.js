@@ -145,8 +145,8 @@
   }
 
 let homeworkSubmissionCache = [];
-   window.homeworkSubmissionCache = homeworkSubmissionCache;  // Expose globally for coach dashboard
-async function loadHomeworkSubmissions(forceRefresh = false) {
+  window.homeworkSubmissionCache = homeworkSubmissionCache;  // Expose globally for coach dashboard
+  async function loadHomeworkSubmissions(forceRefresh = false) {
      if (!forceRefresh && homeworkSubmissionCache.length) return homeworkSubmissionCache;
      try {
        const res = await window.apiCall('/api/homework?view=submissions');
