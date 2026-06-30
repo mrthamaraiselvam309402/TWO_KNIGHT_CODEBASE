@@ -310,22 +310,22 @@ return new Response(JSON.stringify({
     }
     
     // 4. Check parent credentials (username = student name, password = parent phone)
-    const cleanUsername = String(username).trim();
+    const cleanStudentName = String(username).trim();
     const inputDigits = String(password).replace(/\D/g, '');
     
-    console.log(`[Auth] Checking parent credentials. Name: "${cleanUsername}", Phone digits: "${inputDigits}"`);
+    console.log(`[Auth] Checking parent credentials. Name: "${cleanStudentName}", Phone digits: "${inputDigits}"`);
 
     let { data: students, error: studentError } = await supabase
       .from('students_decrypted')
       .select('id, name, parent_phone, phone')
-      .or(`name.ilike.%${cleanUsername}%,name.ilike.${cleanUsername}`);
+      .or(`name.ilike.%${cleanStudentName}%,name.ilike.${cleanStudentName}`);
 
     if (studentError) {
       console.warn('[Auth] decrypted view query failed, trying raw students table:', studentError.message);
       const fallbackRes = await supabase
         .from('students')
         .select('id, name, parent_phone, phone')
-        .or(`name.ilike.%${cleanUsername}%,name.ilike.${cleanUsername}`);
+        .or(`name.ilike.%${cleanStudentName}%,name.ilike.${cleanStudentName}`);
       
       if (!fallbackRes.error) {
         students = fallbackRes.data;
