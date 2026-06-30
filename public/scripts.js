@@ -250,7 +250,7 @@
     el.className = `toast toast-${type}`;
     el.innerHTML = `
       <div class="toast-content">
-        <span class="toast-icon">${type === "success" ? "✅" : type === "error" ? "❌" : "ℹ️"}</span>
+        <span class="toast-icon">${type === "success" ? "✅" : type === "error" ? "❌" : "ℹ️"}</span>
         <span class="toast-msg">${msg}</span>
       </div>
     `;
@@ -1406,7 +1406,7 @@
           <span style="font-size: 13px; color: #744210; font-weight: 600; display: flex; align-items: center; gap: 6px;">
             📄 Annual Tuition Investment Statement is prepared for print.
           </span>
-          <button onclick="window.print()" style="background: #daa33e; border: none; color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; box-shadow: 0 2px 4px rgba(218,163,62,0.3);">🖨️ Print Statement / Save PDF</button>
+          <button onclick="window.print()" style="background: #daa33e; border: none; color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 13px; box-shadow: 0 2px 4px rgba(218,163,62,0.3);">🖨️ Print Statement / Save PDF</button>
         </div>
         
         <div class="header">
@@ -1601,7 +1601,8 @@
       excused = 0,
       unmarked = 0;
     rows.forEach((row) => {
-      const status = row.querySelector(".att-status").value;
+      const select = row.querySelector(".att-status");
+      const status = select ? select.value : "";
       if (status === "present") present++;
       else if (status === "absent") absent++;
       else if (status === "late") late++;
@@ -5072,7 +5073,7 @@
                 minute: "2-digit",
               });
               toast(
-                `🛡️ Failed login attempt: ${latest.user_name || "Unknown"} at ${time}`,
+                `🛡️ Failed login attempt: ${latest.user_name || "Unknown"} at ${time}`,
                 "error",
               );
             }
@@ -5096,7 +5097,7 @@
                 { hour: "2-digit", minute: "2-digit" },
               );
               toast(
-                `🛡️ Failed login: ${latest.user || "Unknown"} at ${time}`,
+                `🛡️ Failed login: ${latest.user || "Unknown"} at ${time}`,
                 "error",
               );
             }
@@ -6153,44 +6154,6 @@
     const prevMonthDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1));
     const prevCollected = calculateCollectedRevenue(prevMonthDate.getUTCFullYear(), prevMonthDate.getUTCMonth());
 
-    // 1. Target Dataset Preparation — cumulative paid months (deduplicated)
-    const s_id_map = {};
-    const seenMonthsAudit = new Set();
-    (allPayments || []).forEach((p) => {
-      if (p.status === "paid") {
-        const sid = String(p.student_id || "")
-          .trim()
-          .toLowerCase();
-        if (!sid) return;
-        const s = allStudents.find((x) => String(x.id).toLowerCase() === sid);
-        if (!s) return;
-
-        const enrollDateStr = getStudentDate(s);
-        const baseline = new Date(Date.UTC(2026, 3, 1));
-        const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-        const effectiveEnroll = (function () {
-          var _a =
-            window.getBillingAnchor && window.getBillingAnchor(s, baseline);
-          return _a
-            ? new Date(Date.UTC(_a.year, _a.month, 1))
-            : enrollDate < baseline
-              ? baseline
-              : enrollDate;
-        })();
-
-        const pDate = new Date(p.payment_date || p.created_at);
-        if (pDate <= targetMonthEnd) {
-          const pMonthKey = p.applied_month || `${pDate.getUTCFullYear()}-${String(pDate.getUTCMonth() + 1).padStart(2, '0')}`;
-          const mKey = `${sid}_${pMonthKey}`;
-          if (seenMonthsAudit.has(mKey)) return;
-          seenMonthsAudit.add(mKey);
-
-          if (!s_id_map[sid]) s_id_map[sid] = 0;
-          s_id_map[sid]++;
-        }
-      }
-    });
-
     const targetStudents = (allStudents || []).filter((s) => {
       const sStatus = getStudentStatus(s);
       if (
@@ -6218,8 +6181,8 @@
           )
         : 0;
 
-    // Calculate historical arrears and current month pending
-    let totalArrears = 0;
+    // Calculate Last Month Due Amount and Current Month Pending
+    let lastMonthDueAmount = 0;
     let currMonthPending = 0;
     let totalPotential = 0;
 
@@ -6227,6 +6190,7 @@
       const fee = getStudentMonthlyFee(s) || 0;
 
       const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+      const prevMonthStatus = getStudentPaymentStatus(s, prevMonthDate.getUTCMonth(), prevMonthDate.getUTCFullYear());
 
       const enrollDateStr = getStudentDate(s);
       const baseline = new Date(Date.UTC(2026, 3, 1));
@@ -6250,24 +6214,18 @@
       // consistent — a grace-month student isn't yet "expected" revenue.
       if (monthsRequired >= 1) totalPotential += fee;
 
-      const sid = String(s.id).toLowerCase();
-      const totalCredits = s_id_map[sid] || 0;
+      // Current Month Pending
+      if (status !== "Paid") {
+        currMonthPending += fee;
+      }
 
-      const totalMonthsUnpaid = Math.max(0, monthsRequired - totalCredits);
-      if (totalMonthsUnpaid > 0) {
-        const isPaidThisMonth = status === "Paid";
-        const histMonths = totalMonthsUnpaid - (isPaidThisMonth ? 0 : 1);
-
-        if (histMonths > 0) {
-          totalArrears += fee * histMonths;
-        }
-        if (!isPaidThisMonth) {
-          currMonthPending += fee;
-        }
+      // Last Month Due Amount - check if student was unpaid in the previous month
+      if (prevMonthStatus !== "Paid" && prevMonthStatus !== "Not Enrolled") {
+        lastMonthDueAmount += fee;
       }
     });
 
-    const totalOutstanding = totalArrears + currMonthPending;
+    const totalOutstanding = lastMonthDueAmount + currMonthPending;
 
     // --- Collection Rate Calculation ---
 
@@ -6287,7 +6245,7 @@
       $("s-total-revenue").textContent = "₹" + totalPotential.toLocaleString();
 
     if ($("s-last-due"))
-      $("s-last-due").textContent = "₹" + totalArrears.toLocaleString();
+      $("s-last-due").textContent = "₹" + lastMonthDueAmount.toLocaleString();
     if ($("s-curr-pending"))
       $("s-curr-pending").textContent = "₹" + currMonthPending.toLocaleString();
     if ($("s-total-outstanding"))
@@ -6309,10 +6267,12 @@
           throw new Error();
         })
         .then((summary) => {
-          const totalExp = parseFloat(summary.total_expense || 0);
           if ($("s-profit")) {
+            const profitLoss = parseFloat(summary.profit_or_loss || 0);
+            const collected = parseFloat(summary.total_income || currCollected);
             $("s-profit").textContent =
-              "₹" + Math.round(totalExp).toLocaleString();
+              "₹" + Math.round(profitLoss).toLocaleString();
+            $("s-profit").title = `Income: ₹${collected.toLocaleString()} | Expenses: ₹${parseFloat(summary.total_expense || 0).toLocaleString()}`;
           }
         })
         .catch((err) => {
@@ -6895,7 +6855,7 @@
             } else if (status === "Paid") {
               dueDateHtml = `<span class="text-success" style="opacity: 0.85; font-weight: 500; cursor:pointer" onclick="viewPaymentHistory('${s.id}')">${dueDateString}</span>`;
             } else if (isOverdue) {
-              dueDateHtml = `<span class="text-danger" style="font-weight: 700;">⚠️ ${dueDateString}</span>`;
+              dueDateHtml = `<span class="text-danger" style="font-weight: 700;">⚠️ ${dueDateString}</span>`;
             } else {
               dueDateHtml = `<span style="color: var(--warning); font-weight: 600;">${dueDateString}</span>`;
             }
@@ -7511,7 +7471,7 @@
 
     if (!allCoaches || allCoaches.length === 0) {
       grid.innerHTML =
-        '<div class="empty-state" style="grid-column: 1/-1;"><span class="empty-icon">👨‍🏫</span><p>No coaches found in the academy</p></div>';
+        '<div class="empty-state" style="grid-column: 1/-1;"><span class="empty-icon">👨‍🏫</span><p>No coaches found in the academy</p></div>';
       return;
     }
 
@@ -8799,9 +8759,9 @@
              isAdmin
                ? `
              <div style="position: absolute; top: 12px; right: 12px; display:flex; gap: 8px; background: rgba(15, 23, 42, 0.75); padding: 6px 8px; border-radius: 10px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); z-index:10;">
-               <button onclick="editAchievement('${a.id}')" style="background:transparent; border:none; color:var(--gold); cursor:pointer; font-size:14px; padding:0 4px;" title="Edit">✏️</button>
+               <button onclick="editAchievement('${a.id}')" style="background:transparent; border:none; color:var(--gold); cursor:pointer; font-size:14px; padding:0 4px;" title="Edit">✏️</button>
                <div style="width:1px; background:rgba(255,255,255,0.2); height:16px; align-self:center;"></div>
-               <button onclick="confirmDeleteAchievement('${a.id}', '${escapeHtml(a.title).replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:0 4px;" title="Delete">🗑️</button>
+               <button onclick="confirmDeleteAchievement('${a.id}', '${escapeHtml(a.title).replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:var(--danger); cursor:pointer; font-size:14px; padding:0 4px;" title="Delete">🗑️</button>
              </div>
            `
                : ""
@@ -9594,7 +9554,7 @@ Best regards,
          <td>
            <div style="display:flex;gap:5px">
              <button class="btn btn-outline btn-sm" onclick="downloadReceipt('${s.id}', '${escapeHtml(getStudentName(s))}', '${p.amount}', '${escapeHtml(getStudentLevel(s))}', '${getStudentRating(s)}', 'N/A', '${p.payment_method || "Online"}', '${p.payment_date || p.created_at || ""}')">📄</button>
-             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
+             <button class="btn btn-outline-danger btn-sm" onclick="deletePayment('${p.id}', '${studentId}')">🗑️</button>
            </div>
          </td>
        </tr>`;
@@ -10861,7 +10821,7 @@ Best regards,
          <div class="msg-card-body">${escapeHtml(m.message || "")}</div>
          <div class="msg-card-actions">
            ${!getMessageIsRead(m) ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${encodeURIComponent(String(m.id || ""))}')">✓ Mark Read</button>` : ""}
-           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${encodeURIComponent(String(m.id || ""))}')">🗑️ Delete</button>
+           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${encodeURIComponent(String(m.id || ""))}')">🗑️ Delete</button>
          </div>
        </div>
      `,
@@ -11998,7 +11958,7 @@ Best regards,
       ) {
         const weather = results.find((r) => r.temperature !== undefined);
         if (weather) {
-          response = `🌤️ **Current Weather** (${temporalContext.date})
+          response = `🌤️ **Current Weather** (${temporalContext.date})
 
 `;
           response += `• **Temperature:** ${weather.temperature}Â°C
@@ -12389,7 +12349,7 @@ Best regards,
       console.error("AI Query Error:", e);
       const errorMsg = document.createElement("div");
       errorMsg.className = "ai-ws-msg bot";
-      errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️ Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
+      errorMsg.innerHTML = `<div class="ai-ws-avatar">🤖</div><div class="ai-ws-bubble">⚠️ Sorry, I encountered an error: ${escapeHtml(e.message)}. Try again or check your connection.</div>`;
       chatContainer.appendChild(errorMsg);
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -13409,7 +13369,7 @@ Best regards,
     content.innerHTML = `
       <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
         <h3 style="margin:0">System Notifications</h3>
-        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">🗑️ Clear All</button>
+        <button class="btn btn-outline btn-sm" onclick="clearNotifications()">🗑️ Clear All</button>
       </div>
       ${html}
     `;
@@ -13556,7 +13516,7 @@ Best regards,
         if (records[0].status === "absent" && records[1].status === "absent") {
           generatedInsights.push({
             type: "attendance",
-            icon: "⚠️",
+            icon: "⚠️",
             severity: "danger",
             text: `<strong>Attendance Warning:</strong> Student <strong>${getStudentName(s)}</strong> has missed <strong>2 consecutive classes</strong> (last absent on ${records[0].date}). Suggest coach follow-up.`,
           });
