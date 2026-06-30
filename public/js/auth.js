@@ -32,7 +32,7 @@ window.doLogin = async function() {
 
     try {
         // 1. Auth API - Primary Secure Authentication via Supabase Edge Function
-        const authRes = await apiCall(`${API_BASE}/auth`, {
+        const authRes = await window.apiCall(`${API_BASE}/auth`, {
             method: 'POST',
             body: JSON.stringify({ action: 'login', username: user, password: pass })
         }).catch(err => {
@@ -43,22 +43,27 @@ window.doLogin = async function() {
         if (authRes && authRes.ok) {
             const data = await authRes.json().catch(() => ({}));
             if (data.success) {
-                // FIX: write to window.role explicitly. The previous `role = data.role`
-                // was an implicit global that (a) breaks under strict mode and (b) does
-                // not update scripts.js's IIFE-scoped `role` — finishLogin re-syncs it,
-                // but the pattern is fragile.
-                window.role = data.role;
+                // Normalize coach-admin/coach+admin to admin for full UI privileges
+                let displayRole = data.role;
+                if (displayRole === 'coach-admin' || displayRole === 'coach+admin') {
+                    displayRole = 'admin';
+                }
+                window.role = displayRole;
                 // Store both the full auth object and a separate token for API calls
                 sessionStorage.setItem('twoknights_auth', JSON.stringify({
-                    role: data.role,
+                    role: displayRole,
+                    actualRole: data.role, // store actual role for audit logs
                     user: data.user || user,
                     studentId: data.student_id,
+                    coachId: data.coach_id,
                     token: data.token
                 }));
                 // Store token separately for API Authorization header
                 sessionStorage.setItem('sb-access-token', data.token);
-                finishLogin(data.user || user, data.role, data.student_id);
-                toast(`Welcome back, ${data.role}!`, 'success');
+                // Also set window.currentCoachId for coach dashboard
+                window.currentCoachId = data.coach_id || null;
+                window.finishLogin(data.user || user, displayRole, data.student_id);
+                window.toast(`Welcome back, ${displayRole}!`, 'success');
 
                 // Log successful login with security telemetry parameters
                 if (window.logAudit) {
@@ -131,7 +136,7 @@ window.doLogin = async function() {
  window.doLogout = async function() {
      const token = sessionStorage.getItem('sb-access-token');
      if (token && token.startsWith('eyJ')) {
-       await apiCall('/api/auth', {
+       await (window.apiCall || fetch)('/api/auth', {
          method: 'POST',
          body: JSON.stringify({ action: 'logout', token })
        }).catch(() => {});
@@ -139,8 +144,7 @@ window.doLogin = async function() {
 
      sessionStorage.removeItem('twoknights_auth');
      sessionStorage.removeItem('sb-access-token');
-     role = null;
-     if (window.role) window.role = null;
+     window.role = null;
      
      document.body.classList.remove('admin-mode', 'parent-mode', 'master-mode');
      document.body.classList.add('login-mode');
@@ -151,6 +155,6 @@ window.doLogin = async function() {
      const sidebar = document.getElementById('sidebar');
      if (sidebar) sidebar.classList.remove('active');
      
-     toast('Logged out safely.', 'info');
+     if (window.toast) window.toast('Logged out safely.', 'info');
      setTimeout(() => location.reload(), 500); // Reload to clear all state
    };

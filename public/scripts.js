@@ -205,14 +205,15 @@
     } catch (e) {}
     const bearer =
       storedTok && storedTok.startsWith("eyJ") ? storedTok : SUPABASE_ANON_KEY;
-    const headers = {
-      "Content-Type": "application/json",
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${bearer}`,
-      ...(auth.role ? { "x-user-role": auth.role } : {}),
-      ...(auth.studentId ? { "x-student-id": auth.studentId } : {}),
-      ...options.headers,
-    };
+const headers = {
+       "Content-Type": "application/json",
+       apikey: SUPABASE_ANON_KEY,
+       Authorization: `Bearer ${bearer}`,
+       ...(auth.role ? { "x-user-role": auth.role } : {}),
+       ...(auth.studentId ? { "x-student-id": auth.studentId } : {}),
+       ...(auth.coachId ? { "x-coach-id": auth.coachId } : {}),
+       ...options.headers,
+     };
 
     try {
       const res = await fetch(url, { ...options, headers });
