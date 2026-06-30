@@ -9,7 +9,7 @@ window.openMonthlyMatrix = function() {
       allCoaches.map(c => `<option value="${c.id}">${getCoachName(c)}</option>`).join('');
   }
   
-  renderMonthlyMatrix();
+  if (typeof window.renderMonthlyMatrix === 'function') window.renderMonthlyMatrix();
   openModal('monthly-attendance-modal');
 };
 
@@ -50,8 +50,8 @@ window.renderMonthlyMatrix = function() {
       let cellStyle = 'cursor:pointer;border:1px solid var(--border);';
       if (status === 'present') { cellContent = '🟩'; cellStyle += 'background:rgba(16,185,129,0.1);'; }
       else if (status === 'absent') { cellContent = '🟥'; cellStyle += 'background:rgba(239,68,68,0.1);'; }
-      else if (status === 'late') { cellContent = '🟨'; }
-      else if (status === 'excused') { cellContent = '⬜'; }
+      else if (status === 'late') { cellContent = '🟨'; cellStyle += 'background:rgba(239,191,10,0.1);'; }
+      else if (status === 'excused') { cellContent = '⬜'; cellStyle += 'background:rgba(128,128,128,0.1);'; }
       
       html += `<td style="${cellStyle}" onclick="toggleCellAttendance('${s.id}', '${dateStr}', '${status}')">
                  ${cellContent}
@@ -65,11 +65,14 @@ window.renderMonthlyMatrix = function() {
 };
 
 window.toggleCellAttendance = async function(studentId, date, currentStatus) {
-  // Cycle: present -> absent -> empty
-  let newStatus = '';
-  if (!currentStatus) newStatus = 'present';
-  else if (currentStatus === 'present') newStatus = 'absent';
-  else newStatus = '';
+   // Cycle: empty -> present -> absent -> late -> excused -> empty
+   const statusCycle = ['', 'present', 'absent', 'late', 'excused'];
+   let newStatus = '';
+   if (!currentStatus) newStatus = 'present';
+   else {
+     const currentIndex = statusCycle.indexOf(currentStatus);
+     newStatus = currentIndex < statusCycle.length - 1 ? statusCycle[currentIndex + 1] : '';
+   }
   
   // Optimistic UI update in local state
   const existingIndex = allAttendance.findIndex(a => String(a.student_id) === String(studentId) && a.date === date);
@@ -83,15 +86,14 @@ window.toggleCellAttendance = async function(studentId, date, currentStatus) {
     } else {
       allAttendance.push({ student_id: studentId, date: date, status: newStatus, notes: '' });
     }
-  }
-  
-  // Re-render
-  renderMonthlyMatrix();
+}
+   
+   // Re-render
+   if (typeof window.renderMonthlyMatrix === 'function') window.renderMonthlyMatrix();
   
   // API Call silently in background
-  if (newStatus === '') {
-    apiCall('/api/attendance', { method: 'POST', body: JSON.stringify([{student_id: studentId, date: date, status: 'absent'}]) }).catch(()=>{});
-  } else {
+  // Note: Empty status means removal - we don't send API call to avoid creating empty records
+  if (newStatus !== '') {
     apiCall('/api/attendance', { method: 'POST', body: JSON.stringify([{student_id: studentId, date: date, status: newStatus}]) }).catch(()=>{});
   }
 };

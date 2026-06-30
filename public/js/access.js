@@ -3,7 +3,7 @@ window.accessUsers = [];
 
 window.loadAccessControl = async function() {
     if (window.role !== 'master' && window.role !== 'admin') {
-        toast('Unauthorized access', 'error');
+        if (window.toast) window.toast('Unauthorized access', 'error');
         return;
     }
     
@@ -22,19 +22,21 @@ window.loadAccessControl = async function() {
         if (!response.ok) {
             let errorMsg = 'Failed to load users';
             try {
-                const errData = await response.json();
+                const errData = await response.json().catch(() => ({}));
                 errorMsg = errData.error || errorMsg;
-            } catch(e) {}
+            } catch {
+                // ignore JSON parse errors
+            }
             throw new Error(errorMsg);
         }
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         window.accessUsers = data.users || [];
-        renderAccessTable();
+        window.renderAccessTable();
     } catch (err) {
         console.error('Error loading access control:', err);
         tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error: ${err.message}</td></tr>`;
-        toast('Failed to load users', 'error');
+        if (window.toast) window.toast('Failed to load users', 'error');
     }
 };
 
@@ -82,17 +84,60 @@ window.renderParentAccounts = function() {
 
     tbody.innerHTML = rows.map(s => {
         const phone = s.parent_phone || s.phone || '—';
+        const hasCustomPwd = s.password ? true : false;
+        const pwdBadge = hasCustomPwd
+            ? '<span class="badge badge-success" style="font-size:10px;">🔑 Custom</span>'
+            : '<span class="badge badge-outline" style="font-size:10px;">📱 Phone</span>';
         return `<tr>
             <td style="font-weight:600; color:var(--ivory);">${esc(s.name || '—')}</td>
-            <td style="color:var(--slate);">${esc(s.parent_name || '—')}</td>
+            <td style="color:var(--ivory2);">${esc(s.parent_name || '—')}</td>
             <td style="font-family:var(--font-mono); font-size:12px; color:var(--ivory-dim);">${esc(String(phone))}</td>
-            <td style="color:var(--slate); font-size:12px;">${esc(coachName(s.coach_id))}</td>
+            <td style="color:var(--ivory2); font-size:12px;">${esc(coachName(s.coach_id))}</td>
+            <td>${pwdBadge}</td>
             <td>${statusBadge(s.status)}</td>
             <td style="text-align:center;">
-                <button class="btn btn-outline-grey btn-sm" style="padding:4px 10px; font-size:11px;" onclick="window.quickSwitchPreviewStudent && window.quickSwitchPreviewStudent('${s.id}'); window.setPage && window.setPage('child');" title="Open portal preview">Open ↗</button>
+                <div style="display:flex; justify-content:center; gap:6px;">
+                    <button class="btn btn-outline-grey btn-sm" style="padding:4px 10px; font-size:11px;" onclick="window.quickSwitchPreviewStudent && window.quickSwitchPreviewStudent('${s.id}'); window.setPage && window.setPage('child');" title="Open portal preview">Open ↗</button>
+                    <button class="btn btn-outline-grey btn-sm" style="padding:4px; font-size:11px;" onclick="window.editStudentPassword('${s.id}', '${esc(s.name || '')}')" title="Edit Password">🔑</button>
+                </div>
             </td>
         </tr>`;
     }).join('');
+};
+
+window.editStudentPassword = async function(studentId, studentName) {
+    if (window.role !== 'master' && window.role !== 'admin' && window.role !== 'coach-admin' && window.role !== 'coach+admin') {
+        if (window.toast) window.toast('Unauthorized action', 'error');
+        return;
+    }
+
+    const currentStudent = (window.allStudents || []).find(s => String(s.id) === String(studentId));
+    if (!currentStudent) return;
+
+    const newPassword = prompt(`Enter new password for ${studentName}:\n(Leave blank to revert to Phone-only authentication)`);
+    if (newPassword === null) return; // user cancelled
+
+    const pwdToSave = newPassword.trim() === '' ? null : newPassword.trim();
+
+    try {
+        const res = await window.apiCall(`/api/students?id=${encodeURIComponent(studentId)}`, {
+            method: 'PUT',
+            body: JSON.stringify({ password: pwdToSave })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `Server error ${res.status}`);
+        }
+        
+        // Update local state
+        currentStudent.password = pwdToSave;
+        
+        if (window.toast) window.toast('Password updated successfully', 'success');
+        window.renderParentAccounts();
+    } catch (e) {
+        console.error('Failed to update student password:', e);
+        if (window.toast) window.toast(`Failed to update password: ${e.message}`, 'error');
+    }
 };
 
 window.renderAccessTable = function() {
@@ -116,12 +161,14 @@ window.renderAccessTable = function() {
         if (u.role === 'master') roleBadge = 'badge-gold';
         else if (u.role === 'admin') roleBadge = 'badge-level';
         else if (u.role === 'coach') roleBadge = 'badge-purple';
+        else if (u.role === 'coach-admin' || u.role === 'coach+admin') roleBadge = 'badge-level';
         
+        const roleLabel = u.role === 'coach-admin' || u.role === 'coach+admin' ? 'Coach+Admin' : u.role;
         html += `<tr>
             <td style="font-weight:600; color:var(--ivory);">${window.escapeHtml(u.email)}</td>
-            <td><span class="badge ${roleBadge}" style="text-transform:uppercase; font-size:10px;">${window.escapeHtml(u.role)}</span></td>
-            <td style="color:var(--slate); font-size:12px;">${createdDate}</td>
-            <td style="color:var(--slate); font-size:12px;">${signInDate}</td>
+            <td><span class="badge ${roleBadge}" style="text-transform:uppercase; font-size:10px;">${window.escapeHtml(roleLabel)}</span></td>
+            <td style="color:var(--ivory2); font-size:12px;">${createdDate}</td>
+            <td style="color:var(--ivory2); font-size:12px;">${signInDate}</td>
             <td style="text-align:center;">
                 <div style="display:flex; justify-content:center; gap:6px;">
                     <button class="btn btn-outline-grey btn-sm" onclick="promptEditUserRole('${u.id}', '${u.role}', '${window.escapeHtml(u.email)}')" style="padding:4px;" title="Edit Role" ${isMaster ? 'disabled' : ''}>✏️</button>
@@ -166,12 +213,12 @@ window.submitAccessUserForm = function() {
         if (!email) return setAccessUserError('Email / username is required.');
         if (!password || password.length < 6) return setAccessUserError('Password must be at least 6 characters.');
         if (window.closeModals) window.closeModals();
-        createAccessUser(email, password, role);
+        window.createAccessUser(email, password, role);
     } else {
         // Edit: role always sent; password only if provided (reset)
         if (password && password.length < 6) return setAccessUserError('Password must be at least 6 characters (or leave blank).');
         if (window.closeModals) window.closeModals();
-        updateAccessUser(id, role, password || null);
+        window.updateAccessUser(id, role, password || null);
     }
 };
 
@@ -183,14 +230,13 @@ window.createAccessUser = async function(email, password, role) {
             body: JSON.stringify({ email, password, role })
         });
         
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (data.error) throw new Error(data.error);
         
-        toast('User created successfully', 'success');
-        loadAccessControl();
+        if (window.toast) window.toast('User created successfully', 'success');
+        window.loadAccessControl();
     } catch (err) {
         console.error('Error creating user:', err);
-        alert('Error: ' + err.message);
     }
 };
 
@@ -203,7 +249,7 @@ window.promptEditUserRole = function(id, currentRole, email) {
     document.getElementById('acc-user-password').value = '';
     document.getElementById('acc-user-pass-label').textContent = 'New Password (leave blank to keep current)';
     const roleSel = document.getElementById('acc-user-role');
-    roleSel.value = (currentRole && ['admin','coach','parent'].includes(currentRole)) ? currentRole : 'coach';
+    roleSel.value = (currentRole && ['admin','coach','coach-admin','coach+admin','parent'].includes(currentRole)) ? currentRole : 'coach';
     document.getElementById('acc-user-submit-btn').textContent = 'Save Changes';
     setAccessUserError('');
     if (window.openModal) window.openModal('access-user-modal');
@@ -217,19 +263,18 @@ window.updateAccessUser = async function(id, role, password) {
             body: JSON.stringify({ id, role, password })
         });
         
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (data.error) throw new Error(data.error);
         
-        toast('User updated successfully', 'success');
-        loadAccessControl();
+        if (window.toast) window.toast('User updated successfully', 'success');
+        window.loadAccessControl();
     } catch (err) {
         console.error('Error updating user:', err);
-        alert('Error: ' + err.message);
     }
 };
 
 window.deleteUserAccess = async function(id, email) {
-    if (!confirm(`Are you SURE you want to revoke access for ${email}? This cannot be undone.`)) return;
+    if (!window.confirm(`Are you SURE you want to revoke access for ${email}? This cannot be undone.`)) return;
     
     try {
         const response = await window.apiCall('/api/access_control', {
@@ -238,14 +283,13 @@ window.deleteUserAccess = async function(id, email) {
             body: JSON.stringify({ id })
         });
         
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (data.error) throw new Error(data.error);
         
-        toast('User access revoked', 'success');
-        loadAccessControl();
+        if (window.toast) window.toast('User access revoked', 'success');
+        window.loadAccessControl();
     } catch (err) {
         console.error('Error deleting user:', err);
-        alert('Error: ' + err.message);
     }
 };
 
@@ -386,7 +430,10 @@ window.loadAuditLogs = async function() {
 
         // Parse & map raw audit logs to match the telemetry payload layout
         const mappedLogs = fetchedLogs.map(log => {
-            const details = typeof log.new_value === 'string' ? JSON.parse(log.new_value) : (log.new_value || {});
+            let details = {};
+            if (typeof log.new_value === 'string') {
+                try { details = JSON.parse(log.new_value); } catch { details = {}; }
+            } else if (log.new_value) { details = log.new_value; }
             return {
                 id: log.id || Math.random().toString(36).substr(2, 9),
                 userEmail: log.user_name || details.user || details.username || 'anonymous@academy.com',
@@ -626,7 +673,10 @@ window.startSecurityLogsSimulation = function() {
                     );
 
                     if (!exists) {
-                        const details = typeof log.new_value === 'string' ? JSON.parse(log.new_value) : (log.new_value || {});
+                        let details = {};
+                        if (typeof log.new_value === 'string') {
+                            try { details = JSON.parse(log.new_value); } catch { details = {}; }
+                        } else if (log.new_value) { details = log.new_value; }
                         const mappedLog = {
                             id: log.id || Math.random().toString(36).substr(2, 9),
                             userEmail: log.user_name || details.user || details.username || 'system',
