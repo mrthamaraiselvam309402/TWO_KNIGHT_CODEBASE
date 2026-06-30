@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     return crypto.randomUUID();
   }
 
-  function transformCoach(c) {
+  function transformCoach(c: any) {
     return {
       id: c.id,
       full_name: c.name || c.full_name || '',
@@ -111,7 +111,6 @@ Deno.serve(async (req) => {
         availability: body.availability || '',
         address: body.address || '',
         photo_url: body.photo_url || '',
-        payment_status: body.payment_status || 'Pending',
         role: 'coach',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -169,7 +168,6 @@ Deno.serve(async (req) => {
       if (body.availability !== undefined) updateData.availability = body.availability;
       if (body.address !== undefined) updateData.address = body.address;
       if (body.photo_url !== undefined) updateData.photo_url = body.photo_url;
-      if (body.payment_status !== undefined) updateData.payment_status = body.payment_status;
       
       updateData.updated_at = new Date().toISOString();
       
@@ -221,8 +219,8 @@ Deno.serve(async (req) => {
       status: 405,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error?.message || 'Unknown error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
