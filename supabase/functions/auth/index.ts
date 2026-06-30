@@ -20,6 +20,7 @@ function tokenLifetimeSeconds(role: string) {
   if (role === 'admin') return 15 * 60;
   if (role === 'master') return 4 * 60 * 60;
   if (role === 'parent') return 10 * 60;
+  if (role === 'coach') return 15 * 60;
   return 15 * 60;
 }
 
@@ -260,22 +261,54 @@ Deno.serve(async (req) => {
         });
       }
       
-      return new Response(JSON.stringify({
+return new Response(JSON.stringify({
         success: true,
         token: accessToken,
         role: userRole,
         user: authData.user.email
        }), { 
-        headers: { 
-          'Content-Type': 'application/json', 
-          ...corsHeaders,
-          'X-RateLimit-Limit': String(rateLimitResult.limit),
-          'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-          'X-RateLimit-Reset': String(rateLimitResult.resetTime)
-        } 
-      });
+         headers: { 
+           'Content-Type': 'application/json', 
+           ...corsHeaders,
+           'X-RateLimit-Limit': String(rateLimitResult.limit),
+           'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+           'X-RateLimit-Reset': String(rateLimitResult.resetTime)
+         } 
+       });
     }
-
+    
+    // 3. Check Coach credentials (username = coach name, password = coach phone)
+    const cleanUsername = String(username).trim();
+    const inputPhone = String(password).replace(/\D/g, '');
+    
+    console.log(`[Auth] Checking coach credentials. Name: "${cleanUsername}"`);
+    
+    let { data: coaches, error: coachError } = await supabase
+      .from('coaches')
+      .select('id, name, email, phone')
+      .or(`name.ilike.%${cleanUsername}%,email.ilike.%${cleanUsername}%`);
+    
+    if (coachError) {
+      console.warn('[Auth] Coach query failed:', coachError.message);
+    } else if (coaches && coaches.length > 0) {
+      const matchedCoach = coaches.find(c => {
+        const cPhone = c.phone ? String(c.phone).replace(/\D/g, '') : '';
+        return inputPhone.length >= 8 && (cPhone.endsWith(inputPhone) || inputPhone.endsWith(cPhone));
+      });
+      
+      if (matchedCoach) {
+        console.log(`[Auth] Successful coach login for: ${matchedCoach.name}`);
+        const token = await createCustomTokenSession(supabase, 'coach', matchedCoach.name, matchedCoach.id);
+        return new Response(JSON.stringify({
+          success: true,
+          token,
+          role: 'coach',
+          coach_id: matchedCoach.id,
+          user: matchedCoach.name
+        }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+    }
+    
     // 4. Check parent credentials (username = student name, password = parent phone)
     const cleanUsername = String(username).trim();
     const inputDigits = String(password).replace(/\D/g, '');
@@ -334,25 +367,25 @@ Deno.serve(async (req) => {
       console.log(`[Auth] No student records matched name "${cleanUsername}".`);
     }
 
-     // Failed attempt
-     return new Response(JSON.stringify({ 
-       error: 'Invalid credentials.',
-       details: authError ? authError.message : 'Check if user exists in Supabase Auth or as a Student Name + Parent Phone.' 
-     }), { 
-       status: 401, 
-       headers: { 
-         'Content-Type': 'application/json', 
-         ...corsHeaders,
-         'X-RateLimit-Limit': String(rateLimitResult.limit),
-         'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-         'X-RateLimit-Reset': String(rateLimitResult.resetTime)
-       } 
-     });
-   } catch (error) {
-     console.error('Auth error:', error.message);
-     return new Response(JSON.stringify({ error: 'Internal server error' }), { 
-       status: 500, 
-       headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-     });
-   }
- });
+// Failed attempt
+      return new Response(JSON.stringify({ 
+        error: 'Invalid credentials.',
+        details: authError ? authError.message : 'Check if user exists in Supabase Auth or as a Student Name + Parent Phone.' 
+      }), { 
+        status: 401, 
+        headers: { 
+          'Content-Type': 'application/json', 
+          ...corsHeaders,
+          'X-RateLimit-Limit': String(rateLimitResult.limit),
+          'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          'X-RateLimit-Reset': String(rateLimitResult.resetTime)
+        } 
+      });
+    } catch (error) {
+      console.error('Auth error:', error);
+      return new Response(JSON.stringify({ error: 'Internal server error' }), { 
+        status: 500, 
+        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+      });
+    }
+  });

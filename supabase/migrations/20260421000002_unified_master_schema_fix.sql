@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS coaches (
   availability TEXT,
   photo_url TEXT,
   address TEXT,
+  payment_status TEXT DEFAULT 'Pending',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
@@ -155,6 +156,14 @@ DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='students' AND column_name='due_date') THEN
         ALTER TABLE students ADD COLUMN due_date DATE;
+    END IF;
+END $$;
+
+-- Ensure payment_status exists on coaches table (for existing tables)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='coaches' AND column_name='payment_status') THEN
+        ALTER TABLE coaches ADD COLUMN payment_status TEXT DEFAULT 'Pending';
     END IF;
 END $$;
 
