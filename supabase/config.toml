@@ -53,11 +53,14 @@ verify_jwt = false
 [functions.payment_cycle]
 verify_jwt = false
 
+[functions.batches]
+verify_jwt = false
+
+[functions.homework]
+verify_jwt = false
+
 [functions.games]
 verify_jwt = false
 
-[functions.bob-payment-init]
-verify_jwt = false
-
-[functions.bob-payment-webhook]
+[functions.productivity]
 verify_jwt = false
