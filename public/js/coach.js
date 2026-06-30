@@ -31,7 +31,7 @@ window.renderCoachDashboard = function() {
   if (statStud) statStud.textContent = myStudents.length;
   if (statBatches) statBatches.textContent = myBatches.length;
   const pendingCount = (window.homeworkSubmissionCache || [])
-    .filter(s => s.status === 'submitted' || s.status === 'pending_review').length;
+    .filter(s => s.status === 'submitted').length;
   if (statHw) statHw.textContent = pendingCount;
 
   // 2. Render My Batches Table
@@ -58,7 +58,7 @@ window.renderCoachDashboard = function() {
   if (hwTbody) {
     // Get pending submissions from cache
     const pendingSubmissions = (window.homeworkSubmissionCache || [])
-      .filter(s => s.status === 'submitted' || s.status === 'pending_review')
+      .filter(s => s.status === 'submitted')
       .sort((a,b) => new Date(b.submitted_at || b.created_at) - new Date(a.submitted_at || a.created_at))
       .slice(0, 5);
       
@@ -74,7 +74,7 @@ window.renderCoachDashboard = function() {
           <tr>
             <td style="color:var(--ivory)">${window.escapeHtml ? window.escapeHtml(studentName) : studentName}</td>
             <td>${window.escapeHtml ? window.escapeHtml(title) : title}</td>
-            <td><span class="badge badge-warning">${s.status === 'submitted' ? 'Submitted' : 'Pending Review'}</span></td>
+            <td><span class="badge badge-warning">Submitted</span></td>
           </tr>
         `;
       }).join('');
