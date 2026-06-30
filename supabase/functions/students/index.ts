@@ -426,22 +426,7 @@ Deno.serve(async (req) => {
       let rawBody: Record<string, unknown> = {}
       try { rawBody = await req.json() } catch (_e) {}
 
-      if (rawBody.action === 'batch-password') {
-        const batch = rawBody.batch as string
-        const password = rawBody.password as string
-        if (!password) {
-          return new Response(JSON.stringify({ error: 'Password required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-        }
-        
-        // Build query
-        let query = supabase.from('students').update({ password })
-        if (batch !== 'All') {
-           query = query.eq('status', batch) // Wait, does the frontend use "Morning/Evening" as status? Wait, batch logic.
-           // Wait, where is batch stored? Usually "level" or "grade" or "status"? Let me check what the UI says.
-        }
-      }
-
-      if (!id) {
+if (!id) {
         return new Response(JSON.stringify({ error: 'ID is required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -621,6 +606,23 @@ Deno.serve(async (req) => {
         await supabase.from('event_registrations').delete().eq('student_id', sanitizedId);
       } catch (e) {
         console.warn("Failed to delete event registrations:", e);
+      }
+      
+      // Cleanup other potential child tables just in case ON DELETE CASCADE is missing
+      const childTables = [
+        'payments', 
+        'attendance', 
+        'rating_history', 
+        'messages', 
+        'homework_submissions', 
+        'user_sessions'
+      ];
+      for (const table of childTables) {
+        try {
+          await supabase.from(table).delete().eq('student_id', sanitizedId);
+        } catch (e) {
+          console.warn(`Failed to delete ${table} for student:`, e);
+        }
       }
       
       // 3. Clean up JSONB fields in events table (registered_students and registrations_data)
