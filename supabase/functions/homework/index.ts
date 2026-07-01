@@ -81,18 +81,21 @@ Deno.serve(async (req) => {
 
     if (req.method === 'GET') {
       const supabase = getSupabaseClient();
-if (view === 'submissions') {
-         const { data: submissions, error } = await supabase
-           .from('homework_submissions')
-           .select('*')
-           .order('updated_at', { ascending: false });
-         if (error) {
-           // Return empty array if table doesn't exist (PGRST205)
-           console.warn('[Homework] submissions query error:', error.message);
-           return jsonResponse({ data: [], total: 0 });
-         }
-         return jsonResponse({ data: submissions, total: submissions.length });
-       }
+      if (view === 'submissions') {
+        const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+        const limit = Math.min(500, Math.max(1, parseInt(url.searchParams.get('limit') || '500')));
+        const offset = (page - 1) * limit;
+        const { data: submissions, error, count } = await supabase
+          .from('homework_submissions')
+          .select('*', { count: 'exact' })
+          .order('updated_at', { ascending: false })
+          .range(offset, offset + limit - 1);
+        if (error) {
+          console.warn('[Homework] submissions query error:', error.message);
+          return jsonResponse({ data: [], total: 0 });
+        }
+        return jsonResponse({ data: submissions || [], total: count || (submissions || []).length, page, limit });
+      }
 
       if (id) {
         const assignment = await getAssignmentById(id);
@@ -101,7 +104,6 @@ if (view === 'submissions') {
 
       const assignments = await getAllAssignments();
 
-      // Attach student_submission if logged in as a parent/student
       if (headerStudentId && isUuid(headerStudentId)) {
         const { data: submissions, error: subError } = await supabase
           .from('homework_submissions')
@@ -131,7 +133,6 @@ if (view === 'submissions') {
           return jsonResponse({ error: 'Valid Assignment ID is required' }, 400);
         }
 
-        // Fetch existing submission to check revision count
         const { data: existing } = await supabase
           .from('homework_submissions')
           .select('revision_count')
@@ -163,10 +164,27 @@ if (view === 'submissions') {
         return jsonResponse({ data, success: true }, 201);
       }
 
-      // Default: Create new assignment
       const title = typeof body.title === 'string' ? body.title.trim() : '';
       if (!title) {
         return jsonResponse({ error: 'Title is required' }, 400);
+      }
+
+      if (body.target_type === 'student' && body.student_id) {
+        const { data: studentExists } = await supabase
+          .from('students')
+          .select('id')
+          .eq('id', String(body.student_id))
+          .single();
+        if (!studentExists) return jsonResponse({ error: 'Invalid student selected' }, 400);
+      }
+
+      if (body.target_type === 'batch' && body.batch_id) {
+        const { data: batchExists } = await supabase
+          .from('batches')
+          .select('id')
+          .eq('id', String(body.batch_id))
+          .single();
+        if (!batchExists) return jsonResponse({ error: 'Invalid batch selected' }, 400);
       }
 
       const { data, error } = await supabase.from('homework_assignments').insert({

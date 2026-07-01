@@ -134,6 +134,18 @@ Deno.serve(async (req) => {
       
       const studentIds = [...new Set(records.map(r => r.student_id))]
       const dates = [...new Set(records.map(r => r.date))]
+      const { data: validStudents } = await supabase
+        .from('students')
+        .select('id')
+        .in('id', studentIds);
+      const validIds = new Set((validStudents || []).map(s => s.id));
+      const invalidRecords = records.filter(r => !validIds.has(r.student_id));
+      if (invalidRecords.length > 0) {
+        return new Response(JSON.stringify({ error: 'Invalid student IDs in attendance records' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
       
       const { data: existing } = await supabase
         .from('attendance')

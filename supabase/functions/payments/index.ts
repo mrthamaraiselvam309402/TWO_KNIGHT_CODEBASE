@@ -131,6 +131,18 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
+
+      const { data: studentExists } = await supabase
+        .from('students')
+        .select('id')
+        .eq('id', studentId)
+        .single();
+      if (!studentExists) {
+        return new Response(JSON.stringify({ error: 'Invalid student selected' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
       
       const amount = parseFloat(String(rawBody.amount || 0))
       if (isNaN(amount) || amount <= 0) {

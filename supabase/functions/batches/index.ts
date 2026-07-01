@@ -86,6 +86,28 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'POST') {
+      if (body.coach_id) {
+        const { data: coachExists } = await supabase
+          .from('coaches')
+          .select('id')
+          .eq('id', String(body.coach_id))
+          .single();
+        if (!coachExists) return jsonResponse({ error: 'Invalid coach selected' }, 400);
+      }
+
+      let studentIds = Array.isArray(body.student_ids) ? body.student_ids.map(String) : [];
+      if (studentIds.length > 0) {
+        const { data: validStudents } = await supabase
+          .from('students')
+          .select('id')
+          .in('id', studentIds);
+        const validIds = new Set((validStudents || []).map(s => s.id));
+        const invalidIds = studentIds.filter((id: string) => !validIds.has(id));
+        if (invalidIds.length > 0) return jsonResponse({ error: `Invalid student IDs: ${invalidIds.join(', ')}` }, 400);
+      } else {
+        body.student_ids = [];
+      }
+
       const { data, error } = await supabase.from('batches').insert({
         id: crypto.randomUUID(),
         ...body
@@ -96,6 +118,29 @@ Deno.serve(async (req) => {
 
     if (req.method === 'PUT') {
       if (!id) return jsonResponse({ error: 'ID required' }, 400);
+
+      if (body.coach_id) {
+        const { data: coachExists } = await supabase
+          .from('coaches')
+          .select('id')
+          .eq('id', String(body.coach_id))
+          .single();
+        if (!coachExists) return jsonResponse({ error: 'Invalid coach selected' }, 400);
+      }
+
+      let studentIds = Array.isArray(body.student_ids) ? body.student_ids.map(String) : [];
+      if (studentIds.length > 0) {
+        const { data: validStudents } = await supabase
+          .from('students')
+          .select('id')
+          .in('id', studentIds);
+        const validIds = new Set((validStudents || []).map(s => s.id));
+        const invalidIds = studentIds.filter((id: string) => !validIds.has(id));
+        if (invalidIds.length > 0) return jsonResponse({ error: `Invalid student IDs: ${invalidIds.join(', ')}` }, 400);
+      } else {
+        body.student_ids = [];
+      }
+
       const { data, error } = await supabase.from('batches').update(body).eq('id', id).select().single();
       if (error) throw error;
       return jsonResponse(data);

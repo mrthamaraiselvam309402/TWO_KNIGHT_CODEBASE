@@ -117,6 +117,13 @@ Deno.serve(async (req) => {
           currentEvent = events2[0];
         }
 
+        const { data: studentExists } = await supabase
+          .from('students')
+          .select('id')
+          .eq('id', String(studentId))
+          .single();
+        if (!studentExists) return new Response(JSON.stringify({ error: 'Invalid student selected' }), { status: 400 });
+
         const maxParts = parseInt(currentEvent.max_participants) || 50;
         
         // Fetch current active registrations
@@ -224,7 +231,7 @@ Deno.serve(async (req) => {
 
         // 2. Remove from JSONB arrays
         let registeredStudents = currentEvent.registered_students || [];
-        let regsData = currentEvent.registrations_data || [];
+        let regsData = [...(currentEvent.registrations_data || [])];
         
         registeredStudents = registeredStudents.filter((id: string) => id !== studentId);
         regsData = regsData.filter((r: any) => r.student_id !== studentId);
@@ -268,6 +275,15 @@ Deno.serve(async (req) => {
           promoted_student: promotedStudentName,
           event: transformEvent(updatedEvent)
         }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }
+      
+      if (body.student_id && body.action !== 'submit') {
+        const { data: studentExists } = await supabase
+          .from('students')
+          .select('id')
+          .eq('id', String(body.student_id))
+          .single();
+        if (!studentExists) return new Response(JSON.stringify({ error: 'Invalid student selected' }), { status: 400 });
       }
       
       const { title, date, type, location, id, event_date, event_time, max_participants, description, fee, map_url, img_url, prize_pool } = body;
