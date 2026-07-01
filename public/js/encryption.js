@@ -34,25 +34,37 @@ async function deriveKeyFromSource(source) {
 /**
  * Generate or retrieve encryption key from localStorage
  */
+/**
+ * Base64 helpers that work safely with raw binary bytes
+ */
+function uint8ArrayToBase64(value) {
+  const binary = Array.from(value, byte => String.fromCharCode(byte)).join('');
+  return btoa(binary);
+}
+
+function base64ToUint8Array(value) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, byte => byte.charCodeAt(0));
+}
+
 async function getEncryptionKey() {
   try {
     let keyStr = localStorage.getItem(ENCRYPTION_KEY_NAME)
 
     if (!keyStr) {
-      // Generate stable key from app identifier (not random - for persistability)
       const encoder = new TextEncoder()
       const data = encoder.encode('twoknights-encryption-v1')
       const hash = await crypto.subtle.digest('SHA-256', data)
-      keyStr = btoa(String.fromCharCode(...new Uint8Array(hash)))
+      keyStr = uint8ArrayToBase64(new Uint8Array(hash))
       localStorage.setItem(ENCRYPTION_KEY_NAME, keyStr)
     }
 
-    const rawKey = Uint8Array.from(atob(keyStr), c => c.charCodeAt(0))
+    const rawKey = base64ToUint8Array(keyStr)
     return await crypto.subtle.importKey(
       'raw',
       rawKey,
       { name: ALGORITHM },
-      true, // Keep as true just in case, or false. True is fine since we don't call exportKey on it.
+      true,
       ['encrypt', 'decrypt']
     )
   } catch (error) {
@@ -83,7 +95,7 @@ async function encryptField(plaintext) {
     combined.set(iv)
     combined.set(new Uint8Array(encrypted), iv.length)
 
-    return btoa(String.fromCharCode(...combined))
+    return uint8ArrayToBase64(combined)
   } catch (error) {
     console.warn('Encryption failed:', error)
     return plaintext
@@ -100,7 +112,7 @@ async function decryptField(ciphertext) {
     const key = await getEncryptionKey()
     if (!key) return ciphertext
 
-    const combined = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0))
+    const combined = base64ToUint8Array(ciphertext)
     const iv = combined.slice(0, 12)
     const data = combined.slice(12)
 

@@ -135,28 +135,38 @@ window.doLogin = async function() {
     }
 };
 
- window.doLogout = async function() {
-     const token = sessionStorage.getItem('sb-access-token');
-     if (token && token.startsWith('eyJ')) {
-       await (window.apiCall || fetch)('/api/auth', {
-         method: 'POST',
-         body: JSON.stringify({ action: 'logout', token })
-       }).catch(() => {});
-     }
+  window.doLogout = async function() {
+      const auth = sessionStorage.getItem('twoknights_auth');
+      let token = null;
+      if (auth) {
+        try {
+          const data = JSON.parse(auth);
+          token = data.token;
+        } catch (_) {}
+      }
+      if (!token) {
+        token = sessionStorage.getItem('sb-access-token');
+      }
+      if (token) {
+        await (window.apiCall || fetch)('/api/auth', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'logout', token })
+        }).catch(() => {});
+      }
 
-     sessionStorage.removeItem('twoknights_auth');
-     sessionStorage.removeItem('sb-access-token');
-     window.role = null;
-     
-     document.body.classList.remove('admin-mode', 'parent-mode', 'master-mode');
-     document.body.classList.add('login-mode');
-     
-     const loginScreen = document.getElementById('login-screen');
-     if (loginScreen) loginScreen.style.display = 'flex';
-     
-     const sidebar = document.getElementById('sidebar');
-     if (sidebar) sidebar.classList.remove('active');
-     
-     if (window.toast) window.toast('Logged out safely.', 'info');
-     setTimeout(() => location.reload(), 500); // Reload to clear all state
-   };
+      sessionStorage.removeItem('twoknights_auth');
+      sessionStorage.removeItem('sb-access-token');
+      window.role = null;
+      
+      document.body.classList.remove('admin-mode', 'parent-mode', 'master-mode');
+      document.body.classList.add('login-mode');
+      
+      const loginScreen = document.getElementById('login-screen');
+      if (loginScreen) loginScreen.style.display = 'flex';
+      
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar) sidebar.classList.remove('active');
+      
+      if (window.toast) window.toast('Logged out safely.', 'info');
+      setTimeout(() => location.reload(), 500); // Reload to clear all state
+    };

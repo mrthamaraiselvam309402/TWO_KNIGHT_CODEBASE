@@ -9,9 +9,9 @@ Deno.serve(async (req) => {
   }
 
   // Ensure this is triggered by a secure source (e.g. cron job sending a valid auth header)
-  // For simplicity, we just check the service role key or a custom cron secret
   const authHeader = req.headers.get('Authorization') || '';
-  if (authHeader !== `Bearer ${Deno.env.get('CRON_SECRET') || supabaseKey}`) {
+  const cronSecret = Deno.env.get('CRON_SECRET');
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
 

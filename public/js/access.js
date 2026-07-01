@@ -88,6 +88,8 @@ window.renderParentAccounts = function() {
         const pwdBadge = hasCustomPwd
             ? '<span class="badge badge-success" style="font-size:10px;">🔑 Custom</span>'
             : '<span class="badge badge-outline" style="font-size:10px;">📱 Phone</span>';
+        const escId = String(s.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const escName = (s.name || '—').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         return `<tr>
             <td style="font-weight:600; color:var(--ivory);">${esc(s.name || '—')}</td>
             <td style="color:var(--ivory2);">${esc(s.parent_name || '—')}</td>
@@ -97,8 +99,8 @@ window.renderParentAccounts = function() {
             <td>${statusBadge(s.status)}</td>
             <td style="text-align:center;">
                 <div style="display:flex; justify-content:center; gap:6px;">
-                    <button class="btn btn-outline-grey btn-sm" style="padding:4px 10px; font-size:11px;" onclick="window.quickSwitchPreviewStudent && window.quickSwitchPreviewStudent('${s.id}'); window.setPage && window.setPage('child');" title="Open portal preview">Open ↗</button>
-                    <button class="btn btn-outline-grey btn-sm" style="padding:4px; font-size:11px;" onclick="window.editStudentPassword('${s.id}', '${esc(s.name || '')}')" title="Edit Password">🔑</button>
+                    <button class="btn btn-outline-grey btn-sm" style="padding:4px 10px; font-size:11px;" onclick="window.quickSwitchPreviewStudent && window.quickSwitchPreviewStudent('${escId}'); window.setPage && window.setPage('child');" title="Open portal preview">Open ↗</button>
+                    <button class="btn btn-outline-grey btn-sm" style="padding:4px; font-size:11px;" onclick="window.editStudentPassword('${escId}', '${escName}')" title="Edit Password">🔑</button>
                 </div>
             </td>
         </tr>`;
@@ -151,31 +153,33 @@ window.renderAccessTable = function() {
 
     let html = '';
     window.accessUsers.forEach(u => {
-        const createdDate = new Date(u.created_at).toLocaleDateString();
-        const signInDate = u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString() : 'Never';
-        
-        // Prevent deleting the master user from the UI to avoid lockouts
-        const isMaster = u.role === 'master';
-        
-        let roleBadge = 'badge-grey';
-        if (u.role === 'master') roleBadge = 'badge-gold';
-        else if (u.role === 'admin') roleBadge = 'badge-level';
-        else if (u.role === 'coach') roleBadge = 'badge-purple';
-        else if (u.role === 'coach-admin' || u.role === 'coach+admin') roleBadge = 'badge-level';
-        
-        const roleLabel = u.role === 'coach-admin' || u.role === 'coach+admin' ? 'Coach+Admin' : u.role;
-        html += `<tr>
-            <td style="font-weight:600; color:var(--ivory);">${window.escapeHtml(u.email)}</td>
-            <td><span class="badge ${roleBadge}" style="text-transform:uppercase; font-size:10px;">${window.escapeHtml(roleLabel)}</span></td>
-            <td style="color:var(--ivory2); font-size:12px;">${createdDate}</td>
-            <td style="color:var(--ivory2); font-size:12px;">${signInDate}</td>
-            <td style="text-align:center;">
-                <div style="display:flex; justify-content:center; gap:6px;">
-                    <button class="btn btn-outline-grey btn-sm" onclick="promptEditUserRole('${u.id}', '${u.role}', '${window.escapeHtml(u.email)}')" style="padding:4px;" title="Edit Role" ${isMaster ? 'disabled' : ''}>✏️</button>
-                    <button class="btn btn-outline-grey btn-sm text-danger" onclick="deleteUserAccess('${u.id}', '${window.escapeHtml(u.email)}')" style="padding:4px; border-color:var(--danger);" title="Revoke Access" ${isMaster ? 'disabled' : ''}>🗑️</button>
-                </div>
-            </td>
-        </tr>`;
+      const createdDate = new Date(u.created_at).toLocaleDateString();
+      const signInDate = u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString() : 'Never';
+      
+      const isMaster = u.role === 'master';
+      
+      let roleBadge = 'badge-grey';
+      if (u.role === 'master') roleBadge = 'badge-gold';
+      else if (u.role === 'admin') roleBadge = 'badge-level';
+      else if (u.role === 'coach') roleBadge = 'badge-purple';
+      else if (u.role === 'coach-admin' || u.role === 'coach+admin') roleBadge = 'badge-level';
+      
+      const roleLabel = u.role === 'coach-admin' || u.role === 'coach+admin' ? 'Coach+Admin' : u.role;
+      const escId = String(u.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const escRole = String(u.role || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const escEmail = window.escapeHtml(u.email || '');
+      html += `<tr>
+          <td style="font-weight:600; color:var(--ivory);">${escEmail}</td>
+          <td><span class="badge ${roleBadge}" style="text-transform:uppercase; font-size:10px;">${window.escapeHtml(roleLabel)}</span></td>
+          <td style="color:var(--ivory2); font-size:12px;">${createdDate}</td>
+          <td style="color:var(--ivory2); font-size:12px;">${signInDate}</td>
+          <td style="text-align:center;">
+              <div style="display:flex; justify-content:center; gap:6px;">
+                  <button class="btn btn-outline-grey btn-sm" onclick="promptEditUserRole('${escId}', '${escRole}', '${escEmail}')" style="padding:4px;" title="Edit Role" ${isMaster ? 'disabled' : ''}>✏️</button>
+                  <button class="btn btn-outline-grey btn-sm text-danger" onclick="deleteUserAccess('${escId}', '${escEmail}')" style="padding:4px; border-color:var(--danger);" title="Revoke Access" ${isMaster ? 'disabled' : ''}>🗑️</button>
+              </div>
+          </td>
+      </tr>`;
     });
     tbody.innerHTML = html;
 };
