@@ -332,7 +332,7 @@ return new Response(JSON.stringify({
 // Failed attempt
     return new Response(JSON.stringify({ 
       error: 'Invalid credentials.',
-      details: authError ? authError.message : 'Check if user exists in Supabase Auth or as a Student Name + Parent Phone.' 
+      details: 'Check if user exists in Supabase Auth or as a Student Name + Parent Phone.' 
     }), { 
       status: 401, 
       headers: { 
