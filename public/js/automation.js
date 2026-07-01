@@ -113,11 +113,6 @@
                  padding:12px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">
           📢 Inform All Coaches via WhatsApp
         </button>
-        <button onclick="window.automationRunRollover()" id="btn-run-rollover"
-          style="background:transparent;border:1px solid #dca33e;color:#dca33e;
-                 padding:10px;border-radius:8px;cursor:pointer;font-size:13px">
-          🔄 Re-run Status Classification Now
-        </button>
         <button onclick="localStorage.setItem('automation_morning_shown','${monthKey}');document.getElementById('morning-action-panel').remove()"
           style="background:transparent;border:1px solid #555;color:#7a7870;
                  padding:8px;border-radius:8px;cursor:pointer;font-size:12px">
@@ -160,36 +155,6 @@
 
     el.innerHTML = rows || '<span style="color:#7a7870">No data available.</span>';
   }
-
-  window.automationRunRollover = async function () {
-    const btn = document.getElementById('btn-run-rollover');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Running…'; }
-    try {
-      const today = new Date();
-      const result = await rpc('monthly_rollover_job_v4', {});
-      if (result && result.error) throw new Error(result.error);
-      toast(`✅ Rollover complete: old=${result.old_month || '?'} → new=${result.new_month || '?'} (${result.count || 0} students)`, 'success');
-      loadMorningSummary();
-      if (window.loadAllData) window.loadAllData(true);
-    } catch (e) {
-      // Fallback to v3 if v4 is not yet deployed
-      try {
-        const today = new Date();
-        const fallback = await rpc('update_payment_status', {
-          p_year:   today.getUTCFullYear(),
-          p_month1: today.getUTCMonth() + 1,
-          p_month2: today.getUTCMonth() + 2 > 12 ? 1 : today.getUTCMonth() + 2
-        });
-        toast(`✅ Classification (v3 fallback): Paid=${fallback.paid}, Pending=${fallback.pending}, Due=${fallback.due}`, 'success');
-        loadMorningSummary();
-        if (window.loadAllData) window.loadAllData(true);
-      } catch (e2) {
-        toast('Rollover failed: ' + e.message, 'error');
-      }
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '🔄 Re-run Status Classification Now'; }
-    }
-  };
 
   window.automationInformAllCoaches = async function () {
     const panel = document.getElementById('morning-action-panel');

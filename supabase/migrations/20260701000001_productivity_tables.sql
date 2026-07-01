@@ -45,11 +45,17 @@ ALTER TABLE scheduled_meetings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE productivity_notes ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "allow_all_access" ON productivity_tasks;
+DROP POLICY IF EXISTS "allow_all_access" ON scheduled_meetings;
+DROP POLICY IF EXISTS "allow_all_access" ON productivity_notes;
 CREATE POLICY "allow_all_access" ON productivity_tasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_access" ON scheduled_meetings FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all_access" ON productivity_notes FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- Service role bypass
+DROP POLICY IF EXISTS "service_role_all_productivity_tasks" ON productivity_tasks;
+DROP POLICY IF EXISTS "service_role_all_scheduled_meetings" ON scheduled_meetings;
+DROP POLICY IF EXISTS "service_role_all_productivity_notes" ON productivity_notes;
 CREATE POLICY "service_role_all_productivity_tasks" ON productivity_tasks FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY "service_role_all_scheduled_meetings" ON scheduled_meetings FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY "service_role_all_productivity_notes" ON productivity_notes FOR ALL TO service_role USING (true) WITH CHECK (true);

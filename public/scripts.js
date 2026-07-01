@@ -4753,9 +4753,8 @@ if (role === "admin" || role === "master") {
            }
            else if (active === "page-child" && role !== "parent") renderChild();
 
-           updateMsgBadge();
-           checkMonthlyRollover();
-         } else if (role === "coach") {
+            updateMsgBadge();
+          } else if (role === "coach") {
            const active = document.querySelector(".page.active")?.id;
            // Load homework submissions for coaches to show pending submissions
            if (window.loadHomeworkSubmissions) await window.loadHomeworkSubmissions(true);
@@ -4816,96 +4815,6 @@ if (role === "admin" || role === "master") {
 
     return homeworkLoadPromise;
   }
-
-  function checkMonthlyRollover() {
-    if ($("rollover-notification")) return; // Idempotency check
-    const today = new Date();
-    const monthKey = `${today.getUTCFullYear()}-${today.getUTCMonth()}`;
-    const lastNotified = localStorage.getItem("last_rollover_notified");
-
-    // Only show between 1st and 5th of the month
-    if (today.getDate() === 1 && lastNotified !== monthKey) {
-      const modal = document.createElement("div");
-      modal.className = "modal";
-      modal.id = "rollover-notification";
-      modal.style.display = "flex";
-      modal.style.zIndex = "9999";
-      modal.innerHTML = `
-        <div class="modal-box" style="max-width:420px; text-align:center; border:2px solid var(--gold); background:var(--bg2)">
-          <h2 style="color:var(--gold); margin-bottom:12px; font-family:var(--font-head)">🆕 New Billing Month!</h2>
-          <p style="color:var(--ivory-dim); margin-bottom:20px; font-size:14px; line-height:1.6">It's a new month. You can roll any past-month fee due dates forward to this month (each student keeps their day), then notify coaches.</p>
-          <div style="display:flex; flex-direction:column; gap:10px">
-            <button class="btn btn-gold" onclick="rolloverDueDatesToCurrentMonth(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">📅 Roll Due Dates Forward</button>
-            <div style="display:flex; gap:10px">
-              <button class="btn btn-outline" style="flex:1" onclick="localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">Later</button>
-              <button class="btn btn-outline" style="flex:1" onclick="informAllCoaches(); localStorage.setItem('last_rollover_notified', '${monthKey}'); this.closest('.modal').remove()">📢 Inform Coaches</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(modal);
-    }
-  }
-
-  // Month-wise due-date rollover: advance any active student whose fee due date is
-  // in a PAST month forward to the current month, preserving their billing day
-  // (clamped to the month length). Admin-triggered (never silent/auto on load) so
-  // enrollment data only changes on a deliberate action.
-  window.rolloverDueDatesToCurrentMonth = async function (silent) {
-    const now = new Date();
-    const curY = now.getUTCFullYear(),
-      curM = now.getUTCMonth(); // 0-based
-    const daysInCur = new Date(curY, curM + 1, 0).getDate();
-    const targets = (allStudents || []).filter((s) => {
-      if (getStudentStatus(s) === "archived") return false;
-      const m = String(s.due_date || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (!m) return false;
-      const dy = +m[1],
-        dm = +m[2] - 1;
-      return dy < curY || (dy === curY && dm < curM); // due month precedes current month
-    });
-    if (targets.length === 0) {
-      if (!silent) toast("All due dates are already current. ✅", "success");
-      return 0;
-    }
-    const monthName = now.toLocaleString("en-IN", {
-      month: "long",
-      year: "numeric",
-    });
-    if (
-      !silent &&
-      !confirm(
-        `Roll ${targets.length} past-month due date(s) forward to ${monthName}? Each student keeps their billing day. This updates their saved records.`,
-      )
-    )
-      return 0;
-    let ok = 0;
-    for (const s of targets) {
-      const m = String(s.due_date).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      const day = Math.min(+m[3], daysInCur);
-      const newDate = `${curY}-${String(curM + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      try {
-        const res = await apiCall(
-          `/api/students?id=${encodeURIComponent(s.id)}`,
-          { method: "PUT", body: JSON.stringify({ due_date: newDate }) },
-        );
-        if (res.ok) {
-          s.due_date = newDate;
-          ok++;
-        }
-      } catch (e) {
-        /* skip on error */
-      }
-    }
-    if (!silent)
-      toast(
-        `Rolled ${ok}/${targets.length} due date(s) to ${now.toLocaleString("en-IN", { month: "short", year: "numeric" })}.`,
-        ok === targets.length ? "success" : "warning",
-      );
-    if (window.renderStudents) window.renderStudents();
-    if (window.renderDash) window.renderDash();
-    return ok;
-  };
 
   function syncCoachDropdowns() {
     const dropdowns = [
@@ -5293,13 +5202,12 @@ if (role === "admin" || role === "master") {
           <button class="btn btn-gold" onclick="exportAcademyData()">📥 Export Academy Data</button>
         `;
         }
-        if (p === "stud")
-          btnArea.innerHTML = `
-          <button class="btn btn-outline-grey" onclick="openMonthlyMatrix()">📅 Monthly Matrix</button>
-          <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">🗓️  Batch Attendance</button>
-          <button class="btn btn-outline-grey" onclick="rolloverDueDatesToCurrentMonth()" title="Advance past-month fee due dates to this month (keeps each student's day)">🔁 Roll Due Dates</button>
-          <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
-        `;
+if (p === "stud")
+           btnArea.innerHTML = `
+           <button class="btn btn-outline-grey" onclick="openMonthlyMatrix()">📅 Monthly Matrix</button>
+           <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">🗓️  Batch Attendance</button>
+           <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
+           `;
         if (p === "batches") {
           btnArea.innerHTML = `
             <button class="btn btn-outline-grey" onclick="openMasterSchedule()">📋 Master Schedule</button>
