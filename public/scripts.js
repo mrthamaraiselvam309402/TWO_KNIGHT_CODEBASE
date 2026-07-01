@@ -10982,7 +10982,8 @@ Best regards,
       );
     }
   }
-  async function deleteMsg(id, btnEl) {
+  async function deleteMsg(rawId, btnEl) {
+    const id = decodeURIComponent(String(rawId || ""));
     if (!id) return toast("Invalid message ID", "error");
     if (btnEl) {
       btnEl.disabled = true;
@@ -11007,7 +11008,7 @@ Best regards,
       );
       if (!res || !res.ok) {
         // Restore message in cache if delete failed
-        if (removedMsg && msgIndex > -1) {
+        if (removedMsg) {
           allMessages.splice(msgIndex, 0, removedMsg);
           window.allMessages = allMessages;
           renderMsgs();
@@ -11017,6 +11018,12 @@ Best regards,
       }
       toast("Message deleted", "success");
     } catch (e) {
+      if (removedMsg && !allMessages.find(m => String(m.id) === String(id))) {
+        // Ensure rollback if optimistic UI already removed it
+        allMessages.splice(msgIndex, 0, removedMsg);
+        window.allMessages = allMessages;
+        renderMsgs();
+      }
       if (btnEl) {
         btnEl.disabled = false;
         btnEl.textContent = "🗑️ Delete";
