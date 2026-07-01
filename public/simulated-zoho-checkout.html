@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simulated Zoho Checkout</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; background: #1a1a1a; color: #fff; }
+    .card { background: #2a2a2a; padding: 20px; border-radius: 8px; max-width: 500px; margin: 0 auto; }
+    h1 { color: #4CAF50; }
+    .info { margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Zoho Checkout (Simulated)</h1>
+    <div class="info">
+      <p><strong>Amount:</strong> <span id="amt"></span></p>
+      <p><strong>Student ID:</strong> <span id="sid"></span></p>
+    </div>
+    <button onclick="confirmPayment()" style="background:#4CAF50; color:#fff; padding:10px 20px; border:none; border-radius:4px; cursor:pointer;">
+      Confirm Payment
+    </button>
+    <p id="status" style="margin-top:20px;"></p>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    document.getElementById('amt').textContent = params.get('amt') || 'N/A';
+    document.getElementById('sid').textContent = params.get('sid') || 'N/A';
+    
+    function confirmPayment() {
+      document.getElementById('status').textContent = 'Payment simulated successfully!';
+      document.getElementById('status').style.color = '#4CAF50';
+      setTimeout(() => {
+        alert('Payment confirmed! (This is a simulated endpoint - configure Zoho credentials for real payments)');
+        window.close();
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

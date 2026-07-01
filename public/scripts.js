@@ -2274,6 +2274,10 @@ const headers = {
         endpoint = "/api/students?id=" + id;
         auditTarget = "students";
         successMsg = "Student enrollment deleted!";
+      } else if (type === "batch") {
+        endpoint = "/api/batches?id=" + id;
+        auditTarget = "batches";
+        successMsg = "Batch deleted!";
       }
 
       if (endpoint) {
@@ -4503,6 +4507,7 @@ const headers = {
           apiCall("/api/achievements"),
           apiCall("/api/events"),
           apiCall("/api/batches"),
+          apiCall("/api/homework"),
         ];
 
         const res1 = await fetches[0];
@@ -4564,6 +4569,12 @@ const headers = {
           const d = await res10.json();
           allBatches = d.data || d;
           window.allBatches = allBatches;
+        }
+        const res11 = await fetches[10];
+        if (res11.ok) {
+          const d = await res11.json();
+          allHomework = d.data || d || [];
+          window.allHomework = allHomework;
         }
 
         const extractData = (res) => {
@@ -4704,47 +4715,62 @@ const headers = {
         } catch (e) {}
         syncCoachDropdowns();
 
-        if (role === "admin" || role === "master") {
-          console.log("[Sync] Rendering active page for role:", role);
-          const active = document.querySelector(".page.active")?.id;
-          if (active === "page-dash") renderDash();
-          else if (active === "page-insights") {
-            if (window.generateAcademyInsights)
-              window.generateAcademyInsights();
-          } else if (active === "page-stud") renderStudents();
-          else if (active === "page-coach-mgmt") renderCoachMgmt();
-          else if (active === "page-bills") renderBills();
-          else if (active === "page-msgs") renderMsgs();
-          else if (active === "page-fame") renderFame();
-          else if (active === "page-events") renderEvents();
-          else if (active === "page-batches") { if (window.renderBatchesGrid) window.renderBatchesGrid(); }
-          else if (active === "page-attendance" && window.renderAttendanceList) window.renderAttendanceList();
-          else if (active === "page-homework") {
-            if (window.loadHomeworkData) {
-              window.loadHomeworkData().then(() => {
-                if (window.renderHomeworkPage) window.renderHomeworkPage();
-              });
-            } else if (window.renderHomeworkPage) window.renderHomeworkPage();
-          }
-          else if (active === "page-schedules" && window.initSchedulePage) window.initSchedulePage();
-          else if (active === "page-exp" && window.initExpPage) window.initExpPage();
-          else if (active === "page-access") {
-            if (window.loadAccessControl) window.loadAccessControl();
-            if (window.renderParentAccounts) window.renderParentAccounts();
-            if (window.loadAuditLogs) window.loadAuditLogs();
-            if (window.startSecurityLogsSimulation) window.startSecurityLogsSimulation();
-          }
-          else if (active === "page-productivity" && window.initProductivityPage) window.initProductivityPage();
-          else if (active === "page-chessable" && window.renderChessableProfiles) window.renderChessableProfiles();
-          else if (active === "page-ai") {
-            if (window.updateTomKpis) window.updateTomKpis();
-            if (window.initSmartPills) window.initSmartPills();
-          }
-          else if (active === "page-child" && role !== "parent") renderChild();
+if (role === "admin" || role === "master") {
+           console.log("[Sync] Rendering active page for role:", role);
+           const active = document.querySelector(".page.active")?.id;
+           if (active === "page-dash") renderDash();
+           else if (active === "page-insights") {
+             if (window.generateAcademyInsights)
+               window.generateAcademyInsights();
+           } else if (active === "page-stud") renderStudents();
+           else if (active === "page-coach-mgmt") renderCoachMgmt();
+           else if (active === "page-bills") renderBills();
+           else if (active === "page-msgs") renderMsgs();
+           else if (active === "page-fame") renderFame();
+           else if (active === "page-events") renderEvents();
+           else if (active === "page-batches") { if (window.renderBatchesGrid) window.renderBatchesGrid(); }
+           else if (active === "page-attendance" && window.renderAttendanceList) window.renderAttendanceList();
+           else if (active === "page-homework") {
+             if (window.loadHomeworkData) {
+               window.loadHomeworkData().then(() => {
+                 if (window.renderHomeworkPage) window.renderHomeworkPage();
+               });
+             } else if (window.renderHomeworkPage) window.renderHomeworkPage();
+           }
+           else if (active === "page-schedules" && window.initSchedulePage) window.initSchedulePage();
+           else if (active === "page-exp" && window.initExpPage) window.initExpPage();
+           else if (active === "page-access") {
+             if (window.loadAccessControl) window.loadAccessControl();
+             if (window.renderParentAccounts) window.renderParentAccounts();
+             if (window.loadAuditLogs) window.loadAuditLogs();
+             if (window.startSecurityLogsSimulation) window.startSecurityLogsSimulation();
+           }
+           else if (active === "page-productivity" && window.initProductivityPage) window.initProductivityPage();
+           else if (active === "page-chessable" && window.renderChessableProfiles) window.renderChessableProfiles();
+           else if (active === "page-ai") {
+             if (window.updateTomKpis) window.updateTomKpis();
+             if (window.initSmartPills) window.initSmartPills();
+           }
+           else if (active === "page-child" && role !== "parent") renderChild();
 
-          updateMsgBadge();
-          checkMonthlyRollover();
-        } else if (role === "parent") {
+           updateMsgBadge();
+           checkMonthlyRollover();
+         } else if (role === "coach") {
+           const active = document.querySelector(".page.active")?.id;
+           // Load homework submissions for coaches to show pending submissions
+           if (window.loadHomeworkSubmissions) await window.loadHomeworkSubmissions(true);
+           if (active === "page-coach-dash" && window.renderCoachDashboard) window.renderCoachDashboard();
+           else if (active === "page-stud" && window.renderStudents) window.renderStudents();
+           else if (active === "page-batches" && window.renderBatchesGrid) window.renderBatchesGrid();
+           else if (active === "page-homework") {
+             if (window.loadHomeworkData) {
+               window.loadHomeworkData().then(() => {
+                 if (window.renderHomeworkPage) window.renderHomeworkPage();
+               });
+             } else if (window.renderHomeworkPage) window.renderHomeworkPage();
+           }
+           else if (active === "page-attendance" && window.renderAttendanceList) window.renderAttendanceList();
+         } else if (role === "parent") {
           renderChild();
           renderEvents();
           if (document.querySelector(".page.active")?.id === "page-parent-ai" && window.setAIModule) window.setAIModule("parent");
@@ -5204,7 +5230,8 @@ const headers = {
       "attendance",
       "homework",
     ];
-    if (adminPages.includes(p) && role !== "admin" && role !== "master") {
+    const coachAccessiblePages = ["coach-dash", "batches", "homework", "attendance", "stud"];
+    if (adminPages.includes(p) && role !== "admin" && role !== "master" && !coachAccessiblePages.includes(p)) {
       toast("Access denied", "error");
       setPage(role === "parent" ? "child" : "dash");
       return;
@@ -5301,11 +5328,15 @@ const headers = {
       if (overlay) overlay.classList.remove("active");
     }
 
-    setTimeout(function () {
-      if (p === "dash") renderDash();
-      if (p === "stud") renderStudents();
-      if (p === "coach-mgmt") renderCoachMgmt();
-      if (p === "batches") {
+setTimeout(function () {
+       if (p === "dash") renderDash();
+       if (p === "coach-dash") {
+         if (window.loadHomeworkSubmissions) window.loadHomeworkSubmissions(true);
+         if (window.renderCoachDashboard) window.renderCoachDashboard();
+       }
+       if (p === "stud") renderStudents();
+       if (p === "coach-mgmt") renderCoachMgmt();
+       if (p === "batches") {
         if (window.renderBatchesGrid) window.renderBatchesGrid();
       }
       if (p === "homework") {
@@ -5490,8 +5521,9 @@ const headers = {
       $("report-month-select").value =
         `${window.reportYear}-${String(window.reportMonth + 1).padStart(2, "0")}`;
 
-    if (userRole === "parent") setPage("child");
-    else setPage("dash");
+if (userRole === "parent") setPage("child");
+     else if (userRole === "coach") setPage("coach-dash");
+     else setPage("dash");
 
     // Load data in background - use cache for faster initial load
     dataCache = { timestamp: 0 };
@@ -7973,18 +8005,6 @@ const headers = {
     openModal("delete-confirm-modal");
   };
 
-  async function deleteCoach(id) {
-    try {
-      const res = await apiCall(`/api/coaches?id=${id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast("Coach deleted from academy", "success");
-        loadAllData(true);
-      }
-    } catch (e) {
-      toast("Delete failed", "error");
-    }
-  }
-
   // ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═
   // MASTER SCHEDULE MATRIX
   // ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═
@@ -8495,6 +8515,8 @@ const headers = {
       .join("");
   };
 
+  window.openBatchModal = function() { window.openCreateBatchModal(null); };
+
   window.openCreateBatchModal = function (id = null) {
     $("eb-id").value = id || "";
 
@@ -8622,24 +8644,13 @@ const headers = {
   };
 
   window.deleteBatch = async function (id) {
-    if (
-      !confirm(
-        "Are you sure you want to delete this batch? This will NOT delete the students inside it.",
-      )
-    )
-      return;
-    try {
-      const res = await apiCall(`/api/batches?id=${id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast("Batch deleted", "success");
-        await loadAllData(true);
-        if (window.renderBatchesGrid) window.renderBatchesGrid();
-      } else {
-        toast("Error deleting batch", "error");
-      }
-    } catch (e) {
-      toast("Network Error", "error");
-    }
+    $("delete-item-type").textContent = "Batch";
+    // Try to find batch name for display
+    const batch = (window.allBatches || []).find((b) => String(b.id) === String(id));
+    $("delete-item-name").textContent = batch ? (batch.name || "Unknown Batch") : "Batch";
+    $("delete-item-id").value = id;
+    $("delete-type").value = "batch";
+    openModal("delete-confirm-modal");
   };
 
   function renderFame() {
@@ -8794,19 +8805,8 @@ const headers = {
     openModal("delete-confirm-modal");
   }
 
-  async function deleteAchievement(id) {
-    try {
-      const res = await apiCall(`/api/achievements?id=${id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        toast("Achievement deleted!", "success");
-        loadAllData(true);
-      }
-    } catch (e) {
-      toast("Delete failed", "error");
-    }
-  }
+  // All delete operations go through executeDelete with the modal
+  // Individual delete functions below are just for reference
 
   function openAwardModal() {
     $("award-sid").value = "";
@@ -12783,22 +12783,24 @@ Best regards,
     document.addEventListener(event, resetSessionTimer, { passive: true });
   });
 
-  window.addEventListener("DOMContentLoaded", () => {
-    initUI(); // Setup UI event handlers
+window.addEventListener("DOMContentLoaded", () => {
+     initUI(); // Setup UI event handlers
 
-    const auth = sessionStorage.getItem("twoknights_auth");
-    if (auth) {
-      try {
-        const data = JSON.parse(auth);
-        role = data.role;
-        finishLogin(data.user || "User", data.role, data.studentId);
-        resetSessionTimer();
-      } catch (e) {
-        sessionStorage.removeItem("twoknights_auth");
-        $("login-screen").style.display = "flex";
-        document.body.classList.add("login-mode");
-      }
-    } else {
+     const auth = sessionStorage.getItem("twoknights_auth");
+     if (auth) {
+       try {
+         const data = JSON.parse(auth);
+         role = data.role;
+         window.currentCoachId = data.coachId || null;
+         window.userId = data.coachId || null; // Set userId for homework.js compatibility
+         finishLogin(data.user || "User", data.role, data.studentId);
+         resetSessionTimer();
+       } catch (e) {
+         sessionStorage.removeItem("twoknights_auth");
+         $("login-screen").style.display = "flex";
+         document.body.classList.add("login-mode");
+       }
+     } else {
       $("login-screen").style.display = "flex";
       document.body.classList.add("login-mode");
     }
@@ -12875,26 +12877,24 @@ Best regards,
   window.updateStudent = updateStudent;
   window.openEnroll = openEnroll;
   window.saveStudent = saveStudent;
-  window.deleteStudent = deleteStudent;
-  window.renderCoachMgmt = renderCoachMgmt;
-  window.viewCoachSchedule = viewCoachSchedule;
-  window.openCoachModal = openCoachModal;
-  window.saveCoach = saveCoach;
-  window.deleteCoach = deleteCoach;
-  window.renderEvents = renderEvents;
-  window.openEventModal = openEventModal;
-  window.saveEvent = saveEvent;
-  window.deleteEvent = deleteEvent;
-  window.editEvent = editEvent;
-  window.archiveEvent = archiveEvent;
-  window.confirmDeleteEvent = confirmDeleteEvent;
-  window.renderFame = renderFame;
-  window.openAwardModal = openAwardModal;
-  window.onAwardStudentChange = onAwardStudentChange;
-  window.saveAward = saveAward;
-  window.deleteAchievement = deleteAchievement;
-  window.editAchievement = editAchievement;
-  window.confirmDeleteAchievement = confirmDeleteAchievement;
+window.deleteStudent = deleteStudent;
+   window.renderCoachMgmt = renderCoachMgmt;
+   window.viewCoachSchedule = viewCoachSchedule;
+   window.openCoachModal = openCoachModal;
+   window.saveCoach = saveCoach;
+   window.renderEvents = renderEvents;
+   window.openEventModal = openEventModal;
+   window.saveEvent = saveEvent;
+   window.deleteEvent = deleteEvent;
+   window.editEvent = editEvent;
+   window.archiveEvent = archiveEvent;
+   window.confirmDeleteEvent = confirmDeleteEvent;
+   window.renderFame = renderFame;
+   window.openAwardModal = openAwardModal;
+   window.onAwardStudentChange = onAwardStudentChange;
+   window.saveAward = saveAward;
+   window.editAchievement = editAchievement;
+   window.confirmDeleteAchievement = confirmDeleteAchievement;
   window.renderBills = renderBills;
   window.markPaid = markPaid;
   window.markUnpaid = markUnpaid;

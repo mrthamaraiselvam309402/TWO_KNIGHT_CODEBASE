@@ -132,21 +132,26 @@ window.renderCoachDashboard = function() {
 // Helper to get coach ID from storage
 function getCurrentCoachIdFromStorage() {
   try {
+    // Try multiple sources for coach ID
+    if (window.currentCoachId) return window.currentCoachId;
+    
     const auth = sessionStorage.getItem("twoknights_auth");
     if (auth) {
       const data = JSON.parse(auth);
-      // For coach role, the user email/name should map to a coach record
-      const coach = (window.allCoaches || []).find(c =>
-        String(c.email || '').toLowerCase() === String(data.user || '').toLowerCase() ||
-        (window.coachEmail && String(window.coachEmail(data.user || '')).toLowerCase() === String(data.user || '').toLowerCase())
+      // For coach role, coach_id might be stored directly
+      if (data.coach_id) return data.coach_id;
+      // Check if we have a user property that matches a coach
+      const user = data.user || '';
+      const coach = (window.allCoaches || []).find(c => 
+        String(c.email || '').toLowerCase() === String(user).toLowerCase() ||
+        String(c.name || '').toLowerCase() === String(user).toLowerCase()
       );
       if (coach && coach.id) return coach.id;
     }
   } catch (e) {
     console.warn('[Coach] Failed to get coach ID from storage:', e);
   }
-  // Fallback: extract coach ID from user token
-  return window.userId || 'default';
+  return null;
 }
 
 // Auto-render when navigating to coach dashboard

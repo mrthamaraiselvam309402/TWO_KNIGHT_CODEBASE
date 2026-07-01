@@ -1,0 +1,34 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.110.0"
+  },
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.105.1": "d96e63cd3c7d0a07d5821a3573b4923d0e556e064633265c584656d95b22fa38",
+    "https://esm.sh/@supabase/supabase-js@2.110.0": "b99c0ce7729f9de7797f836b93ab9ec94f1cfe079b4f937fa4144fe13525e979"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@eslint/js@^10.0.1",
+        "npm:@playwright/test@^1.60.0",
+        "npm:@supabase/server@^1.1.0",
+        "npm:@supabase/supabase-js@^2.105.1",
+        "npm:cors@^2.8.6",
+        "npm:dotenv@^17.4.2",
+        "npm:eslint@^10.4.0",
+        "npm:express@^5.2.1",
+        "npm:globals@^17.7.0",
+        "npm:html5-qrcode@^2.3.8",
+        "npm:http-proxy-middleware@^3.0.7",
+        "npm:iconv-lite@~0.7.2",
+        "npm:jest@^30.4.2",
+        "npm:jspdf-autotable@^5.0.8",
+        "npm:jspdf@^4.2.1",
+        "npm:openai@^6.34.0",
+        "npm:razorpay@^2.9.2",
+        "npm:vercel@^32.4.1"
+      ]
+    }
+  }
+}

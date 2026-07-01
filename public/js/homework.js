@@ -238,7 +238,33 @@ let homeworkSubmissionCache = [];
     if ($('hw-title')) $('hw-title').value = '';
     if ($('hw-description')) $('hw-description').value = '';
     if ($('hw-due-date')) $('hw-due-date').value = '';
+    if ($('hw-file-input')) $('hw-file-input').value = '';
+    if ($('hw-file-preview')) $('hw-file-preview').innerHTML = '';
     window.openModal && window.openModal('homework-assignment-modal');
+  }
+
+  async function uploadHomeworkFile(file) {
+    const IMGBB_API_KEY = window.IMGBB_API_KEY || Deno?.env?.get('IMGBB_API_KEY') || '';
+    if (!IMGBB_API_KEY && !window.apiCall) {
+      throw new Error('File upload service not configured');
+    }
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(',')[1];
+        try {
+          const res = await window.apiCall('/api/upload', {
+            method: 'POST',
+            body: JSON.stringify({ image: base64 })
+          });
+          if (!res.ok) throw new Error('Upload failed');
+          const data = await res.json();
+          resolve(data.data?.url || data.url || base64);
+        } catch (e) { reject(e); }
+      };
+      reader.onerror = () => reject(new Error('File read error'));
+      reader.readAsDataURL(file);
+    });
   }
 
   async function saveHomeworkAssignment() {
@@ -248,10 +274,21 @@ let homeworkSubmissionCache = [];
     const dueDate = $('hw-due-date') ? $('hw-due-date').value : '';
     const studentId = $('hw-student-select') ? $('hw-student-select').value : '';
     const batchId = $('hw-batch-select') ? $('hw-batch-select').value : '';
+    const fileInput = $('hw-file-input');
 
     if (!title) return window.toast ? window.toast('Homework title is required', 'error') : null;
     if (targetType === 'student' && !studentId) return window.toast ? window.toast('Select a student', 'error') : null;
     if (targetType === 'batch' && !batchId) return window.toast ? window.toast('Select a batch', 'error') : null;
+
+    let attachmentUrls = [];
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      try {
+        const uploadPromises = Array.from(fileInput.files).map(f => uploadHomeworkFile(f));
+        attachmentUrls = await Promise.all(uploadPromises);
+      } catch (e) {
+        return window.toast ? window.toast(`File upload failed: ${e.message}`, 'error') : null;
+      }
+    }
 
     const payload = {
       target_type: targetType,
@@ -259,7 +296,8 @@ let homeworkSubmissionCache = [];
       description,
       due_date: dueDate || null,
       student_id: targetType === 'student' ? studentId : null,
-      batch_id: targetType === 'batch' ? batchId : null
+      batch_id: targetType === 'batch' ? batchId : null,
+      attachment_urls: attachmentUrls.length > 0 ? attachmentUrls : null
     };
 
     try {

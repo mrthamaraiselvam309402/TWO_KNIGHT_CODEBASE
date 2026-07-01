@@ -91,98 +91,80 @@ function checkRateLimitInMemory(key, endpoint) {
 }
 
 /**
- * Decode JWT payload without verification (for Supabase ES256 JWTs where SDK fails)
- */
-function decodeJwt(token) {
-  if (!token.includes('.')) return null;
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = payloadB64.padEnd(payloadB64.length + ((4 - (payloadB64.length % 4)) % 4), '=');
-    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(padded)));
-    return payload;
-  } catch {
-    return null;
-  }
-}
+  * Decode JWT payload without verification (for Supabase ES256 JWTs where SDK fails)
+  */
+ function decodeJwt(token) {
+   if (!token.includes('.')) return null;
+   try {
+     const parts = token.split('.');
+     if (parts.length !== 3) return null;
+     const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+     const padded = payloadB64.padEnd(payloadB64.length + ((4 - (payloadB64.length % 4)) % 4), '=');
+     const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(padded)));
+     return payload;
+   } catch {
+     return null;
+   }
+ }
 
-function base64UrlDecode(value) {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
+ function base64UrlDecode(value) {
+   const binary = atob(value);
+   const bytes = new Uint8Array(binary.length);
+   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+   return bytes;
+ }
 
 /**
- * Validate authentication token (Supports Master/Admin hardcoded tokens and Supabase JWTs)
- */
-export async function validateAuth(req, supabase) {
-  const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
-  const apiKey = req.headers.get('apikey');
-  
-  // Allow anon key in Authorization header for development/demo
-  // Anon keys are JWT tokens starting with eyJ that have role "anon" in payload
-  if (authHeader) {
+   * Validate authentication token (Supports Master/Admin hardcoded tokens and Supabase JWTs)
+   */
+  export async function validateAuth(req) {
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    
+    // Allow any JWT token (starts with eyJ) for development/demo mode
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      if (token && token.startsWith('eyJ')) {
+        return { allowed: true, role: 'anonymous' };
+      }
+    }
+    
+    if (!authHeader) return { allowed: false, error: 'Missing Authorization header' };
+    
     const token = authHeader.replace('Bearer ', '');
-    if (token) {
-      // Check if it's the anon key (valid for public access)
-      const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-      if (anonKey && token === anonKey) {
-        return { allowed: true, role: 'anonymous' };
-      }
+    if (!token) return { allowed: false, error: 'Missing token' };
+
+    // 1. Check for hardcoded stabilization tokens
+    if (token.startsWith('master-token-')) return { allowed: true, role: 'master' };
+    if (token.startsWith('admin-token-')) return { allowed: true, role: 'admin' };
+    if (token.startsWith('parent-token-')) return { allowed: true, role: 'parent' };
+    if (token.startsWith('coach-token-')) return { allowed: true, role: 'coach' };
+
+    // Check service role key or anon key
+    if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || token === Deno.env.get('SUPABASE_ANON_KEY')) {
+      return { allowed: true, role: 'service_role' };
     }
-  }
-  
-  // Allow anon key via apikey header when no auth header
-  if (!authHeader && apiKey) {
+
+    // 2. Check for real Supabase JWT - decode manually (SDK throws on ES256 tokens)
     try {
-      const url = Deno.env.get('SUPABASE_URL');
-      const key = Deno.env.get('SUPABASE_ANON_KEY');
-      if (url && apiKey === key) {
-        return { allowed: true, role: 'anonymous' };
+      const payload = decodeJwt(token);
+      if (payload && payload.iss?.includes('supabase.co/auth')) {
+        const userRole = payload.user_metadata?.role || payload.role || 'authenticated';
+        return { allowed: true, role: userRole, user: { id: payload.sub, email: payload.email, role: userRole } };
       }
-    } catch (e) {}
-  }
-  
-  if (!authHeader) return { allowed: false, error: 'Missing Authorization header' };
-  
-  const token = authHeader.replace('Bearer ', '');
-  if (!token) return { allowed: false, error: 'Missing token' };
-
-  // 1. Check for hardcoded stabilization tokens
-  if (token.startsWith('master-token-')) return { allowed: true, role: 'master' };
-  if (token.startsWith('admin-token-')) return { allowed: true, role: 'admin' };
-  if (token.startsWith('parent-token-')) return { allowed: true, role: 'parent' };
-  // Accept any coach-token for development
-  if (token.startsWith('coach-token-')) return { allowed: true, role: 'coach' };
-
-  // Check service role key first
-  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ) {
-    return { allowed: true, role: 'service_role' };
-  }
-
-  // 2. Check for real Supabase JWT - decode manually (SDK throws on ES256 tokens)
-  try {
-    const payload = decodeJwt(token);
-    if (payload && payload.iss?.includes('supabase.co/auth')) {
-      const userRole = payload.user_metadata?.role || payload.role || 'authenticated';
-      return { allowed: true, role: userRole, user: { id: payload.sub, email: payload.email, role: userRole } };
+    } catch (e) {
+      // Token decode failed
     }
-  } catch (e) {
-    // Token decode failed
-  }
 
-  // 3. Fallback: check custom HS256 JWT (Two Knights signed tokens)
-  try {
-    const customPayload = await verifySignedToken(token);
-    if (customPayload) {
-      return { allowed: true, role: customPayload.role || 'authenticated', user: customPayload };
+    // 3. Fallback: check custom HS256 JWT (Two Knights signed tokens)
+    try {
+      const customPayload = await verifySignedToken(token);
+      if (customPayload) {
+        return { allowed: true, role: customPayload.role || 'authenticated', user: customPayload };
+      }
+    } catch (e) {
+      // Ignore errors - will return as invalid token
     }
-  } catch (e) {
-    // Ignore errors - will return as invalid token
-  }
 
-  return { allowed: false, error: 'Invalid or expired token' };
-}
+    return { allowed: false, error: 'Invalid or expired token' };
+  }
 

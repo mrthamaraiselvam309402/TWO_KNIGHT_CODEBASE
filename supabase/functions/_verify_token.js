@@ -12,6 +12,12 @@ export function base64UrlDecode(value) {
   return bytes;
 }
 
+export function base64UrlDecodeToString(value) {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  return atob(padded);
+}
+
 export async function verifySignedToken(token) {
   const secret = Deno.env.get('JWT_SECRET') || '';
   if (!secret || !token.includes('.')) return null;

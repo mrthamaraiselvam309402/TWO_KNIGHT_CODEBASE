@@ -111,7 +111,6 @@ Deno.serve(async (req) => {
         availability: body.availability || '',
         address: body.address || '',
         photo_url: body.photo_url || '',
-        role: 'coach',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -131,6 +130,11 @@ Deno.serve(async (req) => {
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
       }
+
+      if (body.password) {
+        await supabase.rpc('update_user_password', { p_user_type: 'coach', p_id: insertedCoach.id, p_new_password: body.password });
+      }
+
       return new Response(JSON.stringify(insertedCoach ? transformCoach(insertedCoach) : null), {
         status: 201,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -145,6 +149,10 @@ Deno.serve(async (req) => {
       
       console.log('PUT /coaches body:', JSON.stringify(body));
       
+      if (body.password) {
+        await supabase.rpc('update_user_password', { p_user_type: 'coach', p_id: id, p_new_password: body.password });
+      }
+
       const updateData: Record<string, unknown> = {};
       
       if (body.name !== undefined) {
@@ -171,6 +179,8 @@ Deno.serve(async (req) => {
       
       updateData.updated_at = new Date().toISOString();
       
+      // If only the password was being updated, updateData has just updated_at
+      // We still do a minimal update to confirm the record exists
       console.log('PUT updateData:', JSON.stringify(updateData));
       
       const { data: updatedCoach, error: updateError } = await supabase

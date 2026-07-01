@@ -67,6 +67,7 @@
     { "source": "/api/sessions/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/sessions/:match*" },
     { "source": "/api/security", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/security" },
     { "source": "/api/security/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/security/:match*" },
+
     { "source": "/api/ai", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/ai" },
     { "source": "/api/ai/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/ai/:match*" },
     { "source": "/api/games", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/games" },
@@ -90,11 +91,16 @@
     { "source": "/api/upload", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/upload" },
     { "source": "/api/access_control", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/access_control" },
     { "source": "/api/access_control/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/access_control/:match*" },
-    { "source": "/api/bob-payment-init", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-init" },
-    { "source": "/api/bob-payment-init/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-init/:match*" },
-    { "source": "/api/bob-payment-webhook", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-webhook" },
-    { "source": "/api/bob-payment-webhook/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/bob-payment-webhook/:match*" },
+    { "source": "/api/chesscom-proxy", "destination": "/api/chesscom-proxy" },
+    { "source": "/api/lichess-proxy", "destination": "/api/lichess-proxy" },
+    { "source": "/api/chessable-proxy", "destination": "/api/chessable-proxy" },
+    { "source": "/api/zoho-payment-init", "destination": "/api/zoho-payment-init" },
+    { "source": "/api/zoho-payment-init/:match*", "destination": "/api/zoho-payment-init" },
+    { "source": "/api/zoho-webhook", "destination": "/api/zoho-webhook" },
+    { "source": "/api/zoho-webhook/:match*", "destination": "/api/zoho-webhook" },
     { "source": "/api/batches", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/batches" },
-    { "source": "/api/batches/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/batches/:match*" }
+    { "source": "/api/batches/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/batches/:match*" },
+    { "source": "/api/homework", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/homework" },
+    { "source": "/api/homework/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/homework/:match*" }
   ]
 }

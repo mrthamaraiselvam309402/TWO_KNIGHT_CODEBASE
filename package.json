@@ -28,7 +28,6 @@
     "@supabase/supabase-js": "^2.105.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
@@ -39,6 +38,10 @@
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
     "eslint": "^10.4.0",
+    "express": "^5.2.1",
+    "globals": "^17.7.0",
+    "http-proxy-middleware": "^3.0.7",
+    "iconv-lite": "^0.7.2",
     "jest": "^30.4.2",
     "vercel": "^32.4.1"
   },

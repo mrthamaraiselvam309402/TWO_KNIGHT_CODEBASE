@@ -3,7 +3,7 @@
  * Uses Supabase for distributed rate limiting
  */
 
-import { verifySignedToken } from '../_verify_token.js';
+import { validateAuth } from '../_shared_auth.js';
 
 // Rate limit configuration
 const RATE_LIMITS = {
@@ -79,70 +79,3 @@ function checkRateLimitInMemory(key, endpoint) {
   
   return { allowed, remaining: Math.max(0, config.max - requests.length), resetTime: now + config.windowMs, limit: config.max };
 }
-
-/**
- * Validate authentication token (Supports Master/Admin hardcoded tokens and Supabase JWTs)
- */
-export async function validateAuth(req, supabase) {
-  const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
-  const apiKey = req.headers.get('apikey');
-  
-  // Allow anon key in Authorization header for development/demo
-  if (authHeader) {
-    const token = authHeader.replace('Bearer ', '');
-    if (token) {
-      // Check if it's the anon key (valid for public access)
-      const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-      if (anonKey && token === anonKey) {
-        return { allowed: true, role: 'anonymous' };
-      }
-    }
-  }
-  
-  // Allow anon key via apikey header when no auth header
-  if (!authHeader && apiKey) {
-    try {
-      const url = Deno.env.get('SUPABASE_URL');
-      const key = Deno.env.get('SUPABASE_ANON_KEY');
-      if (url && apiKey === key) {
-        return { allowed: true, role: 'anonymous' };
-      }
-    } catch (e) {}
-  }
-  
-  if (!authHeader) return { allowed: false, error: 'Missing Authorization header' };
-  
-  const token = authHeader.replace('Bearer ', '');
-  if (!token) return { allowed: false, error: 'Missing token' };
-
-  // 1. Check for hardcoded stabilization tokens
-  if (token.startsWith('master-token-')) return { allowed: true, role: 'master' };
-  if (token.startsWith('admin-token-')) return { allowed: true, role: 'admin' };
-  if (token.startsWith('parent-token-')) return { allowed: true, role: 'parent' };
-  // Accept any coach-token for development
-  if (token.startsWith('coach-token-')) return { allowed: true, role: 'coach' };
-
-  // Check service role key first (before calling supabase.auth.getUser to avoid exceptions)
-  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ) {
-    return { allowed: true, role: 'service_role' };
-  }
-
-  // 2. Check for real Supabase JWT (must be caught - throws on invalid tokens)
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (!error && user) {
-      return { allowed: true, role: user.user_metadata?.role || 'authenticated', user };
-    }
-  } catch (e) {
-    // Supabase throws on non-Supabase JWTs (like HS256), ignore and try custom token
-  }
-
-  // 3. Fallback: check custom HS256 JWT (Two Knights signed tokens)
-  const customPayload = await verifySignedToken(token);
-  if (customPayload) {
-    return { allowed: true, role: customPayload.role || 'authenticated', user: customPayload };
-  }
-
-  return { allowed: false, error: 'Invalid or expired token' };
-}
-

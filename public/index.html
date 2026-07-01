@@ -426,7 +426,7 @@
     </div>
 
     <!-- Students -->
-    <div id="page-stud" class="page admin-only">
+    <div id="page-stud" class="page admin-only coach-accessible">
       <!-- ALWAYS VISIBLE MAIN ROW -->
       <div class="filter-main-row" style="display:flex; gap:12px; margin-bottom:12px; align-items:center; width:100%">
         <input type="text" id="f-search" placeholder="Search Name or Phone..." oninput="renderStudents()" style="flex:1; min-width:180px; padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px">
@@ -535,7 +535,7 @@
     </div>
 
     <!-- Attendance Manager Page -->
-    <div id="page-attendance" class="page admin-only">
+    <div id="page-attendance" class="page admin-only coach-accessible">
       <div class="filter-main-row" style="display:flex; gap:12px; margin-bottom:12px; align-items:center; width:100%; flex-wrap:wrap">
         <div style="display:flex; align-items:center; gap:8px">
           <label style="color:var(--ivory-dim); font-size:14px">Date:</label>
@@ -576,7 +576,7 @@
     </div>
 
     <!-- Homework Manager Page -->
-    <div id="page-homework" class="page admin-only">
+    <div id="page-homework" class="page admin-only coach-accessible">
       <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
         <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none;">📝</div>
         <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">
@@ -1492,7 +1492,7 @@
     </div>
 
     <!-- Classroom / Batch Manager -->
-    <div id="page-batches" class="page admin-only">
+    <div id="page-batches" class="page admin-only coach-accessible">
       <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
         <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none; font-family: sans-serif;">🏫</div>
         <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">
@@ -3573,47 +3573,52 @@
  
       <script src="js/attendance_extension.js?v=2.0&t=20260611a" charset="utf-8"></script>
 
-      <!-- Homework Assignment Modal -->
-      <div class="modal" id="homework-assignment-modal">
-        <div class="modal-box" style="max-width:760px; width:95%">
-          <div class="modal-title">Assign Homework</div>
-          <div class="modal-sub">Choose a batch, an individual student, or all active students.</div>
-          <div class="modal-grid" style="margin-top:18px;">
-            <div class="form-group">
-              <label class="label">Target Type</label>
-              <select id="hw-target-type" class="input-field" onchange="updateHomeworkTargetFields()">
-                <option value="student">Individual Student</option>
-                <option value="batch">Batch</option>
-                <option value="all">All Active Students</option>
-              </select>
-            </div>
-            <div class="form-group" id="hw-student-field">
-              <label class="label">Student</label>
-              <select id="hw-student-select" class="input-field"></select>
-            </div>
-            <div class="form-group" id="hw-batch-field" style="display:none;">
-              <label class="label">Batch</label>
-              <select id="hw-batch-select" class="input-field"></select>
-            </div>
-            <div class="form-group">
-              <label class="label">Title</label>
-              <input id="hw-title" class="input-field" placeholder="e.g. Endgame practice">
-            </div>
-            <div class="form-group">
-              <label class="label">Due Date</label>
-              <input id="hw-due-date" class="input-field" type="date">
-            </div>
-            <div class="form-group" style="grid-column:1/-1;">
-              <label class="label">Instructions</label>
-              <textarea id="hw-description" class="input-field" style="height:140px; resize:vertical;" placeholder="Include practice tasks, links, puzzles, or preparation notes..."></textarea>
-            </div>
-          </div>
-          <div style="display:flex; gap:10px; margin-top:18px;">
-            <button class="btn btn-gold" style="flex:1" onclick="saveHomeworkAssignment()">Assign</button>
-            <button class="btn btn-outline-grey" style="flex:1" onclick="closeModals()">Cancel</button>
-          </div>
-        </div>
-      </div>
+<!-- Homework Assignment Modal -->
+       <div class="modal" id="homework-assignment-modal">
+         <div class="modal-box" style="max-width:760px; width:95%">
+           <div class="modal-title">Assign Homework</div>
+           <div class="modal-sub">Choose a batch, an individual student, or all active students. Upload files or notes as needed.</div>
+           <div class="modal-grid" style="margin-top:18px;">
+             <div class="form-group">
+               <label class="label">Target Type</label>
+               <select id="hw-target-type" class="input-field" onchange="updateHomeworkTargetFields()">
+                 <option value="student">Individual Student</option>
+                 <option value="batch">Batch</option>
+                 <option value="all">All Active Students</option>
+               </select>
+             </div>
+             <div class="form-group" id="hw-student-field">
+               <label class="label">Student</label>
+               <select id="hw-student-select" class="input-field"></select>
+             </div>
+             <div class="form-group" id="hw-batch-field" style="display:none;">
+               <label class="label">Batch</label>
+               <select id="hw-batch-select" class="input-field"></select>
+             </div>
+             <div class="form-group">
+               <label class="label">Title</label>
+               <input id="hw-title" class="input-field" placeholder="e.g. Endgame practice">
+             </div>
+             <div class="form-group">
+               <label class="label">Due Date</label>
+               <input id="hw-due-date" class="input-field" type="date">
+             </div>
+             <div class="form-group" style="grid-column:1/-1;">
+               <label class="label">Instructions / Notes</label>
+               <textarea id="hw-description" class="input-field" style="height:140px; resize:vertical;" placeholder="Include practice tasks, links, puzzles, or preparation notes..."></textarea>
+             </div>
+             <div class="form-group" style="grid-column:1/-1;">
+               <label class="label">Attachments</label>
+               <input type="file" id="hw-file-input" class="input-field" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,.gif,.pgn,.txt,.md">
+               <div id="hw-file-preview" style="margin-top:8px; font-size:12px; color:var(--ivory-dim);"></div>
+             </div>
+           </div>
+           <div style="display:flex; gap:10px; margin-top:18px;">
+             <button class="btn btn-gold" style="flex:1" onclick="saveHomeworkAssignment()">Assign</button>
+             <button class="btn btn-outline-grey" style="flex:1" onclick="closeModals()">Cancel</button>
+           </div>
+         </div>
+       </div>
 
       <!-- Monthly Attendance Modal -->
       <div class="modal" id="monthly-attendance-modal">

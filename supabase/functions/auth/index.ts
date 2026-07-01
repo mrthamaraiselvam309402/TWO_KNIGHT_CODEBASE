@@ -277,115 +277,77 @@ return new Response(JSON.stringify({
        });
     }
     
-    // 3. Check Coach credentials (username = coach name, password = coach phone)
+    // 3. Check Coach credentials
     const cleanUsername = String(username).trim();
-    const inputPhone = String(password).replace(/\D/g, '');
     
-    console.log(`[Auth] Checking coach credentials. Name: "${cleanUsername}"`);
+    console.log(`[Auth] Checking coach credentials. Name/Email: "${cleanUsername}"`);
     
-    let { data: coaches, error: coachError } = await supabase
-      .from('coaches')
-      .select('id, name, email, phone')
-      .or(`name.ilike.%${cleanUsername}%,email.ilike.%${cleanUsername}%`);
+    const { data: coachData, error: coachError } = await supabase.rpc('verify_user_password', {
+      p_user_type: 'coach',
+      p_identifier: cleanUsername,
+      p_password: password
+    });
     
     if (coachError) {
-      console.warn('[Auth] Coach query failed:', coachError.message);
-    } else if (coaches && coaches.length > 0) {
-      const matchedCoach = coaches.find(c => {
-        const cPhone = c.phone ? String(c.phone).replace(/\D/g, '') : '';
-        return inputPhone.length >= 8 && (cPhone.endsWith(inputPhone) || inputPhone.endsWith(cPhone));
-      });
-      
-      if (matchedCoach) {
-        console.log(`[Auth] Successful coach login for: ${matchedCoach.name}`);
-        const token = await createCustomTokenSession(supabase, 'coach', matchedCoach.name, matchedCoach.id);
-        return new Response(JSON.stringify({
-          success: true,
-          token,
-          role: 'coach',
-          coach_id: matchedCoach.id,
-          user: matchedCoach.name
-        }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-      }
+      console.warn('[Auth] Coach verify RPC failed:', coachError.message);
+    } else if (coachData && coachData.valid) {
+      console.log(`[Auth] Successful coach login for: ${coachData.name}`);
+      const token = await createCustomTokenSession(supabase, 'coach', coachData.name, coachData.id);
+      return new Response(JSON.stringify({
+        success: true,
+        token,
+        role: 'coach',
+        coach_id: coachData.id,
+        user: coachData.name
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
     
-    // 4. Check parent credentials (username = student name, password = parent phone)
+    // 4. Check parent credentials
     const cleanStudentName = String(username).trim();
-    const inputDigits = String(password).replace(/\D/g, '');
     
-    console.log(`[Auth] Checking parent credentials. Name: "${cleanStudentName}", Phone digits: "${inputDigits}"`);
+    console.log(`[Auth] Checking parent credentials. Name: "${cleanStudentName}"`);
 
-    let { data: students, error: studentError } = await supabase
-      .from('students_decrypted')
-      .select('id, name, parent_phone, phone')
-      .or(`name.ilike.%${cleanStudentName}%,name.ilike.${cleanStudentName}`);
+    const { data: studentData, error: studentError } = await supabase.rpc('verify_user_password', {
+      p_user_type: 'student',
+      p_identifier: cleanStudentName,
+      p_password: password
+    });
 
     if (studentError) {
-      console.warn('[Auth] decrypted view query failed, trying raw students table:', studentError.message);
-      const fallbackRes = await supabase
-        .from('students')
-        .select('id, name, parent_phone, phone')
-        .or(`name.ilike.%${cleanStudentName}%,name.ilike.${cleanStudentName}`);
-      
-      if (!fallbackRes.error) {
-        students = fallbackRes.data;
-      } else {
-        console.error('[Auth] Fallback query to students table failed:', fallbackRes.error.message);
-      }
-    }
-
-    if (students && students.length > 0) {
-      console.log(`[Auth] Found ${students.length} matching student records. Verifying phone numbers.`);
-      const matchedStudent = students.find(s => {
-        const pDigits = s.parent_phone ? String(s.parent_phone).replace(/\D/g, '') : '';
-        const fDigits = s.phone ? String(s.phone).replace(/\D/g, '') : '';
-        
-        console.log(`[Auth] Verifying "${s.name}" (parent_phone="${pDigits}", student_phone="${fDigits}") against input="${inputDigits}"`);
-        
-        if (inputDigits.length >= 8) {
-          if (pDigits.length >= 8 && (pDigits.endsWith(inputDigits) || inputDigits.endsWith(pDigits))) return true;
-          if (fDigits.length >= 8 && (fDigits.endsWith(inputDigits) || inputDigits.endsWith(fDigits))) return true;
-        }
-        if (inputDigits && (inputDigits === pDigits || inputDigits === fDigits)) return true;
-        return false;
-      });
-
-      if (matchedStudent) {
-        console.log(`[Auth] Successful parent login for student: ${matchedStudent.name}`);
-        const token = await createParentToken(supabase, matchedStudent.id, matchedStudent.name);
-        return new Response(JSON.stringify({
-          success: true,
-          token,
-          role: 'parent',
-          student_id: matchedStudent.id,
-          user: matchedStudent.name
-        }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-      } else {
-        console.log(`[Auth] No phone match among candidate students.`);
-      }
+      console.warn('[Auth] Student verify RPC failed:', studentError.message);
+    } else if (studentData && studentData.valid) {
+      console.log(`[Auth] Successful parent login for student: ${studentData.name}`);
+      const token = await createParentToken(supabase, studentData.id, studentData.name);
+      return new Response(JSON.stringify({
+        success: true,
+        token,
+        role: 'parent',
+        student_id: studentData.id,
+        user: studentData.name
+      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     } else {
-      console.log(`[Auth] No student records matched name "${cleanUsername}".`);
+      console.log(`[Auth] No parent/student records matched name "${cleanStudentName}" with given password.`);
     }
 
 // Failed attempt
-      return new Response(JSON.stringify({ 
-        error: 'Invalid credentials.',
-        details: authError ? authError.message : 'Check if user exists in Supabase Auth or as a Student Name + Parent Phone.' 
-      }), { 
-        status: 401, 
-        headers: { 
-          'Content-Type': 'application/json', 
-          ...corsHeaders,
-          'X-RateLimit-Limit': String(rateLimitResult.limit),
-          'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-          'X-RateLimit-Reset': String(rateLimitResult.resetTime)
-        } 
-      });
-    } catch (error) {
-      console.error('Auth error:', error);
-      return new Response(JSON.stringify({ error: 'Internal server error' }), { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-      });
-    }
-  });
+    return new Response(JSON.stringify({ 
+      error: 'Invalid credentials.',
+      details: authError ? authError.message : 'Check if user exists in Supabase Auth or as a Student Name + Parent Phone.' 
+    }), { 
+      status: 401, 
+      headers: { 
+        'Content-Type': 'application/json', 
+        ...corsHeaders,
+        'X-RateLimit-Limit': String(rateLimitResult.limit),
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetTime)
+      } 
+    });
+  } catch (error) {
+    console.error('Auth error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { 
+      status: 500, 
+      headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+    });
+  }
+});

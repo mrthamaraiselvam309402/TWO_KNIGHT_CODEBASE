@@ -46,6 +46,7 @@ export default [
         "clearInterval": "readonly",
         "fetch": "readonly",
         "localStorage": "readonly",
+        "sessionStorage": "readonly",
         "Math": "readonly",
         "Date": "readonly",
         "parseFloat": "readonly",

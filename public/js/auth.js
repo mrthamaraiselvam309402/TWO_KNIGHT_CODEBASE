@@ -56,12 +56,14 @@ window.doLogin = async function() {
                     user: data.user || user,
                     studentId: data.student_id,
                     coachId: data.coach_id,
-                    token: data.token
+                    token: data.token,
+                    userId: data.coach_id // Set userId for coach role compatibility
                 }));
                 // Store token separately for API Authorization header
                 sessionStorage.setItem('sb-access-token', data.token);
                 // Also set window.currentCoachId for coach dashboard
                 window.currentCoachId = data.coach_id || null;
+                window.userId = data.coach_id || null; // Set userId for homework.js compatibility
                 window.finishLogin(data.user || user, displayRole, data.student_id);
                 window.toast(`Welcome back, ${displayRole}!`, 'success');
 

@@ -51,4 +51,3 @@ FROM public.students;
 
 -- Re-grant permissions since dropping the view drops all grants
 GRANT SELECT ON public.students_decrypted TO anon, authenticated, service_role;
-

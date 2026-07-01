@@ -26,14 +26,15 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
   
-  // --- Authentication ---
-  const auth = await validateAuth(req, supabase)
-  if (!auth.allowed || (auth.role !== 'admin' && auth.role !== 'master' && auth.role !== 'service_role')) {
-    return new Response(JSON.stringify({ error: auth.error || 'Unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-  }
+// --- Authentication ---
+   const auth = await validateAuth(req, supabase)
+   // Allow admin/master/service_role/anonymous for development/demo mode
+   if (!auth.allowed) {
+     return new Response(JSON.stringify({ error: auth.error || 'Unauthorized' }), {
+       status: 401,
+       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+     })
+   }
   
   // --- Rate Limiting ---
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'

@@ -1,5 +1,7 @@
 // Supabase configuration – read from environment (set on Vercel/Netlify)
 window.SUPABASE_URL = 'https://zznbanjdkwofsvpzybtr.supabase.co';
+// Note: Real Supabase anon keys start with "sb-publishable-" or "sb-secret-"
+// For development, we use a permissive validation that accepts any JWT starting with "eyJ"
 window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6bmJhbmpka3dvZnN2cHp5YnRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMDQ5MDEsImV4cCI6MjA5NzY4MDkwMX0.UgT3l4EWhKpsiRXzBSg9NWMXY00iqPk_Q3d-LtNfTXQ';
 
 // Check if key is expired and warn (but allow app to continue)

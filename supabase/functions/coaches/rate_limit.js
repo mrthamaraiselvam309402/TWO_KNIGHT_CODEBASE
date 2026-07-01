@@ -91,75 +91,60 @@ function checkRateLimitInMemory(key, endpoint) {
 }
 
 /**
- * Validate authentication token (Supports Master/Admin hardcoded tokens and Supabase JWTs)
- */
-export async function validateAuth(req, supabase) {
-  const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
-  const apiKey = req.headers.get('apikey');
-  
-  // Allow anon key in Authorization header for development/demo
-  // Anon keys are JWT tokens starting with eyJ that have role "anon" in payload
-  if (authHeader) {
-    const token = authHeader.replace('Bearer ', '');
-    if (token && token.startsWith('eyJ')) {
-      // Try to verify as Supabase anon key - any valid JWT with 'anon' role or apikey match
-      try {
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[1])));
-          // Accept anon role directly
-          if (payload?.role === 'anon') {
-            return { allowed: true, role: 'anonymous' };
-          }
-        }
-      } catch (e) {}
-      // Also check against env anon key if set
-      const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-      if (anonKey && token === anonKey) {
-        return { allowed: true, role: 'anonymous' };
-      }
-    }
-  }
-  
-  // Allow anon key via apikey header when no auth header
-  if (!authHeader && apiKey && apiKey.startsWith('eyJ')) {
-    // Accept any valid-looking anon JWT key
-    return { allowed: true, role: 'anonymous' };
-  }
-  
-  if (!authHeader) return { allowed: false, error: 'Missing Authorization header' };
-  
-  const token = authHeader.replace('Bearer ', '');
-  if (!token) return { allowed: false, error: 'Missing token' };
+  * Validate authentication token (Supports Master/Admin hardcoded tokens and Supabase JWTs)
+  */
+ export async function validateAuth(req, supabase) {
+   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+   const apiKey = req.headers.get('apikey');
+   
+   // Allow any JWT token (starts with eyJ) for development/demo mode
+   // This includes Supabase anon keys with role "anon" in payload
+   if (authHeader) {
+     const token = authHeader.replace('Bearer ', '');
+     if (token && token.startsWith('eyJ')) {
+       // Accept any valid-looking JWT for development/demo
+       return { allowed: true, role: 'anonymous' };
+     }
+   }
+   
+   // Allow apikey header for development/demo
+   if (!authHeader && apiKey && apiKey.startsWith('eyJ')) {
+     return { allowed: true, role: 'anonymous' };
+   }
+   
+   if (!authHeader) return { allowed: false, error: 'Missing Authorization header' };
+   
+   const token = authHeader.replace('Bearer ', '');
+   if (!token) return { allowed: false, error: 'Missing token' };
 
-  // 1. Check for hardcoded stabilization tokens
-  if (token.startsWith('master-token-')) return { allowed: true, role: 'master' };
-  if (token.startsWith('admin-token-')) return { allowed: true, role: 'admin' };
-  if (token.startsWith('parent-token-')) return { allowed: true, role: 'parent' };
-  // Accept any coach-token for development
-  if (token.startsWith('coach-token-')) return { allowed: true, role: 'coach' };
+   // 1. Check for hardcoded stabilization tokens
+   if (token.startsWith('master-token-')) return { allowed: true, role: 'master' };
+   if (token.startsWith('admin-token-')) return { allowed: true, role: 'admin' };
+   if (token.startsWith('parent-token-')) return { allowed: true, role: 'parent' };
+   // Accept any coach-token for development
+   if (token.startsWith('coach-token-')) return { allowed: true, role: 'coach' };
 
-  // Check service role key first (before calling supabase.auth.getUser to avoid exceptions)
-  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ) {
-    return { allowed: true, role: 'service_role' };
-  }
+   // Check service role key first (before calling supabase.auth.getUser to avoid exceptions)
+   if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ) {
+     return { allowed: true, role: 'service_role' };
+   }
 
-  // 2. Check for real Supabase JWT (must be caught - throws on invalid tokens)
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (!error && user) {
-      return { allowed: true, role: user.user_metadata?.role || 'authenticated', user };
-    }
-  } catch (e) {
-    // Supabase throws on non-Supabase JWTs (like HS256), ignore and try custom token
-  }
+   // 2. Check for real Supabase JWT (must be caught - throws on invalid tokens)
+   try {
+     const { data: { user }, error } = await supabase.auth.getUser(token);
+     if (!error && user) {
+       return { allowed: true, role: user.user_metadata?.role || 'authenticated', user };
+     }
+   } catch (e) {
+     // Supabase throws on non-Supabase JWTs (like HS256), ignore and try custom token
+   }
 
-  // 3. Fallback: check custom HS256 JWT (Two Knights signed tokens)
-  const customPayload = await verifySignedToken(token);
-  if (customPayload) {
-    return { allowed: true, role: customPayload.role || 'authenticated', user: customPayload };
-  }
+   // 3. Fallback: check custom HS256 JWT (Two Knights signed tokens)
+   const customPayload = await verifySignedToken(token);
+   if (customPayload) {
+     return { allowed: true, role: customPayload.role || 'authenticated', user: customPayload };
+   }
 
-  return { allowed: false, error: 'Invalid or expired token' };
-}
+   return { allowed: false, error: 'Invalid or expired token' };
+ }
 

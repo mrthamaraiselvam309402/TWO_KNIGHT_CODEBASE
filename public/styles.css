@@ -658,7 +658,11 @@ body[data-theme="light"] #login-screen .label { color: var(--gold); }
 /* ── PAGE VISIBILITY ── */
 body.admin-mode .parent-only,
 body.parent-mode .admin-only,
+body.admin-mode .coach-only,
+body.parent-mode .coach-only,
 body.admin-mode:not(.master-mode) .master-only { display: none !important; }
+body.coach-mode .admin-only:not(.coach-accessible) { display: none !important; }
+body.coach-mode .coach-accessible { display: flex !important; }
 .page { display: none; animation: fadeUp 0.4s ease; }
 .page.active { display: block; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }

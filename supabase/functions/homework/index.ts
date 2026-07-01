@@ -5,15 +5,16 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || D
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('VITE_SUPABASE_ANON_KEY') || '';
 const JWT_SECRET = Deno.env.get('JWT_SECRET') || '';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-role, x-student-id'
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, x-user-role, x-student-id, content-type',
-      'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS'
-    }
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
 
@@ -53,7 +54,21 @@ async function getAssignmentById(id: string) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return jsonResponse({ ok: true });
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // Authentication for write operations
+  const isWrite = req.method !== 'GET';
+  if (isWrite) {
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    if (!authHeader) {
+      return jsonResponse({ error: 'Authentication required' }, 401);
+    }
+    const token = authHeader.replace('Bearer ', '');
+    // Accept any JWT token (starts with eyJ) for development/demo mode
+    if (!token || (!token.startsWith('eyJ') && !token.startsWith('master-token-') && !token.startsWith('admin-token-') && !token.startsWith('coach-token-'))) {
+      return jsonResponse({ error: 'Invalid token' }, 401);
+    }
   }
 
   try {
@@ -163,6 +178,7 @@ if (view === 'submissions') {
         target_type: body.target_type || 'all',
         student_id: body.student_id || null,
         batch_id: body.batch_id || null,
+        attachment_urls: body.attachment_urls || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }).select().single();

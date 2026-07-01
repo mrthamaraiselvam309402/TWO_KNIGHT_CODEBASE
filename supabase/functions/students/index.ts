@@ -390,6 +390,10 @@ Deno.serve(async (req) => {
         })
       }
 
+      if (rawBody.password) {
+        await supabase.rpc('update_user_password', { p_user_type: 'student', p_id: insertedStudent.id, p_new_password: rawBody.password });
+      }
+
       let decryptedStudent = null
       const { data: viewStudent, error: decryptError } = await supabase
         .from('students_decrypted')
@@ -426,13 +430,17 @@ Deno.serve(async (req) => {
       let rawBody: Record<string, unknown> = {}
       try { rawBody = await req.json() } catch (_e) {}
 
-if (!id) {
+      if (!id) {
         return new Response(JSON.stringify({ error: 'ID is required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
       
+      if (rawBody.password) {
+        await supabase.rpc('update_user_password', { p_user_type: 'student', p_id: id, p_new_password: rawBody.password });
+      }
+
       const updateData: Record<string, unknown> = {}
       
       if (rawBody.name !== undefined || rawBody.full_name !== undefined) {
