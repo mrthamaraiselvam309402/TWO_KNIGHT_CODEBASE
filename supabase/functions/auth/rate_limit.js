@@ -87,6 +87,29 @@ export async function validateAuth(req, supabase) {
   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
   const apiKey = req.headers.get('apikey');
   
+  // Allow anon key in Authorization header for development/demo
+  if (authHeader) {
+    const token = authHeader.replace('Bearer ', '');
+    if (token) {
+      // Check if it's the anon key (valid for public access)
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+      if (anonKey && token === anonKey) {
+        return { allowed: true, role: 'anonymous' };
+      }
+    }
+  }
+  
+  // Allow anon key via apikey header when no auth header
+  if (!authHeader && apiKey) {
+    try {
+      const url = Deno.env.get('SUPABASE_URL');
+      const key = Deno.env.get('SUPABASE_ANON_KEY');
+      if (url && apiKey === key) {
+        return { allowed: true, role: 'anonymous' };
+      }
+    } catch (e) {}
+  }
+  
   if (!authHeader) return { allowed: false, error: 'Missing Authorization header' };
   
   const token = authHeader.replace('Bearer ', '');
@@ -96,9 +119,11 @@ export async function validateAuth(req, supabase) {
   if (token.startsWith('master-token-')) return { allowed: true, role: 'master' };
   if (token.startsWith('admin-token-')) return { allowed: true, role: 'admin' };
   if (token.startsWith('parent-token-')) return { allowed: true, role: 'parent' };
+  // Accept any coach-token for development
+  if (token.startsWith('coach-token-')) return { allowed: true, role: 'coach' };
 
   // Check service role key first (before calling supabase.auth.getUser to avoid exceptions)
-  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || token === apiKey) {
+  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ) {
     return { allowed: true, role: 'service_role' };
   }
 
@@ -120,3 +145,4 @@ export async function validateAuth(req, supabase) {
 
   return { allowed: false, error: 'Invalid or expired token' };
 }
+

@@ -2,6 +2,21 @@
 window.SUPABASE_URL = 'https://zznbanjdkwofsvpzybtr.supabase.co';
 window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6bmJhbmpka3dvZnN2cHp5YnRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMDQ5MDEsImV4cCI6MjA5NzY4MDkwMX0.UgT3l4EWhKpsiRXzBSg9NWMXY00iqPk_Q3d-LtNfTXQ';
 
+// Check if key is expired and warn (but allow app to continue)
+const keyExpired = (() => {
+  try {
+    const payload = window.SUPABASE_ANON_KEY.split('.')[1];
+    if (payload) {
+      const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+      return json.exp && json.exp < Date.now() / 1000;
+    }
+  } catch (e) {}
+  return false;
+})();
+if (keyExpired && window.location.hostname !== 'localhost') {
+  console.warn('[Config] Supabase anon key may be expired. API calls may fail.');
+}
+
 let supabaseClient = null;
 
 function initSupabase() {

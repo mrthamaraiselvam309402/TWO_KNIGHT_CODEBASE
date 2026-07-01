@@ -5,6 +5,16 @@
 
 import { verifySignedToken } from '../_verify_token.js';
 
+// Helper for decoding JWT payload
+function base64UrlDecode(value) {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 // Rate limit configuration
 const RATE_LIMITS = {
   auth: { windowMs: 15 * 60 * 1000, max: 5 },        // 5 attempts per 15 minutes
@@ -87,6 +97,30 @@ export async function validateAuth(req, supabase) {
   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
   const apiKey = req.headers.get('apikey');
   
+  // Allow anon key in Authorization header for development/demo
+  // Anon keys are JWT tokens starting with eyJ that have role "anon" in payload
+  if (authHeader) {
+    const token = authHeader.replace('Bearer ', '');
+    if (token) {
+      // Check if it's the anon key (valid for public access)
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+      if (anonKey && token === anonKey) {
+        return { allowed: true, role: 'anonymous' };
+      }
+    }
+  }
+  
+  // Allow anon key via apikey header when no auth header
+  if (!authHeader && apiKey) {
+    try {
+      const url = Deno.env.get('SUPABASE_URL');
+      const key = Deno.env.get('SUPABASE_ANON_KEY');
+      if (url && apiKey === key) {
+        return { allowed: true, role: 'anonymous' };
+      }
+    } catch (e) {}
+  }
+  
   if (!authHeader) return { allowed: false, error: 'Missing Authorization header' };
   
   const token = authHeader.replace('Bearer ', '');
@@ -96,9 +130,11 @@ export async function validateAuth(req, supabase) {
   if (token.startsWith('master-token-')) return { allowed: true, role: 'master' };
   if (token.startsWith('admin-token-')) return { allowed: true, role: 'admin' };
   if (token.startsWith('parent-token-')) return { allowed: true, role: 'parent' };
+  // Accept any coach-token for development
+  if (token.startsWith('coach-token-')) return { allowed: true, role: 'coach' };
 
   // Check service role key first (before calling supabase.auth.getUser to avoid exceptions)
-  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || token === apiKey) {
+  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ) {
     return { allowed: true, role: 'service_role' };
   }
 
@@ -120,3 +156,4 @@ export async function validateAuth(req, supabase) {
 
   return { allowed: false, error: 'Invalid or expired token' };
 }
+
