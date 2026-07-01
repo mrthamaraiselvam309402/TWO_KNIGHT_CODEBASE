@@ -1543,7 +1543,7 @@ const headers = {
     const date = $("att-date")?.value || new Date().toISOString().split("T")[0];
     const coachId = $("att-coach-filter")?.value;
 
-    let filteredStudents = allStudents.filter((s) => s.status === "active");
+    let filteredStudents = allStudents.filter((s) => (s.status || "").toLowerCase() === "active");
     if (coachId) {
       filteredStudents = filteredStudents.filter(
         (s) => String(s.coach_id) === String(coachId),
@@ -2390,22 +2390,30 @@ const headers = {
     const dayName = now
       .toLocaleDateString("en-US", { weekday: "long" })
       .toUpperCase();
-    const time = (s.session_time || s.batch_time || "").toUpperCase();
-    if (!time) return true;
-    if (time.includes("WEEKEND")) {
-      if (day === 0 || day === 6) return true;
-    }
-    if (time.includes("WEEKDAY")) {
-      if (day >= 1 && day <= 5) return true;
-    }
-    if (time.includes("DAILY")) return true;
-    if (time.includes(dayName)) return true;
     const shortDay = dayName.slice(0, 3);
-    if (time.includes(shortDay)) return true;
-    if (time.includes("FRI") && day === 5) return true;
-    if (time.includes("SAT") && day === 6) return true;
-    if (time.includes("SUN") && day === 0) return true;
-    return false;
+    
+    const days = (s.days || "").toUpperCase();
+    const time = (s.session_time || s.batch_time || "").toUpperCase();
+    
+    if (!time && !days) return true;
+    
+    let hasDayMatch = true;
+    if (days) {
+      if (days.includes("WEEKEND")) {
+        hasDayMatch = (day === 0 || day === 6);
+      } else if (days.includes("WEEKDAY")) {
+        hasDayMatch = (day >= 1 && day <= 5);
+      } else if (days.includes("DAILY")) {
+        hasDayMatch = true;
+      } else {
+        hasDayMatch = days.includes(dayName) || days.includes(shortDay) ||
+          (days.includes("FRI") && day === 5) ||
+          (days.includes("SAT") && day === 6) ||
+          (days.includes("SUN") && day === 0);
+      }
+    }
+    
+    return hasDayMatch;
   }
   const DEFAULT_MONTHLY_FEE = 1500; // Configurable default for display
 
@@ -6189,21 +6197,16 @@ if (userRole === "parent") setPage("child");
 
     // --- Today's Attendance Insights (Local Date Aware) ---
     const nowLocal = new Date();
-    const todayStr =
-      nowLocal.getFullYear() +
-      "-" +
-      String(nowLocal.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(nowLocal.getDate()).padStart(2, "0");
-    const todayLogs = allAttendance.filter((a) => a.date === todayStr);
-    const presentCount = todayLogs.filter((a) => a.status === "present").length;
-    const absentCount = todayLogs.filter((a) => a.status === "absent").length;
+    const todayStr = nowLocal.toISOString().split("T")[0];
+    const todayLogs = (allAttendance || []).filter((a) => String(a.date) === todayStr);
+    const presentCount = todayLogs.filter((a) => (a.status || "").toLowerCase() === "present").length;
+    const absentCount = todayLogs.filter((a) => (a.status || "").toLowerCase() === "absent").length;
 
     // Smart Pending Logic: Only count students scheduled for today
     const studentsScheduledToday = allStudents.filter(isStudentScheduledToday);
-    const loggedIds = new Set(todayLogs.map((l) => l.student_id));
+    const loggedIds = new Set(todayLogs.map((l) => String(l.student_id)));
     const pendingCount = studentsScheduledToday.filter(
-      (s) => !loggedIds.has(s.id),
+      (s) => !loggedIds.has(String(s.id)),
     ).length;
 
     if ($("s-att-present")) $("s-att-present").textContent = presentCount;

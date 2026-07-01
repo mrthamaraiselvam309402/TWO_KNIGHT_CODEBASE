@@ -107,7 +107,8 @@ window.renderCoachDashboard = function() {
   const attDetails = document.getElementById('coach-attendance-details');
 
   const todayStr = today.toISOString().split('T')[0];
-  const todaysAttendance = (window.allAttendance || []).filter(a => a.date === todayStr &&
+  const todaysAttendance = (window.allAttendance || [])
+    .filter(a => String(a.date) === todayStr &&
     myStudents.some(s => String(s.id) === String(a.student_id)));
   const presentCount = todaysAttendance.filter(a => (a.status || '').toLowerCase() === 'present').length;
   const absentCount = todaysAttendance.filter(a => (a.status || '').toLowerCase() === 'absent').length;
