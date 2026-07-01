@@ -70,16 +70,16 @@
       <p style="font-size: 12px; color: var(--gold, #d4af37); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin: 0;">CHESS ACADEMY</p>
     </div>
 
-    <form onsubmit="event.preventDefault(); window.doLogin();">
-      <div class="form-group">
-        <label class="label">Admin or Student Name</label>
-        <input type="text" id="li-user" class="input-field" placeholder="Enter username or email" autocomplete="username">
-      </div>
+<form onsubmit="event.preventDefault(); window.doLogin();">
+       <div class="form-group">
+         <label class="label">Admin, Student Email, or Student Name</label>
+         <input type="text" id="li-user" class="input-field" placeholder="Enter admin name, student email, or student name" autocomplete="username">
+       </div>
 
-      <div class="form-group">
-        <label class="label">Password or Phone Number</label>
-        <div style="position:relative">
-          <input type="password" id="li-pass" class="input-field" placeholder="Enter password or mobile" autocomplete="current-password">
+       <div class="form-group">
+         <label class="label">Password, Student Password, or Phone</label>
+         <div style="position:relative">
+           <input type="password" id="li-pass" class="input-field" placeholder="Enter password or mobile number" autocomplete="current-password">
           <button type="button" id="eye-btn" onclick="toggleEye()" aria-label="Show password" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;padding:8px;z-index:10">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
@@ -1571,15 +1571,14 @@
             <div class="form-group" style="margin-bottom:12px;">
               <label class="label">Class Days</label>
               <input type="text" id="sch-reg-days" class="input-field" placeholder="e.g. Monday & Wednesday">
-              <!-- Quick Select Day Pills -->
-              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;" id="sch-days-shortcuts">
-                <button type="button" class="btn btn-outline-grey btn-sm" onclick="toggleDayShortcut('Monday')" style="padding:2px 8px; font-size:11px;">Mon</button>
-                <button type="button" class="btn btn-outline-grey btn-sm" onclick="toggleDayShortcut('Tuesday')" style="padding:2px 8px; font-size:11px;">Tue</button>
-                <button type="button" class="btn btn-outline-grey btn-sm" onclick="toggleDayShortcut('Wednesday')" style="padding:2px 8px; font-size:11px;">Wed</button>
-                <button type="button" class="btn btn-outline-grey btn-sm" onclick="toggleDayShortcut('Thursday')" style="padding:2px 8px; font-size:11px;">Thu</button>
-                <button type="button" class="btn btn-outline-grey btn-sm" onclick="toggleDayShortcut('Friday')" style="padding:2px 8px; font-size:11px;">Fri</button>
-                <button type="button" class="btn btn-outline-grey btn-sm" onclick="toggleDayShortcut('Saturday')" style="padding:2px 8px; font-size:11px;">Sat</button>
-                <button type="button" class="btn btn-outline-grey btn-sm" onclick="toggleDayShortcut('Sunday')" style="padding:2px 8px; font-size:11px;">Sun</button>
+<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;" id="sch-days-shortcuts">
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Monday" onclick="toggleDayShortcut('Monday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Mon</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Tuesday" onclick="toggleDayShortcut('Tuesday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Tue</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Wednesday" onclick="toggleDayShortcut('Wednesday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Wed</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Thursday" onclick="toggleDayShortcut('Thursday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Thu</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Friday" onclick="toggleDayShortcut('Friday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Fri</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Saturday" onclick="toggleDayShortcut('Saturday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Sat</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Sunday" onclick="toggleDayShortcut('Sunday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Sun</button>
               </div>
             </div>
             <div class="form-group">
@@ -1837,10 +1836,18 @@
 
     <!-- Messages -->
     <div id="page-msgs" class="page admin-only">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px;">
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
         <h2 style="color:var(--gold); margin:0;">📬 Messages Hub</h2>
-        <button class="btn btn-gold" onclick="openComposeMessage()">+ Compose Message</button>
+        <select id="msg-filter" onchange="renderMsgs()" style="padding:8px 10px; border-radius:8px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-size:13px;">
+          <option value="all">All messages</option>
+          <option value="unread">Unread</option>
+          <option value="sent">Sent items</option>
+          <option value="outbox">Outbox by template</option>
+        </select>
       </div>
+      <button class="btn btn-gold" onclick="openComposeMessage()">+ Compose Message</button>
+    </div>
       <div id="msgs-loading" class="loading-state"><span class="spinner"></span> Loading…</div>
       <div class="msgs-list" id="msgs-list" style="display:none;grid-template-columns:1fr;gap:16px"></div>
     </div>
@@ -2612,6 +2619,20 @@
       </div>
     </div>
 
+    <div class="form-group" style="margin-bottom: 8px;">
+      <label style="display:block; margin-bottom:8px;">Student Schedule Days</label>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 0;">
+        <button type="button" class="btn btn-outline-grey btn-sm m-day-btn" data-day="Monday" onclick="toggleEnrollDay(this, 'Monday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Mon</button>
+        <button type="button" class="btn btn-outline-grey btn-sm m-day-btn" data-day="Tuesday" onclick="toggleEnrollDay(this, 'Tuesday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Tue</button>
+        <button type="button" class="btn btn-outline-grey btn-sm m-day-btn" data-day="Wednesday" onclick="toggleEnrollDay(this, 'Wednesday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Wed</button>
+        <button type="button" class="btn btn-outline-grey btn-sm m-day-btn" data-day="Thursday" onclick="toggleEnrollDay(this, 'Thursday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Thu</button>
+        <button type="button" class="btn btn-outline-grey btn-sm m-day-btn" data-day="Friday" onclick="toggleEnrollDay(this, 'Friday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Fri</button>
+        <button type="button" class="btn btn-outline-grey btn-sm m-day-btn" data-day="Saturday" onclick="toggleEnrollDay(this, 'Saturday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Sat</button>
+        <button type="button" class="btn btn-outline-grey btn-sm m-day-btn" data-day="Sunday" onclick="toggleEnrollDay(this, 'Sunday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Sun</button>
+      </div>
+      <input type="hidden" id="m-days" value="">
+    </div>
+
     <div class="modal-grid">
       <div class="form-group">
         <label>Session Schedule</label>
@@ -2623,16 +2644,22 @@
       </div>
     </div>
 
-    <div class="modal-grid">
-      <div class="form-group">
-        <label>Monthly Fees (₹)</label>
-        <input type="number" id="m-fee" placeholder="e.g. 5000">
-      </div>
-      <div class="form-group">
-        <label>Due Date</label>
-        <input type="date" id="m-due-date">
-      </div>
-    </div>
+<div class="modal-grid">
+       <div class="form-group">
+         <label>Monthly Fees (₹)</label>
+         <input type="number" id="m-fee" placeholder="e.g. 5000">
+       </div>
+       <div class="form-group">
+         <label>Admission Fee (₹)</label>
+         <input type="number" id="m-admission-fee" placeholder="e.g. 2000" value="0">
+       </div>
+     </div>
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Due Date</label>
+         <input type="date" id="m-due-date">
+       </div>
+     </div>
 
     <div class="modal-grid" style="margin-top: 12px;">
       <div class="form-group">
@@ -2734,22 +2761,31 @@
       </div>
     </div>
 
-    <div class="modal-grid">
-      <div class="form-group">
-        <label>Session Schedule</label>
-        <input type="text" id="e-batch-time" placeholder="e.g. FRI & SAT or 17:00">
+    <div class="form-group" style="margin-bottom: 8px;">
+      <label style="display:block; margin-bottom:8px;">Student Schedule Days</label>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 0;">
+        <button type="button" class="btn btn-outline-grey btn-sm e-day-btn" data-day="Monday" onclick="toggleEditDay(this, 'Monday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Mon</button>
+        <button type="button" class="btn btn-outline-grey btn-sm e-day-btn" data-day="Tuesday" onclick="toggleEditDay(this, 'Tuesday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Tue</button>
+        <button type="button" class="btn btn-outline-grey btn-sm e-day-btn" data-day="Wednesday" onclick="toggleEditDay(this, 'Wednesday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Wed</button>
+        <button type="button" class="btn btn-outline-grey btn-sm e-day-btn" data-day="Thursday" onclick="toggleEditDay(this, 'Thursday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Thu</button>
+        <button type="button" class="btn btn-outline-grey btn-sm e-day-btn" data-day="Friday" onclick="toggleEditDay(this, 'Friday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Fri</button>
+        <button type="button" class="btn btn-outline-grey btn-sm e-day-btn" data-day="Saturday" onclick="toggleEditDay(this, 'Saturday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Sat</button>
+        <button type="button" class="btn btn-outline-grey btn-sm e-day-btn" data-day="Sunday" onclick="toggleEditDay(this, 'Sunday')" style="padding:6px 12px; min-width:70px; font-size:12px;">Sun</button>
       </div>
-      <div class="form-group">
-        <label>Join Date</label>
-        <input type="date" id="e-join">
-      </div>
+      <input type="hidden" id="e-days" value="">
     </div>
 
-    <div class="modal-grid">
+    <div class="modal-grid" style="margin-top: 12px;">
       <div class="form-group">
         <label>Monthly Fee (₹)</label>
         <input type="number" id="e-fee">
       </div>
+      <div class="form-group">
+        <label>Admission Fee (₹)</label>
+        <input type="number" id="e-admission-fee" value="0">
+      </div>
+    </div>
+    <div class="modal-grid">
       <div class="form-group">
         <label>Due Date</label>
         <input type="date" id="e-due-date">
@@ -2775,6 +2811,11 @@
           <option value="online">Online Student</option>
         </select>
       </div>
+    </div>
+
+    <div class="form-group" style="margin-top: 12px;">
+      <label>Session Schedule (Legacy)</label>
+      <input type="text" id="e-batch-time" placeholder="e.g. FRI & SAT or 17:00">
     </div>
 
     <div class="form-group">
@@ -2810,7 +2851,7 @@
 
     <div class="form-group">
       <label>Staff Notes</label>
-      <input type="text" id="e-notes" placeholder="Notes about student progress, behavior, or special requests...">
+      <textarea id="e-notes" class="input-field" style="height:80px;resize:vertical;" placeholder="Notes about student progress, behavior, or special requests..."></textarea>
     </div>
 
     <div style="display:flex;gap:10px;margin-top:20px; border-top: 1px solid var(--border); padding-top: 20px;">
@@ -3149,6 +3190,95 @@
 </div>
 
 
+
+<!-- Compose Message Modal -->
+<div class="modal" id="compose-message-modal">
+  <div class="modal-box" style="max-width: 640px;">
+    <div class="modal-title">Compose Message</div>
+    <div class="modal-sub">Choose who to message and write your notice.</div>
+
+    <div style="display:flex; flex-direction:column; gap:12px; margin-top:16px;">
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Category</label>
+        <select id="msg-category" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+          <option value="">-- Select category --</option>
+          <option value="payment">Payment</option>
+          <option value="schedule">Schedule</option>
+          <option value="event">Event</option>
+          <option value="holiday">Holiday</option>
+          <option value="batch">Batch</option>
+          <option value="coach">Coach</option>
+          <option value="general">General</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Template</label>
+        <select id="msg-template" onchange="applyMsgTemplate()" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+          <option value="">-- Choose a template --</option>
+          <option value="payment_reminder">Payment Reminder</option>
+          <option value="holiday_notice">Holiday Notice</option>
+          <option value="event_reminder">Event Reminder</option>
+          <option value="class_cancellation">Class Cancellation</option>
+          <option value="welcome">Welcome Message</option>
+          <option value="general">General Announcement</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Quick Attach</label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="attachBatchSchedule()">📅 Batch Schedule</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="attachStudentSchedule()">👤 Student Schedule</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="attachCoachInfo()">🎓 Coach Info</button>
+        </div>
+      </div>
+
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Send to</label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff;">
+            <input type="radio" name="msg-recipient-type" value="student" checked onchange="renderRecipientOptions()"> Student / Parent
+          </label>
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff;">
+            <input type="radio" name="msg-recipient-type" value="coach" onchange="renderRecipientOptions()"> Coach
+          </label>
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff;">
+            <input type="radio" name="msg-recipient-type" value="batch" onchange="renderRecipientOptions()"> Batch
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Recipients</label>
+        <input type="text" id="msg-recipient-search" placeholder="Search students, coaches, or batches..." oninput="renderRecipientOptions()" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline-grey btn-sm" onclick="selectAllRecipients('student')">Select All Students</button>
+          <button type="button" class="btn btn-outline-grey btn-sm" onclick="selectAllRecipients('coach')">Select All Coaches</button>
+          <button type="button" class="btn btn-outline-grey btn-sm" onclick="selectAllRecipients('batch')">Select All Batches</button>
+          <button type="button" class="btn btn-outline-grey btn-sm" onclick="clearRecipientSelection()">Clear</button>
+        </div>
+        <div id="msg-recipient-list" style="margin-top:8px; max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; background:var(--bg3); padding:6px;"></div>
+        <div style="font-size:11px; color:var(--ivory-dim); margin-top:6px;">Leave empty to broadcast to all. Selected: <span id="msg-selected-count">0</span></div>
+      </div>
+
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Subject</label>
+        <input type="text" id="msg-subject" placeholder="e.g. Holiday notice" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+      </div>
+
+      <div>
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Message</label>
+        <textarea id="msg-body" rows="5" placeholder="Write your message..." style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;"></textarea>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px; border-top: 1px solid var(--border); padding-top: 20px;">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="sendAdminMessage()">Send Message</button>
+    </div>
+  </div>
+</div>
 
 <!-- Contact Modal -->
 <div class="modal" id="contact-modal">
@@ -3579,39 +3709,39 @@
            <div class="modal-title">Assign Homework</div>
            <div class="modal-sub">Choose a batch, an individual student, or all active students. Upload files or notes as needed.</div>
            <div class="modal-grid" style="margin-top:18px;">
-             <div class="form-group">
-               <label class="label">Target Type</label>
-               <select id="hw-target-type" class="input-field" onchange="updateHomeworkTargetFields()">
-                 <option value="student">Individual Student</option>
-                 <option value="batch">Batch</option>
-                 <option value="all">All Active Students</option>
-               </select>
-             </div>
-             <div class="form-group" id="hw-student-field">
-               <label class="label">Student</label>
-               <select id="hw-student-select" class="input-field"></select>
-             </div>
-             <div class="form-group" id="hw-batch-field" style="display:none;">
-               <label class="label">Batch</label>
-               <select id="hw-batch-select" class="input-field"></select>
-             </div>
-             <div class="form-group">
-               <label class="label">Title</label>
-               <input id="hw-title" class="input-field" placeholder="e.g. Endgame practice">
-             </div>
-             <div class="form-group">
-               <label class="label">Due Date</label>
-               <input id="hw-due-date" class="input-field" type="date">
-             </div>
-             <div class="form-group" style="grid-column:1/-1;">
-               <label class="label">Instructions / Notes</label>
-               <textarea id="hw-description" class="input-field" style="height:140px; resize:vertical;" placeholder="Include practice tasks, links, puzzles, or preparation notes..."></textarea>
-             </div>
-             <div class="form-group" style="grid-column:1/-1;">
-               <label class="label">Attachments</label>
-               <input type="file" id="hw-file-input" class="input-field" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,.gif,.pgn,.txt,.md">
-               <div id="hw-file-preview" style="margin-top:8px; font-size:12px; color:var(--ivory-dim);"></div>
-             </div>
+              <div class="form-group">
+                <label class="label" for="hw-target-type">Target Type</label>
+                <select id="hw-target-type" class="input-field" onchange="updateHomeworkTargetFields()">
+                  <option value="student">Individual Student</option>
+                  <option value="batch">Batch</option>
+                  <option value="all">All Active Students</option>
+                </select>
+              </div>
+              <div class="form-group" id="hw-student-field">
+                <label class="label" for="hw-student-select">Student</label>
+                <select id="hw-student-select" class="input-field"></select>
+              </div>
+              <div class="form-group" id="hw-batch-field" style="display:none;">
+                <label class="label" for="hw-batch-select">Batch</label>
+                <select id="hw-batch-select" class="input-field"></select>
+              </div>
+              <div class="form-group">
+                <label class="label" for="hw-title">Title</label>
+                <input id="hw-title" class="input-field" placeholder="e.g. Endgame practice">
+              </div>
+              <div class="form-group">
+                <label class="label" for="hw-due-date">Due Date</label>
+                <input id="hw-due-date" class="input-field" type="date">
+              </div>
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="label" for="hw-description">Instructions / Notes</label>
+                <textarea id="hw-description" class="input-field" style="height:140px; resize:vertical;" placeholder="Include practice tasks, links, puzzles, or preparation notes..."></textarea>
+              </div>
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="label" for="hw-file-input">Attachments</label>
+                <input type="file" id="hw-file-input" class="input-field" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,.gif,.pgn,.txt,.md">
+                <div id="hw-file-preview" style="margin-top:8px; font-size:12px; color:var(--ivory-dim);"></div>
+              </div>
            </div>
            <div style="display:flex; gap:10px; margin-top:18px;">
              <button class="btn btn-gold" style="flex:1" onclick="saveHomeworkAssignment()">Assign</button>

@@ -21,6 +21,7 @@ function tokenLifetimeSeconds(role: string) {
   if (role === 'master') return 4 * 60 * 60;
   if (role === 'parent') return 10 * 60;
   if (role === 'coach') return 15 * 60;
+  if (role === 'student') return 10 * 60;
   return 15 * 60;
 }
 
@@ -302,31 +303,51 @@ return new Response(JSON.stringify({
       }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
     
-    // 4. Check parent credentials
-    const cleanStudentName = String(username).trim();
-    
-    console.log(`[Auth] Checking parent credentials. Name: "${cleanStudentName}"`);
+    // 4. Check parent credentials (student name + parent phone)
+    if (cleanUsername.includes('@')) {
+      // This is an email - check if it's a student email login
+      console.log(`[Auth] Checking student email login: "${cleanUsername}"`);
 
-    const { data: studentData, error: studentError } = await supabase.rpc('verify_user_password', {
-      p_user_type: 'student',
-      p_identifier: cleanStudentName,
-      p_password: password
-    });
+      const { data: studentData, error: studentError } = await supabase.rpc('verify_student_credentials', {
+        p_email: cleanUsername,
+        p_password: password
+      });
 
-    if (studentError) {
-      console.warn('[Auth] Student verify RPC failed:', studentError.message);
-    } else if (studentData && studentData.valid) {
-      console.log(`[Auth] Successful parent login for student: ${studentData.name}`);
-      const token = await createParentToken(supabase, studentData.id, studentData.name);
-      return new Response(JSON.stringify({
-        success: true,
-        token,
-        role: 'parent',
-        student_id: studentData.id,
-        user: studentData.name
-      }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      if (!studentError && studentData && studentData.valid) {
+        console.log(`[Auth] Successful student login via email: ${studentData.name}`);
+        const token = await createCustomTokenSession(supabase, 'student', studentData.name, studentData.id);
+        return new Response(JSON.stringify({
+          success: true,
+          token,
+          role: 'student',
+          student_id: studentData.id,
+          user: studentData.name
+        }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
+      
+      // Email not found as student - check Supabase Auth as fallback
+      console.log('[Auth] Not a student email, falling through to generic auth check.');
     } else {
-      console.log(`[Auth] No parent/student records matched name "${cleanStudentName}" with given password.`);
+      // Not an email - check parent login by student name
+      console.log(`[Auth] Checking parent credentials. Name: "${cleanUsername}"`);
+
+      const { data: parentData, error: parentError } = await supabase.rpc('verify_user_password', {
+        p_user_type: 'student',
+        p_identifier: cleanUsername,
+        p_password: password
+      });
+
+      if (!parentError && parentData && parentData.valid) {
+        console.log(`[Auth] Successful parent login for student: ${parentData.name}`);
+        const token = await createParentToken(supabase, parentData.id, parentData.name);
+        return new Response(JSON.stringify({
+          success: true,
+          token,
+          role: 'parent',
+          student_id: parentData.id,
+          user: parentData.name
+        }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+      }
     }
 
 // Failed attempt

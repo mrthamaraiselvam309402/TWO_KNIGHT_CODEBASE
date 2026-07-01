@@ -4401,6 +4401,138 @@ const headers = {
     return m.is_read || false;
   }
 
+  function getMessageIsSent(m) {
+    return m.sender_type === "admin";
+  }
+  const MESSAGE_TEMPLATES = {
+    payment_reminder: {
+      subject: "Payment Reminder",
+      message: "Dear Parent, this is a friendly reminder that the monthly fee is currently due. Please complete the payment at the earliest to avoid interruptions in classes. If you have already paid, kindly disregard this message.",
+      category: "payment",
+    },
+    holiday_notice: {
+      subject: "Holiday Notice",
+      message: "Dear Parents, the academy will remain closed on the announced holiday. Classes will resume on the next scheduled working day. Please plan your child's attendance accordingly.",
+      category: "holiday",
+    },
+    event_reminder: {
+      subject: "Event Reminder",
+      message: "Dear Parents, this is a reminder about our upcoming academy event. Please ensure your child is prepared and arrives on time. Contact the admin office for any last-minute queries.",
+      category: "event",
+    },
+    class_cancellation: {
+      subject: "Class Cancellation",
+      message: "Dear Parent, today's class has been cancelled due to unforeseen circumstances. We will arrange a makeup session shortly and will inform you of the revised schedule.",
+      category: "schedule",
+    },
+    welcome: {
+      subject: "Welcome to the Academy",
+      message: "Welcome to the academy family! We're excited to have you. Please reach out anytime if you have questions about schedules, payments, or training progress.",
+      category: "general",
+    },
+    general: {
+      subject: "Academy Announcement",
+      message: "Dear Parents, please read this important announcement from the academy. Contact us if you have any questions. Thank you for your cooperation.",
+      category: "general",
+    },
+  };
+
+  function applyMsgTemplate() {
+    const templateKey = $("msg-template")?.value || "";
+    const template = MESSAGE_TEMPLATES[templateKey];
+    if (!template) return;
+    if ($("msg-subject")) $("msg-subject").value = template.subject;
+    if ($("msg-body")) $("msg-body").value = template.message;
+    const categorySelect = $("msg-category");
+    if (categorySelect && template.category) categorySelect.value = template.category;
+  }
+
+  window.attachBatchSchedule = function () {
+    const selectedBatches = Array.from(document.querySelectorAll(".msg-recipient-cb:checked"))
+      .filter((cb) => cb.dataset.type === "batch")
+      .map((cb) => cb.dataset.id);
+
+    if (selectedBatches.length === 0) {
+      toast("Select at least one batch recipient first", "error");
+      return;
+    }
+
+    const lines = [];
+    for (const batchId of selectedBatches) {
+      const batch = (window.allBatches || []).find((b) => String(b.id) === String(batchId));
+      if (!batch) continue;
+      const studentNames = (Array.isArray(batch.student_ids) ? batch.student_ids : [])
+        .map((sid) => {
+          const s = (allStudents || []).find((st) => String(st.id) === String(sid));
+          return s ? getStudentName(s) : null;
+        })
+        .filter(Boolean);
+
+      const scheduleLine = `Batch: ${batch.name || batch.batch_name || batch.id}\nDays: ${batch.days || "TBD"}\nTime: ${batch.time_slot || "TBD"}\nStudents: ${studentNames.join(", ") || "None"}`;
+      lines.push(scheduleLine);
+    }
+
+    const textarea = $("msg-body");
+    if (textarea) {
+      const current = textarea.value || "";
+      const suffix = current ? `\n\n${current ? "----\n" : ""}` : "";
+      textarea.value = lines.join("\n\n") + suffix + current;
+    }
+  };
+
+  window.attachStudentSchedule = function () {
+    const selectedStudents = Array.from(document.querySelectorAll(".msg-recipient-cb:checked"))
+      .filter((cb) => cb.dataset.type === "student")
+      .map((cb) => cb.dataset.id);
+
+    if (selectedStudents.length === 0) {
+      toast("Select at least one student recipient first", "error");
+      return;
+    }
+
+    const lines = selectedStudents
+      .map((sid) => {
+        const s = (allStudents || []).find((st) => String(st.id) === String(sid));
+        if (!s) return null;
+        const coach = (allCoaches || []).find((c) => String(c.id) === String(s.coach_id));
+        return `Student: ${getStudentName(s)}\nLevel: ${getStudentLevel(s)}\nBatch Days: ${s.days || "N/A"}\nTime: ${s.session_time || s.batch_time || "N/A"}\nCoach: ${coach ? getCoachName(coach) : "N/A"}`;
+      })
+      .filter(Boolean);
+
+    const textarea = $("msg-body");
+    if (textarea) {
+      const current = textarea.value || "";
+      const suffix = current ? `\n\n${current ? "----\n" : ""}` : "";
+      textarea.value = lines.join("\n\n") + suffix + current;
+    }
+  };
+
+  window.attachCoachInfo = function () {
+    const selectedCoaches = Array.from(document.querySelectorAll(".msg-recipient-cb:checked"))
+      .filter((cb) => cb.dataset.type === "coach")
+      .map((cb) => cb.dataset.id);
+
+    if (selectedCoaches.length === 0) {
+      toast("Select at least one coach recipient first", "error");
+      return;
+    }
+
+    const lines = selectedCoaches
+      .map((cid) => {
+        const c = (allCoaches || []).find((coach) => String(coach.id) === String(cid));
+        if (!c) return null;
+        return `Coach: ${getCoachName(c)}\nSpecialty: ${c.specialty || c.role || "N/A"}\nPhone: ${c.phone || "N/A"}`;
+      })
+      .filter(Boolean);
+
+    const textarea = $("msg-body");
+    if (textarea) {
+      const current = textarea.value || "";
+      const suffix = current ? `\n\n${current ? "----\n" : ""}` : "";
+      textarea.value = lines.join("\n\n") + suffix + current;
+    }
+  };
+
   function makeAvSrc(s) {
     const custom = s.custom_avatar;
     if (custom) {
@@ -6695,7 +6827,6 @@ if (userRole === "parent") setPage("child");
         return;
       }
 
-      console.log(`[UI] Rendering ${studs.length} students...`);
       tbody.innerHTML = studs
         .map((s, i) => {
           try {
@@ -6993,6 +7124,17 @@ if (userRole === "parent") setPage("child");
     $("e-join").value = getStudentDate(s);
     $("e-batch-type").value = getStudentBatchType(s);
     $("e-batch-time").value = getStudentBatchTime(s);
+    const studentDays = (s.days || "").split(",").map((d) => d.trim()).filter(Boolean);
+    document.querySelectorAll(".e-day-cb, .e-day-btn").forEach((el) => {
+      const day = el.dataset.day || el.value;
+      if (studentDays.includes(day)) el.classList.add("active");
+      else el.classList.remove("active");
+    });
+    // Also populate the hidden days input for form submission
+    const activeDays = Array.from(document.querySelectorAll("#edit-modal .e-day-btn.active"))
+      .map(b => b.dataset.day)
+      .join(", ");
+    if ($("e-days")) $("e-days").value = activeDays;
     if ($("e-due-date")) $("e-due-date").value = s.due_date || "";
     if ($("e-learning-mode"))
       $("e-learning-mode").value = s.learning_mode || "online";
@@ -7046,30 +7188,32 @@ if (userRole === "parent") setPage("child");
     }
 
     // Send fee under every possible field name so whichever Supabase column exists gets updated
-    const data = {
-      full_name: $("e-name").value,
-      name: $("e-name").value,
-      phone: fullPhone,
-      parent_phone: fullPhone,
-      country_code: countryCode,
-      level: $("e-level").value,
-      grade: $("e-level").value,
-      rating: newElo,
-      coach_id: $("e-coach").value,
-      status: $("e-enroll-status")?.value || s.status || "active",
-      payment_status:
-        $("e-payment-status")?.value || s.payment_status || "Pending",
-      enrollment_date: $("e-join").value,
-      due_date: $("e-due-date")?.value || null,
-      session_mode: $("e-batch-type").value,
-      batch_type: $("e-batch-type").value,
-      session_time: $("e-batch-time").value,
-      batch_time: $("e-batch-time").value,
+const data = {
+       full_name: $("e-name").value,
+       name: $("e-name").value,
+       phone: fullPhone,
+       parent_phone: fullPhone,
+       country_code: countryCode,
+       level: $("e-level").value,
+       grade: $("e-level").value,
+       rating: newElo,
+       coach_id: $("e-coach").value,
+       status: $("e-enroll-status")?.value || s.status || "active",
+       payment_status:
+         $("e-payment-status")?.value || s.payment_status || "Pending",
+       enrollment_date: $("e-join")?.value?.trim() || null,
+       due_date: $("e-due-date")?.value?.trim() || null,
+       session_mode: $("e-batch-type").value?.trim() || null,
+       batch_type: $("e-batch-type").value?.trim() || null,
+       session_time: $("e-batch-time").value?.trim() || null,
+       batch_time: $("e-batch-time").value?.trim() || null,
+       days: getSelectedDays(".e-day-cb, .e-day-btn") || null,
       // Send fee under ALL possible column names
       monthly_fee: newFee,
       fee: newFee,
       fees: newFee,
       tuition_fee: newFee,
+      admission_fee: parseInt($("e-admission-fee")?.value) || 0,
       learning_mode: $("e-learning-mode")?.value || s.learning_mode || "online",
       lichess_username: $("e-lichess") ? $("e-lichess").value.trim() : "",
       chesscom_username: $("e-chesscom") ? $("e-chesscom").value.trim() : "",
@@ -7285,6 +7429,8 @@ if (userRole === "parent") setPage("child");
     if ($("m-coach")) $("m-coach").value = "";
     if ($("m-status")) $("m-status").value = "active";
     if ($("m-learning-mode")) $("m-learning-mode").value = "offline";
+    document.querySelectorAll(".m-day-btn").forEach((btn) => btn.classList.remove("active"));
+    if ($("m-days")) $("m-days").value = "";
     window.selectedCountryCode = "IN";
     window.selectedCountryCodeEdit = "IN";
     const selected = $("country-selected");
@@ -7298,6 +7444,31 @@ if (userRole === "parent") setPage("child");
     openModal("enroll-modal");
   }
 
+  window.toggleEditDay = function(btn, day) {
+    btn.classList.toggle('active');
+    const selected = Array.from(document.querySelectorAll("#edit-modal .e-day-btn.active"))
+      .map(b => b.dataset.day)
+      .join(", ");
+    if ($("e-days")) $("e-days").value = selected;
+  };
+  
+  function getSelectedDays(selector) {
+    return Array.from(document.querySelectorAll(selector))
+      .map((el) => el.dataset.day || el.value)
+      .filter(d => d && d.trim())
+      .join(", ");
+  }
+  
+  window.toggleEnrollDay = function(btn, day) {
+    btn.classList.toggle('active');
+    if ($("m-days")) {
+      const selected = Array.from(document.querySelectorAll("#enroll-modal .m-day-btn.active"))
+        .map(b => b.dataset.day)
+        .join(", ");
+      $("m-days").value = selected;
+    }
+  };
+
   async function saveStudent() {
     const rawPhone = $("m-phone").value.trim();
     const countryCode = window.selectedCountryCode || "IN";
@@ -7306,43 +7477,45 @@ if (userRole === "parent") setPage("child");
     const selectedStatus = $("m-status")?.value || "active";
     const defaultPaymentStatus =
       selectedStatus === "active" ? "Due" : "Pending";
-    const data = {
-      full_name: $("m-name").value.trim(),
-      phone: fullPhone,
-      parent_phone: fullPhone,
-      country_code: countryCode,
-      level: $("m-level").value,
-      rating: parseInt($("m-elo").value) || 0,
-      coach_id: $("m-coach").value,
-      enrollment_date:
-        $("m-join").value || new Date().toISOString().split("T")[0],
+const data = {
+       full_name: $("m-name").value.trim(),
+       phone: fullPhone,
+       parent_phone: fullPhone,
+       country_code: countryCode,
+       level: $("m-level").value,
+       rating: parseInt($("m-elo").value) || 0,
+       coach_id: $("m-coach").value,
+       enrollment_date: $("m-join")?.value || new Date().toISOString().split("T")[0],
       // If no due date is entered, default it to the student's billing-anchor
       // month on their enrollment day (so a June enrolment is due in June, not
       // July via the server's "5th of next month" fallback). Late-month joins
       // (grace) correctly anchor to the next month.
-      due_date: (function () {
-        const explicit = $("m-due-date")?.value;
-        if (explicit) return explicit;
-        const enrollStr =
-          $("m-join").value || new Date().toISOString().split("T")[0];
-        const ed = new Date(enrollStr);
-        if (isNaN(ed.getTime())) return null;
-        const a = window.getBillingAnchor
-          ? window.getBillingAnchor({ enrollment_date: enrollStr })
-          : { year: ed.getUTCFullYear(), month: ed.getUTCMonth() };
-        const daysIn = new Date(a.year, a.month + 1, 0).getDate();
-        const day = Math.min(ed.getUTCDate(), daysIn);
-        return (
-          a.year +
-          "-" +
-          String(a.month + 1).padStart(2, "0") +
-          "-" +
-          String(day).padStart(2, "0")
-        );
-      })(),
+due_date: (function () {
+         const explicit = $("m-due-date")?.value;
+         if (explicit) return explicit;
+         const enrollStr =
+           $("m-join")?.value || new Date().toISOString().split("T")[0];
+         if (!enrollStr) return null;
+         const ed = new Date(enrollStr);
+         if (isNaN(ed.getTime())) return null;
+         const a = window.getBillingAnchor
+           ? window.getBillingAnchor({ enrollment_date: enrollStr })
+           : { year: ed.getUTCFullYear(), month: ed.getUTCMonth() };
+         const daysIn = new Date(a.year, a.month + 1, 0).getDate();
+         const day = Math.min(ed.getUTCDate(), daysIn);
+         return (
+           a.year +
+           "-" +
+           String(a.month + 1).padStart(2, "0") +
+           "-" +
+           String(day).padStart(2, "0")
+         );
+       })(),
       batch_type: $("m-batch-type").value,
       batch_time: $("m-batch-time").value,
+      days: getSelectedDays(".m-day-cb, .m-day-btn") || null,
       monthly_fee: parseInt($("m-fee").value) || 0,
+      admission_fee: parseInt($("m-admission-fee").value) || 0,
       payment_status: defaultPaymentStatus,
       status: selectedStatus,
       learning_mode: $("m-learning-mode")?.value || "online",
@@ -9867,7 +10040,7 @@ Best regards,
         </td>
         <td><div style="font-size:12px;color:var(--ivory)">${escapeHtml(coachName)}</div></td>
         <td><div style="font-size:12px;color:var(--ivory-dim)">${escapeHtml(sessionType)}</div></td>
-        <td><div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(scheduleTime)}</div></td>
+        <td><div style="font-size:11px;color:var(--ivory-dim)">${escapeHtml(scheduleTime)}${s.days ? " \u00b7 " + escapeHtml(s.days) : ""}</div></td>
         <td style="font-weight:600;color:var(--gold)">₹${getStudentMonthlyFee(s).toLocaleString()}</td>
         <td><span class="badge ${statusClass}" style="font-size:10px;padding:4px 8px">${status}</span></td>
         <td>
@@ -10707,33 +10880,87 @@ Best regards,
 
     if (loadingEl) loadingEl.style.display = "none";
 
-    if (!allMessages || allMessages.length === 0) {
+    let messages = allMessages || [];
+    const filter = ($("msg-filter")?.value || "all").trim();
+
+    if (filter === "unread") {
+      messages = messages.filter((m) => !getMessageIsRead(m));
+    } else if (filter === "sent") {
+      messages = messages.filter((m) => m.sender_type === "admin");
+    }
+
+    if (messages.length === 0) {
       listEl.style.display = "grid";
-      listEl.innerHTML =
-        '<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">💬</span><p>No messages yet</p></div>';
+      const label = filter === "sent" ? "No sent messages yet" : filter === "unread" ? "No unread messages" : filter === "outbox" ? "No outbox broadcasts yet" : "No messages yet";
+      listEl.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">💬</span><p>${label}</p></div>`;
       return;
     }
 
     listEl.style.display = "grid";
-    listEl.innerHTML = allMessages
+
+    if (filter === "outbox") {
+      const groups = new Map();
+      for (const m of messages) {
+        if (m.sender_type !== "admin") continue;
+        const key = m.category || m.subject || "Uncategorized";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(m);
+      }
+
+      if (groups.size === 0) {
+        listEl.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><span class="empty-icon">📤</span><p>No outbox broadcasts yet</p></div>`;
+        return;
+      }
+
+      let html = "";
+      for (const [groupName, groupMessages] of groups) {
+        html += `<div style="grid-column:1/-1; margin-bottom:4px; font-size:12px; text-transform:uppercase; color:var(--gold); font-weight:700; letter-spacing:0.08em;">${escapeHtml(groupName)}</div>`;
+        html += groupMessages
+          .map(
+            (m) => `
+            <div class="msg-card ${getMessageIsRead(m) ? "" : "unread"}">
+              <div class="msg-card-head">
+                <div class="msg-card-sender">
+                  ${escapeHtml(m.sender_name || "Admin")}
+                  <span class="badge badge-success" style="margin-left:8px">Sent</span>
+                </div>
+                <div class="msg-card-time">${m.created_at ? new Date(m.created_at).toLocaleDateString() : ""}</div>
+              </div>
+              <div class="msg-card-subject">${escapeHtml(m.subject || "No Subject")}${m.category ? ` <span class="badge badge-level" style="margin-left:8px">${escapeHtml(m.category)}</span>` : ""}</div>
+              <div class="msg-card-body">${escapeHtml(m.message || "")}</div>
+              <div class="msg-card-actions">
+<button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${encodeURIComponent(String(m.id || ""))}', this)">🗑️ Delete</button>
+               </div>
+              </div>
+            </div>
+          `,
+          )
+          .join("");
+      }
+      listEl.innerHTML = html;
+      return;
+    }
+
+    listEl.innerHTML = messages
       .map(
         (m) => `
-       <div class="msg-card ${getMessageIsRead(m) ? "" : "unread"}">
-         <div class="msg-card-head">
-           <div class="msg-card-sender">
-             ${escapeHtml(m.sender_name || "User")}
-             ${!getMessageIsRead(m) ? '<span class="badge badge-level" style="margin-left:8px">New</span>' : ""}
-           </div>
-           <div class="msg-card-time">${m.created_at ? new Date(m.created_at).toLocaleDateString() : ""}</div>
-         </div>
-         <div class="msg-card-subject">${escapeHtml(m.subject || "No Subject")}</div>
-         <div class="msg-card-body">${escapeHtml(m.message || "")}</div>
-         <div class="msg-card-actions">
-           ${!getMessageIsRead(m) ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${encodeURIComponent(String(m.id || ""))}')">✓ Mark Read</button>` : ""}
-           <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${encodeURIComponent(String(m.id || ""))}')">🗑️ Delete</button>
-         </div>
-       </div>
-     `,
+        <div class="msg-card ${getMessageIsRead(m) ? "" : "unread"}">
+          <div class="msg-card-head">
+            <div class="msg-card-sender">
+              ${escapeHtml(m.sender_name || "User")}
+              ${m.sender_type === "admin" ? '<span class="badge badge-success" style="margin-left:8px">Sent</span>' : !getMessageIsRead(m) ? '<span class="badge badge-level" style="margin-left:8px">New</span>' : ""}
+            </div>
+            <div class="msg-card-time">${m.created_at ? new Date(m.created_at).toLocaleDateString() : ""}</div>
+          </div>
+          <div class="msg-card-subject">${escapeHtml(m.subject || "No Subject")}${m.category ? ` <span class="badge badge-level" style="margin-left:8px">${escapeHtml(m.category)}</span>` : ""}</div>
+          <div class="msg-card-body">${escapeHtml(m.message || "")}</div>
+          <div class="msg-card-actions">
+            ${m.sender_type !== "admin" ? `<button class="btn btn-outline-grey btn-sm" onclick="replyToMessage('${encodeURIComponent(String(m.id || ""))}')">↩ Reply</button>` : ""}
+            ${!getMessageIsRead(m) ? `<button class="btn btn-outline-grey btn-sm" onclick="markMsgRead('${encodeURIComponent(String(m.id || ""))}')">✓ Mark Read</button>` : ""}
+            <button class="btn btn-outline-grey btn-sm" onclick="deleteMsg('${encodeURIComponent(String(m.id || ""))}', this)">🗑️ Delete</button>
+          </div>
+        </div>
+      `,
       )
       .join("");
   }
@@ -10755,21 +10982,72 @@ Best regards,
       );
     }
   }
-  async function deleteMsg(id) {
-    // FIX: confirmation, error handling, user feedback
-    if (!confirm("Delete this message? This cannot be undone.")) return;
+  async function deleteMsg(id, btnEl) {
+    if (!id) return toast("Invalid message ID", "error");
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.textContent = "⏳";
+    }
+    if (!confirm("Delete this message? This cannot be undone.")) {
+      if (btnEl) btnEl.disabled = false;
+      return;
+    }
+    
+    // Optimystic UI: Remove from cache immediately, store for rollback
+    const msgIndex = allMessages.findIndex((m) => String(m.id) === String(id));
+    const removedMsg = msgIndex > -1 ? { ...allMessages[msgIndex] } : null;
+    if (msgIndex > -1) allMessages.splice(msgIndex, 1);
+    window.allMessages = allMessages;
+    renderMsgs();
+    
     try {
       const res = await apiCall(
         `${API_BASE}/messages?id=${encodeURIComponent(id)}`,
         { method: "DELETE" },
       );
-      if (!res || !res.ok)
-        throw new Error(`Server returned ${res ? res.status : "no response"}`);
+      if (!res || !res.ok) {
+        // Restore message in cache if delete failed
+        if (removedMsg && msgIndex > -1) {
+          allMessages.splice(msgIndex, 0, removedMsg);
+          window.allMessages = allMessages;
+          renderMsgs();
+        }
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Server returned ${res.status}`);
+      }
       toast("Message deleted", "success");
-      loadAllData(true);
     } catch (e) {
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.textContent = "🗑️ Delete";
+      }
       toast("Failed to delete: " + (e.message || "connection error"), "error");
     }
+  }
+  async function replyToMessage(encodedId) {
+    const id = decodeURIComponent(String(encodedId || ""));
+    const message = (allMessages || []).find((m) => String(m.id) === String(id));
+    if (!message) {
+      toast("Original message not found", "error");
+      return;
+    }
+    $("msg-subject").value = (message.subject || "").startsWith("Re:") ? message.subject : `Re: ${message.subject || ""}`;
+    $("msg-body").value = "";
+    $("msg-recipient-search").value = "";
+    const templateSelect = $("msg-template");
+    if (templateSelect) templateSelect.value = "";
+    const categorySelect = $("msg-category");
+    if (categorySelect) categorySelect.value = "";
+
+    let recipientType = "student";
+    if (message.sender_type === "coach") recipientType = "coach";
+    else if (message.sender_type === "parent") recipientType = "student";
+
+    document.querySelectorAll('input[name="msg-recipient-type"]').forEach((r) => {
+      r.checked = r.value === recipientType;
+    });
+    renderRecipientOptions();
+    openModal("compose-message-modal");
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -12434,6 +12712,7 @@ Best regards,
             ),
             "Session Mode": getStudentBatchType(s),
             "Session Time": s.session_time || s.batch_time || "TBD",
+            "Schedule Days": s.days || "N/A",
             "Assigned Coach": coach ? getCoachName(coach) : "None",
             "Coach Phone": coach ? coach.phone || "N/A" : "N/A",
             "Coach Specialty": coach
@@ -12815,49 +13094,237 @@ window.deleteStudent = deleteStudent;
   window.renderMsgs = renderMsgs;
   window.markMsgRead = markMsgRead;
   window.deleteMsg = deleteMsg;
+  window.replyToMessage = replyToMessage;
 
   // FIX: Compose Message now works (was a placeholder alert). Admin can send a broadcast
   // notice to all parents or a one-off message to themselves for record-keeping.
-  window.openComposeMessage = async function () {
-    if (role !== "admin" && role !== "master") {
-      toast("Only admins can compose messages", "error");
-      return;
+  function renderRecipientOptions() {
+    const type =
+      document.querySelector('input[name="msg-recipient-type"]:checked')?.value ||
+      "student";
+    const query = ($("msg-recipient-search")?.value || "").toLowerCase().trim();
+    const container = $("msg-recipient-list");
+    if (!container) return;
+    let html = "";
+
+    if (type === "student") {
+      const list = (allStudents || [])
+        .filter((s) => {
+          const name = (getStudentName(s) || "").toLowerCase();
+          const phone = (getStudentPhone(s) || "").toLowerCase();
+          const level = (getStudentLevel(s) || "").toLowerCase();
+          if (!query) return true;
+          return name.includes(query) || phone.includes(query) || level.includes(query);
+        })
+        .slice(0, 200);
+      html =
+        list.length === 0
+          ? '<div style="padding:10px; color:var(--ivory-dim); font-size:12px;">No matching students.</div>'
+          : list
+              .map(
+                (s) =>
+                  `<label style="display:flex; align-items:center; gap:8px; padding:6px 8px; cursor:pointer; border-bottom:1px solid var(--border);">
+                    <input type="checkbox" class="msg-recipient-cb" data-type="student" data-id="${escapeHtml(String(s.id))}" data-name="${escapeHtml(getStudentName(s))}">
+                    <span style="font-size:13px; color:var(--ivory)">${escapeHtml(getStudentName(s))}</span>
+                    <span style="font-size:11px; color:var(--ivory-dim); margin-left:auto;">${escapeHtml(getStudentLevel(s))} · ${escapeHtml(getStudentPhone(s) || '')}</span>
+                  </label>`,
+              )
+              .join("");
+    } else if (type === "coach") {
+      const list = (allCoaches || [])
+        .filter((c) => {
+          const name = (getCoachName(c) || "").toLowerCase();
+          if (!query) return true;
+          return name.includes(query);
+        })
+        .slice(0, 200);
+      html =
+        list.length === 0
+          ? '<div style="padding:10px; color:var(--ivory-dim); font-size:12px;">No matching coaches.</div>'
+          : list
+              .map(
+                (c) =>
+                  `<label style="display:flex; align-items:center; gap:8px; padding:6px 8px; cursor:pointer; border-bottom:1px solid var(--border);">
+                    <input type="checkbox" class="msg-recipient-cb" data-type="coach" data-id="${escapeHtml(String(c.id))}" data-name="${escapeHtml(getCoachName(c))}">
+                    <span style="font-size:13px; color:var(--ivory)">${escapeHtml(getCoachName(c))}</span>
+                    <span style="font-size:11px; color:var(--ivory-dim); margin-left:auto;">${escapeHtml(c.specialty || c.role || '')}</span>
+                  </label>`,
+              )
+              .join("");
+    } else if (type === "batch") {
+      const list = (window.allBatches || [])
+        .filter((b) => {
+          const name = ((b.name || b.batch_name || "") + " " + (b.days || "") + " " + (b.time_slot || "")).toLowerCase();
+          if (!query) return true;
+          return name.includes(query);
+        })
+        .slice(0, 200);
+      html =
+        list.length === 0
+          ? '<div style="padding:10px; color:var(--ivory-dim); font-size:12px;">No matching batches.</div>'
+          : list
+              .map(
+                (b) =>
+                  `<label style="display:flex; align-items:center; gap:8px; padding:6px 8px; cursor:pointer; border-bottom:1px solid var(--border);">
+                    <input type="checkbox" class="msg-recipient-cb" data-type="batch" data-id="${escapeHtml(String(b.id))}" data-name="${escapeHtml(b.name || b.batch_name || ('Batch ' + b.id))}">
+                    <span style="font-size:13px; color:var(--ivory)">${escapeHtml(b.name || b.batch_name || ('Batch ' + b.id))}</span>
+                    <span style="font-size:11px; color:var(--ivory-dim); margin-left:auto;">${escapeHtml(b.days || '')}${b.days && b.time_slot ? ' · ' : ''}${escapeHtml(b.time_slot || '')}</span>
+                  </label>`,
+              )
+              .join("");
     }
-    const subject = window.prompt('Subject (e.g. "Holiday notice"):');
-    if (subject === null) return;
-    const trimmedSubject = (subject || "").trim();
-    if (!trimmedSubject) {
+
+container.innerHTML = html;
+    updateRecipientCount();
+  }
+
+  function getSelectedMessageRecipients() {
+    const cbs = document.querySelectorAll(".msg-recipient-cb:checked");
+    const type = document.querySelector('input[name="msg-recipient-type"]:checked')?.value || "student";
+    const recipients = Array.from(cbs).map((cb) => ({
+      type: cb.dataset.type || type,
+      id: cb.dataset.id,
+      name: cb.dataset.name,
+    }));
+    return recipients;
+  }
+
+  async function sendAdminMessage() {
+    const subject = ($("msg-subject")?.value || "").trim();
+    const body = ($("msg-body")?.value || "").trim();
+    const category = $("msg-category")?.value || "";
+    if (!subject) {
       toast("Subject is required", "error");
       return;
     }
-    const body = window.prompt("Message body:");
-    if (body === null) return;
-    const trimmedBody = (body || "").trim();
-    if (!trimmedBody) {
+    if (!body) {
       toast("Message body is required", "error");
       return;
     }
 
+    const recipients = getSelectedMessageRecipients();
+    if (recipients.length === 0) {
+      toast("Select at least one recipient", "error");
+      return;
+    }
+
+    const primaryType = document.querySelector('input[name="msg-recipient-type"]:checked')?.value || "student";
+
     try {
-      const res = await apiCall("/api/messages", {
-        method: "POST",
-        body: JSON.stringify({
-          sender_type: "admin",
-          receiver_type: "parent",
-          subject: trimmedSubject,
-          message: trimmedBody,
-          priority: "normal",
-        }),
-      });
-      if (!res || !res.ok)
-        throw new Error(`Server returned ${res ? res.status : "no response"}`);
-      toast("Message posted to parent inbox", "success");
+      let sentCount = 0;
+      let failCount = 0;
+
+      for (const r of recipients) {
+        let receiverType = primaryType;
+        let receiverId = r.id;
+
+        if (r.type === "batch") {
+          const batch = (window.allBatches || []).find((b) => String(b.id) === String(r.id));
+          const studentIds = Array.isArray(batch?.student_ids) ? batch.student_ids.map(String) : [];
+          for (const sid of studentIds) {
+            const student = (allStudents || []).find((s) => String(s.id) === String(sid));
+            if (!student) continue;
+            const res = await apiCall("/api/messages", {
+              method: "POST",
+              body: JSON.stringify({
+                sender_type: "admin",
+                receiver_type: "parent",
+                receiver_id: student.id,
+                subject,
+                message: body,
+                category: category || null,
+                priority: "normal",
+              }),
+            });
+            if (res && res.ok) sentCount++;
+            else failCount++;
+          }
+        } else if (r.type === "coach") {
+          const res = await apiCall("/api/messages", {
+            method: "POST",
+            body: JSON.stringify({
+              sender_type: "admin",
+              receiver_type: "coach",
+              receiver_id: r.id,
+              subject,
+              message: body,
+              category: category || null,
+              priority: "normal",
+            }),
+          });
+          if (res && res.ok) sentCount++;
+          else failCount++;
+        } else {
+          const res = await apiCall("/api/messages", {
+            method: "POST",
+            body: JSON.stringify({
+              sender_type: "admin",
+              receiver_type: "parent",
+              receiver_id: r.id,
+              subject,
+              message: body,
+              category: category || null,
+              priority: "normal",
+            }),
+          });
+          if (res && res.ok) sentCount++;
+          else failCount++;
+        }
+      }
+
+      if (sentCount > 0) toast(`Message sent to ${sentCount} recipient(s)`, "success");
+      if (failCount > 0) toast(`Failed for ${failCount} recipient(s)`, "error");
+      closeModals();
       loadAllData(true);
     } catch (e) {
       toast("Failed to send: " + (e.message || "connection error"), "error");
     }
+  }
+
+  window.openComposeMessage = function () {
+    if (role !== "admin" && role !== "master") {
+      toast("Only admins can compose messages", "error");
+      return;
+    }
+    $("msg-subject").value = "";
+    $("msg-body").value = "";
+    $("msg-recipient-search").value = "";
+    const templateSelect = $("msg-template");
+    if (templateSelect) templateSelect.value = "";
+    const categorySelect = $("msg-category");
+    if (categorySelect) categorySelect.value = "";
+    document.querySelectorAll('input[name="msg-recipient-type"]').forEach((r) => {
+      r.checked = r.value === "student";
+    });
+    renderRecipientOptions();
+    openModal("compose-message-modal");
   };
-  window.renderChild = renderChild;
+
+window.renderRecipientOptions = renderRecipientOptions;
+   window.getSelectedMessageRecipients = getSelectedMessageRecipients;
+   window.sendAdminMessage = sendAdminMessage;
+   window.applyMsgTemplate = applyMsgTemplate;
+   
+   window.selectAllRecipients = function(type) {
+     const cbs = document.querySelectorAll(`.msg-recipient-cb[data-type="${type}"]`);
+     cbs.forEach(cb => { if (!cb.checked) cb.checked = true; });
+     updateRecipientCount();
+   };
+   
+   window.clearRecipientSelection = function() {
+     document.querySelectorAll(".msg-recipient-cb").forEach(cb => cb.checked = false);
+     updateRecipientCount();
+   };
+   
+   function updateRecipientCount() {
+     const countEl = $("msg-selected-count");
+     if (countEl) {
+       const count = document.querySelectorAll(".msg-recipient-cb:checked").length;
+       countEl.textContent = count;
+     }
+   }
+   
+   window.renderChild = renderChild;
   window.setChildTab = setChildTab;
   window.renderChildEvents = renderChildEvents;
   window.renderChildBilling = renderChildBilling;
@@ -13087,7 +13554,7 @@ window.deleteStudent = deleteStudent;
           </td>
           <td>
             <div style="font-size:13px; color:var(--ivory)">${escapeHtml(coachName)}</div>
-            <div style="font-size:11px; color:var(--ivory-dim)">${s.session_mode || "Group"} \u00b7 ${s.session_time || "TBD"}</div>
+            <div style="font-size:11px; color:var(--ivory-dim)">${s.session_mode || "Group"} \u00b7 ${s.session_time || "TBD"}${s.days ? " \u00b7 " + escapeHtml(s.days) : ""}</div>
           </td>
           <td>
             <div style="display:flex; align-items:center; gap:6px;">
@@ -14105,6 +14572,17 @@ window.deleteStudent = deleteStudent;
 
     chatBody.scrollTop = chatBody.scrollHeight;
   };
+
+  // Expose homework functions to window for modules and inline handlers
+  window.loadHomeworkData = loadHomeworkData;
+  window.allHomework = allHomework;
+  
+  // Expose message functions to window for inline onclick handlers
+  window.deleteMsg = deleteMsg;
+  window.markMsgRead = markMsgRead;
+  window.replyToMessage = replyToMessage;
+  window.sendMsg = sendMsg;
+  window.sendFeedback = sendFeedback;
 
   if (document.getElementById("ui-version"))
     document.getElementById("ui-version").textContent =

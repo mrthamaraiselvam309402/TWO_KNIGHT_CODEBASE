@@ -107,12 +107,62 @@
    * getStudentLevel uses capitalizeFirst() but it might be undefined
    * in cached versions of scripts.js.
    */
-  if (typeof window.capitalizeFirst !== 'function') {
-    window.capitalizeFirst = function (str) {
-      if (!str || typeof str !== 'string') return '';
-      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-    };
-  }
+if (typeof window.capitalizeFirst !== 'function') {
+     window.capitalizeFirst = function (str) {
+       if (!str || typeof str !== 'string') return '';
+       return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+     };
+   }
 
-  console.log('[Two Knights Patch v2.1] Applied successfully.');
+  /* ── FIX 9: MESSAGE FUNCTIONS EXPOSURE ───────────────────────────────
+   * deleteMsg, markMsgRead, replyToMessage, sendMsg, sendFeedback are
+   * defined inside scripts.js IIFE but called via inline onclick handlers.
+   * Expose them as no-ops if scripts.js hasn't loaded them yet.
+   */
+   window.deleteMsg = window.deleteMsg || async function(id, btnEl) {
+     console.warn('[Patch] deleteMsg called before scripts.js loaded');
+     if (typeof window.apiCall === 'function') {
+       try {
+         const res = await window.apiCall(`${API_BASE}/messages?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+         if (res && res.ok) {
+           if (window.toast) window.toast('Message deleted', 'success');
+           if (window.loadAllData) window.loadAllData(true);
+         } else {
+           const err = await res.json().catch(() => ({}));
+           throw new Error(err.error || 'Delete failed');
+         }
+       } catch (e) {
+         if (window.toast) window.toast('Failed to delete: ' + (e.message || 'connection error'), 'error');
+       }
+     }
+   };
+
+   window.markMsgRead = window.markMsgRead || async function(id) {
+     if (typeof window.apiCall !== 'function') return;
+     try {
+       const res = await window.apiCall(`${API_BASE}/messages?id=${encodeURIComponent(id)}`, { 
+         method: 'PUT', 
+         body: JSON.stringify({ is_read: true }) 
+       });
+       if (res && res.ok) {
+         if (window.loadAllData) window.loadAllData(true);
+       }
+     } catch (e) {
+       if (window.toast) window.toast('Failed to mark as read', 'error');
+     }
+   };
+
+   window.replyToMessage = window.replyToMessage || function(encodedId) {
+     console.warn('[Patch] replyToMessage called before scripts.js loaded');
+   };
+
+   window.sendMsg = window.sendMsg || async function() {
+     console.warn('[Patch] sendMsg called before scripts.js loaded');
+   };
+
+   window.sendFeedback = window.sendFeedback || async function() {
+     console.warn('[Patch] sendFeedback called before scripts.js loaded');
+   };
+
+   console.log('[Two Knights Patch v2.1] Applied successfully.');
 })();

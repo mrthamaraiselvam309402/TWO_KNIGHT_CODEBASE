@@ -98,22 +98,37 @@
     // sanitization-safe [SCHEDULE64:...] format and the legacy [SCHEDULE:{...}].
     window.extractScheduleJSON = function (notesString, student = null) {
         if (!notesString) {
-            // FALLBACK: Look up student's live batch schedule dynamically
-            if (student && student.id && window.allBatches) {
-                const myBatch = window.allBatches.find(b => {
-                    const ids = Array.isArray(b.student_ids) ? b.student_ids.map(String) : [];
-                    return ids.includes(String(student.id));
-                });
-                if (myBatch) {
-                    const coaches = window.allCoaches || window.coaches || [];
-                    const c = coaches.find(co => String(co.id) === String(myBatch.coach_id));
+            // FALLBACK: Check student's days column first, then batch lookup
+            if (student) {
+                // First try: use student's days column
+                if (student.days) {
+                    const dayArray = String(student.days).split(',').map(d => d.trim()).filter(Boolean);
+                    const timeVal = student.session_time || student.batch_time || 'TBD';
                     return {
-                        regDays: myBatch.days || 'TBD',
-                        regTime: myBatch.time_slot || 'TBD',
-                        regCoachName: c ? c.name : 'TBD',
-                        meetLink: myBatch.notes || '',
+                        regDays: dayArray.join(' & '),
+                        regTime: timeVal,
+                        regCoachName: student.coach_name || student.coaching_coach || 'TBD',
+                        meetLink: student.notes ? student.notes.match(/https?:\/\/[^\s]+/)?.[0] || '' : '',
                         isMatrixOverride: false
                     };
+                }
+                // Second try: Look up student's live batch schedule dynamically
+                if (student.id && window.allBatches) {
+                    const myBatch = window.allBatches.find(b => {
+                        const ids = Array.isArray(b.student_ids) ? b.student_ids.map(String) : [];
+                        return ids.includes(String(student.id));
+                    });
+                    if (myBatch) {
+                        const coaches = window.allCoaches || window.coaches || [];
+                        const c = coaches.find(co => String(co.id) === String(myBatch.coach_id));
+                        return {
+                            regDays: myBatch.days || 'TBD',
+                            regTime: myBatch.time_slot || 'TBD',
+                            regCoachName: c ? c.name : 'TBD',
+                            meetLink: myBatch.notes || '',
+                            isMatrixOverride: false
+                        };
+                    }
                 }
             }
             return null;
@@ -182,6 +197,18 @@
             days.push(day);
         }
         input.value = days.join(' & ');
+        
+        // Update button active states
+        const buttons = document.querySelectorAll('#sch-days-shortcuts .sch-day-btn');
+        buttons.forEach(btn => {
+            const btnDay = btn.dataset.day;
+            if (days.includes(btnDay)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        
         if (window.generateSchedulePreview) window.generateSchedulePreview();
     };
 
@@ -215,13 +242,14 @@
         const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         const activeDaysStr = regDays.toLowerCase();
         
-        let weekGridHtml = '<div style="display:flex; gap:3px; margin-top:12px; margin-bottom:12px; justify-content:space-between; width:100%;">';
+        let weekGridHtml = '<div style="display:flex; gap:4px; margin-top:12px; margin-bottom:12px; justify-content:space-between; width:100%;">';
+        const dayIcons = ['📅', '🥏', '🎯', '🎲', '🎉', '🎊', '⚽'];
         for (let i = 0; i < 7; i++) {
             const isActive = activeDaysStr.includes(daysOfWeek[i].toLowerCase()) || activeDaysStr.includes(shortDays[i].toLowerCase());
             if (isActive) {
-                weekGridHtml += `<div style="flex:1; text-align:center; padding:6px 0; border-radius:2px; background-color:${coachColor}; color:#ffffff; font-weight:600; font-size:10px; border:1px solid ${coachColor}; text-transform:uppercase;">${shortDays[i]}</div>`;
+                weekGridHtml += `<div title="${daysOfWeek[i]}" style="flex:1; text-align:center; padding:8px 4px; border-radius:4px; background:linear-gradient(135deg, ${coachColor}, ${coachColor}cc); color:#ffffff; font-weight:600; font-size:11px; border:1px solid ${coachColor}; text-transform:uppercase; box-shadow:0 2px 8px rgba(0,0,0,0.2);">${shortDays[i]}<span style="display:block; font-size:9px; opacity:0.9;">${dayIcons[i]}</span></div>`;
             } else {
-                weekGridHtml += `<div style="flex:1; text-align:center; padding:6px 0; border-radius:2px; background-color:#1c2030; color:#a4b0cb; font-weight:600; font-size:10px; border:1px solid #2c3242; text-transform:uppercase;">${shortDays[i]}</div>`;
+                weekGridHtml += `<div title="${daysOfWeek[i]}" style="flex:1; text-align:center; padding:8px 4px; border-radius:4px; background-color:#1c2030; color:#a4b0cb; font-weight:600; font-size:11px; border:1px solid #2c3242; text-transform:uppercase; opacity:0.6;">${shortDays[i]}<span style="display:block; font-size:9px;">${dayIcons[i]}</span></div>`;
             }
         }
         weekGridHtml += '</div>';
@@ -336,6 +364,17 @@
             meetLink: document.getElementById('sch-meet-link') ? document.getElementById('sch-meet-link').value : '',
             footnote: document.getElementById('sch-footnote').value || ''
         };
+        
+        // Update day button active states
+        const buttons = document.querySelectorAll('#sch-days-shortcuts .sch-day-btn');
+        const days = schedData.regDays.split('&').map(d => d.trim()).filter(Boolean);
+        buttons.forEach(btn => {
+            if (days.includes(btn.dataset.day)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
         
         const coachId = document.getElementById('sch-coach-select').value;
         let coachName = 'TBD';

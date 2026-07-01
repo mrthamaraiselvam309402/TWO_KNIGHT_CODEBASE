@@ -8,23 +8,23 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --gold-primary: #c9960c;
-      --gold-light: #daa520;
-      --gold-dark: #b8860b;
-      --bg-cream: #f0ece4;
-      --text-main: #1a0e00;
-      --text-dim: #5a4a35;
-      --border-sep: #e8e0d0;
+      --gold-primary: #1a3f7e;
+      --gold-light: #2a559a;
+      --gold-dark: #0f2a5c;
+      --bg-cream: #f0f4fa;
+      --text-main: #0a1a2f;
+      --text-dim: #3a5a7a;
+      --border-sep: #d0d8e8;
     }
 
     :root.theme-event {
-      --gold-primary: #52c41a;
-      --gold-light: #73d13d;
-      --gold-dark: #389e0d;
-      --bg-cream: #f6ffed;
-      --text-main: #135200;
-      --text-dim: #237804;
-      --border-sep: #d9f7be;
+      --gold-primary: #2a559a;
+      --gold-light: #3a6bba;
+      --gold-dark: #1a4585;
+      --bg-cream: #e8f0ff;
+      --text-main: #0a2a5f;
+      --text-dim: #2a559a;
+      --border-sep: #b8c8de;
     }
 
 
@@ -73,7 +73,7 @@
       position: relative; 
     }
 
-    .receipt-header { 
+.receipt-header { 
       background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-light) 50%, var(--gold-dark) 100%); 
       padding: 40px 48px 32px; 
       text-align: center; 
@@ -94,7 +94,7 @@
       font-family: 'Syne', sans-serif; 
       font-size: 32px; 
       font-weight: 700; 
-      color: var(--text-main); 
+      color: #ffffff;
       letter-spacing: 4px; 
       text-transform: uppercase; 
       margin-bottom: 8px; 
@@ -102,7 +102,7 @@
 
     .academy-tagline { 
       font-size: 14px; 
-      color: #3a2800; 
+      color: #e6f0ff;
       letter-spacing: 1.5px; 
       margin-bottom: 12px; 
       font-style: italic; 
@@ -111,7 +111,7 @@
     .academy-contact { 
       font-family: 'DM Mono', monospace; 
       font-size: 12px; 
-      color: #2a1a00; 
+      color: #cce0ff;
       display: flex; 
       justify-content: center; 
       align-items: center; 
@@ -155,11 +155,11 @@
       color: var(--gold-primary); 
       margin-bottom: 20px; 
       padding-bottom: 8px; 
-      border-bottom: 1px solid #f0e8d0; 
+      border-bottom: 1px solid #d0d8e8; 
     }
 
     .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; font-size: 17px; }
-    .detail-row:not(:last-child) { border-bottom: 1px dashed #ede5d4; }
+    .detail-row:not(:last-child) { border-bottom: 1px dashed #d0d8e8; }
     .detail-label { color: #7a6a55; font-size: 14px; }
     .detail-value { color: var(--text-main); font-weight: 600; font-size: 15px; text-align: right; }
     .detail-value.mono { font-family: 'Syne', sans-serif; font-weight: 600; }
@@ -185,7 +185,7 @@
       justify-content: space-between; 
       align-items: center; 
       padding: 24px 48px; 
-      background: #faf6ee; 
+      background: #f5f9ff; 
       border-top: 2px solid var(--gold-light); 
     }
 
@@ -195,15 +195,15 @@
 
     .total-words { 
       padding: 0 48px 24px; 
-      background: #faf6ee; 
+      background: #f5f9ff; 
       font-size: 14px; 
-      color: #9a8a70; 
+      color: #5a6b8a; 
       font-style: italic; 
       border-bottom: 2px solid var(--border-sep); 
     }
 
-    .receipt-footer { padding: 30px 48px; text-align: center; background: #fdfbf7; }
-    .receipt-footer p { font-size: 12px; color: #b0a090; line-height: 2; }
+    .receipt-footer { padding: 30px 48px; text-align: center; background: #f8fbff; }
+    .receipt-footer p { font-size: 12px; color: #6a7a9a; line-height: 2; }
     .receipt-footer .thank-you { font-size: 16px; font-style: italic; color: var(--gold-primary); margin-top: 10px; }
 
     @media print {
@@ -225,8 +225,8 @@
       <div class="academy-name">Two Knights Academy</div>
       <div class="academy-tagline">Building Champions, One Move at a Time</div>
       <div class="academy-contact">
-        <span>📞 +91 88257 31470</span>
-        <span>📧 Two Knights37@gmail.com</span>
+        <span>📞 +91 80155 12962</span>
+        <span>📧 twoknightschessacademy@gmail.com</span>
       </div>
     </div>
 
@@ -246,13 +246,13 @@
       <div class="section-title">Student Details</div>
       <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value" id="disp-name">Loading...</span></div>
       <div class="detail-row"><span class="detail-label">Level</span><span class="detail-value" id="disp-level">Beginner</span></div>
-      <div class="detail-row"><span class="detail-label">ELO Rating</span><span class="detail-value mono" id="disp-rating">800</span></div>
       <div class="detail-row"><span class="detail-label">Coach</span><span class="detail-value" id="disp-coach">N/A</span></div>
     </div>
 
     <div class="receipt-section">
       <div class="section-title">Payment Details</div>
-      <div class="detail-row"><span class="detail-label" id="disp-fee-label">Tuition Fee</span><span class="detail-value mono" id="disp-amount-row">₹ 0</span></div>
+      <div class="detail-row" id="row-admission" style="display: none;"><span class="detail-label">Admission Fee</span><span class="detail-value mono" id="disp-admission">₹ 0</span></div>
+      <div class="detail-row"><span class="detail-label" id="disp-fee-label">Monthly Fee</span><span class="detail-value mono" id="disp-amount-row">₹ 0</span></div>
       <div class="detail-row" id="row-event" style="display: none;"><span class="detail-label">Tournament / Camp</span><span class="detail-value" id="disp-event-name"></span></div>
       <div class="detail-row"><span class="detail-label">Payment Mode</span><span class="detail-value" id="disp-method">Online Transfer</span></div>
       <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span style="color:#2e7d32;font-weight:700">✓ SUCCESS</span></span></div>
@@ -266,7 +266,7 @@
 
     <div class="receipt-footer">
       <p>This is a computer-generated receipt. No signature required.</p>
-      <p>For queries, contact Two Knights37@gmail.com</p>
+      <p>For queries, contact twoknightschessacademy@gmail.com</p>
       <p class="thank-you">♟ &nbsp; Thank you for your patronage! &nbsp; ♟</p>
     </div>
   </div>
@@ -294,9 +294,9 @@
     const id = params.get('id') || 'STUDENT';
     const name = params.get('name') || 'Student Name';
     const amount = parseInt(params.get('amount')) || 0;
+    const admissionFee = parseInt(params.get('admission_fee')) || 0;
     const dateStr = params.get('date');
     const level = params.get('level') || 'Beginner';
-    const rating = params.get('rating') || '800';
     const coach = params.get('coach') || 'N/A';
     const method = params.get('method') || 'Online Transfer';
     const type = params.get('type') || 'tuition';
@@ -308,12 +308,20 @@
     document.getElementById('disp-date').textContent = date.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' }).replace(/\//g, ' / ');
     document.getElementById('disp-name').textContent = name;
     document.getElementById('disp-level').textContent = level;
-    document.getElementById('disp-rating').textContent = rating;
     document.getElementById('disp-coach').textContent = coach;
+    
+    // Admission fee - only shown for first month
+    const rowAdmission = document.getElementById('row-admission');
+    const dispAdmission = document.getElementById('disp-admission');
+    if (admissionFee > 0 && rowAdmission && dispAdmission) {
+      rowAdmission.style.display = 'flex';
+      dispAdmission.textContent = '₹ ' + admissionFee.toLocaleString();
+    }
+    
     document.getElementById('disp-amount-row').textContent = '₹ ' + amount.toLocaleString();
     document.getElementById('disp-method').textContent = method;
-    document.getElementById('disp-total').textContent = amount.toLocaleString();
-    document.getElementById('disp-words').textContent = numberToWords(amount);
+    document.getElementById('disp-total').textContent = (admissionFee + amount).toLocaleString();
+    document.getElementById('disp-words').textContent = numberToWords(admissionFee + amount);
 
     if (type === 'event') {
       document.documentElement.classList.add('theme-event');

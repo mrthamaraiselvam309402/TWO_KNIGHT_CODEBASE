@@ -149,6 +149,7 @@ Deno.serve(async (req) => {
         receiver_id: body.receiver_id || null,
         subject: body.subject || '',
         message: String(body.message).trim(),
+        category: body.category || null,
         is_read: false,
         priority: body.priority || 'normal',
         reply_to: body.reply_to || null,

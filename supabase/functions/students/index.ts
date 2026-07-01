@@ -200,11 +200,13 @@ Deno.serve(async (req) => {
        school_name: s.school_name || '',
        place: s.place || '',
        special_notes: s.special_notes || '',
-       chesscom_username: s.chesscom_username || '',
-       lichess_username: s.lichess_username || '',
-       created_at: s.created_at,
-       updated_at: s.updated_at
-     }
+chesscom_username: s.chesscom_username || '',
+        lichess_username: s.lichess_username || '',
+        days: s.days || '',
+        admission_fee: parseInt(String(s.admission_fee)) || 0,
+        created_at: s.created_at,
+        updated_at: s.updated_at
+      }
    }
 
   try {
@@ -314,14 +316,15 @@ Deno.serve(async (req) => {
          parent_name: sanitizeString(rawBody.parent_name, 100),
          age: rawBody.age ? parseInt(String(rawBody.age)) || null : null,
          grade: sanitizeString(rawBody.grade || rawBody.level, 50),
-         enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0],
-         status: validateStatus(rawBody.status),
-         coach_id: rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null,
-         rating: validateRating(rawBody.rating || rawBody.current_rating),
-         session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
-         session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
-         monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
-         father_name: sanitizeString(rawBody.father_name, 100) || null,
+enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0],
+          status: validateStatus(rawBody.status),
+          coach_id: rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null,
+          rating: validateRating(rawBody.rating || rawBody.current_rating),
+          session_mode: sanitizeString(rawBody.session_mode || rawBody.batch_type, 50) || null,
+          session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
+          monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
+          admission_fee: parseInt(String(rawBody.admission_fee)) || 0,
+          father_name: sanitizeString(rawBody.father_name, 100) || null,
          father_phone: sanitizeString(rawBody.father_phone, 20) || null,
          mother_name: sanitizeString(rawBody.mother_name, 100) || null,
          mother_phone: sanitizeString(rawBody.mother_phone, 20) || null,
@@ -329,16 +332,17 @@ Deno.serve(async (req) => {
          school_name: sanitizeString(rawBody.school_name, 150) || null,
          place: sanitizeString(rawBody.place, 150) || null,
          special_notes: sanitizeString(rawBody.special_notes, 1000) || null,
-         chesscom_username: sanitizeString(rawBody.chesscom_username, 50) || null,
-         lichess_username: sanitizeString(rawBody.lichess_username, 50) || null,
-         // If due_date is missing, default to the 5th of the next month
-         due_date: rawBody.due_date ? String(rawBody.due_date) : (() => {
-            const now = new Date();
-            let y = now.getUTCFullYear();
-            let m = now.getUTCMonth() + 1; // next month
-            if (m > 11) { m = 0; y++; }
-            return new Date(Date.UTC(y, m, 5)).toISOString().split('T')[0];
-         })(),
+          chesscom_username: sanitizeString(rawBody.chesscom_username, 50) || null,
+          lichess_username: sanitizeString(rawBody.lichess_username, 50) || null,
+          days: rawBody.days ? sanitizeString(String(rawBody.days), 100) : null,
+          // If due_date is missing, default to the 5th of the next month
+due_date: rawBody.due_date && String(rawBody.due_date).trim() ? String(rawBody.due_date).trim() : (() => {
+             const now = new Date();
+             let y = now.getUTCFullYear();
+             let m = now.getUTCMonth() + 1; // next month
+             if (m > 11) { m = 0; y++; }
+             return new Date(Date.UTC(y, m, 5)).toISOString().split('T')[0];
+          })(),
          notes: `[LM:${sanitizeString(rawBody.learning_mode, 50) || 'online'}] ${sanitizeString(rawBody.notes, 2000)}`.trim(),
          account_status: 'active',
          created_at: new Date().toISOString()
@@ -466,9 +470,12 @@ Deno.serve(async (req) => {
       if (rawBody.chesscom_username !== undefined) updateData.chesscom_username = sanitizeString(rawBody.chesscom_username, 50);
       if (rawBody.lichess_username !== undefined) updateData.lichess_username = sanitizeString(rawBody.lichess_username, 50);
       if (rawBody.password !== undefined) updateData.password = sanitizeString(rawBody.password, 255);
-      if (rawBody.enrollment_date !== undefined || rawBody.join_date !== undefined) {
-        updateData.enrollment_date = sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10);
-      }
+if (rawBody.enrollment_date !== undefined || rawBody.join_date !== undefined) {
+         const dateVal = rawBody.enrollment_date || rawBody.join_date;
+         if (dateVal && String(dateVal).trim()) {
+           updateData.enrollment_date = String(dateVal).trim();
+         }
+       }
       if (rawBody.status !== undefined) {
         updateData.status = validateStatus(rawBody.status);
         updateData.account_status = validateStatus(rawBody.status);
@@ -498,22 +505,34 @@ Deno.serve(async (req) => {
          const currentNotes = (updateData.notes !== undefined ? updateData.notes : (typeof rawBody.notes === 'string' ? rawBody.notes : ''));
          updateData.notes = `[LM:${sanitizeString(String(rawBody.learning_mode), 50) || 'online'}] ${currentNotes}`.trim();
       }
-      if (rawBody.session_mode !== undefined || rawBody.batch_type !== undefined) {
-        updateData.session_mode = sanitizeString(rawBody.session_mode || rawBody.batch_type, 50);
+if (rawBody.session_mode !== undefined || rawBody.batch_type !== undefined) {
+        const sessionMode = rawBody.session_mode || rawBody.batch_type;
+        updateData.session_mode = sessionMode && String(sessionMode).trim() ? String(sessionMode).trim() : null;
       }
       if (rawBody.session_time !== undefined || rawBody.batch_time !== undefined) {
-        updateData.session_time = sanitizeString(rawBody.session_time || rawBody.batch_time, 100);
+        const sessionTime = rawBody.session_time || rawBody.batch_time;
+        updateData.session_time = sessionTime && String(sessionTime).trim() ? String(sessionTime).trim() : null;
       }
-      if (rawBody.monthly_fee !== undefined || rawBody.fee !== undefined || rawBody.fees !== undefined || rawBody.tuition_fee !== undefined) {
+      if (rawBody.days !== undefined) {
+        updateData.days = rawBody.days ? sanitizeString(String(rawBody.days), 100) : null;
+      }
+if (rawBody.monthly_fee !== undefined || rawBody.fee !== undefined || rawBody.fees !== undefined || rawBody.tuition_fee !== undefined) {
         const feeVal = parseInt(String(rawBody.monthly_fee ?? rawBody.fee ?? rawBody.fees ?? rawBody.tuition_fee)) || 0;
         updateData.monthly_fee = feeVal;
       }
-       if (rawBody.due_date !== undefined) {
-         updateData.due_date = rawBody.due_date ? String(rawBody.due_date) : null;
-       }
-       if (rawBody.country_code !== undefined) {
-         updateData.country_code = validateCountryCode(rawBody.country_code);
-       }
+      if (rawBody.admission_fee !== undefined) {
+        updateData.admission_fee = parseInt(String(rawBody.admission_fee)) || 0;
+      }
+      if (rawBody.due_date !== undefined) {
+        if (rawBody.due_date && String(rawBody.due_date).trim()) {
+          updateData.due_date = String(rawBody.due_date).trim();
+        } else {
+          updateData.due_date = null;
+        }
+      }
+      if (rawBody.country_code !== undefined) {
+        updateData.country_code = validateCountryCode(rawBody.country_code);
+      }
       
       updateData.updated_at = new Date().toISOString();
       

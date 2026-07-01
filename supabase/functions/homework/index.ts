@@ -43,14 +43,27 @@ async function getAllAssignments() {
  }
 
 async function getAssignmentById(id: string) {
-   const supabase = getSupabaseClient();
-   const { data, error } = await supabase.from('homework_assignments').select('*').eq('id', id).single();
-   if (error) {
-     console.warn('[Homework] getAssignmentById error:', error.message);
-     return null;
-   }
-   return data;
- }
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.from('homework_assignments').select('*').eq('id', id).single();
+    if (error) {
+      console.warn('[Homework] getAssignmentById error:', error.message);
+      return null;
+    }
+    // Add recipient_count
+    if (data) {
+      if (data.target_type === 'all') {
+        const { count } = await supabase.from('students').select('id', { count: 'exact', head: true }).eq('status', 'active').or('status.eq.active,status.eq.pending');
+        data.recipient_count = count || 0;
+      } else if (data.target_type === 'batch' && data.batch_id) {
+        const { data: batch } = await supabase.from('batches').select('student_ids').eq('id', data.batch_id).single();
+        const ids = batch?.student_ids || [];
+        data.recipient_count = Array.isArray(ids) ? ids.length : 0;
+      } else {
+        data.recipient_count = 1;
+      }
+    }
+    return data;
+  }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -102,23 +115,37 @@ Deno.serve(async (req) => {
         return jsonResponse(assignment);
       }
 
-      const assignments = await getAllAssignments();
+const assignments = await getAllAssignments();
+       const assignmentsWithRecipients = await Promise.all(
+         (assignments || []).map(async (a: any) => {
+           if (a.target_type === 'all') {
+             const { count } = await supabase.from('students').select('id', { count: 'exact', head: true }).eq('status', 'active').or('status.eq.active,status.eq.pending');
+             return { ...a, recipient_count: count || 0 };
+           }
+           if (a.target_type === 'batch' && a.batch_id) {
+             const { data: batch } = await supabase.from('batches').select('student_ids').eq('id', a.batch_id).single();
+             const ids = batch?.student_ids || [];
+             return { ...a, recipient_count: Array.isArray(ids) ? ids.length : 0 };
+           }
+           return { ...a, recipient_count: 1 };
+         })
+       );
 
-      if (headerStudentId && isUuid(headerStudentId)) {
-        const { data: submissions, error: subError } = await supabase
-          .from('homework_submissions')
-          .select('*')
-          .eq('student_id', headerStudentId);
+       if (headerStudentId && isUuid(headerStudentId)) {
+         const { data: submissions, error: subError } = await supabase
+           .from('homework_submissions')
+           .select('*')
+           .eq('student_id', headerStudentId);
 
-        if (!subError && submissions) {
-          const subMap = new Map(submissions.map(s => [s.assignment_id, s]));
-          assignments.forEach((a: any) => {
-            a.student_submission = subMap.get(a.id) || null;
-          });
-        }
-      }
+         if (!subError && submissions) {
+           const subMap = new Map(submissions.map(s => [s.assignment_id, s]));
+           assignmentsWithRecipients.forEach((a: any) => {
+             a.student_submission = subMap.get(a.id) || null;
+           });
+         }
+       }
 
-      return jsonResponse({ data: assignments, total: assignments.length });
+       return jsonResponse({ data: assignmentsWithRecipients, total: assignmentsWithRecipients.length });
     }
 
     if (req.method === 'POST') {
@@ -150,6 +177,7 @@ Deno.serve(async (req) => {
               student_id: headerStudentId,
               submission_text: body.submission_text || '',
               submission_url: body.submission_url || '',
+              file_urls: body.file_urls || null,
               status: 'submitted',
               revision_count: revisionCount,
               submitted_at: new Date().toISOString(),

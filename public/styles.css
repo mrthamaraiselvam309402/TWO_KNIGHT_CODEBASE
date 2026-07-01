@@ -146,6 +146,22 @@ body[data-theme="light"] .ai-msg.bot { background: var(--surface3) !important; c
 body[data-theme="light"] .ai-chat-input-area { background: var(--surface2); }
 body[data-theme="light"] .ai-input { background: var(--surface); border-color: var(--border); color: var(--ivory); }
 
+/* ── MESSAGE HUB LIGHT THEME ── */
+body[data-theme="light"] .msg-card { background: var(--surface); border: 1px solid var(--border); }
+body[data-theme="light"] .msg-card.unread { border-left: 3px solid var(--gold); }
+body[data-theme="light"] .msg-card-sender { color: var(--gold); }
+body[data-theme="light"] .msg-card-subject { color: var(--ivory); }
+body[data-theme="light"] .msg-card-body { color: var(--ivory2); }
+body[data-theme="light"] .msg-card-time { color: var(--ivory3); }
+body[data-theme="light"] #msg-filter { background: var(--surface2); border-color: var(--border); color: var(--ivory); }
+body[data-theme="light"] #msg-category { background: var(--surface2); border-color: var(--border); color: var(--ivory); }
+body[data-theme="light"] #msg-template { background: var(--surface2); border-color: var(--border); color: var(--ivory); }
+body[data-theme="light"] .msgs-list { gap: 16px; }
+body[data-theme="light"] .msg-recipient-list { background: var(--surface2) !important; }
+body[data-theme="light"] .homework-calendar-grid div { background: var(--surface2) !important; }
+body[data-theme="light"] #homework-month-filter, body[data-theme="light"] #homework-assignee-filter, body[data-theme="light"] #homework-status-filter { background: var(--surface2); border-color: var(--border); color: var(--ivory); }
+body[data-theme="light"] .homework-calendar-list .card { background: var(--surface); border: 1px solid var(--border); }
+
 /* ── CARD CLICKABLE ── */
 .card-clickable { cursor: pointer; transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s, border-color 0.2s !important; }
 .card-clickable:hover { transform: translateY(-4px) scale(1.02); border-color: var(--gold) !important; box-shadow: var(--shadow-deep), 0 0 15px var(--gold-glow); }
@@ -355,6 +371,7 @@ tbody tr:hover { background: var(--gold-mist); }
 .btn-outline-blue:hover { background: rgba(90,159,255,0.1); }
 .btn-outline-grey { background: transparent; border: 1px solid #555; color: var(--ivory); }
 .btn-outline-grey:hover { background: var(--glass); }
+.btn-outline-grey.active { background: var(--gold); color: var(--charcoal); border-color: var(--gold); }
  .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
  .btn-danger:hover { background: rgba(255,77,79,0.1); }
  .btn-outline-info { background: transparent; border: 1px solid var(--info); color: var(--info); }

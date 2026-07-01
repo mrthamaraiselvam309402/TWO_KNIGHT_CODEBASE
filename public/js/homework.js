@@ -243,23 +243,25 @@ let homeworkSubmissionCache = [];
     window.openModal && window.openModal('homework-assignment-modal');
   }
 
-  async function uploadHomeworkFile(file) {
-    const IMGBB_API_KEY = window.IMGBB_API_KEY || Deno?.env?.get('IMGBB_API_KEY') || '';
-    if (!IMGBB_API_KEY && !window.apiCall) {
-      throw new Error('File upload service not configured');
-    }
+async function uploadHomeworkFile(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = async () => {
-        const base64 = reader.result.split(',')[1];
         try {
+          const base64 = reader.result.split(',')[1];
           const res = await window.apiCall('/api/upload', {
             method: 'POST',
-            body: JSON.stringify({ image: base64 })
+            body: JSON.stringify({ 
+              image: base64,
+              filename: file?.name || `file.${file?.type?.split('/')[1] || 'bin'}`
+            })
           });
-          if (!res.ok) throw new Error('Upload failed');
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `Upload failed (${res.status})`);
+          }
           const data = await res.json();
-          resolve(data.data?.url || data.url || base64);
+          resolve(data?.data?.url || data?.url || null);
         } catch (e) { reject(e); }
       };
       reader.onerror = () => reject(new Error('File read error'));
@@ -284,7 +286,11 @@ let homeworkSubmissionCache = [];
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       try {
         const uploadPromises = Array.from(fileInput.files).map(f => uploadHomeworkFile(f));
-        attachmentUrls = await Promise.all(uploadPromises);
+        const uploaded = await Promise.all(uploadPromises);
+        attachmentUrls = uploaded.filter(url => url !== null);
+        if (attachmentUrls.length === 0) {
+          return window.toast ? window.toast('File upload failed - please try again', 'error') : null;
+        }
       } catch (e) {
         return window.toast ? window.toast(`File upload failed: ${e.message}`, 'error') : null;
       }
@@ -392,7 +398,25 @@ let homeworkSubmissionCache = [];
     if (!assignment) return window.toast ? window.toast('Homework assignment not found.', 'error') : null;
     const text = $(`homework-submission-text-${assignment.id}`)?.value.trim() || '';
     const url = $(`homework-submission-url-${assignment.id}`)?.value.trim() || '';
-    if (!text && !url) return window.toast ? window.toast('Add homework text or a submission link.', 'error') : null;
+    const fileInput = $(`homework-submission-files-${assignment.id}`);
+
+    if (!text && !url && (!fileInput || !fileInput.files || fileInput.files.length === 0)) {
+      return window.toast ? window.toast('Add homework text, a submission link, or upload files.', 'error') : null;
+    }
+
+    let uploadedUrls = [];
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      try {
+        const uploadPromises = Array.from(fileInput.files).map(f => uploadHomeworkFile(f));
+        const uploaded = await Promise.all(uploadPromises);
+        uploadedUrls = uploaded.filter(url => url !== null);
+        if (uploadedUrls.length === 0) {
+          return window.toast ? window.toast('File upload failed - please try again', 'error') : null;
+        }
+      } catch (e) {
+        return window.toast ? window.toast(`File upload failed: ${e.message}`, 'error') : null;
+      }
+    }
 
     try {
       const res = await window.apiCall('/api/homework?action=submit', {
@@ -400,7 +424,8 @@ let homeworkSubmissionCache = [];
         body: JSON.stringify({
           assignment_id: assignment.id,
           submission_text: text,
-          submission_url: url
+          submission_url: url,
+          file_urls: uploadedUrls.length > 0 ? uploadedUrls : null
         })
       });
       if (!res.ok) {
@@ -408,6 +433,7 @@ let homeworkSubmissionCache = [];
         throw new Error(err.error || `Server error ${res.status}`);
       }
       if (window.toast) window.toast('Homework submitted', 'success');
+      if ($(`homework-submission-files-${assignment.id}`)) $(`homework-submission-files-${assignment.id}`).value = '';
       if (window.loadHomeworkData) await window.loadHomeworkData(true);
       else if (window.loadAllData) await window.loadAllData(true);
       refreshHomeworkViews();
@@ -445,6 +471,14 @@ let homeworkSubmissionCache = [];
     const canSubmit = !isAdminUser() && ['active', 'completed'].includes(assignment.status) && !['approved', 'closed'].includes(status);
     const currentText = submission?.submission_text || '';
     const currentUrl = submission?.submission_url || '';
+    const fileUrls = submission?.file_urls || [];
+
+    const filesHtml = Array.isArray(fileUrls) && fileUrls.length > 0 
+      ? `<div style="margin-top:6px;font-size:12px;color:var(--gold);">
+          <strong>Attachments:</strong><br>
+          ${fileUrls.map((url, i) => `<a href="${escapeValue(url)}" target="_blank" rel="noopener" style="display:block;margin-top:4px;">📎 File ${i + 1}</a>`).join('')}
+        </div>` 
+      : '';
 
     return `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
@@ -456,9 +490,12 @@ let homeworkSubmissionCache = [];
       ${feedback ? `<div style="margin:8px 0;padding:10px;background:rgba(218,163,62,0.06);border:1px solid rgba(218,163,62,0.25);border-radius:8px;font-size:12px;color:var(--ivory);white-space:pre-wrap;">${escapeValue(feedback)}</div>` : ''}
       ${currentText ? `<div style="font-size:12px;color:var(--ivory-dim);line-height:1.55;white-space:pre-wrap;">${escapeValue(currentText)}</div>` : ''}
       ${currentUrl ? `<div style="margin-top:6px;font-size:12px;color:var(--gold);"><a href="${escapeValue(currentUrl)}" target="_blank" rel="noopener">Open submission link</a></div>` : ''}
+      ${filesHtml}
       ${canSubmit ? `<div style="display:grid;gap:8px;margin-top:12px;">
         <textarea id="homework-submission-text-${assignment.id}" class="input-field" placeholder="Type your completed homework response or practice notes..." style="min-height:90px;">${escapeValue(currentText)}</textarea>
-        <input id="homework-submission-url-${assignment.id}" class="input-field" placeholder="Optional submission link" value="${escapeValue(currentUrl)}">
+        <input id="homework-submission-url-${assignment.id}" class="input-field" placeholder="Optional submission link (Google Drive, Dropbox, etc.)" value="${escapeValue(currentUrl)}">
+        <input type="file" id="homework-submission-files-${assignment.id}" class="input-field" accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,.gif,.pgn,.txt,.md" multiple style="font-size:12px; color:var(--ivory-dim);">
+        <div id="homework-submission-preview-${assignment.id}" style="margin-top:6px; display:flex; flex-wrap:wrap; gap:8px;"></div>
         <button class="btn btn-gold btn-sm" onclick="submitHomeworkForChild('${assignment.id}')">${submissionActionLabel(status)}</button>
       </div>` : ''}
     </div>`;
@@ -492,6 +529,10 @@ let homeworkSubmissionCache = [];
         </div>` : ''}
       </div>
       ${assignment.description ? `<div style="margin-top:12px; color:var(--ivory-dim); font-size:13px; line-height:1.65; white-space:pre-wrap;">${escapeValue(assignment.description)}</div>` : '<div style="margin-top:12px;color:var(--ivory-dim);font-size:13px;">No detailed instructions provided.</div>'}
+      ${assignment.attachment_urls && Array.isArray(assignment.attachment_urls) && assignment.attachment_urls.length > 0 ? `<div style="margin-top:12px; font-size:12px; color:var(--gold);">
+          <strong>Attachments:</strong><br>
+          ${assignment.attachment_urls.map((url, i) => `<a href="${escapeValue(url)}" target="_blank" rel="noopener" style="display:block; margin-top:4px;">📎 File ${i + 1}</a>`).join('')}
+        </div>` : ''}
       ${!isAdminUser() ? renderChildSubmissionPanel(assignment) : ''}
     </div>`;
   }
@@ -690,6 +731,7 @@ let homeworkSubmissionCache = [];
         </div>
         ${submission.submission_text ? `<div style="margin-top:10px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--ivory);line-height:1.55;white-space:pre-wrap;">${escapeValue(submission.submission_text)}</div>` : ''}
         ${submission.submission_url ? `<div style="margin-top:6px;font-size:12px;color:var(--gold);"><a href="${escapeValue(submission.submission_url)}" target="_blank" rel="noopener">Open submission link</a></div>` : ''}
+        ${Array.isArray(submission.file_urls) && submission.file_urls.length > 0 ? `<div style="margin-top:6px;font-size:12px;color:var(--gold);"><strong>Attachments:</strong> ${submission.file_urls.map((url, i) => `<a href="${escapeValue(url)}" target="_blank" rel="noopener" style="display:block;margin-top:4px;">📎 File ${i + 1}</a>`).join('')}</div>` : ''}
         ${feedback ? `<div style="margin-top:10px;padding:10px;background:rgba(218,163,62,0.06);border:1px solid rgba(218,163,62,0.25);border-radius:8px;font-size:12px;color:var(--ivory);white-space:pre-wrap;">${escapeValue(feedback)}</div>` : ''}
         <div style="display:grid;gap:8px;margin-top:12px;">
           <textarea id="homework-feedback-${submission.id}" class="input-field" placeholder="Teacher feedback or revision instructions..." style="min-height:70px;">${escapeValue(feedback)}</textarea>

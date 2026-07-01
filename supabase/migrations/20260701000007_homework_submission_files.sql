@@ -1,0 +1,1 @@
+ALTER TABLE homework_submissions ADD COLUMN IF NOT EXISTS file_urls JSONB DEFAULT NULL;
