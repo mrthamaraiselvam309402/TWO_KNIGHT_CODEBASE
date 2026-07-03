@@ -8,37 +8,51 @@ export default async function handler(request) {
     });
   }
 
-  try {
-    const [profileRes, historyRes] = await Promise.all([
-      fetch(`https://lichess.org/api/user/${encodeURIComponent(username)}`, {
-        headers: { 'Accept': 'application/json' }
-      }),
-      fetch(`https://lichess.org/api/user/${encodeURIComponent(username)}/rating-history`, {
-        headers: { 'Accept': 'application/x-ndjson' }
-      })
-    ]);
+  const timeout = setTimeout(() => {}, 15000);
 
-    if (!profileRes.ok || !historyRes.ok) {
-      return new Response(JSON.stringify({ error: 'Lichess API error', profileStatus: profileRes.status, historyStatus: historyRes.status }), {
-        status: 400,
+  try {
+    let profile = null;
+    let ratingHistory = [];
+    let profileOk = false;
+    let historyOk = false;
+
+    const profileRes = await fetch(
+      `https://lichess.org/api/user/${encodeURIComponent(username)}`,
+      { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(15000) }
+    ).catch((e) => ({ ok: false, status: e.name === 'AbortError' ? 504 : 500 }));
+
+    if (profileRes && profileRes.ok) {
+      try { profile = await profileRes.json(); profileOk = true; } catch { profile = null; }
+    }
+
+    const historyRes = await fetch(
+      `https://lichess.org/api/user/${encodeURIComponent(username)}/rating-history`,
+      { headers: { 'Accept': 'application/x-ndjson' }, signal: AbortSignal.timeout(15000) }
+    ).catch((e) => ({ ok: false, status: e.name === 'AbortError' ? 504 : 500 }));
+
+    if (historyRes && historyRes.ok) {
+      try {
+        const text = await historyRes.text();
+        const lines = text.split('\n').filter((line) => line.trim());
+        ratingHistory = lines.map((line) => {
+          try { return JSON.parse(line); } catch { return null; }
+        }).filter(Boolean);
+        historyOk = true;
+      } catch { ratingHistory = []; }
+    }
+
+    clearTimeout(timeout);
+
+    if (!profileOk) {
+      return new Response(JSON.stringify({ error: 'Lichess profile not found', notFound: true }), {
+        status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const profile = await profileRes.json();
-    const text = await historyRes.text();
-    const lines = text.split('\n').filter((line) => line.trim());
-    const ratingHistory = lines.map((line) => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
-
     const payload = {
-      profile,
-      ratingHistory
+      profile: profile || {},
+      ratingHistory: ratingHistory || []
     };
 
     return new Response(JSON.stringify(payload), {
@@ -49,10 +63,11 @@ export default async function handler(request) {
       }
     });
   } catch (err) {
+    clearTimeout(timeout);
     console.error('Lichess proxy error:', err);
     return new Response(JSON.stringify({ error: 'Failed to fetch from Lichess' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
   }
-};
+}

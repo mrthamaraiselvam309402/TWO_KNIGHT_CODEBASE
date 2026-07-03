@@ -214,7 +214,7 @@ chesscom_username: s.chesscom_username || '',
     const id = url.searchParams.get('id')
     const method = req.method
 
-     // GET - List all students with pagination
+      // GET - List all students with pagination
      if (method === 'GET') {
        const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
        const limit = Math.min(1000, Math.max(1, parseInt(url.searchParams.get('limit') || '100')))
@@ -222,53 +222,80 @@ chesscom_username: s.chesscom_username || '',
        const search = sanitizeString(url.searchParams.get('search') || '', 100)
        const coachFilter = sanitizeString(url.searchParams.get('coach_id') || '', 50)
        const statusFilter = sanitizeString(url.searchParams.get('status') || '', 50)
+       const sessionFilter = sanitizeString(url.searchParams.get('session') || '', 50)
+       const learningModeFilter = sanitizeString(url.searchParams.get('learning_mode') || '', 20)
+       const paymentStatusFilter = sanitizeString(url.searchParams.get('payment_status') || '', 50)
+       const minFee = parseInt(url.searchParams.get('min_fee') || '0') || 0
+       const maxFee = parseInt(url.searchParams.get('max_fee') || '999999') || 999999
        
         let query = supabase
           .from('students_decrypted')  // Use decrypted view to automatically decrypt PII
           .select('*', { count: 'exact' })
           .order('created_at', { ascending: false })
           .range(offset, offset + limit - 1)
-       
+        
        if (search) {
-         query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,parent_phone.ilike.%${search}%`)
-       }
-       if (coachFilter) {
-         query = query.eq('coach_id', coachFilter)
-       }
-       if (statusFilter) {
-         query = query.eq('status', statusFilter)
-       }
-       
-       let { data: students, error, count } = await query
-       
-       if (error) {
-         console.warn('Decrypted view query failed, falling back to raw students table:', error.message)
-         let fallbackQuery = supabase
-           .from('students')
-           .select('*', { count: 'exact' })
-           .order('created_at', { ascending: false })
-           .range(offset, offset + limit - 1)
-         
-         if (search) {
-           fallbackQuery = fallbackQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%,parent_phone.ilike.%${search}%`)
-         }
-         if (coachFilter) {
-           fallbackQuery = fallbackQuery.eq('coach_id', coachFilter)
-         }
-         if (statusFilter) {
-           fallbackQuery = fallbackQuery.eq('status', statusFilter)
-         }
-         
-         const fallbackRes = await fallbackQuery
-         if (fallbackRes.error) {
-           return new Response(JSON.stringify({ error: fallbackRes.error.message }), {
-             status: 500,
-             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-           })
-         }
-         students = fallbackRes.data
-         count = fallbackRes.count
-       }
+          const searchPattern = `%${search}%`
+          query = query.or(`name.ilike.${searchPattern},parent_name.ilike.${searchPattern},email.ilike.${searchPattern},phone.ilike.${searchPattern},parent_phone.ilike.${searchPattern}`)
+        }
+        if (coachFilter) {
+          query = query.eq('coach_id', coachFilter)
+        }
+        if (statusFilter) {
+          query = query.eq('status', statusFilter)
+        }
+        if (sessionFilter) {
+          query = query.ilike('session_mode', sessionFilter)
+        }
+        if (learningModeFilter) {
+          query = query.like('notes', `%[LM:${learningModeFilter}]%`)
+        }
+        if (paymentStatusFilter) {
+          query = query.eq('payment_status', paymentStatusFilter)
+        }
+        query = query.gte('monthly_fee', minFee).lte('monthly_fee', maxFee)
+        
+        let { data: students, error, count } = await query
+        
+        if (error) {
+          console.warn('Decrypted view query failed, falling back to raw students table:', error.message)
+          let fallbackQuery = supabase
+            .from('students')
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1)
+          
+          if (search) {
+            const searchPattern = `%${search}%`
+            fallbackQuery = fallbackQuery.or(`name.ilike.${searchPattern},parent_name.ilike.${searchPattern},email.ilike.${searchPattern},phone.ilike.${searchPattern},parent_phone.ilike.${searchPattern}`)
+          }
+          if (coachFilter) {
+            fallbackQuery = fallbackQuery.eq('coach_id', coachFilter)
+          }
+          if (statusFilter) {
+            fallbackQuery = fallbackQuery.eq('status', statusFilter)
+          }
+          if (sessionFilter) {
+            fallbackQuery = fallbackQuery.ilike('session_mode', sessionFilter)
+          }
+          if (learningModeFilter) {
+            fallbackQuery = fallbackQuery.like('notes', `%[LM:${learningModeFilter}]%`)
+          }
+          if (paymentStatusFilter) {
+            fallbackQuery = fallbackQuery.eq('payment_status', paymentStatusFilter)
+          }
+          fallbackQuery = fallbackQuery.gte('monthly_fee', minFee).lte('monthly_fee', maxFee)
+          
+          const fallbackRes = await fallbackQuery
+          if (fallbackRes.error) {
+            return new Response(JSON.stringify({ error: fallbackRes.error.message }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
+          students = fallbackRes.data
+          count = fallbackRes.count
+        }
        
        const transformed = (students || []).map(transformStudent)
        

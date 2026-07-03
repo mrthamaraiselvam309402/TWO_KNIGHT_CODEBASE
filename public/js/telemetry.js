@@ -7,46 +7,20 @@
     let cachedCountry = 'IN'; // Default fallback
     let isFetched = false;
 
-    // Start fetching IP and geo data immediately on load with multiple international fallbacks
+    // Start fetching IP and geo data immediately on load with fallback through local proxy
     async function prefetchGeoData() {
         try {
-            // Priority 1: ipapi.co
-            let res = await fetch('https://ipapi.co/json/').catch(() => null);
+            const res = await fetch('/api/geo').catch(() => null);
             if (res && res.ok) {
                 const data = await res.json().catch(() => null);
                 if (data && data.ip) {
                     cachedIP = data.ip;
-                    cachedCountry = data.country_code || 'IN';
+                    cachedCountry = data.country_code || data.country || 'IN';
                     isFetched = true;
                     return;
                 }
             }
-
-            // Priority 2: ip-api.com (returns query for IP, countryCode for Country)
-            res = await fetch('https://ip-api.com/json/').catch(() => null);
-            if (res && res.ok) {
-                const data = await res.json().catch(() => null);
-                if (data && data.query) {
-                    cachedIP = data.query;
-                    cachedCountry = data.countryCode || 'IN';
-                    isFetched = true;
-                    return;
-                }
-            }
-
-            // Priority 3: ipinfo.io
-            res = await fetch('https://ipinfo.io/json').catch(() => null);
-            if (res && res.ok) {
-                const data = await res.json().catch(() => null);
-                if (data && data.ip) {
-                    cachedIP = data.ip;
-                    cachedCountry = data.country || 'IN';
-                    isFetched = true;
-                    return;
-                }
-            }
-        } catch (e) {
-            console.warn('Telemetry: Geo prefetch failed, using defaults.', e);
+        } catch {
         }
     }
 

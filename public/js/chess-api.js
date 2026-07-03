@@ -243,7 +243,7 @@ function renderPerformanceCards(lichessProfile, chesscomData, container) {
   container.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">${cards.join('')}</div>`;
 }
 
-function renderRecentGamesList(games, container) {
+function renderRecentGamesList(games, container, platform = 'lichess') {
   if (!container) return;
   if (!Array.isArray(games) || games.length === 0) {
     container.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games found.</div>';
@@ -251,22 +251,42 @@ function renderRecentGamesList(games, container) {
   }
 
   const items = games.slice(0, 10).map((g, idx) => {
-    const white = g.players?.white?.user?.name || 'Anonymous';
-    const black = g.players?.black?.user?.name || 'Anonymous';
-    const result = g.winner
-      ? g.winner === 'white'
-        ? '1-0'
-        : '0-1'
-      : '1/2-1/2';
-    const date = g.endAt ? formatDate(new Date(g.endAt * 1000).toISOString()) : (g.end_time ? formatDate(new Date(g.end_time * 1000).toISOString()) : 'N/A');
-    const timeClass = g.clock?.class || g.perf || g.time_class || 'N/A';
-    const pgn = g.pgn || '';
-    const lichessId = g.id;
+    let white, black, result, date, timeClass, pgn, gameId;
+    
+    if (platform === 'chesscom') {
+      white = g.white?.username || 'Anonymous';
+      black = g.black?.username || 'Anonymous';
+      const whiteResult = g.white?.result || '';
+      const blackResult = g.black?.result || '';
+      if (whiteResult === 'win') result = '1-0';
+      else if (blackResult === 'win') result = '0-1';
+      else if (whiteResult === 'draw' || blackResult === 'draw') result = '1/2-1/2';
+      else result = '*';
+      date = g.end_time ? formatDate(new Date(g.end_time * 1000).toISOString()) : 'N/A';
+      timeClass = g.time_class || g.perf || 'N/A';
+      pgn = g.pgn || '';
+      gameId = g.url || '';
+    } else {
+      white = g.players?.white?.user?.name || 'Anonymous';
+      black = g.players?.black?.user?.name || 'Anonymous';
+      result = g.winner
+        ? g.winner === 'white'
+          ? '1-0'
+          : '0-1'
+        : '1/2-1/2';
+      date = g.endAt ? formatDate(new Date(g.endAt * 1000).toISOString()) : (g.end_time ? formatDate(new Date(g.end_time * 1000).toISOString()) : 'N/A');
+      timeClass = g.clock?.class || g.perf || g.time_class || 'N/A';
+      pgn = g.pgn || '';
+      gameId = g.id || '';
+    }
+
+    const platformLabel = platform === 'chesscom' ? 'Chess.com' : 'Lichess';
+    const platformColor = platform === 'chesscom' ? '#7FA650' : '#fff';
 
     return `
-      <div style="background:var(--bg3); padding:10px; border-radius:6px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);" onclick="viewChessGame(${idx}, 'lichess')" class="chess-game-item">
+      <div style="background:var(--bg3); padding:10px; border-radius:6px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);" onclick="viewChessGame(${idx}, '${platform}')" class="chess-game-item">
         <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-          <span style="color:var(--gold); font-size:11px; font-weight:bold;">Lichess • ${esc(timeClass)}</span>
+          <span style="color:${platformColor}; font-size:11px; font-weight:bold;">${platformLabel} • ${esc(timeClass)}</span>
           <span style="color:var(--ivory-dim); font-size:11px;">${date}</span>
         </div>
         <div style="font-size:13px;">
@@ -274,7 +294,7 @@ function renderRecentGamesList(games, container) {
         </div>
         <div style="font-size:12px; color:var(--ivory2); margin-top:4px; display:flex; justify-content:space-between; align-items:center;">
           <span>Result: ${result}</span>
-          <span style="color:var(--gold); font-size:10px;">${lichessId ? 'View PGN' : ''}</span>
+          <span style="color:var(--gold); font-size:10px;">${gameId ? 'View PGN' : ''}</span>
         </div>
       </div>
     `;
@@ -283,13 +303,18 @@ function renderRecentGamesList(games, container) {
   container.innerHTML = items;
 }
 
+window.renderChesscomRecentGames = function(games, container) {
+  renderRecentGamesList(games, container, 'chesscom');
+};
+
 function renderLichessGameStats(lichessProfile, container) {
   if (!container || !lichessProfile?.perfs) return;
 
   const totalGames = Object.values(lichessProfile.perfs).reduce((sum, p) => sum + (p.games || 0), 0);
-  const totalWins = Object.values(lichessProfile.perfs).reduce((sum, p) => sum + (p.win ?? 0), 0);
-  const totalLosses = Object.values(lichessProfile.perfs).reduce((sum, p) => sum + (p.loss ?? 0), 0);
-  const totalDraws = Object.values(lichessProfile.perfs).reduce((sum, p) => sum + (p.draw ?? 0), 0);
+  const count = lichessProfile.count || {};
+  const totalWins = count.win || 0;
+  const totalLosses = count.loss || 0;
+  const totalDraws = count.draw || 0;
 
   const cards = [
     renderGameStatsCard('Total Games', totalGames, 'Across all variants', '#fff'),
@@ -349,6 +374,12 @@ async function loadChessDashboard(student) {
         const profile = data;
         const stats = data;
 
+        if (!profile.username) {
+          chesscomCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
+          if (chesscomDetails) chesscomDetails.innerHTML = '';
+          if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games.</div>';
+        }
+
         student.chesscom_last_online = profile.last_online || chesscomLastOnline;
 
         const blitzRating = stats.chess_blitz?.last?.rating || 'N/A';
@@ -357,11 +388,11 @@ async function loadChessDashboard(student) {
 
         chesscomCard.innerHTML = `
           <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
-            ${profile.avatar ? `<img src="${profile.avatar}" style="width:48px;height:48px;border-radius:4px;">` : ''}
+            ${profile.avatar ? `<img src="${esc(profile.avatar)}" style="width:48px;height:48px;border-radius:4px;">` : ''}
             <div>
-              <div style="font-weight:bold; font-size:16px;">${profile.username} ${profile.title ? `(${profile.title})` : ''}</div>
-              <div style="color:var(--ivory-dim);">${profile.name || ''}</div>
-              <a href="${profile.url || `https://www.chess.com/member/${profile.username}`}" target="_blank" style="color:var(--gold); text-decoration:none;">View on Chess.com</a>
+              <div style="font-weight:bold; font-size:16px;">${esc(profile.username)} ${profile.title ? `(${esc(profile.title)})` : ''}</div>
+              <div style="color:var(--ivory-dim);">${esc(profile.name || '')}</div>
+              <a href="${esc(profile.url || `https://www.chess.com/member/${profile.username}`)}" target="_blank" style="color:var(--gold); text-decoration:none;">View on Chess.com</a>
             </div>
           </div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
@@ -391,14 +422,14 @@ async function loadChessDashboard(student) {
           console.warn('[Chess] clubs/tournaments fetch failed:', e);
         }
 
-        // Fetch current month games
+        // Fetch current month games via proxy to avoid CORS
         const d = new Date();
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
-        const gamesRes = await fetch(`https://api.chess.com/pub/player/${chesscomUser}/games/${y}/${m}`);
+        const gamesRes = await fetch(`/api/chesscom-games-proxy?username=${encodeURIComponent(chesscomUser)}&year=${y}&month=${m}`);
         if (gamesRes.ok) {
           const gamesData = await gamesRes.json();
-          allChesscomGames = (gamesData.games || []).reverse().slice(0, 10);
+          allChesscomGames = (gamesData.games || []).slice(0, 10);
           renderChesscomRecentGames(allChesscomGames, recentGamesContainer);
         } else if (recentGamesContainer) {
           recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">Unable to load recent games.</div>';
@@ -423,6 +454,12 @@ async function loadChessDashboard(student) {
         const profile = data.profile || {};
         const ratingHistory = Array.isArray(data.ratingHistory) ? data.ratingHistory : [];
 
+        if (!profile.username) {
+          lichessCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
+          if (lichessDetails) lichessDetails.innerHTML = '';
+          if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games.</div>';
+        }
+
         if (profile.seenAt) {
           student.lichess_seen_at = new Date(profile.seenAt).toISOString();
         } else if (seenAt) {
@@ -433,26 +470,24 @@ async function loadChessDashboard(student) {
         const rapidRating = profile.perfs?.rapid?.rating || 'N/A';
         const puzzleRating = profile.perfs?.puzzle?.rating || 'N/A';
 
-        if (true) {
-          try {
-            const extrasRes = await fetch(`/api/lichess-extras-proxy?username=${encodeURIComponent(lichessUser)}`);
-            if (extrasRes.ok) {
-              const extras = await extrasRes.json();
-              renderLichessExtras(extras.trophies || [], extras.status || {}, document.getElementById('chessapi-lichess-extras'));
-            } else if (document.getElementById('chessapi-lichess-extras')) {
-              document.getElementById('chessapi-lichess-extras').innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">Unable to load extra data.</div>';
-            }
-          } catch (e) {
-            console.warn('[Chess] lichess extras fetch failed:', e);
+        try {
+          const extrasRes = await fetch(`/api/lichess-extras-proxy?username=${encodeURIComponent(lichessUser)}`);
+          if (extrasRes.ok) {
+            const extras = await extrasRes.json();
+            renderLichessExtras(extras.trophies || [], extras.status || {}, document.getElementById('chessapi-lichess-extras'));
+          } else if (document.getElementById('chessapi-lichess-extras')) {
+            document.getElementById('chessapi-lichess-extras').innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">Unable to load extra data.</div>';
           }
+        } catch (e) {
+          console.warn('[Chess] lichess extras fetch failed:', e);
         }
 
         lichessCard.innerHTML = `
           <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
             <div>
-              <div style="font-weight:bold; font-size:16px;">${profile.username} ${profile.title ? `(${profile.title})` : ''}</div>
-              <div style="color:var(--ivory-dim);">${profile.profile?.firstName || ''} ${profile.profile?.lastName || ''}</div>
-              <a href="${profile.url || `https://lichess.org/@/${profile.username}`}" target="_blank" style="color:var(--gold); text-decoration:none;">View on Lichess</a>
+              <div style="font-weight:bold; font-size:16px;">${esc(profile.username)} ${esc(profile.title) ? `(${esc(profile.title)})` : ''}</div>
+              <div style="color:var(--ivory-dim);">${esc(profile.profile?.firstName || '')} ${esc(profile.profile?.lastName || '')}</div>
+              <a href="${esc(profile.url || `https://lichess.org/@/${profile.username}`)}" target="_blank" style="color:var(--gold); text-decoration:none;">View on Lichess</a>
             </div>
           </div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
@@ -467,7 +502,6 @@ async function loadChessDashboard(student) {
         renderLichessRatings(profile, ratingsTable);
         renderLichessGameStats(profile, performanceContainer);
 
-        const rapidHistory = ratingHistory.find((d) => d.name === 'Rapid');
         ratingsData.lichessBlitz.push(profile.perfs?.blitz?.rating || null);
         ratingsData.lichessRapid.push(profile.perfs?.rapid?.rating || null);
         const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true`);
@@ -580,3 +614,65 @@ function renderChessChart(data) {
 // Expose globally
 window.loadChessDashboard = loadChessDashboard;
 window.viewChessGame = viewChessGame;
+
+function renderLichessExtras(trophies, status, container) {
+  if (!container) return;
+  let html = '';
+
+  if (trophies && trophies.length) {
+    html += `<div style="margin-bottom:12px;">
+      <b style="color:var(--ivory); display:block; margin-bottom:6px;">Trophies</b>
+      <div style="display:flex; flex-wrap:wrap; gap:6px;">
+        ${trophies.map(t => `<span style="background:var(--bg3); border:1px solid var(--border); padding:4px 8px; border-radius:4px; font-size:11px; color:var(--ivory-dim);">${esc(t.name || t.type || 'Trophy')}</span>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  if (status && Object.keys(status).length) {
+    const online = status.online ? '<span style=\"color:var(--success);\">● Online</span>' : '<span style=\"color:var(--ivory-dim);\">○ Offline</span>';
+    html += `<div style="font-size:12px; color:var(--ivory-dim);"><b style=\"color:var(--ivory);\">Status:</b> ${online}</div>`;
+  }
+
+  if (!html) {
+    container.innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">No extra data available.</div>';
+    return;
+  }
+
+  container.innerHTML = html;
+}
+
+function renderChesscomClubs(clubs, container) {
+  if (!container) return;
+  if (!Array.isArray(clubs) || clubs.length === 0) {
+    container.innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">No clubs found.</div>';
+    return;
+  }
+
+  container.innerHTML = `<div style="margin-bottom:12px;">
+    <b style="color:var(--ivory); display:block; margin-bottom:6px;">Clubs</b>
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      ${clubs.slice(0, 10).map(c => `<div style="background:var(--bg3); border:1px solid var(--border); padding:8px 10px; border-radius:6px; font-size:12px; color:var(--ivory-dim);">
+        <a href="${esc(c.url || '#')}" target="_blank" style="color:var(--gold); text-decoration:none; font-weight:600;">${esc(c.name || 'Club')}</a>
+        ${c.activity ? `<div style="margin-top:2px; font-size:11px;">${esc(c.activity)}</div>` : ''}
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderChesscomTournaments(tournaments, container) {
+  if (!container) return;
+  if (!Array.isArray(tournaments) || tournaments.length === 0) {
+    container.innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">No recent tournaments found.</div>';
+    return;
+  }
+
+  container.innerHTML = `<div style="margin-bottom:12px;">
+    <b style="color:var(--ivory); display:block; margin-bottom:6px;">Recent Tournaments</b>
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      ${tournaments.slice(0, 10).map(t => `<div style="background:var(--bg3); border:1px solid var(--border); padding:8px 10px; border-radius:6px; font-size:12px; color:var(--ivory-dim);">
+        <span style="font-weight:600; color:var(--ivory);">${esc(t.name || 'Tournament')}</span>
+        ${t.status ? `<span style="float:right; font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(218,163,62,0.15); color:var(--gold);">${esc(t.status)}</span>` : ''}
+      </div>`).join('')}
+    </div>
+  </div>`;
+}

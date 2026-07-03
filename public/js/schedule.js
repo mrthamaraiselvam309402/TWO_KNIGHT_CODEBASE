@@ -27,12 +27,40 @@
     }
     window.resolveScheduleCoachName = resolveScheduleCoachName;
 
+    window.setScheduleMode = function (mode) {
+        const individualPanel = document.getElementById('sch-individual-panel');
+        const groupPanel = document.getElementById('sch-group-panel');
+        const individualBtn = document.getElementById('sch-mode-individual');
+        const groupBtn = document.getElementById('sch-mode-group');
+        const saveBtn = document.getElementById('sch-save-btn');
+        const groupSaveBtn = document.getElementById('sch-group-save-btn');
+
+        if (!individualPanel || !groupPanel) return;
+
+        if (mode === 'individual') {
+            individualPanel.style.display = 'block';
+            groupPanel.style.display = 'none';
+            if (individualBtn) { individualBtn.style.background = 'var(--gold)'; individualBtn.style.color = '#111'; }
+            if (groupBtn) { groupBtn.style.background = 'transparent'; groupBtn.style.color = 'var(--ivory)'; }
+            if (saveBtn) saveBtn.style.display = '';
+            if (groupSaveBtn) groupSaveBtn.style.display = 'none';
+        } else {
+            individualPanel.style.display = 'none';
+            groupPanel.style.display = 'block';
+            if (groupBtn) { groupBtn.style.background = 'var(--gold)'; groupBtn.style.color = '#111'; }
+            if (individualBtn) { individualBtn.style.background = 'transparent'; individualBtn.style.color = 'var(--ivory)'; }
+            if (saveBtn) saveBtn.style.display = 'none';
+            if (groupSaveBtn) groupSaveBtn.style.display = '';
+            if (window.toggleScheduleGroup) window.toggleScheduleGroup();
+        }
+    };
+
     window.initSchedulePage = function () {
         populateStudentSelect();
         populateCoachSelect();
-        // Clear inputs on page load
+        window.setScheduleMode('individual');
         resetScheduleInputs();
-        if (window.generateSchedulePreview) window.generateSchedulePreview(); // Reset preview
+        if (window.generateSchedulePreview) window.generateSchedulePreview();
     };
 
     function populateStudentSelect() {
@@ -69,13 +97,11 @@
     }
 
     function resetScheduleInputs() {
-        if(document.getElementById('sch-demo-date')) document.getElementById('sch-demo-date').value = '';
-        if(document.getElementById('sch-demo-time')) document.getElementById('sch-demo-time').value = '';
         if(document.getElementById('sch-reg-days')) document.getElementById('sch-reg-days').value = '';
         if(document.getElementById('sch-reg-time')) document.getElementById('sch-reg-time').value = '';
         if(document.getElementById('sch-meet-link')) document.getElementById('sch-meet-link').value = '';
         if(document.getElementById('sch-coach-select')) document.getElementById('sch-coach-select').value = '';
-        if(document.getElementById('sch-footnote')) document.getElementById('sch-footnote').value = 'Kindly ensure student joins on time for the demo session. Looking forward to a great learning journey ahead. – Two Knights Academy';
+        if(document.getElementById('sch-footnote')) document.getElementById('sch-footnote').value = 'Welcome to Two Knights Academy! We look forward to an exciting chess learning journey together.';
     }
 
     // UTF-8 safe base64 helpers. The server sanitizes the `notes` column and
@@ -172,8 +198,6 @@
         if (student && student.notes) {
             const schedData = window.extractScheduleJSON(student.notes);
             if (schedData) {
-                if(document.getElementById('sch-demo-date')) document.getElementById('sch-demo-date').value = schedData.demoDate || '';
-                if(document.getElementById('sch-demo-time')) document.getElementById('sch-demo-time').value = schedData.demoTime || '';
                 if(document.getElementById('sch-reg-days')) document.getElementById('sch-reg-days').value = schedData.regDays || '';
                 if(document.getElementById('sch-reg-time')) document.getElementById('sch-reg-time').value = schedData.regTime || '';
                 if(document.getElementById('sch-meet-link')) document.getElementById('sch-meet-link').value = schedData.meetLink || '';
@@ -230,9 +254,7 @@
     }
 
     // Shared function to render the Schedule Card HTML using the Master Matrix theme
-    function buildScheduleCardHtml(studentName, schedData, coachName, isChildView, studentId) {
-        const demoDate = schedData.demoDate || 'TBD';
-        const demoTime = schedData.demoTime || 'TBD';
+    function buildScheduleCardHtml(studentName, schedData, coachName, isChildView, studentId, studentBatches = []) {
         const regDays = schedData.regDays || 'TBD';
         const regTime = schedData.regTime || 'TBD';
         const meetLink = schedData.meetLink || '';
@@ -295,19 +317,6 @@
                 <div style="font-size:24px; font-weight:600; color:#ffffff; margin-top:4px;">${studentName}</div>
             </div>
 
-            <!-- Demo Class Block -->
-            <div style="background-color:#1a1e2e; border:1px solid #2c3242; border-radius:4px; padding:14px; margin-bottom:16px;">
-                <div style="font-size:10px; text-transform:uppercase; color:#a4b0cb; font-weight:600; letter-spacing:0.5px; margin-bottom:8px;">Demo Class</div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                    <span style="color:#8a90a6; font-size:12px;">Date:</span>
-                    <span style="font-weight:600; font-size:12px;">${demoDate}</span>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span style="color:#8a90a6; font-size:12px;">Timing:</span>
-                    <span style="font-weight:600; font-size:12px;">${demoTime}</span>
-                </div>
-            </div>
-
             <!-- Regular Class Block -->
             <div style="background-color:#1a1e2e; border:1px solid #2c3242; border-radius:4px; padding:16px; margin-bottom:16px;">
                 <div style="font-size:10px; text-transform:uppercase; color:#a4b0cb; font-weight:600; letter-spacing:0.5px; margin-bottom:8px;">Regular Class (Weekly Calendar)</div>
@@ -333,6 +342,30 @@
                     <a href="${meetLink}" target="_blank" style="display:inline-block; background:${coachColor}; color:#ffffff; padding:8px 20px; border-radius:4px; text-decoration:none; font-weight:600; font-size:12px;">Join Class 🎥</a>
                 </div>` : ''}
             </div>
+
+            ${isChildView && studentBatches.length > 0 ? `
+            <!-- Batch / Group Info -->
+            <div style="background-color:#1a1e2e; border:1px solid #2c3242; border-radius:4px; padding:16px; margin-bottom:16px;">
+                <div style="font-size:10px; text-transform:uppercase; color:#a4b0cb; font-weight:600; letter-spacing:0.5px; margin-bottom:8px;">Your Batches</div>
+                ${studentBatches.map(b => `
+                <div style="margin-bottom:10px;">
+                    <div style="font-weight:600; color:#ffffff; font-size:12px; margin-bottom:4px;">${b.name}</div>
+                    <div style="font-size:11px; color:#8a90a6;">
+                        ${b.days || ''} • ${b.time_slot || ''}
+                        ${window.allCoaches && b.coach_id ? 
+                            `<span style="color:${coachColor};"> • Coach: ${(window.allCoaches.find(c => String(c.id) === String(b.coach_id))?.name || 'TBD')}</span>` : ''}
+                    </div>
+                    ${Array.isArray(b.student_ids) && b.student_ids.length > 1 ? `
+                    <div style="font-size:10px; color:#a4b0cb; margin-top:6px;">
+                        <span style="color:#8a90a6;">Group mates:</span> ${b.student_ids.map(sid => {
+                            const s = (window.allStudents || []).find(x => String(x.id) === String(sid));
+                            return s ? s.name : '';
+                        }).filter(Boolean).join(', ')}
+                    </div>` : ''}
+                </div>
+                `).join('')}
+            </div>
+            ` : ''}
 
             ${actionButtons}
 
@@ -360,8 +393,6 @@
         const stName = student ? student.name : 'Student';
         
         const schedData = {
-            demoDate: document.getElementById('sch-demo-date').value || 'TBD',
-            demoTime: document.getElementById('sch-demo-time').value || 'TBD',
             regDays: document.getElementById('sch-reg-days').value || 'TBD',
             regTime: document.getElementById('sch-reg-time').value || 'TBD',
             meetLink: document.getElementById('sch-meet-link') ? document.getElementById('sch-meet-link').value : '',
@@ -395,8 +426,6 @@
         const coachId = document.getElementById('sch-coach-select').value;
         const coachObj = (window.allCoaches || window.coaches || []).find(c => String(c.id) === String(coachId));
         return {
-            demoDate: document.getElementById('sch-demo-date').value,
-            demoTime: document.getElementById('sch-demo-time').value,
             regDays: document.getElementById('sch-reg-days').value,
             regTime: document.getElementById('sch-reg-time').value,
             meetLink: document.getElementById('sch-meet-link') ? document.getElementById('sch-meet-link').value : '',
@@ -442,7 +471,6 @@
     window.toggleScheduleGroup = function () {
         const panel = document.getElementById('sch-group-panel');
         if (!panel) return;
-        if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
         
         // Populate batch dropdown
         const batchSelect = document.getElementById('sch-batch-select');
@@ -540,8 +568,6 @@
         const student = (window.allStudents || []).find(s => s.id == studentId);
         if (!student) return;
 
-        const demoDate = document.getElementById('sch-demo-date').value || 'TBD';
-        const demoTime = document.getElementById('sch-demo-time').value || 'TBD';
         const regDays = document.getElementById('sch-reg-days').value || 'TBD';
         const regTime = document.getElementById('sch-reg-time').value || 'TBD';
         const meetLink = document.getElementById('sch-meet-link') ? document.getElementById('sch-meet-link').value : '';
@@ -569,9 +595,6 @@
         let msg = `\u{1F451} *Two Knights ACADEMY*\n_Official Class Schedule_\n\n`;            // 👑
         msg += `Hello Sir/Madam, \u{1F44B}\n\n`;                                              // 👋
         msg += `We are happy to inform you that *${cleanName}* has been scheduled for chess classes at our academy. \u{265F}\u{FE0F}\n\n`; // ♟️
-        msg += `\u{1F4D6} *DEMO CLASS*\n`;                                                     // 📖
-        if (demoDate && demoDate !== 'TBD') msg += `\u{1F4C5} Date: ${demoDate}\n`;            // 📅
-        msg += `\u{23F0} Timing: ${demoTime}\n\n`;                                             // ⏰
         msg += `\u{1F5D3}\u{FE0F} *REGULAR CLASS*\n`;                                          // 🗓️
         msg += `\u{1F4C6} Days: ${regDays}\n`;                                                 // 📆
         msg += `\u{23F1}\u{FE0F} Timing: ${regTime}\n`;                                        // ⏱️
@@ -602,7 +625,12 @@
         // student's assigned coach / passed-in name).
         const resolvedCoachName = schedData.regCoachName || resolveScheduleCoachName(schedData, student) || coachName || 'TBD';
 
-        wrapper.innerHTML = buildScheduleCardHtml(student.name, schedData, resolvedCoachName, true, student.id);
+        // Find student's batch
+        const studentBatches = (window.allBatches || []).filter(b => 
+            Array.isArray(b.student_ids) && b.student_ids.map(String).includes(String(student.id))
+        );
+
+        wrapper.innerHTML = buildScheduleCardHtml(student.name, schedData, resolvedCoachName, true, student.id, studentBatches);
         
         // Trigger AI Insight update for Parent Portal Schedule
         if(window.generateContextualInsight) {
@@ -624,7 +652,7 @@
         const days = (schedData.regDays || '').toLowerCase().replace(/&/g, ',').split(',').map(d => d.trim());
         const byDayStr = days.map(d => daysMap[d]).filter(Boolean).join(',');
 
-        // Current time block (Mock default to current date next occurrence for demo purposes)
+        // Default to current time as the class start timestamp
         const d = new Date();
         const startStr = d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
         
@@ -670,7 +698,7 @@ DESCRIPTION:Regular chess class timing: ${schedData.regTime || 'TBD'}. Coach: ${
 
         // Allow DOM to render page
         setTimeout(() => {
-            const studentSelect = document.getElementById("sch-student");
+            const studentSelect = document.getElementById("sch-student-select");
             if (studentSelect) {
                 studentSelect.value = studentId;
                 studentSelect.dispatchEvent(new window.Event('change')); // Trigger logic to load their existing schedule

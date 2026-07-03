@@ -574,10 +574,55 @@
          <div class="coach-section-block">
            <div class="coach-section-row">
              <h2 class="coach-section-title">Students</h2>
+             <button id="filter-toggle-btn" class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="toggleMobileFilters()">☰ Filters</button>
            </div>
-           <div class="filter-main-row" style="display:flex; gap:12px; margin-bottom:12px; align-items:center; width:100%">
-             <input type="text" id="f-search" placeholder="Search students..." oninput="renderStudents()" style="flex:1; min-width:180px; padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px">
-           </div>
+            <div id="student-filter-bar" class="filter-bar" style="margin-bottom:10px; background:var(--glass); padding:6px; border-radius:8px; border:1px solid var(--border); display:flex; align-items:center; gap:5px; flex-wrap: wrap;">
+              <input type="text" id="f-search" placeholder="Search by name, parent, or phone..." oninput="renderStudents()" style="flex:1; min-width:140px; padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px;">
+              <select id="f-coach" onchange="renderStudents()" style="padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; min-width:110px">
+                <option value="">All Coaches</option>
+              </select>
+              <select id="f-session" onchange="renderStudents()" style="padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; min-width:90px">
+                <option value="">All Sessions</option>
+                <option value="Group">Group</option>
+                <option value="Single">Individual</option>
+              </select>
+              <select id="f-enroll-status" onchange="renderStudents()" style="padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; min-width:120px">
+                <option value="">Enroll Status (All)</option>
+                <option value="active">Enrolled & Attending</option>
+                <option value="pending">Pending</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="inactive">Inactive</option>
+                <option value="waitlist">Waitlist</option>
+                <option value="upcoming">Upcoming</option>
+              </select>
+              <select id="f-learning-mode" onchange="renderStudents()" style="padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; min-width:90px">
+                <option value="">All Modes</option>
+                <option value="online">Online</option>
+                <option value="offline">Offline</option>
+              </select>
+              <select id="f-status" onchange="renderStudents()" style="padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; min-width:110px">
+                <option value="">All Payment Status</option>
+                <option value="Paid">Paid</option>
+                <option value="Pending">Pending</option>
+                <option value="Due">Due</option>
+                <option value="Overdue">Overdue</option>
+              </select>
+              <div style="display:inline-flex; align-items:center; gap:2px;">
+                <input type="number" id="f-min-fee" placeholder="Min Fee ₹" oninput="renderStudents()" style="padding:5px 6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; width:65px">
+                <span style="color:var(--ivory-dim); font-size:10px;">to</span>
+                <input type="number" id="f-max-fee" placeholder="Max Fee ₹" oninput="renderStudents()" style="padding:5px 6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; width:65px">
+              </div>
+              <select id="f-bill-month-stud" onchange="syncStudMonth(this.value)" title="Billing Month" style="padding:5px 6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; width:120px">
+                <option value="">Billing Month</option>
+              </select>
+              <input type="date" id="f-due-date-stud" onchange="syncDueDateFilter(this.value)" title="Due Date" style="padding:5px 6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; width:120px">
+              <input type="date" id="f-enroll-date-stud" onchange="syncEnrollDateFilter(this.value)" title="Enroll Date" style="padding:5px 6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; width:120px">
+              <div style="display:inline-flex; gap:3px;">
+                <button class="btn btn-outline-grey btn-sm" onclick="resetStudMonth()" style="padding:2px 4px; font-size:11px; line-height:1; white-space:nowrap;">This Month</button>
+                <button class="btn btn-outline btn-sm" onclick="clearFilters()" style="padding:2px 4px; font-size:11px; line-height:1; white-space:nowrap;">Clear</button>
+                <button class="btn btn-gold btn-sm" onclick="exportStudentsToCSV()" style="padding:2px 4px; font-size:11px; line-height:1; white-space:nowrap;">Export</button>
+              </div>
+            </div>
          </div>
          <div class="coach-section-block">
            <div class="table-wrap">
@@ -1661,7 +1706,7 @@
           <span>🗓️</span> Student Schedule Manager
         </h2>
         <p style="color:var(--ivory-dim); font-size: 14px; max-width: 600px; line-height: 1.6;">
-          Build high-fidelity invitation cards for student demo and regular chess sessions, download them as images, and inform parents via WhatsApp.
+          Build high-fidelity invitation cards for regular chess sessions, download them as images, and inform parents via WhatsApp.
         </p>
       </div>
 
@@ -1670,56 +1715,66 @@
         <div class="card" style="padding:24px;">
           <h3 style="color:var(--gold); margin-bottom:20px; font-family:var(--font-head)">Configure Schedule</h3>
           
-          <div class="form-group" style="margin-bottom:16px;">
-            <label class="label">Select Student</label>
-            <select id="sch-student-select" class="input-field" onchange="loadStudentScheduleData(this.value)" style="width:100%">
-              <option value="">-- Select Student --</option>
-            </select>
+          <!-- Mode Toggle -->
+          <div style="display:flex; gap:0; margin-bottom:16px; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+            <button type="button" id="sch-mode-individual" class="btn btn-outline" style="flex:1; border-radius:0; border:none; padding:8px; font-size:12px; background:var(--gold); color:#111;" onclick="setScheduleMode('individual')">👤 Individual Student</button>
+            <button type="button" id="sch-mode-group" class="btn btn-outline" style="flex:1; border-radius:0; border:none; border-left:1px solid var(--border); padding:8px; font-size:12px;" onclick="setScheduleMode('group')">👥 Group / Batch</button>
           </div>
 
-          <!-- Demo Class -->
-          <div style="margin-top:20px; padding:16px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px;">
-            <h4 style="color:var(--gold); margin:0 0 12px 0; font-size:13px; text-transform:uppercase; letter-spacing:0.8px; font-family:var(--font-head)">Demo Class Settings</h4>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-              <div class="form-group">
-                <label class="label">Demo Date</label>
-                <input type="text" id="sch-demo-date" class="input-field" placeholder="e.g. TOMORROW or 05-Jun-2026">
-              </div>
-              <div class="form-group">
-                <label class="label">Demo Time</label>
-                <input type="text" id="sch-demo-time" class="input-field" placeholder="e.g. 7:30 PM – 8:00 PM">
-              </div>
+          <!-- Individual Student Mode -->
+          <div id="sch-individual-panel">
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="label">Select Student</label>
+              <select id="sch-student-select" class="input-field" onchange="loadStudentScheduleData(this.value)" style="width:100%">
+                <option value="">-- Select Student --</option>
+              </select>
             </div>
           </div>
 
+          <!-- Group / Batch Mode -->
+          <div id="sch-group-panel" style="display:none; margin-bottom:16px;">
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="label">Select Batch</label>
+              <select id="sch-batch-select" class="input-field" style="width:100%; padding:6px 10px; font-size:12px;" onchange="schGroupSelectBatch(this.value)">
+                <option value="">-- Select Batch --</option>
+              </select>
+            </div>
+            <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
+              <button type="button" class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('group')">Select Group</button>
+              <button type="button" class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('all')">Select All</button>
+              <button type="button" class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('none')">Clear</button>
+            </div>
+            <div id="sch-group-list" style="max-height:180px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:6px; margin-bottom:12px; background:rgba(0,0,0,0.15);"></div>
+          </div>
+
           <!-- Regular Class -->
-          <div style="margin-top:20px; padding:16px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px;">
+          <div style="margin-top:12px; padding:16px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px;">
             <h4 style="color:var(--gold); margin:0 0 12px 0; font-size:13px; text-transform:uppercase; letter-spacing:0.8px; font-family:var(--font-head)">Regular Class Settings</h4>
             <div class="form-group" style="margin-bottom:12px;">
               <label class="label">Class Days</label>
               <input type="text" id="sch-reg-days" class="input-field" placeholder="e.g. Monday & Wednesday">
-<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;" id="sch-days-shortcuts">
-                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Monday" onclick="toggleDayShortcut('Monday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Mon</button>
-                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Tuesday" onclick="toggleDayShortcut('Tuesday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Tue</button>
-                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Wednesday" onclick="toggleDayShortcut('Wednesday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Wed</button>
-                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Thursday" onclick="toggleDayShortcut('Thursday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Thu</button>
-                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Friday" onclick="toggleDayShortcut('Friday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Fri</button>
-                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Saturday" onclick="toggleDayShortcut('Saturday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Sat</button>
-                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Sunday" onclick="toggleDayShortcut('Sunday')" style="padding:6px 12px; font-size:11px; min-width:70px;">Sun</button>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;" id="sch-days-shortcuts">
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Monday" onclick="toggleDayShortcut('Monday')" style="padding:4px 10px; font-size:10px; min-width:50px;">Mon</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Tuesday" onclick="toggleDayShortcut('Tuesday')" style="padding:4px 10px; font-size:10px; min-width:50px;">Tue</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Wednesday" onclick="toggleDayShortcut('Wednesday')" style="padding:4px 10px; font-size:10px; min-width:50px;">Wed</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Thursday" onclick="toggleDayShortcut('Thursday')" style="padding:4px 10px; font-size:10px; min-width:50px;">Thu</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Friday" onclick="toggleDayShortcut('Friday')" style="padding:4px 10px; font-size:10px; min-width:50px;">Fri</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Saturday" onclick="toggleDayShortcut('Saturday')" style="padding:4px 10px; font-size:10px; min-width:50px;">Sat</button>
+                <button type="button" class="btn btn-outline-grey btn-sm sch-day-btn" data-day="Sunday" onclick="toggleDayShortcut('Sunday')" style="padding:4px 10px; font-size:10px; min-width:50px;">Sun</button>
               </div>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom:12px;">
               <label class="label">Regular Time</label>
               <input type="text" id="sch-reg-time" class="input-field" placeholder="e.g. 7:00 PM – 8:00 PM">
             </div>
-            <div class="form-group" style="margin-top:12px;">
+            <div class="form-group" style="margin-bottom:12px;">
               <label class="label">Meeting Link (Zoom / GMeet)</label>
               <input type="text" id="sch-meet-link" class="input-field" placeholder="https://meet.google.com/xxx-xxxx-xxx">
             </div>
           </div>
 
           <!-- Coach -->
-          <div class="form-group" style="margin-top:20px;">
+          <div class="form-group" style="margin-top:16px;">
             <label class="label">Assigned Coach</label>
             <select id="sch-coach-select" class="input-field" style="width:100%">
               <option value="">-- Select Coach --</option>
@@ -1727,37 +1782,16 @@
           </div>
 
           <!-- Footnote / Extra info -->
-          <div class="form-group" style="margin-top:20px;">
+          <div class="form-group" style="margin-top:16px;">
             <label class="label">Custom Welcoming Footnote</label>
-            <textarea id="sch-footnote" class="input-field" style="height:70px; resize:none;">Kindly ensure student joins on time for the demo session. Looking forward to a great learning journey ahead. – Two Knights Academy</textarea>
+            <textarea id="sch-footnote" class="input-field" style="height:70px; resize:none;">Welcome to Two Knights Academy! We look forward to an exciting chess learning journey together.</textarea>
           </div>
 
           <!-- Action buttons -->
-          <div style="display:flex; gap:12px; margin-top:24px;">
-            <button class="btn btn-outline" style="flex:1" onclick="generateSchedulePreview()">Preview Card</button>
-            <button class="btn btn-gold" style="flex:1" onclick="saveStudentSchedule()">Save Schedule</button>
-          </div>
-
-          <!-- Group / Batch Class Scheduling -->
-          <div style="margin-top:16px; border-top:1px dashed var(--border); padding-top:16px;">
-            <button class="btn btn-outline" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="toggleScheduleGroup()">
-              👥 Apply this Schedule to a Group / Batch
-            </button>
-            <div id="sch-group-panel" style="display:none; margin-top:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:14px;">
-              <p style="font-size:11px; color:var(--ivory-dim); margin:0 0 10px; line-height:1.5;">
-                Configure the schedule above, then pick students or batches to apply the same class timings & coach to everyone.
-              </p>
-              <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
-                <select id="sch-batch-select" class="input-field" style="width:auto; min-width:200px; padding:6px 10px; font-size:12px;" onchange="schGroupSelectBatch(this.value)">
-                  <option value="">-- Select Batch --</option>
-                </select>
-                <button class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('group')">Select all Group students</button>
-                <button class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('all')">Select all</button>
-                <button class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('none')">Clear</button>
-              </div>
-              <div id="sch-group-list" style="max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:6px; margin-bottom:12px; background:rgba(0,0,0,0.15);"></div>
-              <button class="btn btn-gold" style="width:100%;" onclick="saveScheduleToGroup()">💾 Save Schedule to Selected Group</button>
-            </div>
+          <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn btn-outline" style="flex:1; font-size:12px; padding:8px 12px;" onclick="generateSchedulePreview()">Preview Card</button>
+            <button id="sch-save-btn" class="btn btn-gold" style="flex:1; font-size:12px; padding:8px 12px;" onclick="saveStudentSchedule()">Save Schedule</button>
+            <button id="sch-group-save-btn" class="btn btn-gold" style="flex:1; font-size:12px; padding:8px 12px; display:none;" onclick="saveScheduleToGroup()">💾 Save to Group</button>
           </div>
         </div>
 
@@ -1773,17 +1807,17 @@
             </div>
           </div>
 
-          <div style="width:100%; display:flex; flex-direction:column; gap:12px;">
-            <button class="btn btn-outline" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="downloadScheduleCardImage()">
+          <div style="width:100%; display:flex; flex-direction:column; gap:10px;">
+            <button class="btn btn-outline" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; padding:8px 12px;" onclick="downloadScheduleCardImage()">
               📥 Download Invitation Image
             </button>
-            <button class="btn btn-gold" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" onclick="shareScheduleViaWhatsApp()">
+            <button class="btn btn-gold" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; padding:8px 12px;" onclick="shareScheduleViaWhatsApp()">
               💬 Share/Inform via WhatsApp
             </button>
           </div>
 
           <!-- Contextual AI Insight Advisor -->
-          <div id="schedule-ai-insight" class="ai-insight-box" style="width:100%;">
+          <div id="schedule-ai-insight" class="ai-insight-box" style="width:100%; margin-top:16px;">
             <div class="ai-insight-title">🤖 TOM AI Schedule Advisor</div>
             <div class="ai-insight-text" id="sch-ai-insight-content">
               Select a student to view automated scheduling checks, time recommendations, and coach matching insights.
