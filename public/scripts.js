@@ -5300,7 +5300,7 @@ const headers = {
   }
 
   const PAGE_TITLES = {
-    dash: "Academy Overview",
+    dash: "TWO KNIGHTS Academy Overview",
     stud: "Student Registry",
     "coach-mgmt": "Coach Management",
     batches: "Classroom / Batch Manager",
@@ -14099,7 +14099,7 @@ window.renderRecipientOptions = renderRecipientOptions;
       type: "baseline",
       severity: "success",
       icon: "📊",
-      text: `<strong>Academy Overview:</strong> You currently have <strong>${activeStudentCount} active students</strong> and <strong>${activeCoachCount} active coaches</strong>. Your academy is operating smoothly.`,
+      text: `<strong>TWO KNIGHTS Academy Overview:</strong> You currently have <strong>${activeStudentCount} active students</strong> and <strong>${activeCoachCount} active coaches</strong>. Your academy is operating smoothly.`,
     });
 
     // --- 1. Promotion Suggestions ---
@@ -14253,7 +14253,7 @@ window.renderRecipientOptions = renderRecipientOptions;
       type: "all",
       icon: "📊",
       severity: "info",
-      text: `<strong>Academy Overview:</strong> You currently have <strong>${allStudents.length}</strong> registered students and <strong>${allCoaches.length}</strong> active coaches. The system is operating normally.`,
+      text: `<strong>TWO KNIGHTS Academy Overview:</strong> You currently have <strong>${allStudents.length}</strong> registered students and <strong>${allCoaches.length}</strong> active coaches. The system is operating normally.`,
     });
 
     // Update Quick Metric Counts
