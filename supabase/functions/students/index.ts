@@ -398,6 +398,55 @@ due_date: rawBody.due_date && String(rawBody.due_date).trim() ? String(rawBody.d
         await supabase.rpc('update_user_password', { p_user_type: 'student', p_id: insertedStudent.id, p_new_password: rawBody.password });
       }
 
+      // Calculate billing anchor (grace day = 26: late-month joins bill from next month)
+      const enrollDateStr = sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0];
+      const enrollDate = new Date(enrollDateStr + 'T00:00:00Z');
+      const enrollDay = enrollDate.getUTCDate();
+      let anchorYear = enrollDate.getUTCFullYear();
+      let anchorMonth = enrollDate.getUTCMonth() + 1;
+      if (enrollDay >= 26) {
+        anchorMonth += 1;
+        if (anchorMonth > 12) { anchorMonth = 1; anchorYear += 1; }
+      }
+      await supabase.from('students').update({ billing_anchor_year: anchorYear, billing_anchor_month: anchorMonth }).eq('id', insertedStudent.id);
+
+      // Auto-create first-month invoice with admission fee + monthly tuition
+      const admissionFee = parseInt(String(rawBody.admission_fee)) || 0;
+      const monthlyFee = parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0;
+      if (admissionFee > 0 || monthlyFee > 0) {
+        const totalInvoice = monthlyFee + admissionFee;
+        const targetMonthKey = `${anchorYear}-${String(anchorMonth).padStart(2, '0')}`;
+        const { data: paymentRow, error: paymentError } = await supabase
+          .from('payments')
+          .insert({
+            student_id: insertedStudent.id,
+            amount: totalInvoice,
+            status: 'paid',
+            payment_method: 'Admission',
+            description: admissionFee > 0 ? 'Monthly Tuition + Admission' : 'Monthly Tuition',
+            transaction_id: `TXN-ADM-${Date.now()}`,
+            payment_date: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            applied_month: targetMonthKey
+          })
+          .select()
+          .single();
+
+        if (!paymentError && paymentRow) {
+          try {
+            await supabase.rpc('apply_payment_debt_first', {
+              p_student_id: insertedStudent.id,
+              p_payment_id: paymentRow.id,
+              p_amount: totalInvoice,
+              p_paid_on: new Date().toISOString(),
+              p_target_month: targetMonthKey
+            });
+          } catch (rpcErr) {
+            console.error('[students] auto-payment allocation error:', rpcErr);
+          }
+        }
+      }
+
       let decryptedStudent = null
       const { data: viewStudent, error: decryptError } = await supabase
         .from('students_decrypted')

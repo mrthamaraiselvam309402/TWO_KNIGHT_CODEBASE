@@ -576,15 +576,16 @@ const headers = {
                ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${escapeHtml(e.prize_pool)}</span>` : ""}
              </div>
 
-             ${e.description ? `<div class="ev-desc">${escapeHtml(e.description)}</div>` : ""}
-           </div>
-           <div class="ev-footer">
-             ${
-               isRegistered
-                 ? `<span class="badge badge-success" style="padding:6px 12px">✅ Registered</span>`
-                 : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`
-             }
-           </div>
+              ${e.description ? `<div class="ev-desc">${escapeHtml(e.description)}</div>` : ""}
+              ${e.registration_url ? `<div style="margin-top:8px"><a href="${e.registration_url}" target="_blank" class="btn btn-outline btn-sm" style="width:100%">🏆 Join Tournament</a></div>` : ""}
+            </div>
+            <div class="ev-footer">
+              ${
+                isRegistered
+                  ? `<span class="badge badge-success" style="padding:6px 12px">✅ Registered</span>`
+                  : `<button class="btn-register" onclick="registerForEvent('${e.id}')">Register</button>`
+              }
+            </div>
          </div>
        `;
       })
@@ -921,6 +922,8 @@ const headers = {
 
     if ($("cb-total-paid"))
       $("cb-total-paid").textContent = formatStudentFee(s, totalPaidSum);
+    if ($("cb-total-paid-summary"))
+      $("cb-total-paid-summary").textContent = "₹" + (totalPaidSum > 0 ? totalPaidSum.toLocaleString() : "0");
     if ($("cb-paid-count"))
       $("cb-paid-count").textContent =
         `${paidPayments.length} transactions completed`;
@@ -974,17 +977,6 @@ const headers = {
         ? "Class: Not Enrolled"
         : `Class: ${mode}${time ? ` (${time})` : ""}`;
     }
-
-    // Bookkeeping statement details (CGST/SGST 18% breakout)
-    const baseSum = totalPaidSum > 0 ? totalPaidSum : fee;
-    const gstAmount = Math.round(baseSum * 0.18);
-    const netAmount = baseSum - gstAmount;
-    if ($("cb-gst-amount"))
-      $("cb-gst-amount").textContent = "₹" + gstAmount.toLocaleString();
-    if ($("cb-net-amount"))
-      $("cb-net-amount").textContent = "₹" + netAmount.toLocaleString();
-    if ($("cb-card-holder"))
-      $("cb-card-holder").textContent = getStudentName(s).toUpperCase();
 
     // ─────────────────────────────────────────────────────────────
     // 2. RENDER CHART.JS VISUAL ANALYTICS
@@ -1802,7 +1794,7 @@ const headers = {
       return (
         `\u{1F534} FEE PAYMENT DUE\n\n` + // 🔴
         `Hello Sir/Madam, \u{1F44B}\n\n` + // 👋
-        `\u{265F}\u{FE0F} This is a gentle note that the chess class fee for ${cn} is currently due.\n\n` + // ♟️
+        `\u{265F}\u{FE0F} This is a gentle note that your Monthly Tuition payment is currently due.\n\n` + // ♟️
         `\u{1F4B0} Amount Due: ${amountText}\n` + // 💰
         `\u{1F4C5} Due Date: ${dueDateStr}\n\n` + // 📅
         `Kindly complete the payment on or before the due date to avoid any interruption in class participation. \u{1F64F}\n\n` + // 🙏
@@ -1814,7 +1806,7 @@ const headers = {
     return (
       `\u{1F4E2} UPCOMING FEE REMINDER\n\n` + // 📢
       `Hello Sir/Madam, \u{1F44B}\n\n` + // 👋
-      `We hope you are doing well! \u{1F60A} This is a friendly reminder that the chess class fee for ${cn} is coming up soon. \u{265F}\u{FE0F}\n\n` + // 😊 ♟️
+      `We hope you are doing well! \u{1F60A} This is a friendly reminder that your Monthly Tuition payment is coming up soon. \u{265F}\u{FE0F}\n\n` + // 😊 ♟️
       `\u{1F4B0} Fee Amount: ${amountText}\n` + // 💰
       `\u{1F4C5} Due Date: ${dueDateStr}\n\n` + // 📅
       `Kindly complete the payment on or before the due date. \u{1F64F}\n\n` + // 🙏
@@ -8553,8 +8545,9 @@ due_date: (function () {
              <span class="ev-meta-item ev-loc">${escapeHtml(e.location || "TBD")}</span>
              ${e.prize_pool ? `<span class="ev-meta-item ev-prize">${escapeHtml(e.prize_pool)}</span>` : ""}
            </div>
-           ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">📍 View on Map</a>` : ""}
-           ${e.description ? `<div class="ev-desc">${escapeHtml(e.description)}</div>` : ""}
+            ${e.map_url ? `<a href="${e.map_url}" target="_blank" class="ev-map-link">📍 View on Map</a>` : ""}
+            ${e.registration_url ? `<a href="${e.registration_url}" target="_blank" class="ev-map-link" style="margin-left:8px">🔗 Join Tournament</a>` : ""}
+            ${e.description ? `<div class="ev-desc">${escapeHtml(e.description)}</div>` : ""}
          </div>
          <div class="ev-progress-wrap">
            <div class="ev-progress-label">
@@ -8599,6 +8592,7 @@ due_date: (function () {
     $("ev-desc").value = "";
     $("ev-img-url").value = "";
     $("ev-map-url").value = "";
+    $("ev-reg-url").value = "";
     $("ev-img-preview").style.display = "none";
     $("ev-img-file").value = "";
     $("ev-modal-title").textContent = "Create Event";
@@ -8623,6 +8617,7 @@ due_date: (function () {
     $("ev-desc").value = e.description || "";
     $("ev-img-url").value = e.img_url || "";
     $("ev-map-url").value = e.map_url || "";
+    $("ev-reg-url").value = e.registration_url || "";
     if (e.img_url) {
       $("ev-img-preview").src = e.img_url;
       $("ev-img-preview").style.display = "block";
@@ -8697,6 +8692,7 @@ due_date: (function () {
       fee: parseFloat($("ev-fee").value) || 0,
       location: $("ev-loc").value,
       map_url: $("ev-map-url").value,
+      registration_url: $("ev-reg-url") ? $("ev-reg-url").value : "",
       description: $("ev-desc").value,
       img_url: img_url,
     };
@@ -9247,7 +9243,7 @@ due_date: (function () {
 
 Hello Sir/Madam ${EMOJI.wave},
 
-We are happy to inform you that we have successfully received and recorded your chess class fee payment for ${cleanText(getStudentName(s))}! ${EMOJI.card}${EMOJI.party}
+    We are happy to inform you that we have successfully received and recorded your Monthly Tuition payment for ${cleanText(getStudentName(s))}! ${EMOJI.card}${EMOJI.party}
 
 ${EMOJI.receipt} PAYMENT DETAILS:
 ${EMOJI.cash} Amount Paid: \u{20B9}${parseFloat(amount).toLocaleString()}
@@ -9316,7 +9312,7 @@ Best regards,
         amount: parseFloat(fee),
         status: "paid",
         payment_method: "Manual Toggle",
-        description: "Status toggled to Paid via Dashboard",
+        description: "Monthly Tuition",
         transaction_id: "TGL-" + Math.floor(Math.random() * 1000000),
         payment_date:
           window.reportMonth !== new Date().getUTCMonth() ||
@@ -9384,7 +9380,7 @@ Best regards,
           amount: parseFloat(fee),
           status: "paid",
           payment_method: "Manual Toggle",
-          description: "Status toggled to Paid via Dashboard",
+          description: "Monthly Tuition",
           transaction_id: "TGL-" + Math.floor(Math.random() * 1000000),
           payment_date: mockPayment.payment_date,
         };
@@ -9441,7 +9437,7 @@ Best regards,
     id,
     amount,
     method = "Cash",
-    desc = "Monthly Tuition Fee",
+    desc = "Monthly Tuition",
   ) {
     try {
       const s = allStudents.find((x) => String(x.id) === String(id));
@@ -9786,7 +9782,7 @@ Best regards,
           amount: parseFloat(fee),
           status: "paid",
           payment_method: "Manual Toggle",
-          description: "Status toggled to Paid via Dashboard",
+          description: "Monthly Tuition",
           transaction_id: "TGL-" + Math.floor(Math.random() * 1000000),
           payment_date:
             window.reportMonth !== new Date().getUTCMonth() ||
@@ -10663,7 +10659,7 @@ Best regards,
         amount: orderData.amount,
         currency: orderData.currency,
         name: "Two Knights Academy",
-        description: "Tuition Fee - " + studentName,
+        description: "Monthly Tuition - " + studentName,
         order_id: orderData.id,
         handler: async function (response) {
           addLogLine(
@@ -10970,7 +10966,7 @@ Best regards,
                 countryCode: "IN",
                 createdAt:
                   p.payment_date || p.created_at || new Date().toISOString(),
-                detail: `${p.description || "Tuition Fee payment processed"} (Amount: ₹${p.amount})`,
+                detail: `${p.description || "Monthly Tuition payment processed"} (Amount: ₹${p.amount})`,
               };
               window.gatewaySecurityLogs.unshift(log);
               hasNew = true;
@@ -11026,7 +11022,9 @@ Best regards,
     type = "tuition",
     eventName = "",
   ) {
-    const url = `receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&level=${encodeURIComponent(level)}&rating=${rating}&coach=${encodeURIComponent(coach)}&method=${encodeURIComponent(paymentMode)}&date=${encodeURIComponent(dateStr)}&type=${encodeURIComponent(type)}&eventName=${encodeURIComponent(eventName)}&print=true`;
+    const student = (allStudents || []).find(s => String(s.id) === String(id));
+    const admissionFee = student ? (parseInt(String(student.admission_fee)) || 0) : 0;
+    const url = `receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&admission_fee=${admissionFee}&level=${encodeURIComponent(level)}&rating=${rating}&coach=${encodeURIComponent(coach)}&method=${encodeURIComponent(paymentMode)}&date=${encodeURIComponent(dateStr)}&type=${encodeURIComponent(type)}&eventName=${encodeURIComponent(eventName)}&print=true`;
     window.open(url, "_blank");
     toast("Opening receipt for printing...", "success");
   }
@@ -13715,6 +13713,10 @@ window.renderRecipientOptions = renderRecipientOptions;
     } else {
       window.open('https://www.chessable.com', '_blank');
     }
+  };
+
+  window.openCoachChessablePortal = function() {
+    window.open('https://www.chessable.com/classroom/two-knights-chess-ac/', '_blank');
   };
 
   // ── CHESSABLE PROFILES FULL PAGE ──

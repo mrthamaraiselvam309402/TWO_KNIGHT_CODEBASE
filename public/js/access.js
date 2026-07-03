@@ -9,7 +9,7 @@ window.loadAccessControl = async function() {
     
     const tbody = document.getElementById('access-users-tbody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5"><div class="loading-state"><span class="spinner"></span> Loading users...</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="loading-state"><span class="spinner"></span> Loading users...</div></td></tr>';
 
     try {
         const response = await window.apiCall('/api/access_control', { // Re-using local dev proxy or Edge function
@@ -142,12 +142,12 @@ window.editStudentPassword = async function(studentId, studentName) {
     }
 };
 
-window.renderAccessTable = function() {
+  window.renderAccessTable = function() {
     const tbody = document.getElementById('access-users-tbody');
     if (!tbody) return;
 
     if (window.accessUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No users found</div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No users found</div></td></tr>';
         return;
     }
 
@@ -168,11 +168,22 @@ window.renderAccessTable = function() {
       const escId = String(u.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       const escRole = String(u.role || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       const escEmail = window.escapeHtml(u.email || '');
+      
+      const pwdInfo = u.password_info || {};
+      const pwdSource = pwdInfo.source || '—';
+      const pwdMasked = pwdInfo.masked || '••••••••';
+      const pwdVisible = pwdInfo.visible && pwdInfo.value;
+      const escPwd = pwdVisible ? window.escapeHtml(pwdInfo.value) : '';
+      
       html += `<tr>
           <td style="font-weight:600; color:var(--ivory);">${escEmail}</td>
           <td><span class="badge ${roleBadge}" style="text-transform:uppercase; font-size:10px;">${window.escapeHtml(roleLabel)}</span></td>
           <td style="color:var(--ivory2); font-size:12px;">${createdDate}</td>
           <td style="color:var(--ivory2); font-size:12px;">${signInDate}</td>
+          <td style="font-family:var(--font-mono); font-size:12px; color:var(--ivory-dim);">
+            ${pwdVisible ? `<span id="pwd-${escId}" style="display:none;">${escPwd}</span><span id="pwd-mask-${escId}">${pwdMasked}</span>
+            <button class="btn btn-outline-grey btn-sm" style="padding:2px 8px; font-size:10px; margin-left:6px;" onclick="togglePasswordVisibility('${escId}', '${pwdVisible ? '1' : '0'}')" ${pwdVisible ? '' : 'disabled'}>👁</button>` : pwdMasked}
+          </td>
           <td style="text-align:center;">
               <div style="display:flex; justify-content:center; gap:6px;">
                   <button class="btn btn-outline-grey btn-sm" onclick="promptEditUserRole('${escId}', '${escRole}', '${escEmail}')" style="padding:4px;" title="Edit Role" ${isMaster ? 'disabled' : ''}>✏️</button>
@@ -182,7 +193,20 @@ window.renderAccessTable = function() {
       </tr>`;
     });
     tbody.innerHTML = html;
-};
+  };
+
+  window.togglePasswordVisibility = function(userId, isVisible) {
+    const pwdEl = document.getElementById('pwd-' + userId);
+    const maskEl = document.getElementById('pwd-mask-' + userId);
+    if (!pwdEl || !maskEl) return;
+    if (isVisible === '1') {
+      pwdEl.style.display = 'none';
+      maskEl.style.display = 'inline';
+    } else {
+      pwdEl.style.display = 'inline';
+      maskEl.style.display = 'none';
+    }
+  };
 
 // ── Create / Edit user via proper modal (replaces prompt() dialogs) ──
 function setAccessUserError(msg) {

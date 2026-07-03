@@ -50,13 +50,53 @@ Deno.serve(async (req) => {
       const { data: users, error } = await supabase.auth.admin.listUsers();
       if (error) throw error;
 
-      const safeUsers = users.users.map(u => ({
-        id: u.id,
-        email: u.email,
-        role: u.user_metadata?.role || 'unknown',
-        created_at: u.created_at,
-        last_sign_in_at: u.last_sign_in_at
-      }));
+      // Enrich with password metadata from students/coaches tables
+      const emails = users.users.map(u => u.email || '').filter(Boolean);
+      const { data: studentRows } = await supabase.from('students').select('email,password,password_hash').in('email', emails);
+      const { data: coachRows } = await supabase.from('coaches').select('email,password_hash').in('email', emails);
+
+      const studentMap = new Map((studentRows || []).map(s => [s.email, s]));
+      const coachMap = new Map((coachRows || []).map(c => [c.email, c]));
+
+      const masterUser = Deno.env.get('MASTER_USERNAME') || '';
+      const adminUser = Deno.env.get('ADMIN_USERNAME') || '';
+
+      const safeUsers = users.users.map(u => {
+        const email = u.email || '';
+        const role = u.user_metadata?.role || 'unknown';
+        let passwordInfo = { source: 'Supabase Auth', masked: '●●●●●●●●', visible: false };
+
+        if (role === 'master' || role === 'admin') {
+          if (email && (email === masterUser || email === adminUser)) {
+            passwordInfo = { source: 'Environment Variable', masked: 'Env Configured', visible: false };
+          } else {
+            passwordInfo = { source: 'Supabase Auth', masked: '●●●●●●●●', visible: false };
+          }
+        } else {
+          const student = studentMap.get(email);
+          const coach = coachMap.get(email);
+          if (student) {
+            if (student.password) {
+              passwordInfo = { source: 'Custom (plaintext)', masked: '••••••••', visible: true, value: student.password };
+            } else if (student.password_hash) {
+              passwordInfo = { source: 'Custom (bcrypt)', masked: '••••••••', visible: false };
+            }
+          } else if (coach) {
+            if (coach.password_hash) {
+              passwordInfo = { source: 'Custom (bcrypt)', masked: '••••••••', visible: false };
+            }
+          }
+        }
+
+        return {
+          id: u.id,
+          email: u.email,
+          role: role,
+          created_at: u.created_at,
+          last_sign_in_at: u.last_sign_in_at,
+          password_info: passwordInfo
+        };
+      });
 
       return new Response(JSON.stringify({ users: safeUsers }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders }

@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
       img_url: e.img_url || e.qr_poster_url || '',
       qr_poster_url: e.qr_poster_url || e.img_url || '',
       map_url: e.map_url || '',
+      registration_url: e.registration_url || '',
       created_at: e.created_at,
       updated_at: e.updated_at
     };
@@ -286,7 +287,7 @@ Deno.serve(async (req) => {
         if (!studentExists) return new Response(JSON.stringify({ error: 'Invalid student selected' }), { status: 400 });
       }
       
-      const { title, date, type, location, id, event_date, event_time, max_participants, description, fee, map_url, img_url, prize_pool } = body;
+      const { title, date, type, location, id, event_date, event_time, max_participants, description, fee, map_url, img_url, prize_pool, registration_url } = body;
       if (!title) return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400 });
       
       let newEvent: Record<string, unknown> = { 
@@ -302,6 +303,7 @@ Deno.serve(async (req) => {
       }
       if (fee) newEvent.fee = fee;
       if (map_url) newEvent.map_url = map_url;
+      if (registration_url) newEvent.registration_url = registration_url;
       if (img_url) {
         newEvent.img_url = img_url;
         newEvent.qr_poster_url = img_url;
@@ -322,7 +324,7 @@ Deno.serve(async (req) => {
       const allowedColumns = [
         'title', 'description', 'event_date', 'event_time', 'location', 
         'type', 'status', 'max_participants', 'current_participants', 
-        'qr_poster_url', 'fee', 'prize', 'prize_pool', 'map_url', 'img_url'
+        'qr_poster_url', 'fee', 'prize', 'prize_pool', 'map_url', 'img_url', 'registration_url'
       ];
       
       const updateData: any = {};

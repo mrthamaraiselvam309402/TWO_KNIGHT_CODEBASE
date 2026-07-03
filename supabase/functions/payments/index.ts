@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
         amount: amount,
         status: 'paid',
         payment_method: sanitizeString(rawBody.payment_method || 'Online', 50),
-        description: sanitizeString(rawBody.description || 'Monthly Tuition Fee', 200),
+        description: sanitizeString(rawBody.description || 'Monthly Tuition', 200),
         transaction_id: rawBody.transaction_id || `TXN-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
         payment_date: rawBody.payment_date ? String(rawBody.payment_date) : new Date().toISOString(),
         created_at: new Date().toISOString()

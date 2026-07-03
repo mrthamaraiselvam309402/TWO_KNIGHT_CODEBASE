@@ -140,7 +140,7 @@
          <div class="nav-item admin-only" id="nav-homework" onclick="setPage('homework');" style="font-size: 13px; padding: 10px 14px;"><span class="ico">📚</span> Homework Manager</div>
       </div>
 
-    <div class="nav-item admin-only" id="nav-chessable" onclick="setPage('chessable')"><span class="ico">♟️</span> Chessable Profiles</div>
+    <div class="nav-item admin-only" id="nav-chessable" onclick="openCoachChessablePortal()"><span class="ico">🎓</span> Chessable Classroom</div>
     <!-- Parent Portal Links -->
     <div class="nav-item parent-only" id="nav-child" onclick="goChildTab('overview')"><span class="ico">📈</span> My Child Profile</div>
     <div class="nav-item parent-only" id="nav-parent-schedule" onclick="goChildTab('schedule')"><span class="ico">🗓️</span> Class Schedule</div>
@@ -1072,16 +1072,12 @@
                   <span style="font-size: 16px;">🧾</span> Bookkeeping & Statements
                 </h3>
                 <p style="font-size: 12px; color: var(--ivory-dim); line-height: 1.5; margin: 0 0 16px;">
-                  Download or email verified tuition statements containing complete tax breakdowns (CGST/SGST @ 9% inclusive) for educational allowances and tax audits.
+                  Download or email verified tuition statements for your records.
                 </p>
                 <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-                  <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: var(--ivory-dim); flex-wrap: wrap; gap: 15px;">
-                    <span>Inclusive GST (18%):</span>
-                    <span id="cb-gst-amount" style="font-weight: 600; color: var(--ivory);">₹0</span>
-                  </div>
                   <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--ivory-dim); flex-wrap: wrap; gap: 15px;">
-                    <span>Net Tuition Investment:</span>
-                    <span id="cb-net-amount" style="font-weight: 600; color: var(--ivory);">₹0</span>
+                    <span>Monthly Tuition Total:</span>
+                    <span id="cb-total-paid-summary" style="font-weight: 600; color: var(--ivory);">₹0</span>
                   </div>
                 </div>
               </div>
@@ -1749,9 +1745,12 @@
             </button>
             <div id="sch-group-panel" style="display:none; margin-top:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:14px;">
               <p style="font-size:11px; color:var(--ivory-dim); margin:0 0 10px; line-height:1.5;">
-                Configure the schedule above, then pick the students who share this group class. The same demo/class timings & coach will be saved to everyone selected.
+                Configure the schedule above, then pick students or batches to apply the same class timings & coach to everyone.
               </p>
-              <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+              <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
+                <select id="sch-batch-select" class="input-field" style="width:auto; min-width:200px; padding:6px 10px; font-size:12px;" onchange="schGroupSelectBatch(this.value)">
+                  <option value="">-- Select Batch --</option>
+                </select>
                 <button class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('group')">Select all Group students</button>
                 <button class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('all')">Select all</button>
                 <button class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('none')">Clear</button>
@@ -2001,6 +2000,7 @@
                 <th>Role</th>
                 <th>Created</th>
                 <th>Last Sign In</th>
+                <th>Password</th>
                 <th style="text-align:center;">Actions</th>
               </tr>
             </thead>
@@ -3312,6 +3312,7 @@
     <img id="ev-img-preview" class="upload-preview" style="max-height:120px;display:none;margin:10px 0;border-radius:8px;border:1px solid var(--border)">
     <input type="url" id="ev-img-url" placeholder="OR paste poster image URL">
     <input type="url" id="ev-map-url" placeholder="Google Maps Location Link (📍)">
+    <input type="url" id="ev-reg-url" placeholder="Tournament Join URL (e.g. Lichess / Chess.com tournament link)" style="margin-top:8px">
 
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>

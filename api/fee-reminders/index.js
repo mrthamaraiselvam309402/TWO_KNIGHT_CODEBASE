@@ -76,7 +76,7 @@ function buildFeeMessage(name, amount, dueDateStr, isDueOrOverdue) {
   if (isDueOrOverdue) {
     return `🔴 FEE PAYMENT DUE\n\n` +
       `Hello Sir/Madam, 👋\n\n` +
-      `♟️ This is a gentle note that the chess class fee for ${cn} is currently due.\n\n` +
+      `♟️ This is a gentle note that the Monthly Tuition payment for ${cn} is currently due.\n\n` +
       `💰 Amount Due: ${amountText}\n` +
       `📅 Due Date: ${dueDateStr}\n\n` +
       `Kindly complete the payment on or before the due date to avoid any interruption in class participation. 🙏\n\n` +
@@ -87,7 +87,7 @@ function buildFeeMessage(name, amount, dueDateStr, isDueOrOverdue) {
 
   return `📢 UPCOMING FEE REMINDER\n\n` +
     `Hello Sir/Madam, 👋\n\n` +
-    `We hope you are doing well! 😊 This is a friendly reminder that the chess class fee for ${cn} is coming up soon. ♟️\n\n` +
+    `We hope you are doing well! 😊 This is a friendly reminder that the Monthly Tuition payment for ${cn} is coming up soon. ♟️\n\n` +
     `💰 Fee Amount: ${amountText}\n` +
     `📅 Due Date: ${dueDateStr}\n\n` +
     `Kindly complete the payment on or before the due date. 🙏\n\n` +

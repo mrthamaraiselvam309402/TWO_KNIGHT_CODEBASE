@@ -443,6 +443,17 @@
         const panel = document.getElementById('sch-group-panel');
         if (!panel) return;
         if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+        
+        // Populate batch dropdown
+        const batchSelect = document.getElementById('sch-batch-select');
+        if (batchSelect && window.allBatches) {
+            const currentOpts = batchSelect.options.length;
+            if (currentOpts <= 1) {
+                batchSelect.innerHTML = '<option value="">-- Select Batch --</option>' + 
+                    window.allBatches.map(b => `<option value="${b.id}">${(window.escapeHtml ? window.escapeHtml(b.name) : b.name)} (${(Array.isArray(b.student_ids) ? b.student_ids.length : 0)} students)</option>`).join('');
+            }
+        }
+        
         const coachId = window.currentCoachId || window.userId;
         const role = window.role || 'admin';
         const students = (window.allStudents || []).filter(s => {
@@ -474,6 +485,17 @@
                 const s = students.find(x => String(x.id) === String(cb.value));
                 cb.checked = !!(s && String(s.session_mode || s.batch_type || '').toLowerCase() === 'group');
             }
+        });
+    };
+
+    window.schGroupSelectBatch = function (batchId) {
+        if (!batchId) return;
+        const batch = (window.allBatches || []).find(b => String(b.id) === String(batchId));
+        if (!batch || !Array.isArray(batch.student_ids)) return;
+        const cbs = document.querySelectorAll('.sch-group-cb');
+        const batchStudentIds = batch.student_ids.map(String);
+        cbs.forEach(cb => {
+            cb.checked = batchStudentIds.includes(String(cb.value));
         });
     };
 
