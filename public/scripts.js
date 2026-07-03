@@ -445,6 +445,17 @@ const headers = {
       typeof window.renderChildProductivity === "function"
     )
       window.renderChildProductivity();
+    if (tabId === "chess") {
+      if (chartInstances.childElo) { chartInstances.childElo.destroy(); chartInstances.childElo = null; }
+      if (chartInstances.lichessElo) { chartInstances.lichessElo.destroy(); chartInstances.lichessElo = null; }
+      if (chartInstances.chesscomElo) { chartInstances.chesscomElo.destroy(); chartInstances.chesscomElo = null; }
+      if (chartInstances.chessableProgress) { chartInstances.chessableProgress.destroy(); chartInstances.chessableProgress = null; }
+      if (window.chessChartInstance) { window.chessChartInstance.destroy(); window.chessChartInstance = null; }
+      window.currentChessGames = [];
+      if (typeof window.renderChildChessPerformance === "function" && currentStudent) {
+        window.renderChildChessPerformance(currentStudent);
+      }
+    }
   }
 
   // Populates the parent-portal Attendance tab (was previously never rendered).
@@ -11472,7 +11483,7 @@ Best regards,
     const targetNav = document.getElementById(targetId);
     if (targetNav) targetNav.classList.add("active");
     if ($("p-title")) {
-      const titles = { overview: "My Child", schedule: "Class Schedule", attendance: "Attendance Logs", homework: "Homework", growth: "Skill & ELO Growth", learning: "Chess Study Hub", events: "Upcoming Events", reports: "Academy Reports", billing: "Tuition & Invoices", productivity: "Daily Tasks" };
+      const titles = { overview: "My Child", schedule: "Class Schedule", attendance: "Attendance Logs", homework: "Homework", growth: "Skill & ELO Growth", learning: "Chess Study Hub", events: "Upcoming Events", reports: "Academy Reports", billing: "Tuition & Invoices", productivity: "Daily Tasks", chess: "Chess Performance" };
       $("p-title").textContent = titles[tab] || "My Child";
     }
   };
@@ -11594,6 +11605,16 @@ Best regards,
       })
       .join("");
   }
+  window.renderChildChessPerformance = async function(student) {
+    if (!student) return;
+    if (typeof window.loadChessDashboardForTab === "function") {
+      try {
+        await window.loadChessDashboardForTab(student);
+      } catch (e) {
+        console.warn("[Child] loadChessDashboardForTab failed:", e);
+      }
+    }
+  };
 
   function renderChildAchievements() {
     const achGrid = $("parent-ach");

@@ -232,6 +232,16 @@ body.login-mode .sidebar-overlay { display: none !important; }
 .logo-text { font-family: 'Cinzel', var(--font-head); font-size: 20px; font-weight: 700; letter-spacing: 1.5px; color: var(--gold); text-transform: uppercase; }
 
 .nav-group { padding: 12px; flex-grow: 1; overflow-y: auto; }
+.nav-group + .nav-group { margin-top: 8px; }
+.nav-group-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ivory3);
+  padding: 8px 16px 4px;
+  font-weight: 600;
+  opacity: 0.7;
+}
 .nav-item {
   display: flex; align-items: center; gap: 11px;
   padding: 13px 16px; margin: 3px 0;
@@ -3255,4 +3265,98 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
 
 .coach-section-block table {
   min-width: 0;
+}
+
+/* ── SKILL RADIAL PROGRESS BAR ── */
+.skill-radial {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 8px;
+}
+
+.skill-radial svg {
+  transform: rotate(-90deg);
+}
+
+.skill-radial .skill-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.skill-radial .skill-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ivory);
+  margin-top: 4px;
+}
+
+.skill-radial .skill-hint {
+  font-size: 10px;
+  color: var(--ivory-dim);
+}
+
+/* ── CHESS PERFORMANCE ERROR STATE ── */
+.chess-error-state {
+  padding: 20px;
+  text-align: center;
+  color: var(--danger);
+}
+
+.chess-error-state .retry-btn {
+  margin-top: 12px;
+}
+
+/* ── CHESS PERFORMANCE EMPTY STATE ── */
+.chess-empty-state {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.chess-empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.chess-empty-state .cta-btn {
+  margin-top: 16px;
+}
+
+/* ── GAME VIEWER NAVIGATION ── */
+.chess-game-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.chess-game-nav button {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.chess-move-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--surface2);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+}
+
+.chess-move-item {
+  display: flex;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.chess-move-item.current {
+  background: rgba(218, 163, 62, 0.15);
 } 
