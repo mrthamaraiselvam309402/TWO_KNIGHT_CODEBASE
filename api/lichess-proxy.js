@@ -9,23 +9,42 @@ export default async function handler(request) {
   }
 
   try {
-    const response = await fetch(
-      `https://lichess.org/api/user/${encodeURIComponent(username)}/rating-history`,
-      { headers: { 'Accept': 'application/x-ndjson' } }
-    );
+    const [profileRes, historyRes] = await Promise.all([
+      fetch(`https://lichess.org/api/user/${encodeURIComponent(username)}`, {
+        headers: { 'Accept': 'application/json' }
+      }),
+      fetch(`https://lichess.org/api/user/${encodeURIComponent(username)}/rating-history`, {
+        headers: { 'Accept': 'application/x-ndjson' }
+      })
+    ]);
 
-    if (!response.ok) {
-      return new Response(JSON.stringify({ error: 'Lichess API error', status: response.status }), {
-        status: response.status,
+    if (!profileRes.ok || !historyRes.ok) {
+      return new Response(JSON.stringify({ error: 'Lichess API error', profileStatus: profileRes.status, historyStatus: historyRes.status }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const text = await response.text();
-    return new Response(text, {
+    const profile = await profileRes.json();
+    const text = await historyRes.text();
+    const lines = text.split('\n').filter((line) => line.trim());
+    const ratingHistory = lines.map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    }).filter(Boolean);
+
+    const payload = {
+      profile,
+      ratingHistory
+    };
+
+    return new Response(JSON.stringify(payload), {
       status: 200,
       headers: {
-        'Content-Type': 'text/plain',
+        'Content-Type': 'application/json',
         'Cache-Control': 's-maxage=300, stale-while-revalidate=600'
       }
     });

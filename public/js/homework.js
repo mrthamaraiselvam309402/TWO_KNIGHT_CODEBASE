@@ -128,15 +128,24 @@
     return 'All Students';
   }
 
-  function getFilteredHomework() {
+   function getFilteredHomework() {
     const month = $('homework-month-filter') ? $('homework-month-filter').value : monthKey(homeworkCalendarMonth);
     const assignee = $('homework-assignee-filter') ? $('homework-assignee-filter').value : '';
     const status = $('homework-status-filter') ? $('homework-status-filter').value : '';
     const [year, monthNumber] = (month || monthKey(homeworkCalendarMonth)).split('-').map(Number);
+    const coachId = window.role === 'coach' ? (window.currentCoachId || window.userId) : null;
+    const coachStudentIds = coachId ? new Set((window.allStudents || []).filter(s => String(s.coach_id) === String(coachId)).map(s => String(s.id))) : null;
+    const coachBatchIds = coachId ? new Set((window.allBatches || []).filter(b => String(b.coach_id) === String(coachId)).map(b => String(b.id))) : null;
 
     return sortHomework((window.allHomework || []).filter((assignment) => {
       if (status && assignment.status !== status) return false;
       if (assignee && assigneeKey(assignment) !== assignee) return false;
+      if (coachStudentIds || coachBatchIds) {
+        const appliesToStudent = assignment.target_type === 'student' && coachStudentIds.has(String(assignment.student_id));
+        const appliesToBatch = assignment.target_type === 'batch' && coachBatchIds.has(String(assignment.batch_id));
+        const appliesToAll = assignment.target_type === 'all';
+        if (!appliesToStudent && !appliesToBatch && !appliesToAll) return false;
+      }
       if (!month) return true;
       if (!assignment.due_date) return false;
       const date = parseDateKey(assignment.due_date);
@@ -153,13 +162,14 @@ let homeworkSubmissionCache = [];
        if (!res.ok) throw new Error(await res.text().catch(() => ''));
        const data = await res.json().catch(() => ({}));
        homeworkSubmissionCache = data.data || [];
-       window.homeworkSubmissionCache = homeworkSubmissionCache;  // Update global reference
-       renderHomeworkSubmissionReview();
+       window.homeworkSubmissionCache = homeworkSubmissionCache;
+       const activePage = document.querySelector('.page.active')?.id;
+       if (activePage === 'page-homework') renderHomeworkSubmissionReview();
        return homeworkSubmissionCache;
-    } catch (error) {
-      if (window.toast) window.toast(`Failed to load homework submissions: ${error.message}`, 'error');
-      return [];
-    }
+     } catch (error) {
+       if (window.toast) window.toast(`Failed to load homework submissions: ${error.message}`, 'error');
+       return [];
+     }
   }
 
   function populateHomeworkSelectors() {
@@ -209,8 +219,11 @@ let homeworkSubmissionCache = [];
         ['', 'All Assignees'],
         ['all:all', 'All Students']
       ]);
-      (window.allStudents || []).filter((student) => (student.status || 'active') !== 'archived').forEach((student) => options.set(`student:${student.id}`, studentName(student)));
-      (window.allBatches || []).filter((batch) => (batch.status || 'active') !== 'archived').forEach((batch) => options.set(`batch:${batch.id}`, batchName(batch)));
+      const coachId = window.role === 'coach' ? (window.currentCoachId || window.userId) : null;
+      const students = coachId ? (window.allStudents || []).filter(s => String(s.coach_id) === String(coachId)) : (window.allStudents || []);
+      const batches = coachId ? (window.allBatches || []).filter(b => String(b.coach_id) === String(coachId)) : (window.allBatches || []);
+      students.filter((student) => (student.status || 'active') !== 'archived').forEach((student) => options.set(`student:${student.id}`, studentName(student)));
+      batches.filter((batch) => (batch.status || 'active') !== 'archived').forEach((batch) => options.set(`batch:${batch.id}`, batchName(batch)));
       (window.allHomework || []).forEach((assignment) => {
         const key = assigneeKey(assignment);
         if (!options.has(key)) options.set(key, assigneeLabel(assignment));
@@ -691,7 +704,10 @@ async function uploadHomeworkFile(file) {
     const assignmentId = $('homework-submission-assignment-filter') ? $('homework-submission-assignment-filter').value : '';
     const studentId = $('homework-submission-student-filter') ? $('homework-submission-student-filter').value : '';
     const status = $('homework-submission-status-filter') ? $('homework-submission-status-filter').value : '';
+    const coachId = window.role === 'coach' ? (window.currentCoachId || window.userId) : null;
+    const coachStudentIds = coachId ? new Set((window.allStudents || []).filter(s => String(s.coach_id) === String(coachId)).map(s => String(s.id))) : null;
     return (homeworkSubmissionCache || []).filter((submission) => {
+      if (coachStudentIds && !coachStudentIds.has(String(submission.student_id))) return false;
       if (assignmentId && String(submission.assignment_id) !== assignmentId) return false;
       if (studentId && String(submission.student_id) !== studentId) return false;
       if (status && String(submission.status) !== status) return false;

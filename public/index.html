@@ -117,18 +117,28 @@
   <div class="nav-group">
     <div class="nav-item admin-only" id="nav-dash" onclick="setPage('dash')"><span class="ico">📊</span> Dashboard</div>
     <div class="nav-item coach-only" id="nav-coach-dash" onclick="setPage('coach-dash')"><span class="ico">🏠</span> My Portal</div>
-    <div class="nav-item admin-only coach-accessible" id="nav-stud" onclick="setPage('stud')"><span class="ico">👨‍🎓</span> Students</div>
+    <div class="nav-item coach-only" id="nav-coach-students" onclick="setPage('coach-students')"><span class="ico">👨‍🎓</span> My Students</div>
+    <div class="nav-item coach-only" id="nav-coach-batches" onclick="setPage('coach-batches')"><span class="ico">👥</span> My Batches</div>
+    <div class="nav-item coach-only" id="nav-coach-schedule" onclick="setPage('coach-schedule')"><span class="ico">📅</span> Schedule</div>
+    <div class="nav-item coach-only" id="nav-coach-events" onclick="setPage('coach-events')"><span class="ico">🏆</span> Events</div>
+    <div class="nav-item coach-only" id="nav-coach-attendance" onclick="setPage('coach-attendance')"><span class="ico">📋</span> Attendance</div>
+    <div class="nav-item coach-only" id="nav-coach-homework" onclick="setPage('coach-homework')"><span class="ico">📚</span> Homework</div>
+    <div class="nav-item coach-only" id="nav-coach-chess" onclick="setPage('coach-chess')"><span class="ico">♟️</span> Chess Stats</div>
+    <div class="nav-item admin-only" id="nav-stud" onclick="setPage('stud')"><span class="ico">👨‍🎓</span> Students</div>
     <div class="nav-item admin-only" id="nav-coach-mgmt" onclick="setPage('coach-mgmt')"><span class="ico">👨‍🏫</span> Coaches</div>
     
     <!-- Academy Manager Group -->
-    <div class="nav-item admin-only coach-accessible" onclick="toggleAcademyManager()"><span class="ico">🏫</span> Academy Manager <span style="float:right;font-size:10px" id="academy-mgr-icon">▼</span></div>
-    <div id="academy-manager-group" style="display:none; background:rgba(0,0,0,0.1); border-left: 2px solid var(--border); margin-left: 14px; padding-left: 4px; border-radius: 0 0 8px 0;">
-      <div class="nav-item admin-only coach-accessible" id="nav-batches" onclick="setPage('batches')" style="font-size: 13px; padding: 10px 14px;"><span class="ico">👥</span> Batch Manager</div>
-      <div class="nav-item admin-only coach-accessible" id="nav-schedules" onclick="setPage('schedules')" style="font-size: 13px; padding: 10px 14px;"><span class="ico">📅</span> Schedule Manager</div>
-      <div class="nav-item admin-only coach-accessible" id="nav-events" onclick="setPage('events')" style="font-size: 13px; padding: 10px 14px;"><span class="ico">🏆</span> Event Manager</div>
-      <div class="nav-item admin-only coach-accessible" id="nav-attendance" onclick="setPage('attendance')" style="font-size: 13px; padding: 10px 14px;"><span class="ico">📋</span> Attendance Manager</div>
-      <div class="nav-item admin-only coach-accessible" id="nav-homework" onclick="setPage('homework')" style="font-size: 13px; padding: 10px 14px;"><span class="ico">📚</span> Homework Manager</div>
-    </div>
+     <div class="nav-item admin-only" onclick="toggleAcademyManager()" style="justify-content: space-between;">
+       <span><span class="ico">🏫</span> Academy Manager</span>
+       <span style="font-size:10px" id="academy-mgr-icon">▼</span>
+     </div>
+ <div id="academy-manager-group" style="display:none; background:rgba(0,0,0,0.1); border-left: 2px solid var(--border); margin-left: 14px; padding-left: 4px; border-radius: 0 0 8px 0;">
+        <div class="nav-item admin-only" id="nav-batches" onclick="setPage('batches');" style="font-size: 13px; padding: 10px 14px;"><span class="ico">👥</span> Batch Manager</div>
+        <div class="nav-item admin-only" id="nav-schedules" onclick="setPage('schedules');" style="font-size: 13px; padding: 10px 14px;"><span class="ico">📅</span> Schedule Manager</div>
+         <div class="nav-item admin-only" id="nav-events" onclick="setPage('events');" style="font-size: 13px; padding: 10px 14px;"><span class="ico">🏆</span> Event Manager</div>
+         <div class="nav-item admin-only" id="nav-attendance" onclick="setPage('attendance');" style="font-size: 13px; padding: 10px 14px;"><span class="ico">📋</span> Attendance Manager</div>
+         <div class="nav-item admin-only" id="nav-homework" onclick="setPage('homework');" style="font-size: 13px; padding: 10px 14px;"><span class="ico">📚</span> Homework Manager</div>
+      </div>
 
     <div class="nav-item admin-only" id="nav-chessable" onclick="setPage('chessable')"><span class="ico">♟️</span> Chessable Profiles</div>
     <!-- Parent Portal Links -->
@@ -183,161 +193,294 @@
 
   <div class="content">
 
-    <!-- Coach Dashboard -->
-    <div id="page-coach-dash" class="page coach-only">
-      <!-- Welcome Banner -->
-      <div class="coach-welcome-banner">
-        <div class="coach-welcome-glow"></div>
-        <div class="coach-welcome-content">
-          <h1 class="coach-welcome-title">
-            <span class="coach-welcome-icon">👋</span>
-            Welcome back, <span id="coach-dash-name" class="coach-welcome-name">Coach</span>!
-          </h1>
-          <p class="coach-welcome-subtitle">Your coaching command center. Track students, manage batches, and review submissions in real-time.</p>
-        </div>
-      </div>
+<!-- Coach Dashboard -->
+     <div id="page-coach-dash" class="page coach-only">
+       <div class="coach-shell">
+         <!-- Header -->
+         <div class="coach-header-section">
+           <div class="coach-header-content">
+             <h1 class="coach-welcome-title">Welcome back, <span id="coach-dash-name" class="coach-name-highlight">Coach</span>!</h1>
+             <p class="coach-welcome-subtitle">Your coaching command center — track students, manage batches, and review submissions.</p>
+           </div>
+         </div>
 
-      <!-- Quick Stats Grid -->
-      <div class="coach-stats-grid" id="coach-dash-stats">
-        <div class="coach-stat-card stat-students">
-          <div class="coach-stat-icon">👥</div>
-          <div class="coach-stat-info">
-            <div class="coach-stat-value" id="coach-stat-students">0</div>
-            <div class="coach-stat-label">My Students</div>
-          </div>
-        </div>
-        <div class="coach-stat-card stat-batches">
-          <div class="coach-stat-icon">🏫</div>
-          <div class="coach-stat-info">
-            <div class="coach-stat-value" id="coach-stat-batches">0</div>
-            <div class="coach-stat-label">My Batches</div>
-          </div>
-        </div>
-        <div class="coach-stat-card stat-sessions">
-          <div class="coach-stat-icon">📅</div>
-          <div class="coach-stat-info">
-            <div class="coach-stat-value" id="coach-stat-sessions">0</div>
-            <div class="coach-stat-label">Upcoming Sessions</div>
-          </div>
-        </div>
-        <div class="coach-stat-card stat-homework">
-          <div class="coach-stat-icon">📝</div>
-          <div class="coach-stat-info">
-            <div class="coach-stat-value" id="coach-stat-hw">0</div>
-            <div class="coach-stat-label">Pending Homework</div>
-          </div>
-        </div>
-      </div>
+         <!-- Stats -->
+         <div class="coach-section-block">
+           <div class="coach-section-row">
+             <h2 class="coach-section-title">Overview</h2>
+             <span class="coach-section-badge" id="coach-updated-badge">Updated just now</span>
+           </div>
+           <div class="coach-stats-grid" id="coach-dash-stats">
+             <div class="coach-stat-card">
+               <div class="coach-stat-icon-wrap"><span class="coach-stat-icon">👥</span></div>
+               <div class="coach-stat-info">
+                 <div class="coach-stat-value" id="coach-stat-students">0</div>
+                 <div class="coach-stat-label">My Students</div>
+               </div>
+             </div>
+             <div class="coach-stat-card">
+               <div class="coach-stat-icon-wrap"><span class="coach-stat-icon">🏫</span></div>
+               <div class="coach-stat-info">
+                 <div class="coach-stat-value" id="coach-stat-batches">0</div>
+                 <div class="coach-stat-label">My Batches</div>
+               </div>
+             </div>
+             <div class="coach-stat-card">
+               <div class="coach-stat-icon-wrap"><span class="coach-stat-icon">📅</span></div>
+               <div class="coach-stat-info">
+                 <div class="coach-stat-value" id="coach-stat-sessions">0</div>
+                 <div class="coach-stat-label">Upcoming Sessions</div>
+               </div>
+             </div>
+             <div class="coach-stat-card">
+               <div class="coach-stat-icon-wrap"><span class="coach-stat-icon">📝</span></div>
+               <div class="coach-stat-info">
+                 <div class="coach-stat-value" id="coach-stat-hw">0</div>
+                 <div class="coach-stat-label">Pending Review</div>
+               </div>
+             </div>
+           </div>
+         </div>
 
-      <!-- Main Dashboard Grid -->
-      <div class="coach-dashboard-grid">
-        <!-- My Batches Card -->
-        <div class="coach-dashboard-card">
-          <div class="coach-card-header">
-            <h3 class="coach-card-title">
-              <span class="coach-card-icon">🏫</span>
-              My Batches
-            </h3>
-            <button class="coach-card-action" onclick="setPage('batches')" title="View All Batches">→</button>
-          </div>
-          <div class="coach-card-body">
-            <table class="coach-mini-table">
-              <thead>
-                <tr>
-                  <th>Batch Name</th>
-                  <th>Level</th>
-                  <th>Students</th>
-                  <th>Schedule</th>
-                </tr>
-              </thead>
-              <tbody id="coach-dash-batches-tbody">
-                <tr><td colspan="4" class="coach-loading-cell">Loading your batches...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+         <!-- Quick Navigation -->
+         <div class="coach-section-block">
+           <div class="coach-section-row">
+             <h2 class="coach-section-title">Quick Navigation</h2>
+           </div>
+           <div class="coach-dash-card">
+             <div class="coach-card-body">
+               <div class="coach-quick-actions">
+                 <button class="coach-action-btn primary" onclick="setPage('coach-students')">
+                   <span class="coach-action-icon">👥</span>
+                   <span class="coach-action-text">My Students</span>
+                 </button>
+                 <button class="coach-action-btn" onclick="setPage('coach-batches')">
+                   <span class="coach-action-icon">👥</span>
+                   <span class="coach-action-text">My Batches</span>
+                 </button>
+                 <button class="coach-action-btn" onclick="setPage('coach-schedule')">
+                   <span class="coach-action-icon">📅</span>
+                   <span class="coach-action-text">Schedule</span>
+                 </button>
+                 <button class="coach-action-btn" onclick="setPage('coach-events')">
+                   <span class="coach-action-icon">🏆</span>
+                   <span class="coach-action-text">Events</span>
+                 </button>
+                 <button class="coach-action-btn" onclick="setPage('coach-attendance')">
+                   <span class="coach-action-icon">📋</span>
+                   <span class="coach-action-text">Attendance</span>
+                 </button>
+                 <button class="coach-action-btn" onclick="setPage('coach-homework')">
+                   <span class="coach-action-icon">📚</span>
+                   <span class="coach-action-text">Homework</span>
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
 
-        <!-- Homework Submissions Card -->
-        <div class="coach-dashboard-card">
-          <div class="coach-card-header">
-            <h3 class="coach-card-title">
-              <span class="coach-card-icon">📝</span>
-              Recent Homework
-            </h3>
-            <button class="coach-card-action" onclick="setPage('homework')" title="View All Homework">→</button>
-          </div>
-          <div class="coach-card-body">
-            <table class="coach-mini-table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Topic</th>
-                  <th>Submitted</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="coach-dash-hw-tbody">
-                <tr><td colspan="4" class="coach-loading-cell">Loading submissions...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Today's Attendance Widget -->
-        <div class="coach-dashboard-card">
-          <div class="coach-card-header">
-            <h3 class="coach-card-title">
-              <span class="coach-card-icon">📋</span>
-              Today's Attendance
-            </h3>
-            <button class="coach-card-action" onclick="setPage('attendance')" title="Manage Attendance">→</button>
-          </div>
-          <div class="coach-card-body">
-            <div class="coach-attendance-summary">
-              <div class="coach-attendance-item present">
-                <span class="attendance-count" id="coach-att-present">0</span>
-                <span class="attendance-label">Present</span>
-              </div>
-              <div class="coach-attendance-item absent">
-                <span class="attendance-count" id="coach-att-absent">0</span>
-                <span class="attendance-label">Absent</span>
+      <!-- Coach Workspace Pages -->
+      <div id="page-coach-students" class="page coach-only">
+        <div class="coach-shell">
+          <div class="coach-section-block">
+            <div class="coach-section-row">
+              <h2 class="coach-section-title">My Students</h2>
+            </div>
+            <div class="coach-dash-card">
+              <div class="coach-card-body">
+                <div class="coach-table-wrap">
+                  <table class="coach-mini-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Level / ELO</th>
+                        <th>Session</th>
+                        <th>Schedule</th>
+                        <th>Phone</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="coach-students-tbody">
+                      <tr><td colspan="7" class="coach-loading-cell">Loading your students...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-            <div id="coach-attendance-details" class="coach-attendance-details">
-              <div class="coach-loading-cell">Loading attendance...</div>
-            </div>
           </div>
         </div>
+      </div>
 
-        <!-- Quick Actions Card -->
-        <div class="coach-dashboard-card">
-          <div class="coach-card-header">
-            <h3 class="coach-card-title">
-              <span class="coach-card-icon">⚡</span>
-              Quick Actions
-            </h3>
-          </div>
-          <div class="coach-card-body">
-            <div class="coach-quick-actions">
-              <button class="coach-action-btn" onclick="setPage('batches')">
-                <span>👥</span> Manage Batches
-              </button>
-              <button class="coach-action-btn" onclick="setPage('homework')">
-                <span>📚</span> Review Homework
-              </button>
-              <button class="coach-action-btn" onclick="setPage('attendance')">
-                <span>📋</span> Mark Attendance
-              </button>
-              <button class="coach-action-btn" onclick="setPage('msgs')">
-                <span>💬</span> Messages
-              </button>
+      <div id="page-coach-batches" class="page coach-only">
+        <div class="coach-shell">
+          <div class="coach-section-block">
+            <div class="coach-section-row">
+              <h2 class="coach-section-title">My Batches</h2>
+            </div>
+            <div class="coach-dash-card">
+              <div class="coach-card-body">
+                <div class="coach-table-wrap">
+                  <table class="coach-mini-table">
+                    <thead>
+                      <tr>
+                        <th>Batch Name</th>
+                        <th>Level</th>
+                        <th>Students</th>
+                        <th>Schedule</th>
+                      </tr>
+                    </thead>
+                    <tbody id="coach-batches-tbody">
+                      <tr><td colspan="4" class="coach-loading-cell">Loading your batches...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Dashboard -->
+      <div id="page-coach-schedule" class="page coach-only">
+        <div class="coach-shell">
+          <div class="coach-section-block">
+            <div class="coach-section-row">
+              <h2 class="coach-section-title">Schedule</h2>
+            </div>
+            <div id="coach-schedule-content">
+              <div class="coach-loading-cell">Loading schedule...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        <div id="page-coach-events" class="page coach-only">
+          <div class="coach-shell">
+            <div class="coach-section-block">
+              <div class="coach-section-row">
+                <h2 class="coach-section-title">Events</h2>
+                <button class="btn btn-gold btn-sm" onclick="openCoachEventModal()">
+                  <span class="ico">➕</span> Create Event
+                </button>
+              </div>
+              <div id="coach-events-content">
+                <div class="coach-loading-cell">Loading events...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="page-coach-chess" class="page coach-only">
+          <div class="coach-shell">
+            <div class="coach-section-block">
+              <div class="coach-section-row">
+                <h2 class="coach-section-title">Student Chess Overview</h2>
+              </div>
+              <div id="coach-chess-summary" class="coach-loading-cell">Loading chess data...</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="page-coach-attendance" class="page coach-only">
+         <div class="coach-shell">
+           <div class="coach-section-block">
+             <div class="coach-section-row">
+               <h2 class="coach-section-title">Attendance</h2>
+              <div class="coach-header-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                 <input type="date" id="coach-att-date" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px" onchange="renderCoachAttendanceMarking()">
+                 <button class="btn btn-outline-grey" onclick="markAllCoachPresent()">✅ Mark All Present</button>
+                 <button class="btn btn-outline-grey" onclick="markAllCoachAbsent()">❌ Mark All Absent</button>
+                 <button class="btn btn-gold" onclick="saveCoachAttendance()" style="padding: 10px 24px; font-weight:700">💾 Save Attendance</button>
+               </div>
+             </div>
+             <div id="coach-attendance-summary" style="margin-bottom:16px;"></div>
+             <div class="table-wrap">
+               <table style="font-size:14px">
+                 <thead><tr>
+                   <th style="width:200px">Student</th>
+                   <th style="width:150px">Status</th>
+                   <th>Classwork & Homework Notes</th>
+                 </tr></thead>
+                 <tbody id="coach-att-marking-body"><tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Select a date to load your students</div></td></tr></tbody>
+               </table>
+             </div>
+           </div>
+         </div>
+       </div>
+
+        <div id="page-coach-homework" class="page coach-only">
+          <div class="coach-shell">
+            <div class="coach-section-block">
+              <div class="coach-section-row">
+                <h2 class="coach-section-title">Homework &amp; Submissions</h2>
+                <button class="btn btn-gold btn-sm" onclick="openCoachHomeworkModal()">
+                  <span class="ico">➕</span> Assign Homework
+                </button>
+              </div>
+              <div class="coach-header-actions" style="margin-bottom:14px;">
+                <input type="text" id="coach-hw-search" placeholder="Search by student, assignment, file, or note..." style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px; min-width:260px;" oninput="switchCoachHomeworkTab('submissions'); renderCoachSubmissions(this.value, 1); document.getElementById('coach-hw-sub-search')?.value && (document.getElementById('coach-hw-sub-search').value = this.value);">
+                <select id="coach-hw-status" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px" onchange="switchCoachHomeworkTab('submissions'); renderCoachSubmissions(document.getElementById('coach-hw-search')?.value || '', 1); document.getElementById('coach-hw-sub-status')?.value && (document.getElementById('coach-hw-sub-status').value = this.value);">
+                  <option value="">All Statuses</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="approved">Approved</option>
+                  <option value="needs_revision">Needs Revision</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+              <div class="tabs-nav" style="margin-bottom: 18px;">
+                <button class="tab-link active" onclick="switchCoachHomeworkTab('assignments')" id="btn-coach-hw-assign">My Assignments</button>
+                <button class="tab-link" onclick="switchCoachHomeworkTab('submissions')" id="btn-coach-hw-sub">Submissions</button>
+              </div>
+
+              <div id="coach-hw-assign" class="hw-tab-content active" style="display:block;">
+                <div class="coach-table-wrap">
+                  <table class="coach-mini-table">
+                    <thead>
+                      <tr>
+                        <th>Assignment</th>
+                        <th>Target</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="coach-assignments-tbody">
+                      <tr><td colspan="5" class="coach-loading-cell">Loading assignments...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div id="coach-assign-pagination" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end; margin-top:14px;"></div>
+              </div>
+
+              <div id="coach-hw-submissions" class="hw-tab-content" style="display:none;">
+                <div class="coach-table-wrap">
+                  <table class="coach-mini-table">
+                    <thead>
+                      <tr>
+                        <th>Student</th>
+                        <th>Assignment</th>
+                        <th>Submitted</th>
+                        <th>Status</th>
+                        <th>Review</th>
+                      </tr>
+                    </thead>
+                    <tbody id="coach-submissions-tbody">
+                      <tr><td colspan="5" class="coach-loading-cell">Loading submissions...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+                  <div id="coach-sub-pagination" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;"></div>
+                  <div style="font-size:12px; color:var(--ivory-dim);" id="coach-sub-count"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      <!-- Dashboard -->
     <div id="page-dash" class="page admin-only">
       <img src="/images/hero.jpg" class="hero-img" alt="Chess">
       
@@ -426,77 +569,32 @@
     </div>
 
     <!-- Students -->
-    <div id="page-stud" class="page admin-only coach-accessible">
-      <!-- ALWAYS VISIBLE MAIN ROW -->
-      <div class="filter-main-row" style="display:flex; gap:12px; margin-bottom:12px; align-items:center; width:100%">
-        <input type="text" id="f-search" placeholder="Search Name or Phone..." oninput="renderStudents()" style="flex:1; min-width:180px; padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px">
-        <button type="button" class="btn btn-outline-amber" id="filter-toggle-btn" onclick="toggleMobileFilters()" style="display:none; gap:6px; align-items:center; height:42px; padding:0 16px">
-          <span>⚙️</span> <span style="font-size:13px">Filters</span>
-        </button>
-      </div>
-
-      <!-- COLLAPSIBLE ADVANCED FILTER BAR -->
-      <div class="filter-bar" id="student-filter-bar">
-        <select id="f-coach" onchange="renderStudents()"><option value="">All Coaches</option></select>
-        <select id="f-session" onchange="renderStudents()"><option value="">All Sessions</option><option value="Group">Group</option><option value="Single">Single</option></select>
-        <select id="f-enroll-status" onchange="renderStudents()">
-          <option value="">Enroll Status (All)</option>
-          <option value="active">Enrolled</option>
-          <option value="pending">Pending</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="waitlist">Waitlist</option>
-          <option value="inactive">Inactive</option>
-          <option value="archived">Archived</option>
-        </select>
-        <select id="f-learning-mode" onchange="renderStudents()">
-          <option value="">All Modes</option>
-          <option value="online">Online</option>
-          <option value="offline">Offline</option>
-        </select>
-        <select id="f-status" onchange="renderStudents()"><option value="">All Payment Status</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Due">Due</option><option value="Overdue">Overdue</option></select>
-        <input type="number" id="f-min-fee" placeholder="Min Fee ₹" oninput="renderStudents()">
-        <input type="number" id="f-max-fee" placeholder="Max Fee ₹" oninput="renderStudents()">
-        <button class="btn btn-outline-amber btn-sm" onclick="exportStudentsToCSV()">📤 Export</button>
-         <div style="display:flex; align-items:center; gap:8px">
-           <label style="font-size:12px; color:var(--ivory-dim)">Billing:</label>
-           <input type="month" id="f-bill-month-stud" onchange="syncStudMonth(this.value)" 
-                  style="width:140px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
-           <button class="btn btn-outline-grey btn-sm" onclick="resetStudMonth()">This Month</button>
+      <div id="page-stud" class="page admin-only">
+       <div class="coach-shell">
+         <div class="coach-section-block">
+           <div class="coach-section-row">
+             <h2 class="coach-section-title">Students</h2>
+           </div>
+           <div class="filter-main-row" style="display:flex; gap:12px; margin-bottom:12px; align-items:center; width:100%">
+             <input type="text" id="f-search" placeholder="Search students..." oninput="renderStudents()" style="flex:1; min-width:180px; padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px">
+           </div>
          </div>
-         <div style="display:flex; align-items:center; gap:8px">
-           <label style="font-size:12px; color:var(--ivory-dim)">Due:</label>
-           <input type="date" id="f-due-date-stud" onchange="syncDueDateFilter(this.value)" 
-                  style="width:130px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+         <div class="coach-section-block">
+           <div class="table-wrap">
+             <table id="stud-table">
+               <thead>
+                 <tr id="stud-thead-row">
+                   <th>Student</th>
+                   <th>Session</th>
+                   <th>Rating</th>
+                 </tr>
+               </thead>
+               <tbody id="stud-body"><tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
+             </table>
+           </div>
          </div>
-         <div style="display:flex; align-items:center; gap:8px">
-           <label style="font-size:12px; color:var(--ivory-dim)">Enroll:</label>
-           <input type="date" id="f-enroll-date-stud" onchange="syncEnrollDateFilter(this.value)" 
-                  style="width:130px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
-         </div>
-        <button class="btn btn-outline-grey btn-sm" onclick="clearFilters()">Clear</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:40px"><input type="checkbox" id="stud-check-all" onclick="window.toggleAllStudents(this.checked)"></th>
-              <th style="width:50px">#</th>
-              <th>Student</th>
-              <th>Level / ELO</th>
-              <th>Coach</th>
-              <th>Join Date</th>
-              <th>Session</th>
-              <th>Schedule</th>
-              <th>Fee</th>
-              <th>Status</th>
-              <th>Due Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="stud-body"><tr><td colspan="10"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
-        </table>
-      </div>
-    </div>
+       </div>
+     </div>
 
     <!-- Chessable Profiles Full Page -->
     <div id="page-chessable" class="page admin-only">
@@ -535,168 +633,184 @@
     </div>
 
     <!-- Attendance Manager Page -->
-    <div id="page-attendance" class="page admin-only coach-accessible">
-      <div class="filter-main-row" style="display:flex; gap:12px; margin-bottom:12px; align-items:center; width:100%; flex-wrap:wrap">
-        <div style="display:flex; align-items:center; gap:8px">
-          <label style="color:var(--ivory-dim); font-size:14px">Date:</label>
-          <input type="date" id="att-date" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px" onchange="renderAttendanceList()">
-        </div>
-        <select id="att-coach-filter" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px" onchange="renderAttendanceList()">
-          <option value="">All Coaches</option>
-        </select>
-        <select id="att-batch-filter" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px" onchange="renderAttendanceList()">
-          <option value="">All Batches</option>
-          <option value="Group">Group Session</option>
-          <option value="Single">1-on-1 Session</option>
-        </select>
-      </div>
+      <div id="page-attendance" class="page admin-only">
+       <div class="coach-shell">
+         <div class="coach-section-block">
+           <div class="coach-section-row">
+             <h2 class="coach-section-title">Attendance</h2>
+             <span class="coach-section-badge">Select date / coach / batch to begin</span>
+           </div>
+           <div class="filter-main-row" style="display:flex; gap:12px; margin-bottom:12px; align-items:center; width:100%; flex-wrap:wrap">
+             <div style="display:flex; align-items:center; gap:8px">
+               <label style="color:var(--ivory-dim); font-size:14px">Date:</label>
+               <input type="date" id="att-date" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px" onchange="renderAttendanceList()">
+             </div>
+             <select id="att-coach-filter" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px" onchange="renderAttendanceList()">
+               <option value="">All Coaches</option>
+             </select>
+             <select id="att-batch-filter" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px" onchange="renderAttendanceList()">
+               <option value="">All Batches</option>
+               <option value="Group">Group Session</option>
+               <option value="Single">1-on-1 Session</option>
+             </select>
+           </div>
 
-      <div id="att-stats" style="text-align:center;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;font-size:14px;font-weight:600;color:var(--gold);">
-        <!-- Stats populated by JS -->
-      </div>
-      
-      <div style="display:flex;gap:12px;margin-bottom:16px;justify-content:space-between">
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-outline-grey" onclick="markAllPresent()">✅ Mark All Present</button>
-          <button class="btn btn-outline-grey" onclick="markAllAbsent()">❌ Mark All Absent</button>
-        </div>
-        <button class="btn btn-gold" onclick="saveBatchAttendance()" style="padding: 10px 24px; font-weight:700">💾 Save Attendance</button>
-      </div>
-      
-      <div class="table-wrap">
-        <table style="font-size:14px">
-          <thead><tr>
-            <th style="width:200px">Student</th>
-            <th style="width:150px">Status</th>
-            <th>Classwork & Homework</th>
-          </tr></thead>
-          <tbody id="att-marking-body"><tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Select date/coach to load students</div></td></tr></tbody>
-        </table>
-      </div>
-    </div>
+           <div id="att-stats" style="text-align:center;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;font-size:14px;font-weight:600;color:var(--gold);">
+             <!-- Stats populated by JS -->
+           </div>
+           
+           <div style="display:flex;gap:12px;margin-bottom:16px;justify-content:space-between;flex-wrap:wrap">
+             <div style="display:flex;gap:8px;flex-wrap:wrap">
+               <button class="btn btn-outline-grey" onclick="markAllPresent()">✅ Mark All Present</button>
+               <button class="btn btn-outline-grey" onclick="markAllAbsent()">❌ Mark All Absent</button>
+             </div>
+             <button class="btn btn-gold" onclick="saveBatchAttendance()" style="padding: 10px 24px; font-weight:700">💾 Save Attendance</button>
+           </div>
+           
+           <div class="table-wrap">
+             <table style="font-size:14px">
+               <thead><tr>
+                 <th style="width:200px">Student</th>
+                 <th style="width:150px">Status</th>
+                 <th>Classwork & Homework</th>
+               </tr></thead>
+               <tbody id="att-marking-body"><tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Select date/coach to load students</div></td></tr></tbody>
+             </table>
+           </div>
+         </div>
+       </div>
+     </div>
 
     <!-- Homework Manager Page -->
-    <div id="page-homework" class="page admin-only coach-accessible">
-      <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
-        <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none;">📝</div>
-        <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">
-          <span>📝</span> Homework Manager
-        </h2>
-        <p style="color:var(--ivory-dim); font-size: 14px; max-width: 720px; line-height: 1.6; margin-bottom: 20px;">
-          Assign chess homework to an individual student, a batch, or all active students. Parents see only the homework that applies to their child.
-        </p>
-        <button class="btn btn-gold" onclick="openHomeworkAssignmentModal()">
-          <span class="ico">➕</span> Assign Homework
-        </button>
-      </div>
+      <div id="page-homework" class="page admin-only">
+       <div class="coach-shell">
+         <div class="coach-section-block">
+           <div class="coach-section-row">
+             <h2 class="coach-section-title">Homework Manager</h2>
+             <button class="btn btn-gold btn-sm" onclick="openHomeworkAssignmentModal()">
+               <span class="ico">➕</span> Assign Homework
+             </button>
+           </div>
+           <p style="color:var(--ivory-dim); font-size: 14px; max-width: 720px; line-height: 1.6; margin-bottom: 6px;">
+             Assign chess homework to an individual student, a batch, or all active students. Parents see only the homework that applies to their child.
+           </p>
+         </div>
 
-      <div class="grid-2-col" style="gap:24px; align-items:start;">
-        <div class="card" style="padding:20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
-            <div>
-              <h3 style="color:var(--gold); margin:0 0 6px 0; font-family:var(--font-head); font-size:18px;">Calendar Review</h3>
-              <p style="margin:0; color:var(--ivory-dim); font-size:12px;">Review homework by due date, assignee, and status.</p>
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <input id="homework-month-filter" type="month" class="input-field" onchange="renderHomeworkCalendar()">
-              <select id="homework-assignee-filter" class="input-field" onchange="renderHomeworkCalendar()" style="min-width:180px;">
-                <option value="">All Assignees</option>
-              </select>
-              <select id="homework-status-filter" class="input-field" onchange="renderHomeworkCalendar()" style="min-width:140px;">
-                <option value="">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
+         <div class="coach-section-block">
+          <div class="tabs-nav" style="margin-bottom: 24px;">
+            <button class="tab-link active" onclick="switchHomeworkTab('hw-assign')" id="btn-hw-assign">Assign & Review</button>
+            <button class="tab-link" onclick="switchHomeworkTab('hw-submissions')" id="btn-hw-submissions">Submissions</button>
+            <button class="tab-link" onclick="switchHomeworkTab('hw-analytics')" id="btn-hw-analytics">Analytics & Previews</button>
           </div>
-          <div id="homework-calendar-grid" style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:8px;"></div>
-          <div id="homework-calendar-list" style="display:grid; gap:12px; margin-top:18px;"></div>
-        </div>
 
-        <div class="card" style="padding:20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
-            <div>
-              <h3 style="color:var(--gold); margin:0 0 6px 0; font-family:var(--font-head); font-size:18px;">Batch Editing</h3>
-              <p style="margin:0; color:var(--ivory-dim); font-size:12px;">Select visible assignments and apply one status change.</p>
+          <!-- Tab 1: Assign & Review -->
+          <div id="hw-assign" class="hw-tab-content active" style="display:block; animation: fadeUp 0.3s ease-out;">
+            <div class="coach-section-block" style="margin-bottom: 18px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+                <div>
+                  <h3 style="color:var(--gold); margin:0 0 6px 0; font-family:var(--font-head); font-size:18px;">Calendar Review</h3>
+                  <p style="margin:0; color:var(--ivory-dim); font-size:12px;">Review homework by due date, assignee, and status.</p>
+                </div>
+              <div class="coach-header-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                  <input id="homework-month-filter" type="month" class="input-field" onchange="renderHomeworkCalendar()">
+                  <select id="homework-assignee-filter" class="input-field" onchange="renderHomeworkCalendar()" style="min-width:180px;">
+                    <option value="">All Assignees</option>
+                  </select>
+                  <select id="homework-status-filter" class="input-field" onchange="renderHomeworkCalendar()" style="min-width:140px;">
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+              </div>
+              <div id="homework-calendar-grid" style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:8px;"></div>
+              <div id="homework-calendar-list" style="display:grid; gap:12px; margin-top:18px;"></div>
             </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-              <button class="btn btn-outline-grey btn-sm" onclick="selectFilteredHomework()">Select Visible</button>
-              <button class="btn btn-outline-grey btn-sm" onclick="clearHomeworkSelection()">Clear</button>
-            </div>
-          </div>
-          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:12px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; margin-bottom:16px;">
-            <select id="homework-bulk-status" class="input-field" style="min-width:160px;">
-              <option value="active">Set Active</option>
-              <option value="completed">Set Completed</option>
-              <option value="archived">Set Archived</option>
-            </select>
-            <button class="btn btn-gold btn-sm" onclick="applyBulkHomeworkStatus()">Apply to Selected</button>
-            <span id="homework-selection-count" style="font-size:12px; color:var(--ivory-dim);">0 selected</span>
-          </div>
-        </div>
-        <div class="card" style="padding:20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
-            <div>
-              <h3 style="color:var(--gold); margin:0 0 6px 0; font-family:var(--font-head); font-size:18px;">Submission Review</h3>
-              <p style="margin:0; color:var(--ivory-dim); font-size:12px;">Review student submissions, request revisions, and approve completed work.</p>
-            </div>
-            <button class="btn btn-outline-grey btn-sm" onclick="loadHomeworkSubmissions(true)">Refresh</button>
-          </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
-            <select id="homework-submission-assignment-filter" class="input-field" onchange="renderHomeworkSubmissionReview()" style="min-width:180px;">
-              <option value="">All Assignments</option>
-            </select>
-            <select id="homework-submission-student-filter" class="input-field" onchange="renderHomeworkSubmissionReview()" style="min-width:180px;">
-              <option value="">All Students</option>
-            </select>
-            <select id="homework-submission-status-filter" class="input-field" onchange="renderHomeworkSubmissionReview()" style="min-width:150px;">
-              <option value="">All Statuses</option>
-              <option value="submitted">Submitted</option>
-              <option value="needs_revision">Needs Revision</option>
-              <option value="approved">Approved</option>
-              <option value="closed">Closed</option>
-            </select>
-          </div>
-          <div id="homework-submission-review-list" style="display:grid; gap:12px; max-height:420px; overflow:auto; padding-right:4px;"></div>
-        </div>
-      </div>
 
-      <div class="grid-2-col" style="gap:24px; align-items:start; margin-top:24px;">
-        <div class="card" style="padding:20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
-            <h3 style="color:var(--gold); margin:0; font-family:var(--font-head); font-size:18px;">Batch Homework Preview</h3>
-            <select id="homework-batch-preview" class="input-field" onchange="renderAdminHomeworkBatchPreview()" style="width:100%; min-width:220px;">
-              <option value="">Select a batch</option>
-            </select>
-          </div>
-          <div id="homework-batch-preview-list" class="resource-grid">
-            <div class="loading-state"><span class="spinner"></span> Select a batch to preview homework</div>
-          </div>
-        </div>
-
-        <div class="card" style="padding:20px;">
-          <h3 style="color:var(--gold); margin-bottom:16px; font-family:var(--font-head); font-size:18px;">Recent Homework</h3>
-          <div id="admin-homework-summary" style="display:grid; gap:12px;">
-            <div class="loading-state"><span class="spinner"></span> Loading homework</div>
-          </div>
-        </div>
-
-        <div class="card" style="padding:20px; border:1px solid var(--border);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
-            <div>
-              <h3 style="color:var(--gold); margin:0 0 4px 0; font-family:var(--font-head); font-size:18px;">Student Topic Progress</h3>
-              <p style="margin:0; color:var(--ivory-dim); font-size:12px;">Verify completion of specific topics for a student.</p>
+            <div class="coach-section-block">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+                <div>
+                  <h3 style="color:var(--gold); margin:0 0 6px 0; font-family:var(--font-head); font-size:18px;">Batch Editing</h3>
+                  <p style="margin:0; color:var(--ivory-dim); font-size:12px;">Select visible assignments and apply one status change.</p>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                  <button class="btn btn-outline-grey btn-sm" onclick="selectFilteredHomework()">Select Visible</button>
+                  <button class="btn btn-outline-grey btn-sm" onclick="clearHomeworkSelection()">Clear</button>
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:12px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; margin-bottom:16px;">
+                <select id="homework-bulk-status" class="input-field" style="min-width:160px;">
+                  <option value="active">Set Active</option>
+                  <option value="completed">Set Completed</option>
+                  <option value="archived">Set Archived</option>
+                </select>
+                <button class="btn btn-gold btn-sm" onclick="applyBulkHomeworkStatus()">Apply to Selected</button>
+                <span id="homework-selection-count" style="font-size:12px; color:var(--ivory-dim);">0 selected</span>
+              </div>
             </div>
           </div>
-          <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
-            <select id="hw-progress-student" class="input-field" style="flex:1; min-width:200px;" onchange="renderStudentHomeworkProgress()">
-              <option value="">Select a student</option>
-            </select>
-            <input type="text" id="hw-progress-topic-search" class="input-field" style="flex:2; min-width:200px;" placeholder="Search topic or assignment title..." oninput="renderStudentHomeworkProgress()">
+
+          <!-- Tab 2: Submissions -->
+          <div id="hw-submissions" class="hw-tab-content" style="display:none; animation: fadeUp 0.3s ease-out;">
+            <div class="coach-section-block">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+                <div>
+                  <h3 style="color:var(--gold); margin:0 0 6px 0; font-family:var(--font-head); font-size:18px;">Submission Review</h3>
+                  <p style="margin:0; color:var(--ivory-dim); font-size:12px;">Review student submissions, request revisions, and approve completed work.</p>
+                </div>
+                <button class="btn btn-outline-grey btn-sm" onclick="loadHomeworkSubmissions(true)">Refresh</button>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+                <select id="homework-submission-assignment-filter" class="input-field" onchange="renderHomeworkSubmissionReview()" style="min-width:180px;">
+                  <option value="">All Assignments</option>
+                </select>
+                <select id="homework-submission-student-filter" class="input-field" onchange="renderHomeworkSubmissionReview()" style="min-width:180px;">
+                  <option value="">All Students</option>
+                </select>
+                <select id="homework-submission-status-filter" class="input-field" onchange="renderHomeworkSubmissionReview()" style="min-width:150px;">
+                  <option value="">All Statuses</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="needs_revision">Needs Revision</option>
+                  <option value="approved">Approved</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+              <div id="homework-submission-review-list" style="display:grid; gap:12px; max-height:420px; overflow:auto; padding-right:4px;"></div>
+            </div>
           </div>
-          <div id="hw-progress-list" style="display:grid; gap:12px;">
-            <div class="empty-state"><span class="empty-icon">👤</span><p>Select a student to view progress.</p></div>
+
+          <!-- Tab 3: Analytics & Previews -->
+          <div id="hw-analytics" class="hw-tab-content" style="display:none; animation: fadeUp 0.3s ease-out;">
+            <div class="coach-section-block" style="margin-bottom: 18px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+                <h3 style="color:var(--gold); margin:0; font-family:var(--font-head); font-size:18px;">Batch Homework Preview</h3>
+                <select id="homework-batch-preview" class="input-field" onchange="renderAdminHomeworkBatchPreview()" style="width:100%; min-width:220px;">
+                  <option value="">Select a batch</option>
+                </select>
+              </div>
+              <div id="homework-batch-preview-list" class="resource-grid">
+                <div class="loading-state"><span class="spinner"></span> Select a batch to preview homework</div>
+              </div>
+            </div>
+
+            <div class="coach-section-block">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+                <div>
+                  <h3 style="color:var(--gold); margin:0 0 4px 0; font-family:var(--font-head); font-size:18px;">Student Topic Progress</h3>
+                  <p style="margin:0; color:var(--ivory-dim); font-size:12px;">Verify completion of specific topics for a student.</p>
+                </div>
+              </div>
+              <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+                <select id="hw-progress-student" class="input-field" style="flex:1; min-width:200px;" onchange="renderStudentHomeworkProgress()">
+                  <option value="">Select a student</option>
+                </select>
+                <input type="text" id="hw-progress-topic-search" class="input-field" style="flex:2; min-width:200px;" placeholder="Search topic or assignment title..." oninput="renderStudentHomeworkProgress()">
+              </div>
+              <div id="hw-progress-list" style="display:grid; gap:12px;">
+                <div class="empty-state"><span class="empty-icon">👤</span><p>Select a student to view progress.</p></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -751,14 +865,15 @@
                 <span><b>Coach:</b> <span id="c-coach">—</span></span>
                 <span><b>Parent:</b> <span id="c-parent-name">—</span></span>
                 <span><b>Phone:</b> <span id="c-parent-phone" style="font-family: monospace;">—</span></span>
-                <span><b>Email:</b> <span id="c-parent-email">—</span></span>
+                <span><b>Email:</b> <span id="c-parent-email" style="font-family: monospace;">—</span></span>
               </div>
-              <div class="profile-meta" style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px;" id="c-chess-links-container">
-                <!-- Populated by JS if usernames exist -->
-              </div>
-            </div>
-          </div>
-          <div class="profile-actions">
+        <div class="profile-meta" style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px;" id="c-chess-links-container">
+          <!-- Populated by JS if usernames exist -->
+        </div>
+        <div class="profile-meta" id="c-engagement-flag" style="margin-top:10px; font-size:12px; color:var(--ivory-dim);"></div>
+      </div>
+    </div>
+    <div class="profile-actions">
             <button class="btn btn-outline" onclick="openStudentEditPortalModal()" style="display: flex; align-items: center; gap: 6px;"><span style="font-size: 13px;">⚙️</span> Edit Details</button>
             <button class="btn btn-gold" onclick="openContactModal()">✉️ Message Coach</button>
             <button class="btn btn-outline" onclick="openModal('fb-modal')">📝 Feedback</button>
@@ -796,31 +911,49 @@
             </div>
           </div>
           
-          <!-- Chess API Stats -->
-          <div class="grid-2-col" style="gap:22px; margin-top:22px;">
-            <div class="card" style="border-left:4px solid #fff; background:var(--bg3);">
-              <h3 style="margin-bottom:16px;color:#fff;display:flex;align-items:center;gap:8px;"><span class="ico">♘</span> Lichess Stats</h3>
-              <div id="chessapi-lichess-content" style="font-size:14px;color:var(--ivory);">Loading...</div>
-            </div>
-            <div class="card" style="border-left:4px solid #7FA650; background:var(--bg3);">
-              <h3 style="margin-bottom:16px;color:#7FA650;display:flex;align-items:center;gap:8px;"><span class="ico">♟️</span> Chess.com Stats</h3>
-              <div id="chessapi-chesscom-content" style="font-size:14px;color:var(--ivory);">Loading...</div>
-            </div>
-          </div>
-          <div class="grid-2-col" style="gap:22px; margin-top:22px;">
-            <div class="card">
-              <h3 style="margin-bottom:16px;color:var(--gold);">Chess Ratings</h3>
-              <div style="height:250px"><canvas id="chessapi-rating-chart"></canvas></div>
-            </div>
-            <div class="card">
-              <h3 style="margin-bottom:16px;color:var(--gold);">Game Viewer</h3>
-              <div id="chessapi-pgn-viewer" style="min-height:250px;display:flex;align-items:center;justify-content:center;color:var(--ivory-dim);background:rgba(0,0,0,0.2);border-radius:8px;">Click a game to view</div>
-            </div>
-          </div>
-          <div class="card" style="margin-top:22px;">
-            <h3 style="margin-bottom:16px;color:var(--gold);">Recent Online Games</h3>
-            <div id="chessapi-recent-games" style="font-size:14px;color:var(--ivory);">Loading...</div>
-          </div>
+           <!-- Chess API Stats -->
+           <div class="grid-2-col" style="gap:22px; margin-top:22px;">
+              <div class="card" style="border-left:4px solid #fff; background:var(--bg3);">
+                <h3 style="margin-bottom:16px;color:#fff;display:flex;align-items:center;gap:8px;"><span class="ico">♘</span> Lichess Stats</h3>
+                <div id="chessapi-lichess-content" style="font-size:14px;color:var(--ivory);">Loading...</div>
+                <div id="chessapi-lichess-details" style="margin-top:12px;"></div>
+                <div id="chessapi-lichess-extras" style="margin-top:12px;"></div>
+              </div>
+              <div class="card" style="border-left:4px solid #7FA650; background:var(--bg3);">
+                <h3 style="margin-bottom:16px;color:#7FA650;display:flex;align-items:center;gap:8px;"><span class="ico">♟️</span> Chess.com Stats</h3>
+                <div id="chessapi-chesscom-content" style="font-size:14px;color:var(--ivory);">Loading...</div>
+                <div id="chessapi-chesscom-details" style="margin-top:12px;"></div>
+                <div id="chessapi-chesscom-clubs" style="margin-top:12px;"></div>
+                <div id="chessapi-chesscom-tournaments" style="margin-top:12px;"></div>
+              </div>
+           </div>
+
+           <div class="card" style="margin-top:22px;">
+             <h3 style="margin-bottom:16px;color:var(--gold);">Rating Dashboard</h3>
+             <div id="chessapi-ratings-table" style="font-size:13px; color:var(--ivory);">Loading ratings...</div>
+           </div>
+
+           <div class="grid-2-col" style="gap:22px; margin-top:22px;">
+             <div class="card">
+               <h3 style="margin-bottom:16px;color:var(--gold);">Performance Overview</h3>
+               <div id="chessapi-performance" style="font-size:13px; color:var(--ivory);">Loading performance data...</div>
+             </div>
+             <div class="card">
+               <h3 style="margin-bottom:16px;color:var(--gold);">Chess Ratings</h3>
+               <div style="height:250px"><canvas id="chessapi-rating-chart"></canvas></div>
+             </div>
+           </div>
+
+           <div class="grid-2-col" style="gap:22px; margin-top:22px;">
+             <div class="card">
+               <h3 style="margin-bottom:16px;color:var(--gold);">Game Viewer</h3>
+               <div id="chessapi-pgn-viewer" style="min-height:250px;display:flex;align-items:center;justify-content:center;color:var(--ivory-dim);background:rgba(0,0,0,0.2);border-radius:8px;">Click a game to view</div>
+             </div>
+             <div class="card">
+               <h3 style="margin-bottom:16px;color:var(--gold);">Recent Online Games</h3>
+               <div id="chessapi-recent-games" style="font-size:14px;color:var(--ivory);">Loading...</div>
+             </div>
+           </div>
           
           <!-- Contextual AI Insight block for Parent Dashboard -->
           <div id="child-overview-ai-insight" class="ai-insight-box" style="margin-top:22px; display:none;">
@@ -1239,8 +1372,8 @@
       </div>
     </div>
 
-    <!-- Events -->
-    <div id="page-events" class="page">
+     <!-- Events -->
+      <div id="page-events" class="page">
       
       <!-- Premium Hub Switcher -->
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 25px; flex-wrap: wrap; gap:15px; border-bottom:1px solid var(--border); padding-bottom:15px;">
@@ -1492,42 +1625,40 @@
     </div>
 
     <!-- Classroom / Batch Manager -->
-    <div id="page-batches" class="page admin-only coach-accessible">
-      <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
-        <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none; font-family: sans-serif;">🏫</div>
-        <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">
-          <span>🏫</span> Classroom / Batch Manager
-        </h2>
-        <p style="color:var(--ivory-dim); font-size: 14px; max-width: 600px; line-height: 1.6; margin-bottom: 20px;">
-          Create and manage student batches, assign coaches, and track active classrooms across your academy.
-        </p>
-        <button class="btn btn-gold" onclick="openCreateBatchModal()">
-          <span class="ico">➕</span> New Batch
-        </button>
-      </div>
+      <div id="page-batches" class="page admin-only">
+       <div class="coach-shell">
+         <div class="coach-section-block">
+           <div class="coach-section-row">
+             <h2 class="coach-section-title">Classroom / Batch Manager</h2>
+             <button class="btn btn-gold btn-sm" onclick="openCreateBatchModal()">
+               <span class="ico">➕</span> New Batch
+             </button>
+           </div>
+           <p style="color:var(--ivory-dim); font-size: 14px; max-width: 600px; line-height: 1.6; margin-bottom: 18px;">
+             Create and manage student batches, assign coaches, and track active classrooms across your academy.
+           </p>
+           <div class="card" style="padding: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+             <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+               <div class="search-box">
+                 <span class="ico" style="opacity:0.5; margin-left:12px;">🔍</span>
+                 <input type="text" id="batch-search-input" placeholder="Search batches..." onkeyup="renderBatchesGrid()" style="background:transparent; border:none; color:var(--ivory); outline:none; padding:8px; width:200px;">
+               </div>
+               <select id="batch-status-filter" class="input-field" onchange="renderBatchesGrid()" style="width: auto;">
+                 <option value="active">Active Only</option>
+                 <option value="all">All Statuses</option>
+               </select>
+             </div>
+           </div>
+         </div>
 
-      <!-- Filters & Controls -->
-      <div class="card" style="padding: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; gap: 16px; align-items: center;">
-          <div class="search-box">
-            <span class="ico" style="opacity:0.5; margin-left:12px;">🔍</span>
-            <input type="text" id="batch-search-input" placeholder="Search batches..." onkeyup="renderBatchesGrid()" style="background:transparent; border:none; color:var(--ivory); outline:none; padding:8px; width:200px;">
-          </div>
-          <select id="batch-status-filter" class="input-field" onchange="renderBatchesGrid()" style="width: auto;">
-            <option value="active">Active Only</option>
-            <option value="all">All Statuses</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Card Grid Container -->
-      <div id="batches-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-        <!-- Batches will be rendered here dynamically -->
-      </div>
-    </div>
+         <div id="batches-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+           <!-- Batches will be rendered here dynamically -->
+         </div>
+       </div>
+     </div>
 
     <!-- Student Schedule Manager -->
-    <div id="page-schedules" class="page admin-only">
+      <div id="page-schedules" class="page admin-only">
       <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: var(--shadow);">
         <div style="position: absolute; top: -20px; right: -20px; font-size: 120px; opacity: 0.04; pointer-events: none; font-family: sans-serif;">🗓️</div>
         <h2 style="color:var(--gold); margin-bottom: 8px; font-family:var(--font-head); font-size: 26px; display: flex; align-items: center; gap: 10px;">

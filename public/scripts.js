@@ -495,10 +495,7 @@ const headers = {
               <td>${dateStr}</td>
               <td>${badge}</td>
               <td style="color:var(--ivory-dim); font-size:12px;">
-                ${a.notes || a.note ? `<div>${escapeHtml(a.notes || a.note)}</div>` : ''}
-                ${a.classwork_notes ? `<div style="color:var(--gold);"><strong>CW:</strong> ${escapeHtml(a.classwork_notes)}</div>` : ''}
-                ${a.homework_notes ? `<div style="color:var(--emerald);"><strong>HW:</strong> ${escapeHtml(a.homework_notes)}</div>` : ''}
-                ${!a.notes && !a.note && !a.classwork_notes && !a.homework_notes ? '—' : ''}
+                ${(() => { const p = window.parseAttendanceNotes ? window.parseAttendanceNotes(a.notes || a.note || '') : { cw: '', hw: '', general: '' }; const parts = []; if (p.general) parts.push(escapeHtml(p.general)); if (p.cw) parts.push(`<div style="color:var(--gold);"><strong>CW:</strong> ${escapeHtml(p.cw)}</div>`); if (p.hw) parts.push(`<div style="color:var(--emerald);"><strong>HW:</strong> ${escapeHtml(p.hw)}</div>`); return parts.length ? parts.join('') : '—'; })()}
               </td>
             </tr>`;
           })
@@ -656,9 +653,7 @@ const headers = {
       attLogHtml = monthAtt.map(a => `
         <div style="border-left: 2px solid ${a.status === 'present' ? 'var(--emerald)' : 'var(--danger)'}; padding-left: 10px; margin-bottom: 12px;">
           <div style="font-weight:600; font-size:13px; color:var(--gold);">${new Date(a.date).toLocaleDateString()} - ${a.status.toUpperCase()}</div>
-          ${a.classwork_notes ? `<div style="font-size:12px; margin-top:4px;"><strong style="color:var(--ivory-dim);">Classwork:</strong> <span style="white-space: pre-wrap;">${escapeHtml(a.classwork_notes)}</span></div>` : ''}
-          ${a.homework_notes ? `<div style="font-size:12px; margin-top:4px;"><strong style="color:var(--ivory-dim);">Homework:</strong> <span style="white-space: pre-wrap;">${escapeHtml(a.homework_notes)}</span></div>` : ''}
-          ${a.notes ? `<div style="font-size:12px; margin-top:4px;"><strong style="color:var(--ivory-dim);">Notes:</strong> <span style="white-space: pre-wrap;">${escapeHtml(a.notes)}</span></div>` : ''}
+          ${(() => { const p = window.parseAttendanceNotes ? window.parseAttendanceNotes(a.notes || '') : { cw: '', hw: '', general: '' }; const parts = []; if (p.cw) parts.push(`<div style="font-size:12px; margin-top:4px;"><strong style="color:var(--ivory-dim);">Classwork:</strong> <span style="white-space: pre-wrap;">${escapeHtml(p.cw)}</span></div>`); if (p.hw) parts.push(`<div style="font-size:12px; margin-top:4px;"><strong style="color:var(--ivory-dim);">Homework:</strong> <span style="white-space: pre-wrap;">${escapeHtml(p.hw)}</span></div>`); if (p.general) parts.push(`<div style="font-size:12px; margin-top:4px;"><strong style="color:var(--ivory-dim);">Notes:</strong> <span style="white-space: pre-wrap;">${escapeHtml(p.general)}</span></div>`); return parts.join(''); })()}
         </div>
       `).join("");
     }
@@ -759,7 +754,7 @@ const headers = {
       try {
         const res = await fetch(`/api/lichess-proxy?username=${s.lichess_username}`);
         const data = await res.json();
-        const rapidHistory = Array.isArray(data) ? data.find(d => d.name === "Rapid") : null;
+        const rapidHistory = Array.isArray(data?.ratingHistory) ? data.ratingHistory.find(d => d.name === "Rapid") : null;
         
         if (chartInstances.lichessElo) chartInstances.lichessElo.destroy();
         
@@ -1526,6 +1521,49 @@ const headers = {
   };
 
   // ── ADMIN EXPANSION LOGIC ──
+  window.parseAttendanceNotes = function(raw) {
+    let cw = '', hw = '', general = '';
+    if (!raw) return { cw, hw, general };
+    const lines = String(raw).split('\n');
+    let mode = 'general';
+    for (const line of lines) {
+      if (line.startsWith('CW:')) {
+        mode = 'cw';
+        const val = line.slice(3);
+        cw += (cw ? '\n' : '') + val;
+        continue;
+      }
+      if (line.startsWith('HW:')) {
+        mode = 'hw';
+        const val = line.slice(3);
+        hw += (hw ? '\n' : '') + val;
+        continue;
+      }
+      if (line.startsWith('GENERAL:')) {
+        mode = 'general';
+        const val = line.slice(8);
+        general += (general ? '\n' : '') + val;
+        continue;
+      }
+      if (line.startsWith('---')) {
+        mode = 'general';
+        continue;
+      }
+      if (mode === 'cw') cw += (cw ? '\n' : '') + line;
+      else if (mode === 'hw') hw += (hw ? '\n' : '') + line;
+      else general += (general ? '\n' : '') + line;
+    }
+    return { cw, hw, general };
+  };
+
+  window.formatAttendanceNotesForSave = function(cw, hw, general) {
+    const parts = [];
+    if (cw && cw.trim()) parts.push('CW:' + cw.trim());
+    if (hw && hw.trim()) parts.push('HW:' + hw.trim());
+    if (general && general.trim()) parts.push('GENERAL:' + general.trim());
+    return parts.join('\n');
+  };
+
   function openAttendanceMarking() {
     const dateEl = $("att-date");
     if (dateEl) dateEl.value = new Date().toISOString().split("T")[0];
@@ -1536,17 +1574,25 @@ const headers = {
     openModal("attendance-modal");
   }
 
-  window.renderAttendanceList = function () {
+   window.renderAttendanceList = function () {
     const tbody = $("att-marking-body");
     if (!tbody) return;
 
-    const date = $("att-date")?.value || new Date().toISOString().split("T")[0];
+    const dateEl = $("att-date");
+    const date = dateEl?.value || new Date().toISOString().split("T")[0];
+    if (dateEl && !dateEl.value) dateEl.value = date;
+
     const coachId = $("att-coach-filter")?.value;
+    const currentCoachId = window.currentCoachId || window.userId;
 
     let filteredStudents = allStudents.filter((s) => (s.status || "").toLowerCase() === "active");
     if (coachId) {
       filteredStudents = filteredStudents.filter(
         (s) => String(s.coach_id) === String(coachId),
+      );
+    } else if (role === "coach" && currentCoachId) {
+      filteredStudents = filteredStudents.filter(
+        (s) => String(s.coach_id) === String(currentCoachId),
       );
     }
 
@@ -1554,11 +1600,10 @@ const headers = {
 
     tbody.innerHTML = filteredStudents
       .map((s) => {
-        const existing = dayRecords.find((a) => String(a.student_id) === String(s.id));
-        const status = existing?.status || "";
-        const notes = existing?.notes || "";
-        const cwNotes = existing?.classwork_notes || "";
-        const hwNotes = existing?.homework_notes || "";
+         const existing = dayRecords.find((a) => String(a.student_id) === String(s.id));
+         const status = existing?.status || "";
+         const notes = existing?.notes || "";
+         const parsed = window.parseAttendanceNotes ? window.parseAttendanceNotes(notes) : { cw: "", hw: "", general: "" };
         return `
         <tr>
           <td>
@@ -1581,9 +1626,9 @@ const headers = {
           </td>
           <td>
             <div style="display:flex; flex-direction:column; gap:8px;">
-              <textarea class="att-cw" data-sid="${s.id}" placeholder="Classwork notes (No word limit, links allowed)..." style="font-size:12px; width:100%; min-height:60px; resize:vertical; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); padding:6px; border-radius:4px;">${escapeHtml(cwNotes)}</textarea>
-              <textarea class="att-hw" data-sid="${s.id}" placeholder="Homework notes (No word limit, links allowed)..." style="font-size:12px; width:100%; min-height:60px; resize:vertical; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); padding:6px; border-radius:4px;">${escapeHtml(hwNotes)}</textarea>
-              <textarea class="att-notes" data-sid="${s.id}" placeholder="General note..." style="font-size:12px; width:100%; min-height:40px; resize:vertical; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); padding:6px; border-radius:4px;">${escapeHtml(notes)}</textarea>
+              <textarea class="att-cw" data-sid="${s.id}" placeholder="Classwork notes (No word limit, links allowed)..." style="font-size:12px; width:100%; min-height:60px; resize:vertical; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); padding:6px; border-radius:4px;">${escapeHtml(parsed.cw)}</textarea>
+              <textarea class="att-hw" data-sid="${s.id}" placeholder="Homework notes (No word limit, links allowed)..." style="font-size:12px; width:100%; min-height:60px; resize:vertical; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); padding:6px; border-radius:4px;">${escapeHtml(parsed.hw)}</textarea>
+              <textarea class="att-notes" data-sid="${s.id}" placeholder="General note..." style="font-size:12px; width:100%; min-height:40px; resize:vertical; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); padding:6px; border-radius:4px;">${escapeHtml(parsed.general)}</textarea>
             </div>
           </td>
         </tr>
@@ -1643,6 +1688,8 @@ const headers = {
       return;
     }
 
+    const currentCoachId = window.currentCoachId || window.userId;
+
     const rows = document.querySelectorAll("#att-marking-body tr");
     const records = Array.from(rows)
       .map((row) => {
@@ -1650,15 +1697,23 @@ const headers = {
         const notesInput = row.querySelector(".att-notes");
         const cwInput = row.querySelector(".att-cw");
         const hwInput = row.querySelector(".att-hw");
-        if (!select.value) return null; // Skip unmarked
-        return {
-          student_id: select.dataset.sid,
-          status: select.value,
-          date: date,
-          notes: notesInput ? notesInput.value : "",
-          classwork_notes: cwInput ? cwInput.value : "",
-          homework_notes: hwInput ? hwInput.value : "",
-        };
+        if (!select.value) return null;
+        const studentId = select.dataset.sid;
+        if (role === "coach" && currentCoachId) {
+          const student = (allStudents || []).find((s) => String(s.id) === String(studentId));
+          if (!student || String(student.coach_id) !== String(currentCoachId)) {
+            return null;
+          }
+        }
+          const cw = cwInput ? cwInput.value : "";
+          const hw = hwInput ? hwInput.value : "";
+          const general = notesInput ? notesInput.value : "";
+          return {
+            student_id: studentId,
+            status: select.value,
+            date: date,
+            notes: window.formatAttendanceNotesForSave ? window.formatAttendanceNotesForSave(cw, hw, general) : general,
+          };
       })
       .filter((r) => r !== null);
 
@@ -2251,6 +2306,26 @@ const headers = {
       await archiveEvent(id);
       closeModals();
       return;
+    }
+
+    if (role === "coach") {
+      const currentCoachId = window.currentCoachId || window.userId;
+      if (type === "batch") {
+        const batch = (window.allBatches || []).find((b) => String(b.id) === String(id));
+        if (!batch || String(batch.coach_id) !== String(currentCoachId)) {
+          toast("Access denied: You can only delete your own batches.", "error");
+          return;
+        }
+      } else if (type === "student") {
+        const student = (window.allStudents || []).find((s) => String(s.id) === String(id));
+        if (!student || String(student.coach_id) !== String(currentCoachId)) {
+          toast("Access denied: You can only delete your own students.", "error");
+          return;
+        }
+      } else {
+        toast("Access denied: Coaches cannot perform this action.", "error");
+        return;
+      }
     }
 
     try {
@@ -4853,67 +4928,61 @@ const headers = {
             JSON.stringify(dataCache),
           );
         } catch (e) {}
-        syncCoachDropdowns();
-
-if (role === "admin" || role === "master") {
-           console.log("[Sync] Rendering active page for role:", role);
-           const active = document.querySelector(".page.active")?.id;
-           if (active === "page-dash") renderDash();
-           else if (active === "page-insights") {
-             if (window.generateAcademyInsights)
-               window.generateAcademyInsights();
-           } else if (active === "page-stud") renderStudents();
-           else if (active === "page-coach-mgmt") renderCoachMgmt();
-           else if (active === "page-bills") renderBills();
-           else if (active === "page-msgs") renderMsgs();
-           else if (active === "page-fame") renderFame();
-           else if (active === "page-events") renderEvents();
-           else if (active === "page-batches") { if (window.renderBatchesGrid) window.renderBatchesGrid(); }
-           else if (active === "page-attendance" && window.renderAttendanceList) window.renderAttendanceList();
-           else if (active === "page-homework") {
-             if (window.loadHomeworkData) {
-               window.loadHomeworkData().then(() => {
-                 if (window.renderHomeworkPage) window.renderHomeworkPage();
-               });
-             } else if (window.renderHomeworkPage) window.renderHomeworkPage();
-           }
-           else if (active === "page-schedules" && window.initSchedulePage) window.initSchedulePage();
-           else if (active === "page-exp" && window.initExpPage) window.initExpPage();
-           else if (active === "page-access") {
-             if (window.loadAccessControl) window.loadAccessControl();
-             if (window.renderParentAccounts) window.renderParentAccounts();
-             if (window.loadAuditLogs) window.loadAuditLogs();
-             if (window.startSecurityLogsSimulation) window.startSecurityLogsSimulation();
-           }
-           else if (active === "page-productivity" && window.initProductivityPage) window.initProductivityPage();
-           else if (active === "page-chessable" && window.renderChessableProfiles) window.renderChessableProfiles();
-           else if (active === "page-ai") {
-             if (window.updateTomKpis) window.updateTomKpis();
-             if (window.initSmartPills) window.initSmartPills();
-           }
-           else if (active === "page-child" && role !== "parent") renderChild();
-
-            updateMsgBadge();
+         syncCoachDropdowns();
+          if (role === "admin" || role === "master") {
+            console.log("[Sync] Rendering active page for role:", role);
+            const active = document.querySelector(".page.active")?.id;
+            if (active === "page-dash") renderDash();
+            else if (active === "page-insights") {
+              if (window.generateAcademyInsights)
+                window.generateAcademyInsights();
+            } else if (active === "page-stud") renderStudents();
+            else if (active === "page-coach-mgmt") renderCoachMgmt();
+            else if (active === "page-bills") renderBills();
+            else if (active === "page-msgs") renderMsgs();
+            else if (active === "page-fame") renderFame();
+            else if (active === "page-events") renderEvents();
+            else if (active === "page-batches") { if (window.renderBatchesGrid) window.renderBatchesGrid(); }
+            else if (active === "page-attendance" && window.renderAttendanceList) window.renderAttendanceList();
+            else if (active === "page-homework") {
+              if (window.loadHomeworkData) {
+                window.loadHomeworkData().then(() => {
+                  if (window.renderHomeworkPage) window.renderHomeworkPage();
+                });
+              } else if (window.renderHomeworkPage) {
+                window.renderHomeworkPage();
+              }
+            }
+            else if (active === "page-schedules" && window.initSchedulePage) window.initSchedulePage();
+            else if (active === "page-exp" && window.initExpPage) window.initExpPage();
+            else if (active === "page-access") {
+              if (window.loadAccessControl) window.loadAccessControl();
+              if (window.renderParentAccounts) window.renderParentAccounts();
+              if (window.loadAuditLogs) window.loadAuditLogs();
+              if (window.startSecurityLogsSimulation)
+                window.startSecurityLogsSimulation();
+            }
+            else if (active === "page-productivity" && window.initProductivityPage) window.initProductivityPage();
+            else if (active === "page-chessable" && window.renderChessableProfiles) window.renderChessableProfiles();
+            else if (active === "page-ai") {
+              if (window.updateTomKpis) window.updateTomKpis();
+              if (window.initSmartPills) window.initSmartPills();
+            }
+            else if (active === "page-child" && role !== "parent") renderChild();
           } else if (role === "coach") {
-           const active = document.querySelector(".page.active")?.id;
-           // Load homework submissions for coaches to show pending submissions
-           if (window.loadHomeworkSubmissions) await window.loadHomeworkSubmissions(true);
-           if (active === "page-coach-dash" && window.renderCoachDashboard) window.renderCoachDashboard();
-           else if (active === "page-stud" && window.renderStudents) window.renderStudents();
-           else if (active === "page-batches" && window.renderBatchesGrid) window.renderBatchesGrid();
-           else if (active === "page-homework") {
-             if (window.loadHomeworkData) {
-               window.loadHomeworkData().then(() => {
-                 if (window.renderHomeworkPage) window.renderHomeworkPage();
-               });
-             } else if (window.renderHomeworkPage) window.renderHomeworkPage();
-           }
-           else if (active === "page-attendance" && window.renderAttendanceList) window.renderAttendanceList();
-         } else if (role === "parent") {
-          renderChild();
-          renderEvents();
-          if (document.querySelector(".page.active")?.id === "page-parent-ai" && window.setAIModule) window.setAIModule("parent");
-        }
+            const active = document.querySelector(".page.active")?.id;
+            if (active === "page-coach-dash" && window.renderCoachDashboard) window.renderCoachDashboard();
+            else if (active === "page-coach-students" && window.renderCoachStudents) window.renderCoachStudents();
+            else if (active === "page-coach-batches" && window.renderCoachBatches) window.renderCoachBatches();
+            else if (active === "page-coach-schedule" && window.renderCoachSchedule) window.renderCoachSchedule();
+            else if (active === "page-coach-events" && window.renderCoachEvents) window.renderCoachEvents();
+            else if (active === "page-coach-attendance" && window.renderCoachAttendance) window.renderCoachAttendance();
+            else if (active === "page-coach-homework" && window.renderCoachHomework) window.renderCoachHomework();
+          } else if (role === "parent") {
+           renderChild();
+            renderEvents();
+            if (document.querySelector(".page.active")?.id === "page-parent-ai" && window.setAIModule) window.setAIModule("parent");
+          }
 
         setLoading("data", false);
         isLoadingData = false;
@@ -5258,6 +5327,14 @@ if (role === "admin" || role === "master") {
     productivity: "Operations Productivity Center",
     chessable: "Chessable Profiles",
     "parent-ai": "Ask TOM AI",
+    "coach-dash": "Coach Portal",
+    "coach-students": "My Students",
+    "coach-batches": "My Batches",
+    "coach-schedule": "My Schedule",
+    "coach-events": "My Events",
+    "coach-attendance": "My Attendance",
+    "coach-homework": "My Homework",
+    "coach-chess": "Chess Stats",
   };
 
   function setPage(p) {
@@ -5279,10 +5356,10 @@ if (role === "admin" || role === "master") {
       "attendance",
       "homework",
     ];
-    const coachAccessiblePages = ["coach-dash", "batches", "homework", "attendance", "stud"];
+    const coachAccessiblePages = ["coach-dash", "coach-students", "coach-batches", "coach-schedule", "coach-events", "coach-attendance", "coach-homework", "coach-chess"];
     if (adminPages.includes(p) && role !== "admin" && role !== "master" && !coachAccessiblePages.includes(p)) {
       toast("Access denied", "error");
-      setPage(role === "parent" ? "child" : "dash");
+      setPage(role === "parent" ? "child" : "coach-dash");
       return;
     }
 
@@ -5294,6 +5371,10 @@ if (role === "admin" || role === "master") {
       pg.classList.remove("active");
       pg.style.removeProperty("display");
     });
+    if (role === "parent") {
+      const hwPage = $("page-homework");
+      if (hwPage) hwPage.style.setProperty("display", "none", "important");
+    }
     document
       .querySelectorAll(".nav-item")
       .forEach((ni) => ni.classList.remove("active"));
@@ -5382,7 +5463,14 @@ setTimeout(function () {
          if (window.loadHomeworkSubmissions) window.loadHomeworkSubmissions(true);
          if (window.renderCoachDashboard) window.renderCoachDashboard();
        }
-       if (p === "stud") renderStudents();
+       if (p === "coach-students" && window.renderCoachStudents) window.renderCoachStudents();
+       if (p === "coach-batches" && window.renderCoachBatches) window.renderCoachBatches();
+       if (p === "coach-schedule" && window.renderCoachSchedule) window.renderCoachSchedule();
+       if (p === "coach-events" && window.renderCoachEvents) window.renderCoachEvents();
+        if (p === "coach-attendance" && window.renderCoachAttendanceMarking) window.renderCoachAttendanceMarking();
+        if (p === "coach-homework" && window.renderCoachHomework) window.renderCoachHomework();
+        if (p === "coach-chess" && window.renderCoachChess) window.renderCoachChess();
+        if (p === "stud") renderStudents();
        if (p === "coach-mgmt") renderCoachMgmt();
        if (p === "batches") {
         if (window.renderBatchesGrid) window.renderBatchesGrid();
@@ -5569,9 +5657,15 @@ setTimeout(function () {
       $("report-month-select").value =
         `${window.reportYear}-${String(window.reportMonth + 1).padStart(2, "0")}`;
 
-if (userRole === "parent") setPage("child");
-     else if (userRole === "coach") setPage("coach-dash");
-     else setPage("dash");
+    if (userRole === "parent") {
+      setPage("child");
+      const hwPage = $("page-homework");
+      if (hwPage) hwPage.style.setProperty("display", "none", "important");
+    } else if (userRole === "coach") {
+      setPage("coach-dash");
+    } else {
+      setPage("dash");
+    }
 
     // Load data in background - use cache for faster initial load
     dataCache = { timestamp: 0 };
@@ -6647,7 +6741,91 @@ if (userRole === "parent") setPage("child");
 
   function renderStudents() {
     const tbody = $("stud-body");
+    const theadRow = $("stud-thead-row");
     if (!tbody) return;
+
+    if (role === "coach" && theadRow) {
+      theadRow.innerHTML = `
+        <th>Student</th>
+        <th>Session</th>
+        <th>Rating</th>
+      `;
+    } else if (theadRow) {
+      theadRow.innerHTML = `
+        <th style="width:40px"><input type="checkbox" id="stud-check-all" onclick="window.toggleAllStudents(this.checked)"></th>
+        <th style="width:50px">#</th>
+        <th>Student</th>
+        <th>Level / ELO</th>
+        <th>Coach</th>
+        <th>Join Date</th>
+        <th>Session</th>
+        <th>Schedule</th>
+        <th>Fee</th>
+        <th>Status</th>
+        <th>Due Date</th>
+        <th>Actions</th>
+      `;
+    }
+
+    if (role === "coach") {
+      const fSearch = ($("f-search")?.value || "").toLowerCase().trim();
+      let currentCoachId = window.currentCoachId || window.userId;
+      
+      if (!currentCoachId) {
+        const auth = sessionStorage.getItem("twoknights_auth");
+        if (auth) {
+          try {
+            const data = JSON.parse(auth);
+            currentCoachId = data.coachId || data.coach_id || null;
+            if (currentCoachId) {
+              window.currentCoachId = currentCoachId;
+              window.userId = currentCoachId;
+            }
+          } catch (e) {
+            console.warn("[Coach] Failed to restore coach ID from session:", e);
+          }
+        }
+      }
+      
+      if (!currentCoachId && allCoaches && allCoaches.length > 0) {
+        const auth = sessionStorage.getItem("twoknights_auth");
+        if (auth) {
+          try {
+            const data = JSON.parse(auth);
+            const userName = (data.user || '').toLowerCase();
+            const coach = allCoaches.find(c => 
+              String(c.email || '').toLowerCase() === userName ||
+              String(c.name || '').toLowerCase() === userName
+            );
+            if (coach && coach.id) {
+              currentCoachId = String(coach.id);
+              window.currentCoachId = currentCoachId;
+              window.userId = currentCoachId;
+            }
+          } catch (e) {
+            console.warn("[Coach] Fallback coach lookup failed:", e);
+          }
+        }
+      }
+      
+      if (!currentCoachId) {
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center"><div class="loading-state"><span class="spinner"></span> Loading your session...</div></td></tr>`;
+        setTimeout(() => window.renderStudents && window.renderStudents(), 800);
+        return;
+      }
+      
+      let studs = (allStudents || []).filter((s) => String(s.coach_id) === String(currentCoachId));
+      if (fSearch) {
+        studs = studs.filter((s) => {
+          const name = (getStudentName(s) || "").toLowerCase();
+          const phone = (s.phone || s.parent_phone || "").toLowerCase();
+          return name.includes(fSearch) || phone.includes(fSearch);
+        });
+      }
+      studs.sort((a, b) => (getStudentName(a) || "").localeCompare(getStudentName(b) || ""));
+      renderCoachStudentTable(tbody, studs);
+      return;
+    }
 
     try {
       // Ensure reportMonth/Year are valid numbers
@@ -6690,9 +6868,11 @@ if (userRole === "parent") setPage("child");
       let studs =
         role === "admin" || role === "master"
           ? allStudents
-          : currentStudent
-            ? [currentStudent]
-            : [];
+          : role === "coach"
+            ? (allStudents || []).filter((s) => String(s.coach_id) === String(window.currentCoachId || window.userId))
+            : currentStudent
+              ? [currentStudent]
+              : [];
 
       // Apply Base Filters (Enrollment Date & Archive Status)
       studs = studs.filter((s) => {
@@ -6712,9 +6892,9 @@ if (userRole === "parent") setPage("child");
       });
 
       // Apply UI Filters
-      if (role === "admin" || role === "master") {
+      if (role === "admin" || role === "master" || role === "coach") {
         const fSearch = ($("f-search")?.value || "").toLowerCase().trim();
-        const fCoach = $("f-coach")?.value;
+        const fCoach = role === "coach" ? String(window.currentCoachId || window.userId) : ($("f-coach")?.value || "");
         const fSession = $("f-session")?.value;
         const fEnrollStatus = $("f-enroll-status")?.value;
         const fLearningMode = $("f-learning-mode")?.value;
@@ -6825,8 +7005,14 @@ if (userRole === "parent") setPage("child");
       }
 
       if (!studs || studs.length === 0) {
+        const cols = role === "coach" ? 7 : 12;
         tbody.innerHTML =
-          '<tr><td colspan="12" class="text-center">No students found matching filters for this period</td></tr>';
+          `<tr><td colspan="${cols}" class="text-center">No students found matching filters for this period</td></tr>`;
+        return;
+      }
+
+      if (role === "coach") {
+        renderCoachStudentTable(tbody, studs);
         return;
       }
 
@@ -7066,8 +7252,45 @@ if (userRole === "parent") setPage("child");
     } catch (err) {
       console.error("[UI] renderStudents critical error:", err);
       if (tbody)
-        tbody.innerHTML = `<tr><td colspan="12" class="text-center text-danger">Failed to load students. Please refresh the page.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${role === "coach" ? 7 : 12}" class="text-center text-danger">Failed to load students. Please refresh the page.</td></tr>`;
     }
+  }
+
+  function renderCoachStudentTable(tbody, studs) {
+    if (!tbody) return;
+    try {
+      tbody.innerHTML = studs
+        .map((s, i) => {
+          try {
+            const name = escapeHtml(getStudentName(s));
+            const session = getStudentBatchType(s);
+            const rating = escapeHtml(getStudentRating(s));
+            const sessionBadge = session === "Single"
+              ? `<span class="badge badge-info" style="font-size:10px; padding:2px 6px; border-radius:4px; font-weight:600;">Individual</span>`
+              : `<span class="badge badge-success" style="font-size:10px; padding:2px 6px; border-radius:4px; font-weight:600;">Group</span>`;
+            return `<tr>
+              <td style="font-weight:600; color:var(--ivory);">${name}</td>
+              <td>${sessionBadge}</td>
+              <td style="font-family:var(--font-mono); color:var(--gold); font-weight:700;">${rating}</td>
+            </tr>`;
+          } catch (rowErr) {
+            console.error(`[UI] Error rendering coach student row ${i}:`, rowErr, s);
+            return `<tr><td colspan="3" style="color:var(--danger)">Error rendering student</td></tr>`;
+          }
+        })
+        .join("");
+    } catch (err) {
+      console.error("[UI] renderCoachStudentTable critical error:", err);
+      if (tbody)
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">Failed to load students. Please refresh the page.</td></tr>`;
+    }
+  }
+
+  function openMessageToStudent(studentId) {
+    const s = allStudents.find((x) => String(x.id) === String(studentId));
+    if (!s) return;
+    setCurrentStudent(s);
+    setPage("msgs");
   }
 
   window.toggleMoreMenu = function (id) {
@@ -8541,7 +8764,11 @@ due_date: (function () {
     const searchTerm = ($("batch-search-input") ? $("batch-search-input").value.toLowerCase() : "");
     const statusFilter = ($("batch-status-filter") ? $("batch-status-filter").value : "active");
 
+    const currentCoachId = window.currentCoachId || window.userId;
+    const isCoach = role === "coach" && currentCoachId;
+
     const filteredBatches = allBatches.filter((b) => {
+      if (isCoach && String(b.coach_id) !== String(currentCoachId)) return false;
       const matchName = b.name.toLowerCase().includes(searchTerm);
       const matchStatus = statusFilter === "all" || b.status === statusFilter;
       return matchName && matchStatus;
@@ -8559,6 +8786,8 @@ due_date: (function () {
         const stCount = Array.isArray(b.student_ids) ? b.student_ids.length : 0;
         
         const badgeClass = b.status === "active" ? "badge-success" : b.status === "inactive" ? "badge-danger" : "badge-outline";
+
+        const canEdit = !isCoach || String(b.coach_id) === String(currentCoachId);
 
         return `
         <div class="card" style="padding: 24px; position: relative; display: flex; flex-direction: column; gap: 16px;">
@@ -8590,8 +8819,8 @@ due_date: (function () {
           
           <div style="display: flex; gap: 8px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border);">
             <button class="btn btn-outline" style="flex: 1;" onclick="openHomeworkAssignmentModal('batch', '${b.id}')">Assign Homework</button>
-            <button class="btn btn-outline" style="flex: 1;" onclick="openCreateBatchModal('${b.id}')">Edit</button>
-            <button class="btn btn-outline text-danger" style="flex: 1;" onclick="deleteBatch('${b.id}')">Delete</button>
+            ${canEdit ? `<button class="btn btn-outline" style="flex: 1;" onclick="openCreateBatchModal('${b.id}')">Edit</button>` : ''}
+            ${canEdit ? `<button class="btn btn-outline text-danger" style="flex: 1;" onclick="deleteBatch('${b.id}')">Delete</button>` : ''}
           </div>
         </div>
       `;
@@ -8602,6 +8831,14 @@ due_date: (function () {
   window.openBatchModal = function() { window.openCreateBatchModal(null); };
 
   window.openCreateBatchModal = function (id = null) {
+    const currentCoachId = window.currentCoachId || window.userId;
+    const isCoach = role === "coach" && currentCoachId;
+
+    if (isCoach) {
+      toast("Coaches cannot create or edit batches. Contact admin.", "error");
+      return;
+    }
+
     $("eb-id").value = id || "";
 
     // Populate Coach Dropdown
@@ -10169,6 +10406,7 @@ Best regards,
   let razorpayKeyId = null;
 
   async function checkRazorpayConfig() {
+    if (role !== "admin" && role !== "master") return;
     try {
       const res = await fetch("/api/razorpay/config");
       if (res.ok) {
@@ -10183,7 +10421,7 @@ Best regards,
       );
     }
   }
-  checkRazorpayConfig();
+  if (role === "admin" || role === "master") checkRazorpayConfig();
 
   function openPay(id, name, fee) {
     const nameEl = $("pay-name");
@@ -11176,6 +11414,36 @@ Best regards,
       window.generateContextualInsight("child_overview", s.id);
     }
 
+    if (typeof window.loadChessDashboard === "function") {
+      window.loadChessDashboard(s).catch((e) => console.warn("[Child] loadChessDashboard failed:", e));
+    }
+
+    const engagementEl = $("c-engagement-flag");
+    if (engagementEl && s) {
+      const lichessSeen = s.lichess_seen_at || null;
+      const chesscomLast = s.chesscom_last_online || null;
+      const daysSince = (date) => {
+        if (!date) return null;
+        const diff = Date.now() - new Date(date).getTime();
+        return Math.floor(diff / (1000 * 60 * 60 * 24));
+      };
+      const lichessDays = daysSince(lichessSeen);
+      const chesscomDays = daysSince(chesscomLast);
+      const activeThreshold = 14;
+      const lichessActive = lichessDays !== null && lichessDays <= activeThreshold;
+      const chesscomActive = chesscomDays !== null && chesscomDays <= activeThreshold;
+      const anyActive = lichessActive || chesscomActive;
+      const statusColor = anyActive ? "var(--success)" : "var(--danger)";
+      const statusText = anyActive ? "Active" : "Inactive";
+      const lichessText = s.lichess_username ? `${lichessActive ? '♘ Active' : '♘ Idle'}${lichessDays !== null ? ` (${lichessDays}d)` : ''}` : '';
+      const chesscomText = s.chesscom_username ? `${chesscomActive ? '♟️ Active' : '♟️ Idle'}${chesscomDays !== null ? ` (${chesscomDays}d)` : ''}` : '';
+      engagementEl.innerHTML = `
+        <span style="font-weight:700; color:${statusColor}; margin-right:8px;">● ${statusText}</span>
+        ${lichessText ? `<span style="margin-right:10px;">${lichessText}</span>` : ''}
+        ${chesscomText ? `<span>${chesscomText}</span>` : ''}
+      `;
+    }
+
     if (loadingEl) loadingEl.style.display = "none";
     if (contentEl) contentEl.style.display = "block";
     // Honor a requested sub-tab from the sidebar nav, otherwise default to overview.
@@ -11188,7 +11456,6 @@ Best regards,
   window.goChildTab = function (tab) {
     const childPage = document.getElementById("page-child");
     const alreadyOnChild = childPage && childPage.classList.contains("active");
-    // Close the mobile sidebar for a smooth transition.
     if (window.innerWidth <= 768) {
       const sb = document.getElementById("sidebar");
       if (sb) sb.classList.remove("open");
@@ -11196,7 +11463,6 @@ Best regards,
       if (ov) ov.classList.remove("active");
     }
     if (alreadyOnChild && currentStudent) {
-      // Already viewing the portal — switch tab instantly without a full re-render.
       setChildTab(tab);
     } else {
       window.childTabIntent = tab;
@@ -11207,6 +11473,10 @@ Best regards,
     const targetId = tab === "overview" ? "nav-child" : "nav-parent-" + tab;
     const targetNav = document.getElementById(targetId);
     if (targetNav) targetNav.classList.add("active");
+    if ($("p-title")) {
+      const titles = { overview: "My Child", schedule: "Class Schedule", attendance: "Attendance Logs", homework: "Homework", growth: "Skill & ELO Growth", learning: "Chess Study Hub", events: "Upcoming Events", reports: "Academy Reports", billing: "Tuition & Invoices", productivity: "Daily Tasks" };
+      $("p-title").textContent = titles[tab] || "My Child";
+    }
   };
 
   function openStudentEditPortalModal() {
@@ -12983,21 +13253,21 @@ Best regards,
 window.addEventListener("DOMContentLoaded", () => {
      initUI(); // Setup UI event handlers
 
-     const auth = sessionStorage.getItem("twoknights_auth");
-     if (auth) {
-       try {
-         const data = JSON.parse(auth);
-         role = data.role;
-         window.currentCoachId = data.coachId || null;
-         window.userId = data.coachId || null; // Set userId for homework.js compatibility
-         finishLogin(data.user || "User", data.role, data.studentId);
-         resetSessionTimer();
-       } catch (e) {
-         sessionStorage.removeItem("twoknights_auth");
-         $("login-screen").style.display = "flex";
-         document.body.classList.add("login-mode");
-       }
-     } else {
+      const auth = sessionStorage.getItem("twoknights_auth");
+      if (auth) {
+        try {
+          const data = JSON.parse(auth);
+          role = data.role;
+          window.currentCoachId = data.coachId || null;
+          window.userId = data.coachId || null;
+          finishLogin(data.user || "User", data.role, data.studentId);
+          resetSessionTimer();
+        } catch (e) {
+          sessionStorage.removeItem("twoknights_auth");
+          $("login-screen").style.display = "flex";
+          document.body.classList.add("login-mode");
+        }
+      } else {
       $("login-screen").style.display = "flex";
       document.body.classList.add("login-mode");
     }
@@ -14603,12 +14873,32 @@ window.toggleAcademyManager = function() {
   const group = document.getElementById('academy-manager-group');
   const icon = document.getElementById('academy-mgr-icon');
   if (group && icon) {
-    if (group.style.display === 'none') {
-      group.style.display = 'block';
-      icon.textContent = '▲';
-    } else {
-      group.style.display = 'none';
-      icon.textContent = '▼';
-    }
+    const isHidden = group.style.display === 'none' || group.style.display === '';
+    group.style.display = isHidden ? 'block' : 'none';
+    icon.textContent = isHidden ? '▲' : '▼';
   }
+}
+
+window.closeAcademyManager = function() {
+  const group = document.getElementById('academy-manager-group');
+  const icon = document.getElementById('academy-mgr-icon');
+  if (group) group.style.display = 'none';
+  if (icon) icon.textContent = '▼';
+}
+
+
+// ---- Homework Manager Tabs ----
+function switchHomeworkTab(tabId) {
+  document.querySelectorAll('.hw-tab-content').forEach(el => {
+    el.classList.remove('active');
+    el.style.display = 'none';
+  });
+  document.querySelectorAll('#page-homework .tab-link').forEach(el => el.classList.remove('active'));
+  const target = document.getElementById(tabId);
+  if (target) {
+    target.classList.add('active');
+    target.style.display = 'block';
+  }
+  const btn = document.getElementById('btn-' + tabId);
+  if (btn) btn.classList.add('active');
 }

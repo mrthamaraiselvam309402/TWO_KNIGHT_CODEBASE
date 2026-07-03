@@ -40,8 +40,11 @@
         if (!sel) return;
         sel.innerHTML = '<option value="">-- Select Student --</option>';
         const students = window.allStudents || window.students || [];
-        if (students.length) {
-            students.forEach(s => {
+        const role = window.role || 'admin';
+        const coachId = window.currentCoachId || window.userId;
+        const list = role === 'coach' && coachId ? students.filter(s => String(s.coach_id) === String(coachId)) : students;
+        if (list.length) {
+            list.forEach(s => {
                 const opt = document.createElement('option');
                 opt.value = s.id;
                 opt.textContent = s.name + (s.parent_name ? ` (Parent: ${s.parent_name})` : '');
@@ -440,9 +443,14 @@
         const panel = document.getElementById('sch-group-panel');
         if (!panel) return;
         if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-        const students = window.allStudents || [];
+        const coachId = window.currentCoachId || window.userId;
+        const role = window.role || 'admin';
+        const students = (window.allStudents || []).filter(s => {
+            if ((s.status || 'active').toLowerCase() === 'archived') return false;
+            if (role === 'coach' && coachId && String(s.coach_id) !== String(coachId)) return false;
+            return true;
+        });
         const list = students
-            .filter(s => (s.status || 'active').toLowerCase() !== 'archived')
             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const listEl = document.getElementById('sch-group-list');
         if (listEl) {

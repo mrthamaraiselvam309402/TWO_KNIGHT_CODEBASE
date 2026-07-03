@@ -286,12 +286,43 @@ function escapeHtml(text) {
 
             if (!res || !res.ok) throw new Error('AI request failed');
             const data = await res.json();
-            
-            if (textEl) textEl.innerHTML = data.message || 'Insight generated.';
+            const raw = data && data.message ? String(data.message) : '';
+            if (textEl) {
+              const fallback = generateLocalParentInsight(context, student);
+              textEl.innerHTML = raw.length > 20 ? raw : fallback;
+            }
         } catch (e) {
             console.warn('[AI Insight Failed]', e);
-            if (textEl) textEl.innerHTML = 'AI analysis temporarily unavailable.';
+            if (textEl) {
+              const fallback = generateLocalParentInsight(context, student);
+              textEl.innerHTML = fallback;
+            }
         }
     };
+
+    function generateLocalParentInsight(context, student) {
+      if (context !== 'child_overview' || !student) {
+        return 'Your child\'s progress looks steady. Keep supporting regular practice and attendance for the best improvement.';
+      }
+
+      const name = student.name || 'Your child';
+      const rating = student.rating || student.elo || null;
+      const level = student.level || '';
+      const attendance = student.attendance_rate;
+      const hasLichess = !!student.lichess_username;
+      const hasChesscom = !!student.chesscom_username;
+
+      const platformNote = [hasLichess && 'Lichess', hasChesscom && 'Chess.com'].filter(Boolean).join(' and ');
+      const ratingLine = rating ? `Current academy rating is <b>${rating}</b>.` : '';
+      const attendanceLine = attendance != null ? `Recent attendance is around <b>${attendance}%</b>.` : '';
+      const platformLine = platformNote ? `Connected platforms: <b>${platformNote}</b>.` : '';
+
+      const sentences = [ratingLine, attendanceLine, platformLine].filter(Boolean);
+      if (!sentences.length) {
+        return `${name} is progressing. Encourage steady practice and regular class attendance to keep improving.`;
+      }
+
+      return `${name} is making steady progress. ${sentences.join(' ')}`;
+    }
 
 })();
