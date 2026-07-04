@@ -8,9 +8,10 @@ export default async function handler(request) {
     });
   }
 
-  const timeout = setTimeout(() => {}, 15000);
-
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     let profile = null;
     let ratingHistory = [];
     let profileOk = false;
@@ -18,7 +19,7 @@ export default async function handler(request) {
 
     const profileRes = await fetch(
       `https://lichess.org/api/user/${encodeURIComponent(username)}`,
-      { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(15000) }
+      { headers: { 'Accept': 'application/json' }, signal: controller.signal }
     ).catch((e) => ({ ok: false, status: e.name === 'AbortError' ? 504 : 500 }));
 
     if (profileRes && profileRes.ok) {
@@ -27,7 +28,7 @@ export default async function handler(request) {
 
     const historyRes = await fetch(
       `https://lichess.org/api/user/${encodeURIComponent(username)}/rating-history`,
-      { headers: { 'Accept': 'application/x-ndjson' }, signal: AbortSignal.timeout(15000) }
+      { headers: { 'Accept': 'application/x-ndjson' }, signal: controller.signal }
     ).catch((e) => ({ ok: false, status: e.name === 'AbortError' ? 504 : 500 }));
 
     if (historyRes && historyRes.ok) {
@@ -41,11 +42,12 @@ export default async function handler(request) {
       } catch { ratingHistory = []; }
     }
 
-    clearTimeout(timeout);
+    clearTimeout(timeoutId);
 
     if (!profileOk) {
-      return new Response(JSON.stringify({ error: 'Lichess profile not found', notFound: true }), {
-        status: 404,
+      const status = profileRes?.status || 500;
+      return new Response(JSON.stringify({ error: status === 404 ? 'Lichess profile not found' : 'Failed to fetch Lichess profile', notFound: status === 404 }), {
+        status: status === 404 ? 404 : 500,
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -63,7 +65,6 @@ export default async function handler(request) {
       }
     });
   } catch (err) {
-    clearTimeout(timeout);
     console.error('Lichess proxy error:', err);
     return new Response(JSON.stringify({ error: 'Failed to fetch from Lichess' }), {
       status: 500,
