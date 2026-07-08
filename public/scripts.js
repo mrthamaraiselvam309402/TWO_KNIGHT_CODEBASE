@@ -790,26 +790,63 @@ const headers = {
     let chesscomData = null;
     const allGames = [];
 
-    // Fetch Lichess data
+    // Fetch Lichess data - prefer Supabase cache, fall back to live proxy
     if (s.lichess_username) {
       try {
-        const res = await fetch(`/api/lichess-proxy?username=${encodeURIComponent(s.lichess_username)}&t=${Date.now()}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (!data.notFound) {
-            lichessData = data;
-            if (data.profile?.seenAt) {
-              s.lichess_seen_at = new Date(data.profile.seenAt).toISOString();
+        const username = s.lichess_username;
+        let cacheRes;
+        try {
+          cacheRes = await fetch(`/api/lichess?username=${encodeURIComponent(username)}&t=${Date.now()}`);
+        } catch (e) {
+          cacheRes = null;
+        }
+
+        if (cacheRes && cacheRes.ok) {
+          const cacheData = await cacheRes.json();
+          if (cacheData.data) {
+            lichessData = cacheData.data;
+            if (lichessData.profile?.seenAt) {
+              s.lichess_seen_at = new Date(lichessData.profile.seenAt).toISOString();
             }
-            const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(s.lichess_username)}&max=10&pgnInJson=true&t=${Date.now()}`);
+
+            // Fetch games if we have data
+            const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(username)}&max=10&pgnInJson=true&t=${Date.now()}`);
             if (gamesRes.ok) {
               const games = await gamesRes.json();
               allGames.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
             }
+          } else if (cacheData.cached === false && cacheData.error) {
+            // No cache and sync failed - trigger background sync
+            fetch(`/api/lichess`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username })
+            }).catch(() => {});
+          }
+        } else {
+          // Fall back to old proxy for backward compatibility
+          try {
+            const res = await fetch(`/api/lichess-proxy?username=${encodeURIComponent(username)}&t=${Date.now()}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (!data.notFound) {
+                lichessData = data;
+                if (data.profile?.seenAt) {
+                  s.lichess_seen_at = new Date(data.profile.seenAt).toISOString();
+                }
+                const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(username)}&max=10&pgnInJson=true&t=${Date.now()}`);
+                if (gamesRes.ok) {
+                  const games = await gamesRes.json();
+                  allGames.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Lichess proxy fallback error", e);
           }
         }
       } catch (e) {
-        console.error("Lichess fetch error", e);
+        console.error("Lichess cache fetch error", e);
       }
     }
 
@@ -14437,6 +14474,41 @@ window.deleteStudent = deleteStudent;
   window.toggleMoreMenu = toggleMoreMenu;
   window.openPromote = openPromote;
   window.executePromotion = executePromotion;
+
+  window.syncLichess = async function(username) {
+    if (!username) return;
+    const btn = document.getElementById('lichess-sync-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Syncing...';
+    }
+    try {
+      const res = await fetch('/api/lichess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success || data.cached) {
+        window.showToast ? window.showToast('Lichess data synced successfully', 'success') : alert('Lichess data synced');
+        // Reload growth tab if current student matches
+        if (window.currentStudent && window.currentStudent.lichess_username === username) {
+          if (window.renderChildGrowth) window.renderChildGrowth();
+        }
+      } else {
+        const err = data.error || 'Failed to sync';
+        window.showToast ? window.showToast(err, 'error') : alert(err);
+      }
+    } catch (e) {
+      console.error('Lichess sync error:', e);
+      window.showToast ? window.showToast('Sync failed', 'error') : alert('Sync failed');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Sync Lichess';
+      }
+    }
+  };
 
   window.openChessableModal = function() {
     const modal = $("chessable-redirect-modal");
