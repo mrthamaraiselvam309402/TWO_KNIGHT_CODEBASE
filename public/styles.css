@@ -109,6 +109,7 @@ body[data-theme="light"] {
 
   --bg3: #ffffff;
   --gold-light: #3b82f6;
+  --slate: #64748b;
 
   background: var(--obsidian) !important;
   background-image: none !important;
@@ -3420,3 +3421,39 @@ input[type="checkbox"]:disabled:checked::after {
 .btn:active, .card-clickable:active {
   transform: scale(0.98);
 } 
+
+/* ── Virtualized trace tables (Payments Gateway Monitor / Access Control audit log) ──
+   Background must be theme-aware: the old hardcoded rgba(10,10,20,.4) turned into an
+   unreadable grey wash in light theme. */
+.virtual-table-container {
+  background: rgba(10, 10, 20, 0.4);
+}
+body[data-theme="light"] .virtual-table-container {
+  background: var(--surface);
+}
+
+/* Action chips inside trace rows (payment.captured, auth.login.success, ...) */
+.trace-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border: 1px solid rgba(232, 168, 48, 0.3);
+  border-radius: 4px;
+  color: #fbbf24;
+  background: rgba(232, 168, 48, 0.05);
+}
+.trace-chip.failed {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+}
+body[data-theme="light"] .trace-chip {
+  color: #92400e;
+  border-color: rgba(146, 64, 14, 0.3);
+  background: rgba(245, 158, 11, 0.1);
+}
+body[data-theme="light"] .trace-chip.failed {
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}

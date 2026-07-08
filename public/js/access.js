@@ -548,6 +548,9 @@ window.deleteUserAccess = async function(id, email) {
       .virtual-row:hover {
         background-color: rgba(255, 255, 255, 0.05) !important;
       }
+      body[data-theme="light"] .virtual-row:hover {
+        background-color: rgba(15, 23, 42, 0.05) !important;
+      }
     `;
     document.head.appendChild(style);
 })();
@@ -730,24 +733,20 @@ function initVirtualizer(container, spacer) {
             row.style.transform = `translateY(${startY}px)`;
             row.style.display = 'flex';
             row.style.alignItems = 'center';
-            row.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
+            row.style.borderBottom = '1px solid var(--border)';
             row.style.padding = '0 16px';
             row.style.fontSize = '12px';
             row.style.background = alert.status === 'FAILED' ? 'rgba(239, 68, 68, 0.05)' : 'transparent';
             row.style.boxSizing = 'border-box';
-            
+
             const isSuccess = alert.status === 'SUCCESS';
-            const statusIcon = isSuccess 
+            const statusIcon = isSuccess
                 ? `<span style="color:var(--success); font-size: 14px;" title="Success">🛡️</span>`
                 : `<span class="pulse-alert" style="color:var(--danger); font-size: 14px;" title="Breach Alert">⚠️</span>`;
 
-            const actionColor = alert.status === 'FAILED' 
-                ? 'color: #f87171; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.1);' 
-                : 'color: #fbbf24; border-color: rgba(232,168,48,0.3); background: rgba(232,168,48,0.05);';
-            
             row.innerHTML = `
                 <div style="flex: 0 0 40px; display:flex; align-items:center; justify-content:center;">${statusIcon}</div>
-                <div style="flex: 0 0 140px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;"><span style="font-family:var(--font-mono); font-size:10px; padding:2px 6px; border:1px solid; border-radius:4px; ${actionColor}">${alert.action}</span></div>
+                <div style="flex: 0 0 140px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;"><span class="trace-chip${alert.status === 'FAILED' ? ' failed' : ''}">${alert.action}</span></div>
                 <div style="flex: 1 1 180px; color:var(--ivory); font-weight:500; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; padding-right:10px;">${alert.userEmail}</div>
                 <div style="flex: 0 0 120px; font-family:var(--font-mono); color:var(--ivory-dim); font-size:11px;">💻 ${alert.ipAddress}</div>
                 <div style="flex: 0 0 60px; display:flex; align-items:center; gap:4px; font-family:var(--font-mono); font-size:11px; color:var(--ivory-dim);">🌍 ${alert.countryCode}</div>
