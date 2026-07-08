@@ -233,7 +233,7 @@
     <div class="receipt-title-bar"><h2>Official Receipt</h2></div>
 
     <div class="receipt-meta" style="border-bottom: none; padding-bottom: 8px;">
-      <div><span class="label">Receipt No:</span><span class="value" id="disp-receipt-id">CK-000000</span></div>
+      <div><span class="label">Receipt No:</span><span class="value" id="disp-receipt-id">TKCA-000000</span></div>
       <div><span class="label">Date:</span><span class="value" id="disp-date">-- / -- / ----</span></div>
     </div>
     <div style="padding: 8px 48px 16px; border-bottom: 1px solid var(--border-sep); font-size: 14px; display: flex; justify-content: space-between;">
@@ -304,7 +304,7 @@
 
     const date = dateStr ? new Date(dateStr) : new Date();
     
-    document.getElementById('disp-receipt-id').textContent = 'CK-' + id.slice(-6).toUpperCase();
+    document.getElementById('disp-receipt-id').textContent = 'TKCA-' + id.slice(-6).toUpperCase();
     document.getElementById('disp-date').textContent = date.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' }).replace(/\//g, ' / ');
     document.getElementById('disp-name').textContent = name;
     document.getElementById('disp-level').textContent = level;
