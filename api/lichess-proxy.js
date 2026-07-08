@@ -10,12 +10,16 @@ export default async function handler(request) {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     let profile = null;
     let ratingHistory = [];
     let profileOk = false;
     let historyOk = false;
+    let profileStatus = 500;
+    let profileStatusText = 'Unknown';
+    let historyStatus = 500;
+    let historyStatusText = 'Unknown';
 
     const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     const headers = { 
@@ -24,15 +28,19 @@ export default async function handler(request) {
       'Accept-Language': 'en-US,en;q=0.9'
     };
 
-    const profileRes = await fetch(
-      `https://lichess.org/api/user/${encodeURIComponent(username)}`,
-      { headers, signal: controller.signal }
-    ).catch((e) => {
+    let profileRes;
+    try {
+      profileRes = await fetch(
+        `https://lichess.org/api/user/${encodeURIComponent(username)}`,
+        { headers, signal: controller.signal }
+      );
+      profileStatus = profileRes.status;
+      profileStatusText = profileRes.statusText;
+      console.log(`[Lichess Proxy] Profile response for ${username}:`, profileRes.status, profileRes.statusText);
+    } catch (e) {
       console.error(`[Lichess] Profile fetch threw for ${username}:`, e);
-      return { ok: false, status: e.name === 'AbortError' ? 504 : 500, error: e.message };
-    });
-
-    console.log(`[Lichess Proxy] Profile response for ${username}:`, profileRes?.status, profileRes?.statusText);
+      profileRes = null;
+    }
 
     if (profileRes && profileRes.ok) {
       try { 
@@ -41,49 +49,50 @@ export default async function handler(request) {
       } catch { 
         profile = null; 
       }
-    } else if (profileRes) {
-      const errorText = await profileRes.text().catch(() => '');
-      console.error(`[Lichess Proxy] Profile fetch failed for ${username}:`, profileRes.status, profileRes.statusText, errorText);
-      
+    } else if (profileRes && profileRes.status === 404) {
       // If 404 from API, try scraping the public profile page as fallback
-      if (profileRes.status === 404) {
-        console.log(`[Lichess Proxy] API 404 for ${username}, trying profile page scrape...`);
-        try {
-          const pageRes = await fetch(
-            `https://lichess.org/@/${encodeURIComponent(username)}`,
-            { headers: { 'User-Agent': userAgent }, signal: controller.signal }
-          );
-          if (pageRes.ok) {
-            const html = await pageRes.text();
-            // Try to extract user data from the page's JSON
-            const jsonMatch = html.match(/window\.lichess\s*=\s*({.*?});/s) || 
-                             html.match(/<script[^>]*>([\s\S]*?window\.lichess[\s\S]*?)<\/script>/);
-            if (jsonMatch) {
-              try {
-                const userData = JSON.parse(jsonMatch[1].replace('window.lichess = ', '').replace(';', ''));
-                profile = userData.user || userData.profile || userData;
-                profileOk = true;
-                console.log(`[Lichess Proxy] Scrape fallback succeeded for ${username}`);
-              } catch {
-                console.log(`[Lichess Proxy] Scrape JSON parse failed for ${username}`);
-              }
+      console.log(`[Lichess Proxy] API 404 for ${username}, trying profile page scrape...`);
+      try {
+        const pageRes = await fetch(
+          `https://lichess.org/@/${encodeURIComponent(username)}`,
+          { headers: { 'User-Agent': userAgent }, signal: controller.signal }
+        );
+        if (pageRes.ok) {
+          const html = await pageRes.text();
+          const jsonMatch = html.match(/window\.lichess\s*=\s*({.*?});/s) || 
+                           html.match(/<script[^>]*>([\s\S]*?window\.lichess[\s\S]*?)<\/script>/);
+          if (jsonMatch) {
+            try {
+              const userData = JSON.parse(jsonMatch[1].replace('window.lichess = ', '').replace(';', ''));
+              profile = userData.user || userData.profile || userData;
+              profileOk = true;
+              console.log(`[Lichess Proxy] Scrape fallback succeeded for ${username}`);
+            } catch {
+              console.log(`[Lichess Proxy] Scrape JSON parse failed for ${username}`);
             }
           }
-        } catch (scrapeErr) {
-          console.error(`[Lichess Proxy] Scrape fallback failed for ${username}:`, scrapeErr.message);
         }
+      } catch (scrapeErr) {
+        console.error(`[Lichess Proxy] Scrape fallback failed for ${username}:`, scrapeErr.message);
       }
+    } else if (profileRes) {
+      const errorText = profileRes.text ? await profileRes.text().catch(() => '') : '';
+      console.error(`[Lichess Proxy] Profile fetch failed for ${username}:`, profileRes.status, profileRes.statusText, errorText);
     }
 
-    const historyRes = await fetch(
-      `https://lichess.org/api/user/${encodeURIComponent(username)}/rating-history`,
-      { headers, signal: controller.signal }
-    ).catch((e) => {
+    let historyRes;
+    try {
+      historyRes = await fetch(
+        `https://lichess.org/api/user/${encodeURIComponent(username)}/rating-history`,
+        { headers, signal: controller.signal }
+      );
+      historyStatus = historyRes.status;
+      historyStatusText = historyRes.statusText;
+      console.log(`[Lichess Proxy] History response for ${username}:`, historyRes.status, historyRes.statusText);
+    } catch (e) {
       console.error(`[Lichess] Rating history fetch threw for ${username}:`, e);
-      return { ok: false, status: e.name === 'AbortError' ? 504 : 500, error: e.message };
-    });
-
-    console.log(`[Lichess Proxy] History response for ${username}:`, historyRes?.status, historyRes?.statusText);
+      historyRes = null;
+    }
 
     if (historyRes && historyRes.ok) {
       try {
@@ -101,15 +110,15 @@ export default async function handler(request) {
     clearTimeout(timeoutId);
 
     if (!profileOk) {
-      const status = profileRes?.status || 500;
+      const status = profileStatus === 0 ? 500 : profileStatus;
       return new Response(JSON.stringify({ 
         error: status === 404 ? 'Lichess profile not found' : 'Failed to fetch Lichess profile', 
         notFound: status === 404,
         upstreamStatus: status,
-        upstreamStatusText: profileRes?.statusText,
+        upstreamStatusText: profileStatusText,
         debug: 'Profile API failed and scrape fallback did not find data'
       }), {
-        status: status === 404 ? 404 : 500,
+        status: status === 404 ? 404 : status,
         headers: { 'Content-Type': 'application/json' }
       });
     }
