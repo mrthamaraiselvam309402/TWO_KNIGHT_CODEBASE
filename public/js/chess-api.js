@@ -4,6 +4,8 @@
 // Handles fetching data from Chess.com and Lichess proxies and rendering the dashboard
 
 let chessChartInstance = null;
+let historyChartInstance = null;
+let wdlChartInstance = null;
 
 function formatDate(iso) {
   if (!iso) return 'N/A';
@@ -77,7 +79,7 @@ function renderChesscomProfileDetails(data, container) {
 
 function renderLichessRatings(profile, container) {
   if (!container || !profile?.perfs) return;
-  const variants = ['rapid', 'blitz', 'puzzle'];
+  const variants = ['bullet', 'blitz', 'rapid', 'classical', 'puzzle'];
   const rows = variants
     .map((v) => {
       const perf = profile.perfs[v];
@@ -115,7 +117,7 @@ function renderLichessRatings(profile, container) {
 
 function renderChesscomStatsTable(stats, container) {
   if (!container) return;
-  const types = ['chess_rapid', 'chess_blitz', 'chess_classical'];
+  const types = ['chess_bullet', 'chess_blitz', 'chess_rapid', 'chess_classical', 'chess_daily'];
   const rows = types
     .map((key) => {
       const section = stats[key];
@@ -330,13 +332,18 @@ async function loadChessDashboard(student) {
   }
 
   let ratingsData = {
-    labels: ['Rapid', 'Blitz', 'Puzzles'],
-    lichess: [null, null, null],
-    chesscom: [null, null, null]
+    labels: ['Bullet', 'Blitz', 'Rapid', 'Classical', 'Puzzles'],
+    lichess: [null, null, null, null, null],
+    chesscom: [null, null, null, null, null]
   };
 
   let allLichessGames = [];
   let allChesscomGames = [];
+  // Captured per-platform data so the combined charts (rating history,
+  // win/draw/loss) can render after both fetch branches complete.
+  let lichessProfileData = null;
+  let lichessHistoryData = [];
+  let chesscomStatsData = null;
 
   // Fetch Chess.com via proxy
   if (chesscomUser) {
@@ -382,9 +389,13 @@ async function loadChessDashboard(student) {
 
         renderChesscomProfileDetails(data, chesscomDetails);
         renderChesscomStatsTable(stats, ratingsTable);
+        chesscomStatsData = stats;
 
-        ratingsData.chesscom[0] = stats.chess_rapid?.last?.rating || null;
+        ratingsData.chesscom[0] = stats.chess_bullet?.last?.rating || null;
         ratingsData.chesscom[1] = stats.chess_blitz?.last?.rating || null;
+        ratingsData.chesscom[2] = stats.chess_rapid?.last?.rating || null;
+        ratingsData.chesscom[3] = stats.chess_classical?.last?.rating || null;
+        ratingsData.chesscom[4] = stats.tactics?.highest?.rating || null;
 
         try {
           const clubsRes = await fetch(`/api/chesscom-clubs-proxy?username=${encodeURIComponent(chesscomUser)}`);
@@ -525,10 +536,14 @@ async function loadChessDashboard(student) {
         renderLichessProfileDetails(profile, lichessDetails);
         renderLichessRatings(profile, ratingsTable);
         renderLichessGameStats(profile, performanceContainer);
+        lichessProfileData = profile;
+        lichessHistoryData = ratingHistory;
 
-        ratingsData.lichess[0] = profile.perfs?.rapid?.rating || null;
+        ratingsData.lichess[0] = profile.perfs?.bullet?.rating || null;
         ratingsData.lichess[1] = profile.perfs?.blitz?.rating || null;
-        ratingsData.lichess[2] = profile.perfs?.puzzle?.rating || null;
+        ratingsData.lichess[2] = profile.perfs?.rapid?.rating || null;
+        ratingsData.lichess[3] = profile.perfs?.classical?.rating || null;
+        ratingsData.lichess[4] = profile.perfs?.puzzle?.rating || null;
         const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true`);
         if (gamesRes.ok) {
           const games = await gamesRes.json();
@@ -563,8 +578,10 @@ async function loadChessDashboard(student) {
     window.currentChessGames = allChesscomGames;
   }
 
-  // Render Chart
+  // Render Charts
   renderChessChart(ratingsData);
+  renderRatingHistoryChart(lichessHistoryData);
+  renderWdlChart(lichessProfileData, chesscomStatsData);
 
   // If neither loaded recent games container
   if (!lichessUser && !chesscomUser && recentGamesContainer) {
@@ -641,6 +658,162 @@ function renderChessChart(data) {
           ticks: { color: chartThemeColors().tick },
           grid: { display: false }
         }
+      }
+    }
+  });
+}
+
+// Lichess rating history over time, one line per format.
+// History items look like { name: 'Blitz', points: [[year, month0, day, rating], ...] }.
+const HISTORY_SERIES = [
+  { name: 'Bullet', color: '#f59e0b' },
+  { name: 'Blitz', color: '#3b82f6' },
+  { name: 'Rapid', color: '#10b981' },
+  { name: 'Classical', color: '#8b5cf6' },
+  { name: 'Puzzles', color: '#ec4899' }
+];
+
+function renderRatingHistoryChart(ratingHistory) {
+  const ctx = document.getElementById('chessapi-history-chart');
+  const emptyEl = document.getElementById('chessapi-history-empty');
+  if (!ctx) return;
+
+  if (historyChartInstance) {
+    historyChartInstance.destroy();
+    historyChartInstance = null;
+  }
+
+  const cutoff = Date.now() - 365 * 24 * 60 * 60 * 1000;
+  const datasets = [];
+
+  HISTORY_SERIES.forEach(({ name, color }) => {
+    const series = (ratingHistory || []).find(h => h.name === name);
+    if (!series || !Array.isArray(series.points) || series.points.length === 0) return;
+
+    let points = series.points.map(([y, m, d, rating]) => ({ x: Date.UTC(y, m, d), y: rating }));
+    const recent = points.filter(p => p.x >= cutoff);
+    // Inactive players may have no points in the window; show their trail anyway.
+    points = recent.length >= 2 ? recent : points.slice(-10);
+    if (points.length === 0) return;
+
+    datasets.push({
+      label: name,
+      data: points,
+      borderColor: color,
+      backgroundColor: color,
+      borderWidth: 2,
+      pointRadius: points.length > 30 ? 0 : 2,
+      pointHitRadius: 6,
+      tension: 0.25,
+      spanGaps: true
+    });
+  });
+
+  const hasData = datasets.some(ds => ds.data.length > 0);
+  ctx.parentElement.style.display = hasData ? '' : 'none';
+  if (emptyEl) emptyEl.style.display = hasData ? 'none' : '';
+  if (!hasData) return;
+
+  const theme = chartThemeColors();
+  historyChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false },
+      plugins: {
+        legend: { labels: { color: theme.legend, usePointStyle: true, padding: 12, boxWidth: 8 } },
+        tooltip: {
+          callbacks: {
+            title: (items) => items.length ? new Date(items[0].parsed.x).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          ticks: {
+            color: theme.tick,
+            maxTicksLimit: 8,
+            callback: (v) => new Date(v).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
+          },
+          grid: { display: false }
+        },
+        y: {
+          ticks: { color: theme.tick },
+          grid: { color: theme.grid }
+        }
+      }
+    }
+  });
+}
+
+// Win / Draw / Loss comparison. Lichess exposes lifetime counts on the
+// profile; Chess.com only exposes per-format records, summed here.
+function renderWdlChart(lichessProfile, chesscomStats) {
+  const ctx = document.getElementById('chessapi-wdl-chart');
+  if (!ctx) return;
+
+  if (wdlChartInstance) {
+    wdlChartInstance.destroy();
+    wdlChartInstance = null;
+  }
+
+  const datasets = [];
+
+  const count = lichessProfile?.count;
+  if (count && (count.win || count.loss || count.draw)) {
+    datasets.push({
+      label: 'Lichess',
+      data: [count.win || 0, count.draw || 0, count.loss || 0],
+      backgroundColor: '#3b82f6',
+      borderRadius: 4
+    });
+  }
+
+  if (chesscomStats) {
+    let w = 0, d = 0, l = 0;
+    ['chess_bullet', 'chess_blitz', 'chess_rapid', 'chess_classical', 'chess_daily'].forEach((k) => {
+      const record = chesscomStats[k]?.record;
+      if (!record) return;
+      w += record.wins || 0;
+      d += record.draws || 0;
+      l += record.losses || 0;
+    });
+    if (w || d || l) {
+      datasets.push({
+        label: 'Chess.com',
+        data: [w, d, l],
+        backgroundColor: '#7FA650',
+        borderRadius: 4
+      });
+    }
+  }
+
+  const wrap = ctx.parentElement;
+  if (!datasets.length) {
+    if (wrap) wrap.style.display = 'none';
+    return;
+  }
+  if (wrap) wrap.style.display = '';
+
+  const theme = chartThemeColors();
+  wdlChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Wins', 'Draws', 'Losses'],
+      datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: theme.legend, usePointStyle: true, padding: 12, boxWidth: 8 } }
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { color: theme.tick }, grid: { color: theme.grid } },
+        x: { ticks: { color: theme.tick }, grid: { display: false } }
       }
     }
   });
@@ -1113,33 +1286,6 @@ async function loadChessDashboardForTab(student) {
     games: [],
     timestamp: Date.now()
   };
-
-  // Fetch Chess.com
-  if (chesscomUser) {
-    try {
-      const res = await fetch(`/api/chesscom-proxy?username=${encodeURIComponent(chesscomUser)}&t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.notFound) {
-          result.chesscomNotFound = true;
-        } else {
-          result.chesscomData = data;
-        const y = new Date().getFullYear();
-        const m = String(new Date().getMonth() + 1).padStart(2, '0');
-        const gamesRes = await fetch(`/api/chesscom-games-proxy?username=${encodeURIComponent(chesscomUser)}&year=${y}&month=${m}&t=${Date.now()}`);
-        if (gamesRes.ok) {
-          const gamesData = await gamesRes.json();
-          result.games.push(...(gamesData.games || []).map(g => ({ ...g, platform: 'chesscom' })));
-        }
-        }
-      } else {
-        result.chesscomError = true;
-      }
-    } catch (e) {
-      console.warn('[Chess] Chess.com fetch failed:', e);
-      result.chesscomError = true;
-    }
-  }
 
   // Fetch Lichess
   if (lichessUser) {
