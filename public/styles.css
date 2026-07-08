@@ -65,9 +65,9 @@ h1, h2, h3, h4, h5, h6 {
   --radius-lg: 14px;
   --radius-sm: 8px;
 
-  --font-head: 'Syne', sans-serif;
-  --font-ui: 'Syne', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+--font-head: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
+   --font-ui: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
+   --font-mono: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
 
   --shadow: 0 20px 40px rgba(0,0,0,0.45);
   --shadow-deep: 0 24px 60px rgba(0,0,0,0.6), 0 8px 20px rgba(0,0,0,0.4);
@@ -176,10 +176,13 @@ body[data-theme="light"] .homework-calendar-list .card { background: var(--surfa
 * { box-sizing: border-box; margin: 0; padding: 0; }
 img, video { max-width: 100%; height: auto; display: block; } /* FIX: image overflow shield */
 
+body, input, select, textarea, button {
+  font-family: var(--font-ui) !important;
+}
+
 body {
   background: var(--obsidian);
   color: var(--ivory);
-  font-family: var(--font-ui);
   min-height: 100vh;
   display: flex;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
@@ -275,7 +278,7 @@ body.coach-mode .nav-item.coach-only.active {
 .page-title {
   color: var(--ivory) !important;
   font-family: var(--font-head);
-  font-size: clamp(20px, 4vw, 30px);
+  font-size: clamp(18px, 3.5vw, 26px);
   font-weight: 700;
   display: flex; align-items: center; gap: 16px;
 }
@@ -521,9 +524,11 @@ input, select, textarea {
   font-family: var(--font-ui); font-size: 14px; resize: vertical;
 }
 input:focus, select:focus, textarea:focus { border-color: var(--gold); background: var(--surface); box-shadow: 0 0 0 2px var(--gold-glow); }
-select option { background: var(--surface2); }
+select option { background-color: var(--surface2) !important; color: var(--ivory) !important; }
 input[type="time"], input[type="date"] { color-scheme: dark; }
+body[data-theme="light"] input[type="time"], body[data-theme="light"] input[type="date"] { color-scheme: light; }
 input[type='month']::-webkit-calendar-picker-indicator { filter: invert(0.8) sepia(1) saturate(5) hue-rotate(5deg); cursor: pointer; }
+body[data-theme="light"] input[type='month']::-webkit-calendar-picker-indicator { filter: invert(0.4) sepia(1) saturate(5) hue-rotate(5deg); cursor: pointer; }
 
 /* ── HISTORY ITEMS ── */
 .history-item { margin-bottom: 8px; border-bottom: 1px solid var(--glass); padding-bottom: 8px; font-size: 13px; }
@@ -651,11 +656,6 @@ body[data-theme="light"] .logo-crest {
 }
 body[data-theme="light"] .logo-wordmark .lw-chess { color: #1a2435; }
 body[data-theme="light"] .logo-wordmark .lw-kidoo { color: var(--primary); }
-
-/* On-brand text selection (replaces the harsh default blue that washed out the
-   login labels/placeholders). Readable in both light and dark themes. */
-::selection { background: rgba(10,17,114,0.35); color: var(--ivory); }
-::-moz-selection { background: rgba(10,17,114,0.35); color: var(--ivory); }
 
 /* Login form labels — brighter so they're clearly visible on the dark login box. */
 #login-screen .label { color: var(--amber); opacity: 0.95; font-weight: 600; }
@@ -3349,4 +3349,74 @@ body[data-theme="light"] .tom-kpi-value { color: var(--ivory); }
 
 .chess-move-item.current {
   background: rgba(218, 163, 62, 0.15);
+}
+
+/* Adaptive Pending Colors */
+.theme-adaptive-pending { color: #1a3a5c; font-weight: 800; }
+body[data-theme='light'] .theme-adaptive-pending { color: #000 !important; } 
+
+/* Premium Custom Checkbox styling */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 18px !important;
+  height: 18px !important;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 0 !important;
+  outline: none;
+  flex-shrink: 0;
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--gold);
+  background: rgba(218, 163, 62, 0.05);
+}
+
+input[type="checkbox"]:checked {
+  border-color: var(--gold);
+  background: var(--gold);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-0.5px, -1px);
+  transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:disabled {
+  border-color: var(--border);
+  background: rgba(255,255,255,0.03);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input[type="checkbox"]:disabled:checked::after {
+  border-color: var(--ivory-dim);
+}
+
+/* Premium Click Active Scaling Transition & outline fix */
+*:focus {
+  outline: none !important;
+}
+
+.btn, .card, .card-clickable, input, select, textarea {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn:active, .card-clickable:active {
+  transform: scale(0.98);
 } 

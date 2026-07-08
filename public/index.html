@@ -174,7 +174,7 @@
       <button type="button" class="menu-toggle" onclick="toggleSidebar()">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
       </button>
-      <span id="p-title">TWO KNIGHTS Academy Overview</span>
+      <span id="p-title">Two Knights Chess Academy Overview</span>
     </div>
     <div class="top-nav-right">
 
@@ -295,9 +295,6 @@
                       <tr>
                         <th>#</th>
                         <th>Student</th>
-                        <th>Level / ELO</th>
-                        <th>Session</th>
-                        <th>Schedule</th>
                         <th>Phone</th>
                         <th>Actions</th>
                       </tr>
@@ -497,14 +494,14 @@
       </div>
       <div class="dash-grid" style="margin-bottom:14px">
         <div class="card"><div class="stat-label">Projected Revenue</div><div class="stat-value" style="color:var(--blue)" id="s-total-revenue">—</div></div>
-        <div class="card"><div class="stat-label">Total Coach Cost</div><div class="stat-value" style="color:var(--danger)" id="s-total-cost">—</div></div>
-        <div class="card card-clickable" onclick="setPage('exp')"><div class="stat-label">Net Profit/Loss</div><div class="stat-value" style="color:var(--danger)" id="s-profit">—</div></div>
+<div class="card"><div class="stat-label">Total Coach Cost</div><div class="stat-value" style="color: var(--ivory) !important;" id="s-total-cost">—</div></div>
+         <div class="card card-clickable" onclick="setPage('exp')"><div class="stat-label">Net Profit/Loss</div><div class="stat-value" style="color: var(--ivory) !important;" id="s-profit">—</div></div>
       </div>
-       <div class="dash-grid" style="margin-bottom:14px">
-         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Last Month Due Amount</div><div class="stat-value text-danger" id="s-last-due">₹0</div></div>
-         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Month Pending</div><div class="stat-value" style="color:var(--gold)" id="s-curr-pending">₹0</div></div>
-         <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Total Outstanding</div><div class="stat-value text-danger" id="s-total-outstanding">₹0</div></div>
-       </div>
+<div class="dash-grid" style="margin-bottom:14px">
+          <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Last Month Due Amount</div><div class="stat-value" style="color: var(--ivory) !important; font-weight:800;" id="s-last-due">₹0</div></div>
+          <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Current Month Pending</div><div class="stat-value theme-adaptive-pending" id="s-curr-pending">₹0</div></div>
+          <div class="card card-clickable" onclick="setPage('bills')"><div class="stat-label">Total Pending</div><div class="stat-value" style="color: #0d9488 !important; font-weight:800;" id="s-total-outstanding">₹0</div></div>
+        </div>
        <div class="dash-grid" style="margin-bottom:20px">
          <div class="card"><div class="stat-label">Active Enrollments</div><div class="stat-value" style="color:var(--emerald)" id="s-active-enroll">—</div></div>
          <div class="card"><div class="stat-label">Group Sessions</div><div class="stat-value" id="s-group">—</div></div>
@@ -573,64 +570,104 @@
          <div class="coach-section-block">
            <div class="coach-section-row">
              <h2 class="coach-section-title">Students</h2>
-             <button id="filter-toggle-btn" class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="toggleMobileFilters()">☰ Filters</button>
            </div>
-            <div id="student-filter-bar" class="filter-bar" style="margin-bottom:10px; background:var(--glass); padding:6px; border-radius:8px; border:1px solid var(--border); display:flex; align-items:center; gap:5px; flex-wrap: wrap;">
-              <input type="text" id="f-search" placeholder="Search by name, parent, or phone..." oninput="renderStudents()" style="flex:1; min-width:140px; padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px;">
-              <select id="f-coach" onchange="renderStudents()" style="padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; min-width:110px">
-                <option value="">All Coaches</option>
-              </select>
-              <select id="f-session" onchange="renderStudents()" style="padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; min-width:90px">
-                <option value="">All Sessions</option>
-                <option value="Group">Group</option>
-                <option value="Single">Individual</option>
-              </select>
-              <select id="f-enroll-status" onchange="renderStudents()" style="padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; min-width:120px">
-                <option value="">Enroll Status (All)</option>
-                <option value="active">Enrolled & Attending</option>
-                <option value="pending">Pending</option>
-                <option value="unpaid">Unpaid</option>
-                <option value="inactive">Inactive</option>
-                <option value="waitlist">Waitlist</option>
-                <option value="upcoming">Upcoming</option>
-              </select>
-              <select id="f-learning-mode" onchange="renderStudents()" style="padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; min-width:90px">
-                <option value="">All Modes</option>
-                <option value="online">Online</option>
-                <option value="offline">Offline</option>
-              </select>
-              <select id="f-status" onchange="renderStudents()" style="padding:5px 8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; min-width:110px">
-                <option value="">All Payment Status</option>
-                <option value="Paid">Paid</option>
-                <option value="Pending">Pending</option>
-                <option value="Due">Due</option>
-                <option value="Overdue">Overdue</option>
-              </select>
-              <div style="display:inline-flex; align-items:center; gap:2px;">
-                <input type="number" id="f-min-fee" placeholder="Min Fee ₹" oninput="renderStudents()" style="padding:5px 6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; width:65px">
-                <span style="color:var(--ivory-dim); font-size:10px;">to</span>
-                <input type="number" id="f-max-fee" placeholder="Max Fee ₹" oninput="renderStudents()" style="padding:5px 6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; width:65px">
-              </div>
-              <select id="f-bill-month-stud" onchange="syncStudMonth(this.value)" title="Billing Month" style="padding:5px 6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; width:120px">
-                <option value="">Billing Month</option>
-              </select>
-              <input type="date" id="f-due-date-stud" onchange="syncDueDateFilter(this.value)" title="Due Date" style="padding:5px 6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; width:120px">
-              <input type="date" id="f-enroll-date-stud" onchange="syncEnrollDateFilter(this.value)" title="Enroll Date" style="padding:5px 6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:5px; font-size:12px; width:120px">
-              <div style="display:inline-flex; gap:3px;">
-                <button class="btn btn-outline-grey btn-sm" onclick="resetStudMonth()" style="padding:2px 4px; font-size:11px; line-height:1; white-space:nowrap;">This Month</button>
-                <button class="btn btn-outline btn-sm" onclick="clearFilters()" style="padding:2px 4px; font-size:11px; line-height:1; white-space:nowrap;">Clear</button>
-                <button class="btn btn-gold btn-sm" onclick="exportStudentsToCSV()" style="padding:2px 4px; font-size:11px; line-height:1; white-space:nowrap;">Export</button>
-              </div>
+           <div id="student-filter-bar" class="filter-bar" style="margin-bottom:15px; background:var(--surface2); padding:12px; border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px; width:100%;">
+               <!-- First Row: Search and Core Filters -->
+               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; width:100%;">
+                 <input type="text" id="f-search" placeholder="🔍 Search by name, parent, or phone..." oninput="renderStudents()" style="flex:2; min-width:200px; padding:8px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px; font-family:inherit;">
+                 
+                 <select id="f-coach" onchange="renderStudents()" style="flex:1; min-width:120px; padding:8px 10px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+                   <option value="">All Coaches</option>
+                 </select>
+                 
+                 <select id="f-session" onchange="renderStudents()" style="flex:1; min-width:110px; padding:8px 10px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+                   <option value="">All Sessions</option>
+                   <option value="Group">Group</option>
+                   <option value="Single">Individual</option>
+                 </select>
+
+                 <select id="f-enroll-status" onchange="renderStudents()" style="flex:1; min-width:130px; padding:8px 10px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+                   <option value="">Enroll Status (All)</option>
+                   <option value="active">Enrolled & Attending</option>
+                   <option value="pending">Pending</option>
+                   <option value="unpaid">Unpaid</option>
+                   <option value="inactive">Inactive</option>
+                   <option value="waitlist">Waitlist</option>
+                   <option value="upcoming">Upcoming</option>
+                 </select>
+
+                 <select id="f-status" onchange="renderStudents()" style="flex:1; min-width:130px; padding:8px 10px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+                   <option value="">All Payment Status</option>
+                   <option value="Paid">Paid</option>
+                   <option value="Pending">Pending</option>
+                   <option value="Due">Due</option>
+                   <option value="Overdue">Overdue</option>
+                 </select>
+
+                 <select id="f-learning-mode" onchange="renderStudents()" style="flex:1; min-width:110px; padding:8px 10px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+                   <option value="">All Modes</option>
+                   <option value="online">Online</option>
+                   <option value="offline">Offline</option>
+                 </select>
+               </div>
+
+               <!-- Second Row: Advanced Filters and Actions -->
+               <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; width:100%; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                   <!-- Fee Range -->
+                   <div style="display:inline-flex; align-items:center; gap:4px; background:var(--bg3); padding:4px 8px; border:1px solid var(--border); border-radius:6px;">
+                     <span style="color:var(--ivory-dim); font-size:11px;">Fee:</span>
+                     <input type="number" id="f-min-fee" placeholder="Min ₹" oninput="renderStudents()" style="padding:4px 6px; background:transparent; border:none; color:var(--ivory); font-size:12px; width:70px; outline:none;">
+                     <span style="color:var(--ivory-dim); font-size:11px;">to</span>
+                     <input type="number" id="f-max-fee" placeholder="Max ₹" oninput="renderStudents()" style="padding:4px 6px; background:transparent; border:none; color:var(--ivory); font-size:12px; width:70px; outline:none;">
+                   </div>
+
+                   <!-- Date Pickers -->
+                   <div style="display:inline-flex; align-items:center; gap:4px;">
+                     <span style="color:var(--ivory-dim); font-size:11px; margin-left:4px;">Month:</span>
+                     <input type="month" min="2026-06" id="f-bill-month-stud" onchange="syncStudMonth(this.value)" title="Billing Month" style="padding:6px 10px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:12px; width:140px;">
+                   </div>
+
+                   <div style="display:inline-flex; align-items:center; gap:4px;">
+                     <span style="color:var(--ivory-dim); font-size:11px; margin-left:4px;">Due:</span>
+                     <input type="date" id="f-due-date-stud" onchange="syncDueDateFilter(this.value)" title="Due Date" style="padding:6px 10px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:12px; width:130px;">
+                   </div>
+
+                   <div style="display:inline-flex; align-items:center; gap:4px;">
+                     <span style="color:var(--ivory-dim); font-size:11px; margin-left:4px;">Enroll:</span>
+                     <input type="date" id="f-enroll-date-stud" onchange="syncEnrollDateFilter(this.value)" title="Enroll Date" style="padding:6px 10px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:12px; width:130px;">
+                   </div>
+                 </div>
+
+                 <!-- Action Buttons -->
+                 <div style="display:flex; gap:6px;">
+                   <button class="btn btn-outline-grey btn-sm" onclick="resetStudMonth()" style="padding:6px 12px; font-size:12px; height:32px;">This Month</button>
+                   <button class="btn btn-outline btn-sm" onclick="clearFilters()" style="padding:6px 12px; font-size:12px; height:32px;">Clear</button>
+                   <button class="btn btn-gold btn-sm" onclick="exportStudentsToCSV()" style="padding:6px 12px; font-size:12px; height:32px;">Export CSV</button>
+                 </div>
+               </div>
+             </div>
+          </div>
+          <div class="coach-section-block">
+            <!-- Bulk action bar: operates on the checkboxes in the registry -->
+            <div id="student-bulk-bar" style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
+              <span id="student-bulk-count" style="font-size:12px; color:var(--ivory-dim); min-width:80px;">0 selected</span>
+               <button class="btn btn-gold btn-sm" onclick="window.bulkMarkPaid()" style="padding:6px 14px; font-size:12px;">✅ Mark Paid</button>
+               <button class="btn btn-outline-warning btn-sm" onclick="window.bulkMarkUnpaid()" style="padding:6px 14px; font-size:12px;">🔄 Mark Unpaid</button>
+              <button class="btn btn-danger btn-sm" onclick="window.bulkDeleteStudents()" style="padding:6px 14px; font-size:12px;">🗑️ Delete Selected</button>
             </div>
-         </div>
-         <div class="coach-section-block">
-           <div class="table-wrap">
+            <div class="table-wrap">
              <table id="stud-table">
                <thead>
                  <tr id="stud-thead-row">
+                   <th style="width:40px"><input type="checkbox" id="stud-check-all" onclick="window.toggleAllStudents(this.checked)"></th>
+                   <th style="width:50px">#</th>
                    <th>Student</th>
-                   <th>Session</th>
-                   <th>Rating</th>
+                   <th>Coach</th>
+                   <th>Fee</th>
+                   <th>Status</th>
+                   <th>Due Date</th>
+                   <th>Actions</th>
                  </tr>
                </thead>
                <tbody id="stud-body"><tr><td colspan="3"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
@@ -693,10 +730,14 @@
                <option value="">All Coaches</option>
              </select>
              <select id="att-batch-filter" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px" onchange="renderAttendanceList()">
-               <option value="">All Batches</option>
+               <option value="">-- Select Batch --</option>
+             </select>
+             <select id="att-batch-type-filter" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px" onchange="renderAttendanceList()">
+               <option value="">All Session Types</option>
                <option value="Group">Group Session</option>
                <option value="Single">1-on-1 Session</option>
              </select>
+             <input type="text" id="att-student-search" placeholder="🔍 Search student name..." oninput="renderAttendanceList()" style="padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:8px; min-width:180px;">
            </div>
 
            <div id="att-stats" style="text-align:center;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;font-size:14px;font-weight:600;color:var(--gold);">
@@ -756,7 +797,7 @@
                   <p style="margin:0; color:var(--ivory-dim); font-size:12px;">Review homework by due date, assignee, and status.</p>
                 </div>
               <div class="coach-header-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-                  <input id="homework-month-filter" type="month" class="input-field" onchange="renderHomeworkCalendar()">
+                  <input id="homework-month-filter" type="month" min="2026-06" class="input-field" onchange="renderHomeworkCalendar()">
                   <select id="homework-assignee-filter" class="input-field" onchange="renderHomeworkCalendar()" style="min-width:180px;">
                     <option value="">All Assignees</option>
                   </select>
@@ -766,6 +807,7 @@
                     <option value="completed">Completed</option>
                     <option value="archived">Archived</option>
                   </select>
+                  <input id="homework-search" type="text" class="input-field" placeholder="Search topic, title or file…" oninput="renderHomeworkCalendar()" style="min-width:200px;">
                 </div>
               </div>
               <div id="homework-calendar-grid" style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:8px;"></div>
@@ -808,6 +850,9 @@
               <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
                 <select id="homework-submission-assignment-filter" class="input-field" onchange="renderHomeworkSubmissionReview()" style="min-width:180px;">
                   <option value="">All Assignments</option>
+                </select>
+                <select id="homework-submission-batch-filter" class="input-field" onchange="renderHomeworkSubmissionReview()" style="min-width:180px;">
+                  <option value="">All Batches</option>
                 </select>
                 <select id="homework-submission-student-filter" class="input-field" onchange="renderHomeworkSubmissionReview()" style="min-width:180px;">
                   <option value="">All Students</option>
@@ -955,22 +1000,46 @@
             </div>
           </div>
           
-           <!-- Chess API Stats -->
-           <div class="grid-2-col" style="gap:22px; margin-top:22px;">
-              <div class="card" style="border-left:4px solid #fff; background:var(--bg3);">
-                <h3 style="margin-bottom:16px;color:#fff;display:flex;align-items:center;gap:8px;"><span class="ico">♘</span> Lichess Stats</h3>
-                <div id="chessapi-lichess-content" style="font-size:14px;color:var(--ivory);">Loading...</div>
-                <div id="chessapi-lichess-details" style="margin-top:12px;"></div>
-                <div id="chessapi-lichess-extras" style="margin-top:12px;"></div>
+           <!-- Chess Platforms Stats -->
+           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:22px; margin-top:22px;">
+              <!-- Lichess -->
+              <div class="card card-clickable" onclick="window.openLichessProfile()" style="border-top:4px solid #fff; background:var(--bg3); display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;">
+                <div style="position:absolute; top:-20px; right:-20px; opacity:0.05; font-size:120px; pointer-events:none;">♘</div>
+                <div>
+                  <h3 style="margin-bottom:16px;color:var(--ivory);display:flex;align-items:center;gap:8px;position:relative;z-index:2;"><span class="ico">♘</span> Lichess Profile</h3>
+                  <div id="chessapi-lichess-content" style="font-size:14px;color:var(--ivory);position:relative;z-index:2;">Loading...</div>
+                  <div id="chessapi-lichess-details" style="margin-top:12px;position:relative;z-index:2;"></div>
+                  <div id="chessapi-lichess-extras" style="margin-top:12px;position:relative;z-index:2;"></div>
+                </div>
+                <div style="margin-top:20px; font-size:12px; font-weight:600; color:#fff; display:flex; align-items:center; gap:4px;position:relative;z-index:2;">View Profile <span>→</span></div>
               </div>
-              <div class="card" style="border-left:4px solid #7FA650; background:var(--bg3);">
-                <h3 style="margin-bottom:16px;color:#7FA650;display:flex;align-items:center;gap:8px;"><span class="ico">♟️</span> Chess.com Stats</h3>
-                <div id="chessapi-chesscom-content" style="font-size:14px;color:var(--ivory);">Loading...</div>
-                <div id="chessapi-chesscom-details" style="margin-top:12px;"></div>
-                <div id="chessapi-chesscom-clubs" style="margin-top:12px;"></div>
-                <div id="chessapi-chesscom-tournaments" style="margin-top:12px;"></div>
+
+              <!-- Chess.com -->
+              <div class="card card-clickable" onclick="window.openChesscomProfile()" style="border-top:4px solid #7FA650; background:var(--bg3); display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;">
+                <div style="position:absolute; top:-20px; right:-20px; opacity:0.05; font-size:120px; pointer-events:none;">♟️</div>
+                <div>
+                  <h3 style="margin-bottom:16px;color:#7FA650;display:flex;align-items:center;gap:8px;position:relative;z-index:2;"><span class="ico">♟️</span> Chess.com Profile</h3>
+                  <div id="chessapi-chesscom-content" style="font-size:14px;color:var(--ivory);position:relative;z-index:2;">Loading...</div>
+                  <div id="chessapi-chesscom-details" style="margin-top:12px;position:relative;z-index:2;"></div>
+                  <div id="chessapi-chesscom-clubs" style="margin-top:12px;position:relative;z-index:2;"></div>
+                  <div id="chessapi-chesscom-tournaments" style="margin-top:12px;position:relative;z-index:2;"></div>
+                </div>
+                <div style="margin-top:20px; font-size:12px; font-weight:600; color:#7FA650; display:flex; align-items:center; gap:4px;position:relative;z-index:2;">View Profile <span>→</span></div>
               </div>
-           </div>
+
+              <!-- Chessable -->
+              <div class="card card-clickable" onclick="openChildChessable()" style="border-top:4px solid var(--emerald); background:var(--bg3); display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;">
+                <div style="position:absolute; top:-20px; right:-20px; opacity:0.05; font-size:120px; pointer-events:none;">🧠</div>
+                <div>
+                  <h3 style="margin-bottom:16px;color:var(--emerald);display:flex;align-items:center;gap:8px;position:relative;z-index:2;">
+                    <img src="https://www.chessable.com/favicon.ico" style="width:20px;height:20px;border-radius:4px" onerror="this.style.display='none'"> Chessable Training
+                  </h3>
+                  <div style="font-size:14px;color:var(--ivory);position:relative;z-index:2;">Interactive opening lines and tactical training</div>
+                  <div id="chessable-parent-stats" style="margin-top:12px; font-size:14px; color:var(--ivory-dim);position:relative;z-index:2;"></div>
+                </div>
+                <div style="margin-top:20px; font-size:12px; font-weight:600; color:var(--emerald); display:flex; align-items:center; gap:4px;position:relative;z-index:2;">Practice Now <span>→</span></div>
+              </div>
+            </div>
 
            <div class="card" style="margin-top:22px;">
              <h3 style="margin-bottom:16px;color:var(--gold);">Rating Dashboard</h3>
@@ -1015,7 +1084,7 @@
             <div style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; margin-bottom:24px; background:var(--surface2); padding:16px; border-radius:8px;">
               <div style="flex:1; min-width:200px;">
                 <label style="display:block; margin-bottom:6px; font-size:12px; color:var(--ivory-dim);">Report Month</label>
-                <input type="month" id="parent-report-month" class="input-field" style="width:100%;" onchange="renderChildReports()">
+                <input type="month" min="2026-06" id="parent-report-month" class="input-field" style="width:100%;" onchange="renderChildReports()">
               </div>
             </div>
 
@@ -1038,9 +1107,9 @@
               <div class="stat-value text-success" id="cb-total-paid" style="font-size: 24px; font-weight: 800; margin: 6px 0 2px;">₹0</div>
               <div class="stat-desc" id="cb-paid-count" style="font-size: 11px; color: var(--ivory-dim); opacity: 0.75;">0 transactions completed</div>
             </div>
-            <div class="card" style="border-left: 4px solid var(--danger); background: linear-gradient(145deg, var(--bg2), rgba(239, 68, 68, 0.04)); box-shadow: var(--shadow);">
+            <div class="card" style="border-left: 4px solid var(--border); background: var(--bg2); box-shadow: var(--shadow);">
               <div class="stat-label" style="text-transform: uppercase; font-size: 10px; letter-spacing: 1px; color: var(--ivory-dim);">Outstanding / Due</div>
-              <div class="stat-value text-danger" id="cb-total-due" style="font-size: 24px; font-weight: 800; margin: 6px 0 2px;">₹0</div>
+              <div class="stat-value" id="cb-total-due" style="font-size: 24px; font-weight: 800; margin: 6px 0 2px; color: var(--ivory) !important;">₹0</div>
               <div class="stat-desc" id="cb-due-date" style="font-size: 11px; color: var(--ivory-dim); opacity: 0.75;">Due date: Not set</div>
               <button class="btn btn-gold btn-sm" style="margin-top:10px; width:100%; box-shadow:var(--shadow-amber-sm)" onclick="if(window.currentStudent) openPay(window.currentStudent.id, window.currentStudent.name || 'Student', getStudentMonthlyFee(window.currentStudent))">Pay Fees Securely</button>
             </div>
@@ -1228,14 +1297,51 @@
               <h3 style="margin-bottom:16px;color:var(--gold)">Academy Rating Progression</h3>
               <div style="height:250px"><canvas id="chartChildElo"></canvas></div>
             </div>
+            <!-- ♘ Lichess Analytics Section -->
             <div class="card" id="lichess-chart-card" style="display:none;">
-              <h3 style="margin-bottom:16px;color:#fff;display:flex;align-items:center;gap:8px;"><span class="ico">♘</span> Lichess Rapid Rating</h3>
-              <div style="height:250px"><canvas id="chartLichessElo"></canvas></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <h3 style="margin:0;color:#fff;display:flex;align-items:center;gap:8px;"><span class="ico">♘</span> Lichess Analytics</h3>
+                <a id="lichess-profile-link" href="#" target="_blank" class="btn btn-sm" style="background:#fff;color:#000;border:none;font-size:11px;padding:5px 12px;">View Full Profile ↗</a>
+              </div>
+              <!-- Lichess Stat Cards -->
+              <div id="lichess-stat-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;"></div>
+              <!-- Lichess Summary Bar -->
+              <div id="lichess-summary-bar" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--ivory-dim);"></div>
+              <!-- Lichess Rating History Charts -->
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px;">
+                <div style="height:220px"><canvas id="chartLichessRapid"></canvas></div>
+                <div style="height:220px"><canvas id="chartLichessClassical"></canvas></div>
+                <div style="height:220px"><canvas id="chartLichessPuzzles"></canvas></div>
+              </div>
+              <!-- Lichess Recent Games -->
+              <div style="margin-top:16px;">
+                <h4 style="margin:0 0 12px 0;color:var(--ivory);font-size:13px;">Recent Online Games</h4>
+                <div id="lichess-recent-games" style="max-height:300px;overflow-y:auto;"></div>
+              </div>
             </div>
+
+            <!-- ♟️ Chess.com Analytics Section -->
             <div class="card" id="chesscom-chart-card" style="display:none;">
-              <h3 style="margin-bottom:16px;color:#7FA650;display:flex;align-items:center;gap:8px;"><span class="ico">♟️</span> Chess.com Rapid Rating</h3>
-              <div style="height:250px"><canvas id="chartChesscomElo"></canvas></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <h3 style="margin:0;color:#7FA650;display:flex;align-items:center;gap:8px;"><span class="ico">♟️</span> Chess.com Analytics</h3>
+                <a id="chesscom-profile-link" href="#" target="_blank" class="btn btn-sm" style="background:#7FA650;color:#fff;border:none;font-size:11px;padding:5px 12px;">View Full Profile ↗</a>
+              </div>
+              <!-- Chess.com Stat Cards -->
+              <div id="chesscom-stat-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;"></div>
+              <!-- Chess.com Summary Bar -->
+              <div id="chesscom-summary-bar" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--ivory-dim);"></div>
+              <!-- Chess.com Rating Charts -->
+              <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px;">
+                <div style="height:280px"><canvas id="chartChesscomRatings"></canvas></div>
+              </div>
+              <!-- Chess.com Recent Games -->
+              <div style="margin-top:16px;">
+                <h4 style="margin:0 0 12px 0;color:var(--ivory);font-size:13px;">Recent Online Games</h4>
+                <div id="chesscom-recent-games" style="max-height:300px;overflow-y:auto;"></div>
+              </div>
             </div>
+
+            <!-- 🎓 Chessable Section (unchanged) -->
             <div class="card" id="chessable-chart-card" style="display:none;">
               <h3 style="margin-bottom:16px;color:#EA580C;display:flex;align-items:center;gap:8px;"><span class="ico">🎓</span> Chessable XP Progression</h3>
               <div style="height:250px"><canvas id="chartChessableProgress"></canvas></div>
@@ -1253,17 +1359,7 @@
         </div>
 
         <div id="child-tab-learning" class="child-tab-content">
-          <div style="margin-bottom:24px;">
-            <div class="card card-clickable" onclick="openChildChessable()" style="display:flex;align-items:center;justify-content:space-between;border-left:4px solid var(--emerald);background:linear-gradient(145deg, var(--bg2), rgba(16, 185, 129, 0.04));">
-              <div>
-                <h3 style="margin-bottom:4px;color:var(--emerald);font-size:18px;display:flex;align-items:center;gap:8px">
-                  <img src="https://www.chessable.com/favicon.ico" style="width:20px;height:20px;border-radius:4px" onerror="this.style.display='none'"> Practice on Chessable
-                </h3>
-                <div style="color:var(--ivory-dim);font-size:13px">Interactive opening lines and tactical training</div>
-              </div>
-              <div style="font-size:24px;opacity:0.5">↗</div>
-            </div>
-          </div>
+
           <div id="resource-grid" class="resource-grid">
             <div class="loading-state"><span class="spinner"></span> Loading Library…</div>
           </div>
@@ -1456,7 +1552,7 @@
             <div class="ev-action-group">
               <button class="btn btn-gold btn-sm" onclick="generateEventTickets()">🎟️ Tickets</button>
               <button class="btn btn-gold btn-sm" onclick="generateEventCertificates()">🎓 Certificates</button>
-              <button class="btn btn-sm" onclick="openScannerModal()" style="background:var(--success); border:1px solid var(--success); color:#fff;">📷 Scan QR</button>
+              <button class="btn btn-sm" onclick="openScannerModal()" style="background:var(--success); border:1px solid var(--success); color:var(--ivory);">📷 Scan QR</button>
             </div>
             <div class="ev-action-separator"></div>
             <div class="ev-action-group">
@@ -1591,7 +1687,7 @@
       <div class="filter-bar" style="margin-bottom:20px; background:var(--glass); padding:12px; border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
         <div style="display:flex; align-items:center; gap:8px">
           <span style="font-size:13px; color:var(--ivory-dim)">View Month:</span>
-          <input type="month" id="f-bill-month" onchange="syncBillMonth(this.value)" style="width:160px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
+          <input type="month" min="2026-06" id="f-bill-month" onchange="syncBillMonth(this.value)" style="width:160px; padding:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px">
         </div>
         <button class="btn btn-outline-grey btn-sm" onclick="resetBillMonth()">This Month</button>
 
@@ -1621,7 +1717,7 @@
       <div id="bills-tab-students" class="bill-tab-content" style="display:block;">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Invoice</th><th>Student</th><th>Coach</th><th>Session</th><th>Schedule</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead>
+            <thead><tr><th>#</th><th>Invoice</th><th>Student</th><th>Coach</th><th>Session</th><th>Schedule</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead>
             <tbody id="bill-body"><tr><td colspan="8"><div class="loading-state"><span class="spinner"></span> Loading…</div></td></tr></tbody>
           </table>
         </div>
@@ -1743,7 +1839,7 @@
               <button type="button" class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('all')">Select All</button>
               <button type="button" class="btn btn-outline-grey btn-sm" style="font-size:11px; padding:4px 10px;" onclick="schGroupSelect('none')">Clear</button>
             </div>
-            <div id="sch-group-list" style="max-height:180px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:6px; margin-bottom:12px; background:rgba(0,0,0,0.15);"></div>
+            <div id="sch-group-list" style="max-height:180px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:6px; margin-bottom:12px; background:rgba(0,0,0,0.15); display: flex; flex-direction: column;"></div>
           </div>
 
           <!-- Regular Class -->
@@ -1902,7 +1998,7 @@
       <!-- Month strip -->
       <div class="exp-month-strip">
         <h3 id="exp-month-label">This Month</h3>
-        <input type="month" id="exp-month-picker" style="width:160px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--ivory);border-radius:8px;font-size:13px">
+        <input type="month" min="2026-06" id="exp-month-picker" style="width:160px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--ivory);border-radius:8px;font-size:13px">
         <button class="btn btn-outline-grey btn-sm" onclick="(function(){const now=new Date();const m=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');setExpMonth(m);document.getElementById('exp-month-picker').value=m;})()">This Month</button>
         <div style="margin-left:auto;display:flex;gap:8px">
           <button class="btn btn-outline" onclick="toggleCalculator()" title="Toggle Quick Math Calculator">
@@ -2002,7 +2098,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px;">
       <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
         <h2 style="color:var(--gold); margin:0;">📬 Messages Hub</h2>
-        <select id="msg-filter" onchange="renderMsgs()" style="padding:8px 10px; border-radius:8px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-size:13px;">
+        <select id="msg-filter" onchange="renderMsgs()" style="padding:8px 10px; border-radius:8px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); font-size:13px;">
           <option value="all">All messages</option>
           <option value="unread">Unread</option>
           <option value="sent">Sent items</option>
@@ -2047,6 +2143,9 @@
           </table>
         </div>
       </div>
+
+      <!-- Batch Password Manager Section Placeholder -->
+      <div id="batch-passwords-card-placeholder"></div>
 
       <!-- Parent Portal Accounts (login = student name + parent phone) -->
       <div class="card" style="border: 1px solid var(--border); background:var(--bg2); margin-top: 24px;">
@@ -2555,7 +2654,7 @@
 
     <div class="form-group">
       <label class="label" id="acc-user-pass-label">Temporary Password *</label>
-      <input type="text" id="acc-user-password" placeholder="Minimum 6 characters" autocomplete="new-password">
+      <input type="text" id="acc-user-password" placeholder="Any password" autocomplete="new-password">
     </div>
 
     <div class="form-group">
@@ -2689,13 +2788,10 @@
   <div class="modal-box">
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:16px">
       <img id="sv-av" src="" style="width:70px;height:70px;border-radius:50%;border:2px solid var(--gold);object-fit:cover">
-      <div><h2 id="sv-name" style="font-family:var(--font-head);color:var(--gold);font-size:24px">—</h2><span id="sv-level" class="badge badge-level">—</span></div>
+      <div><h2 id="sv-name" style="font-family:var(--font-head);color:var(--gold);font-size:24px">—</h2></div>
     </div>
     <div class="grid-2-col" style="gap:16px">
-      <div><b style="color:var(--ivory)">ELO:</b> <span id="sv-elo"></span></div>
-      <div><b style="color:var(--ivory)">Join Date:</b> <span id="sv-join"></span></div>
       <div><b style="color:var(--ivory)">Coach:</b> <span id="sv-coach"></span></div>
-      <div><b style="color:var(--ivory)">Schedule:</b> <span id="sv-batch"></span></div>
       <div><b style="color:var(--ivory)">Fee:</b> ₹<span id="sv-fee"></span></div>
       <div><b style="color:var(--ivory)">Status:</b> <span id="sv-status"></span></div>
       <div style="grid-column:1/-1"><b style="color:var(--ivory)">Phone:</b> <span id="sv-phone"></span></div>
@@ -2737,25 +2833,51 @@
     <div class="modal-title">Enroll New Student</div>
     <div class="modal-sub">Student Enrollment Details</div>
     
-    <div class="modal-grid">
-      <div class="form-group">
-        <label>Full Name</label>
-        <input type="text" id="m-name" placeholder="Enter student name">
-      </div>
-      <div class="form-group">
-        <label>Parent Phone</label>
-        <div style="display:flex;gap:8px">
-          <div class="country-selector">
-            <div id="country-selected" onclick="event.stopPropagation();openCountryDropdown()" class="country-selected-display">
-              <span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>
-            </div>
-            <div id="country-dropdown" class="country-dropdown" >
-            </div>
-          </div>
-          <input type="tel" id="m-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
-</div>
-      </div>
-    </div>
+<div class="modal-grid">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="m-name" placeholder="Enter student name">
+        </div>
+        <div class="form-group">
+          <label>Student Email</label>
+          <input type="email" id="m-email" placeholder="student@example.com (used for student login)">
+        </div>
+        <div class="form-group">
+          <label>Parent Phone</label>
+         <div style="display:flex;gap:8px">
+           <div class="country-selector">
+             <div id="country-selected" onclick="event.stopPropagation();openCountryDropdown()" class="country-selected-display">
+               <span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>
+             </div>
+             <div id="country-dropdown" class="country-dropdown" >
+             </div>
+           </div>
+           <input type="tel" id="m-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
+         </div>
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Date of Birth</label>
+         <input type="date" id="m-dob">
+       </div>
+       <div class="form-group">
+         <label>Standard</label>
+         <input type="text" id="m-standard" placeholder="e.g. Grade 5 or Class 10">
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>School</label>
+         <input type="text" id="m-school" placeholder="School name">
+       </div>
+       <div class="form-group">
+         <label>Address</label>
+         <input type="text" id="m-address" placeholder="Full address">
+       </div>
+     </div>
 
     <div class="modal-grid">
       <div class="form-group">
@@ -2855,51 +2977,128 @@
       </div>
     </div>
 
-    <div class="modal-grid" style="margin-top: 12px;">
-      <div class="form-group">
-        <label>Chessable Username</label>
-        <input type="text" id="m-chessable" placeholder="e.g. aarav_v">
-      </div>
-      <div class="form-group">
-        <label>Staff Notes</label>
-        <input type="text" id="m-notes" placeholder="Notes about student...">
-      </div>
-    </div>
 
-    <div style="display:flex;gap:10px;margin-top:20px; border-top: 1px solid var(--border); padding-top: 20px;">
-      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
-      <button class="btn btn-gold" style="flex:1" onclick="saveStudent()">Complete Enrollment</button>
+     <!-- Parent/Guardian Details Section -->
+     <div class="modal-grid" style="margin-top: 12px;">
+       <div class="form-group">
+         <label>Father's Name</label>
+         <input type="text" id="m-father-name" placeholder="Father's full name">
+       </div>
+       <div class="form-group">
+         <label>Father's Phone</label>
+         <input type="tel" id="m-father-phone" placeholder="Father's contact number">
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Father's Qualification</label>
+         <input type="text" id="m-father-qualification" placeholder="e.g. B.Tech, MBA, etc.">
+       </div>
+       <div class="form-group">
+         <label>Father's Profession</label>
+         <input type="text" id="m-father-profession" placeholder="e.g. Engineer, Doctor, etc.">
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Father's Email</label>
+         <input type="email" id="m-father-email" placeholder="Father's email address">
+       </div>
+       <div class="form-group">
+         <label>Father's WhatsApp</label>
+         <input type="tel" id="m-father-whatsapp" placeholder="WhatsApp number with country code">
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Mother's Name</label>
+         <input type="text" id="m-mother-name" placeholder="Mother's full name">
+       </div>
+       <div class="form-group">
+         <label>Mother's Phone</label>
+         <input type="tel" id="m-mother-phone" placeholder="Mother's contact number">
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Mother's Qualification</label>
+         <input type="text" id="m-mother-qualification" placeholder="e.g. B.Tech, MBA, etc.">
+       </div>
+       <div class="form-group">
+         <label>Mother's Profession</label>
+         <input type="text" id="m-mother-profession" placeholder="e.g. Engineer, Teacher, etc.">
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Mother's Email</label>
+         <input type="email" id="m-mother-email" placeholder="Mother's email address">
+       </div>
+       <div class="form-group">
+         <label>Mother's WhatsApp</label>
+         <input type="tel" id="m-mother-whatsapp" placeholder="WhatsApp number with country code">
+       </div>
+     </div>
+
+     <!-- Things about Child Section -->
+     <div class="form-group" style="margin-top: 12px;">
+       <label>Things about the Child</label>
+       <textarea id="m-special-notes" placeholder="Child's interests, strengths, weaknesses, special requirements, etc..." style="width:100%; min-height:80px; padding:10px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px; resize:vertical;"></textarea>
+     </div>
+
+     <div class="modal-grid" style="margin-top: 12px;">
+       <div class="form-group">
+         <label>Staff Notes</label>
+         <input type="text" id="m-notes" placeholder="Notes about student...">
+       </div>
+       <div class="form-group">
+         <!-- Empty placeholder to balance the grid layout -->
+</div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:20px; border-top: 1px solid var(--border); padding-top: 20px;">
+        <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
+        <button class="btn btn-gold" style="flex:1" onclick="saveStudent()">Complete Enrollment</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Edit Modal -->
-<div class="modal" id="edit-modal">
-  <div class="modal-box">
-    <div class="modal-title">Update Student Profile</div>
-    <input type="hidden" id="e-id">
-    
-    <div class="modal-grid">
-      <div class="form-group">
-        <label>Full Name</label>
-        <input type="text" id="e-name">
-      </div>
-      <div class="form-group">
-        <label>Parent Phone</label>
-        <div style="display:flex;gap:8px">
-          <div class="country-selector">
-            <div id="country-selected-edit" onclick="event.stopPropagation();openCountryDropdownEdit()" class="country-selected-display">
-              <span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>
+  <!-- Edit Modal -->
+  <div class="modal" id="edit-modal">
+    <div class="modal-box">
+      <div class="modal-title">Update Student Profile</div>
+      <input type="hidden" id="e-id">
+      
+      <div class="modal-grid">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="e-name">
+        </div>
+        <div class="form-group">
+          <label>Student Login Email</label>
+          <input type="email" id="e-email" placeholder="student@email.com (used for student login)">
+        </div>
+        <div class="form-group">
+          <label>Parent Phone</label>
+          <div style="display:flex;gap:8px">
+            <div class="country-selector">
+              <div id="country-selected-edit" onclick="event.stopPropagation();openCountryDropdownEdit()" class="country-selected-display">
+                <span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>
+              </div>
+              <div id="country-dropdown-edit" class="country-dropdown" >
+              </div>
             </div>
-            <div id="country-dropdown-edit" class="country-dropdown" >
-            </div>
+            <input type="tel" id="e-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
           </div>
-          <input type="tel" id="e-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
         </div>
       </div>
-    </div>
 
-    <div class="modal-grid">
+<div class="modal-grid">
       <div class="form-group">
         <label>Student Level</label>
         <select id="e-level">
@@ -2909,6 +3108,28 @@
       <div class="form-group">
         <label>Current ELO Rating</label>
         <input type="number" id="e-elo">
+      </div>
+    </div>
+
+    <div class="modal-grid">
+      <div class="form-group">
+        <label>Standard</label>
+        <input type="text" id="e-standard" placeholder="e.g. Grade 5 or Class 10">
+      </div>
+      <div class="form-group">
+        <label>Date of Birth</label>
+        <input type="date" id="e-dob">
+      </div>
+    </div>
+
+    <div class="modal-grid">
+      <div class="form-group">
+        <label>School</label>
+        <input type="text" id="e-school" placeholder="School name">
+      </div>
+      <div class="form-group">
+        <label>Address</label>
+        <input type="text" id="e-address" placeholder="Full address">
       </div>
     </div>
 
@@ -3003,27 +3224,99 @@
       </div>
     </div>
 
-    <div class="modal-grid" style="margin-top: 12px;">
-      <div class="form-group">
-        <label>Chessable Username</label>
-        <input type="text" id="e-chessable" placeholder="e.g. aarav_v">
+<div class="modal-grid" style="margin-top: 12px;">
+        <div class="form-group">
+          <!-- Empty placeholder to balance the grid layout -->
+        </div>
+        <div class="form-group">
+          <!-- Empty placeholder to balance the grid layout -->
+        </div>
       </div>
-      <div class="form-group">
-        <!-- Empty placeholder to balance the grid layout -->
-      </div>
-    </div>
 
-    <div class="form-group">
-      <label>Staff Notes</label>
-      <textarea id="e-notes" class="input-field" style="height:80px;resize:vertical;" placeholder="Notes about student progress, behavior, or special requests..."></textarea>
-    </div>
+     <!-- Parent/Guardian Details Section -->
+     <div class="modal-grid" style="margin-top: 12px;">
+       <div class="form-group">
+         <label>Father's Name</label>
+         <input type="text" id="e-father-name" placeholder="Father's full name">
+       </div>
+       <div class="form-group">
+         <label>Father's Phone</label>
+         <input type="tel" id="e-father-phone" placeholder="Father's contact number">
+       </div>
+     </div>
 
-    <div style="display:flex;gap:10px;margin-top:20px; border-top: 1px solid var(--border); padding-top: 20px;">
-      <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Discard</button>
-      <button class="btn btn-gold" style="flex:1" onclick="updateStudent()">Update Records</button>
-    </div>
-  </div>
-</div>
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Father's Qualification</label>
+         <input type="text" id="e-father-qualification" placeholder="e.g. B.Tech, MBA, etc.">
+       </div>
+       <div class="form-group">
+         <label>Father's Profession</label>
+         <input type="text" id="e-father-profession" placeholder="e.g. Engineer, Doctor, etc.">
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Father's Email</label>
+         <input type="email" id="e-father-email" placeholder="Father's email address">
+       </div>
+       <div class="form-group">
+         <label>Father's WhatsApp</label>
+         <input type="tel" id="e-father-whatsapp" placeholder="WhatsApp number with country code">
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Mother's Name</label>
+         <input type="text" id="e-mother-name" placeholder="Mother's full name">
+       </div>
+       <div class="form-group">
+         <label>Mother's Phone</label>
+         <input type="tel" id="e-mother-phone" placeholder="Mother's contact number">
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Mother's Qualification</label>
+         <input type="text" id="e-mother-qualification" placeholder="e.g. B.Tech, MBA, etc.">
+       </div>
+       <div class="form-group">
+         <label>Mother's Profession</label>
+         <input type="text" id="e-mother-profession" placeholder="e.g. Engineer, Teacher, etc.">
+       </div>
+     </div>
+
+     <div class="modal-grid">
+       <div class="form-group">
+         <label>Mother's Email</label>
+         <input type="email" id="e-mother-email" placeholder="Mother's email address">
+       </div>
+       <div class="form-group">
+         <label>Mother's WhatsApp</label>
+         <input type="tel" id="e-mother-whatsapp" placeholder="WhatsApp number with country code">
+       </div>
+     </div>
+
+     <!-- Things about Child Section -->
+     <div class="form-group" style="margin-top: 12px;">
+       <label>Things about the Child</label>
+       <textarea id="e-special-notes" placeholder="Child's interests, strengths, weaknesses, special requirements, etc..." style="width:100%; min-height:80px; padding:10px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px; resize:vertical;"></textarea>
+     </div>
+
+     <div class="form-group">
+       <label>Staff Notes</label>
+       <textarea id="e-notes" class="input-field" style="height:80px;resize:vertical;" placeholder="Notes about student progress, behavior, or special requests..."></textarea>
+     </div>
+
+     <div style="display:flex;gap:10px;margin-top:20px; border-top: 1px solid var(--border); padding-top: 20px;">
+       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Discard</button>
+       <button class="btn btn-gold" style="flex:1" onclick="updateStudent()">Update Records</button>
+     </div>
+   </div>
+ </div>
 
 
 
@@ -3069,43 +3362,82 @@
   </div>
 </div>
 
-<!-- Coach Modal -->
 <div class="modal" id="coach-crud-modal">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width: 540px;">
     <div class="modal-title" id="coach-modal-title">Add Coach</div>
     <input type="hidden" id="cm-id">
-    <input type="text" id="cm-name" placeholder="Coach Name">
-    <div class="grid-2-col" style="gap:12px">
-      <input type="text" id="cm-spec" placeholder="Specialty (e.g. Endgames)">
-      <input type="number" id="cm-exp" placeholder="Experience (Years)">
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Coach Name *</label>
+      <input type="text" id="cm-name" placeholder="Full name">
     </div>
-    <div class="grid-2-col" style="gap:12px">
+
+    <div class="grid-2-col" style="gap:14px; margin-bottom:14px;">
+      <div class="form-group">
+        <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Specialty</label>
+        <input type="text" id="cm-spec" placeholder="e.g. Endgames, Openings">
+      </div>
+      <div class="form-group">
+        <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Experience (Years)</label>
+        <input type="number" id="cm-exp" placeholder="e.g. 4">
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Phone Number</label>
       <div style="display:flex;gap:8px">
         <div class="country-selector">
-<div id="country-selected-coach" onclick="event.stopPropagation();openCountryDropdownCoach()" class="country-selected-display">
-              <span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>
-            </div>
+          <div id="country-selected-coach" onclick="event.stopPropagation();openCountryDropdownCoach()" class="country-selected-display">
+            <span style="display: flex; align-items: center; gap: 6px;"><img src="https://flagcdn.com/w20/in.png" style="width: 20px; height: 14px; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" alt="India" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><span class="country-flag-emoji" style="display: none; font-size: 17px; line-height: 1;">🇮🇳</span><span style="font-family: monospace; font-size: 11px; font-weight: 700; opacity: 0.75;">IN</span></span><span class="country-dial">+91</span>
+          </div>
           <div id="country-dropdown-coach" class="country-dropdown" >
           </div>
         </div>
-        <input type="tel" id="cm-phone" placeholder="10 digits" maxlength="13" inputmode="numeric" style="flex:1">
+        <input type="tel" id="cm-phone" placeholder="10 digit number" maxlength="13" inputmode="numeric" style="flex:1; min-width:0;">
       </div>
-      <input type="email" id="cm-email" placeholder="Email Address">
     </div>
-    <textarea id="cm-address" rows="2" placeholder="Address"></textarea>
-    <div class="grid-2-col" style="gap:12px">
-      <input type="url" id="cm-photo" placeholder="Photo URL">
-      <input type="number" id="cm-salary" placeholder="Salary ₹" value="0">
+    
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Email Address</label>
+      <input type="email" id="cm-email" placeholder="coach@example.com">
     </div>
-    <div class="grid-2-col" style="gap:12px">
-      <select id="cm-status">
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
-      <input type="text" id="cm-avail" placeholder="Availability (e.g. Weekends)">
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Address</label>
+      <textarea id="cm-address" rows="2" placeholder="Street, City, State"></textarea>
     </div>
-    <textarea id="cm-etc" rows="2" placeholder="Additional Details / Bio"></textarea>
-    <div style="display:flex;gap:10px;margin-top:14px">
+
+    <div class="grid-2-col" style="gap:14px; margin-bottom:14px;">
+      <div class="form-group">
+        <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Photo URL</label>
+        <input type="url" id="cm-photo" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Monthly Salary (₹)</label>
+        <input type="number" id="cm-salary" placeholder="e.g. 15000" value="0">
+      </div>
+    </div>
+
+    <div class="grid-2-col" style="gap:14px; margin-bottom:14px;">
+      <div class="form-group">
+        <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Status</label>
+        <select id="cm-status">
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Availability</label>
+        <input type="text" id="cm-avail" placeholder="e.g. Weekdays, All Days">
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:4px; letter-spacing:0.5px;">Additional Details / Bio</label>
+      <textarea id="cm-etc" rows="2" placeholder="Head Coach, certifications, etc."></textarea>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:14px; border-top:1px solid var(--border); padding-top:14px;">
       <button class="btn btn-outline" style="flex:1" onclick="closeModals()">Cancel</button>
       <button class="btn btn-gold" style="flex:1" onclick="saveCoach()">Save Coach</button>
     </div>
@@ -3144,10 +3476,6 @@
       <div class="card" style="padding:12px;text-align:center">
         <div style="font-size:10px;color:var(--ivory-dim);text-transform:uppercase">Students</div>
         <div id="cv-stud-count" style="font-size:20px;font-weight:700;color:var(--ivory)">0</div>
-      </div>
-      <div class="card" style="padding:12px;text-align:center">
-        <div style="font-size:10px;color:var(--ivory-dim);text-transform:uppercase">Avg ELO</div>
-        <div id="cv-avg-elo" style="font-size:20px;font-weight:700;color:var(--ivory)">0</div>
       </div>
       <div class="card" style="padding:12px;text-align:center">
         <div style="font-size:10px;color:var(--ivory-dim);text-transform:uppercase">Exp.</div>
@@ -3280,6 +3608,35 @@
       </div>
     </div>
 
+    <!-- View Batch Modal -->
+    <div class="modal" id="view-batch-modal">
+      <div class="modal-box" style="max-width: 500px;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;">
+          <div class="modal-title" id="vb-title" style="color:var(--gold)">Batch Details</div>
+          <button class="close-btn" onclick="closeModal('view-batch-modal')" style="background:none; border:none; color:var(--ivory); font-size:24px; cursor:pointer;">&times;</button>
+        </div>
+        
+        <input type="hidden" id="vb-batch-id">
+        
+        <h4 style="margin-bottom:8px; color:var(--ivory);">Enrolled Students (<span id="vb-student-count-badge">0</span>)</h4>
+        <div style="background:var(--bg3); border:1px solid var(--border); border-radius:6px; max-height:220px; overflow-y:auto; padding:8px; margin-bottom:20px;" id="vb-student-list">
+          <!-- Populated by JS -->
+        </div>
+
+        <h4 style="margin-bottom:8px; color:var(--ivory);">Add Student to Batch</h4>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <select id="vb-student-select" style="flex:1; margin-bottom:0; background:var(--surface2); border:1px solid var(--border); color:var(--ivory); padding:8px 10px; border-radius:6px;">
+            <!-- Unassigned active students populated by JS -->
+          </select>
+          <button class="btn btn-gold btn-sm" style="height:38px; padding:0 14px;" onclick="addStudentToCurrentBatch()">+ Add</button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:24px; border-top: 1px solid var(--border); padding-top: 16px;">
+          <button class="btn btn-outline" style="width:100%" onclick="closeModal('view-batch-modal')">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Event Expenditure Modal -->
     <div class="modal" id="event-expenditure-modal">
       <div class="modal-content" style="max-width: 400px;">
@@ -3365,7 +3722,7 @@
     <div style="display:flex; flex-direction:column; gap:12px; margin-top:16px;">
       <div>
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Category</label>
-        <select id="msg-category" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+        <select id="msg-category" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
           <option value="">-- Select category --</option>
           <option value="payment">Payment</option>
           <option value="schedule">Schedule</option>
@@ -3379,7 +3736,7 @@
 
       <div>
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Template</label>
-        <select id="msg-template" onchange="applyMsgTemplate()" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+        <select id="msg-template" onchange="applyMsgTemplate()" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
           <option value="">-- Choose a template --</option>
           <option value="payment_reminder">Payment Reminder</option>
           <option value="holiday_notice">Holiday Notice</option>
@@ -3402,13 +3759,13 @@
       <div>
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Send to</label>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff;">
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory);">
             <input type="radio" name="msg-recipient-type" value="student" checked onchange="renderRecipientOptions()"> Student / Parent
           </label>
-          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff;">
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory);">
             <input type="radio" name="msg-recipient-type" value="coach" onchange="renderRecipientOptions()"> Coach
           </label>
-          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff;">
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory);">
             <input type="radio" name="msg-recipient-type" value="batch" onchange="renderRecipientOptions()"> Batch
           </label>
         </div>
@@ -3416,7 +3773,7 @@
 
       <div>
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Recipients</label>
-        <input type="text" id="msg-recipient-search" placeholder="Search students, coaches, or batches..." oninput="renderRecipientOptions()" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+        <input type="text" id="msg-recipient-search" placeholder="Search students, coaches, or batches..." oninput="renderRecipientOptions()" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
         <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
           <button type="button" class="btn btn-outline-grey btn-sm" onclick="selectAllRecipients('student')">Select All Students</button>
           <button type="button" class="btn btn-outline-grey btn-sm" onclick="selectAllRecipients('coach')">Select All Coaches</button>
@@ -3429,12 +3786,12 @@
 
       <div>
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Subject</label>
-        <input type="text" id="msg-subject" placeholder="e.g. Holiday notice" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+        <input type="text" id="msg-subject" placeholder="e.g. Holiday notice" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
       </div>
 
       <div>
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Message</label>
-        <textarea id="msg-body" rows="5" placeholder="Write your message..." style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;"></textarea>
+        <textarea id="msg-body" rows="5" placeholder="Write your message..." style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); font-family:inherit;"></textarea>
       </div>
     </div>
 
@@ -3478,31 +3835,27 @@
     <div style="display:flex; flex-direction:column; gap:16px; margin: 20px 0;">
       <div>
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Student Name</label>
-        <input type="text" id="spe-name" placeholder="Student Name" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+        <input type="text" id="spe-name" placeholder="Student Name" style="width:100%; padding:10px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
       </div>
-      <div>
+      <div style="margin-bottom:12px;">
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Parent Name</label>
-        <input type="text" id="spe-parent-name" placeholder="Parent Name" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+        <input type="text" id="spe-parent-name" placeholder="Parent Name" style="width:100%; padding:10px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
       </div>
-      <div>
-        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Parent Phone Number</label>
-        <input type="text" id="spe-phone" placeholder="Parent Phone Number" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Parent Phone</label>
+        <input type="text" id="spe-phone" placeholder="Parent Phone Number" style="width:100%; padding:10px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
       </div>
-      <div>
+      <div style="margin-bottom:12px;">
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Parent Email</label>
-        <input type="email" id="spe-email" placeholder="Parent Email Address" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+        <input type="email" id="spe-email" placeholder="Parent Email Address" style="width:100%; padding:10px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
       </div>
-      <div>
+      <div style="margin-bottom:12px;">
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Lichess URL</label>
-        <input type="url" id="spe-lichess" placeholder="https://lichess.org/@/username" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+        <input type="url" id="spe-lichess" placeholder="https://lichess.org/@/username" style="width:100%; padding:10px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
       </div>
-      <div>
+      <div style="margin-bottom:12px;">
         <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Chess.com URL</label>
-        <input type="url" id="spe-chesscom" placeholder="https://www.chess.com/member/username" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
-      </div>
-      <div>
-        <label style="display:block; font-size:12px; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:6px;">Chessable Username</label>
-        <input type="text" id="spe-chessable" placeholder="e.g. aarav_v" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+        <input type="url" id="spe-chesscom" placeholder="https://www.chess.com/member/username" style="width:100%; padding:10px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
       </div>
     </div>
 
@@ -3522,7 +3875,7 @@
     </div>
     
     <div style="margin: 15px 0;">
-      <input type="text" id="chessable-search" placeholder="Search student by name..." oninput="filterChessableStudents()" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:#fff; font-family:inherit;">
+      <input type="text" id="chessable-search" placeholder="Search student by name..." oninput="filterChessableStudents()" style="width:100%; padding:10px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); font-family:inherit;">
     </div>
 
     <div id="chessable-student-list" style="max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
@@ -3876,7 +4229,7 @@
            <div class="modal-grid" style="margin-top:18px;">
               <div class="form-group">
                 <label class="label" for="hw-target-type">Target Type</label>
-                <select id="hw-target-type" class="input-field" onchange="updateHomeworkTargetFields()">
+                <select id="hw-target-type" class="input-field" onchange="updateHomeworkTargetFields(); if(typeof updatePastHomeworkHistory === 'function') updatePastHomeworkHistory();">
                   <option value="student">Individual Student</option>
                   <option value="batch">Batch</option>
                   <option value="all">All Active Students</option>
@@ -3884,11 +4237,11 @@
               </div>
               <div class="form-group" id="hw-student-field">
                 <label class="label" for="hw-student-select">Student</label>
-                <select id="hw-student-select" class="input-field"></select>
+                <select id="hw-student-select" class="input-field" onchange="if(typeof updatePastHomeworkHistory === 'function') updatePastHomeworkHistory();"></select>
               </div>
               <div class="form-group" id="hw-batch-field" style="display:none;">
                 <label class="label" for="hw-batch-select">Batch</label>
-                <select id="hw-batch-select" class="input-field"></select>
+                <select id="hw-batch-select" class="input-field" onchange="if(typeof updatePastHomeworkHistory === 'function') updatePastHomeworkHistory();"></select>
               </div>
               <div class="form-group">
                 <label class="label" for="hw-title">Title</label>
@@ -3907,6 +4260,13 @@
                 <input type="file" id="hw-file-input" class="input-field" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,.gif,.pgn,.txt,.md">
                 <div id="hw-file-preview" style="margin-top:8px; font-size:12px; color:var(--ivory-dim);"></div>
               </div>
+              <div id="hw-past-history-section" style="grid-column:1/-1; margin-top:12px; border-top:1px solid var(--border); padding-top:12px; display:none;">
+                <label class="label" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                  <span>Selected Assignee's Past Homework</span>
+                  <input type="text" id="hw-past-search" placeholder="🔍 Search past homework by topic..." class="input-field" style="width:240px; padding:6px 10px; font-size:11px; margin:0;" oninput="if(typeof filterPastHomeworkList === 'function') filterPastHomeworkList();">
+                </label>
+                <div id="hw-past-list" style="margin-top:8px; max-height:120px; overflow-y:auto; display:grid; gap:6px; background:var(--bg3); padding:8px; border-radius:6px; border:1px solid var(--border);"></div>
+              </div>
            </div>
            <div style="display:flex; gap:10px; margin-top:18px;">
              <button class="btn btn-gold" style="flex:1" onclick="saveHomeworkAssignment()">Assign</button>
@@ -3922,7 +4282,7 @@
           <div class="modal-sub" style="display:flex;gap:15px;align-items:center;flex-wrap:wrap;margin-bottom:15px">
             <div>
               <span style="margin-right:8px">Month:</span>
-              <input type="month" id="mat-month" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--ivory)" onchange="renderMonthlyMatrix()">
+              <input type="month" min="2026-06" id="mat-month" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--ivory)" onchange="renderMonthlyMatrix()">
             </div>
             <div>
               <span style="margin-right:8px">Coach:</span>

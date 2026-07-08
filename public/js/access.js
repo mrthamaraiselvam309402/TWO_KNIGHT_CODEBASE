@@ -1,6 +1,19 @@
 // access.js - Access Control Manager Logic
 window.accessUsers = [];
 
+// Safely parse a fetch Response body as JSON, tolerating empty/non-JSON
+// bodies (some DELETE handlers respond with no body) so callers never throw
+// "Unexpected end of JSON input".
+async function safeJson(res) {
+  const text = await res.text().catch(() => "");
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return {};
+  }
+}
+
 window.loadAccessControl = async function() {
     if (window.role !== 'master' && window.role !== 'admin') {
         if (window.toast) window.toast('Unauthorized access', 'error');
@@ -30,7 +43,7 @@ window.loadAccessControl = async function() {
             throw new Error(errorMsg);
         }
 
-        const data = await response.json().catch(() => ({}));
+        const data = await safeJson(response);
         window.accessUsers = data.users || [];
         window.renderAccessTable();
     } catch (err) {
@@ -43,11 +56,12 @@ window.loadAccessControl = async function() {
 // Parent/student portal accounts — derived from the Students registry, since
 // parents authenticate with the child's name + registered phone (custom auth),
 // not Supabase Auth. Read-only overview for the admin.
-window.renderParentAccounts = function() {
+window.renderParentAccounts = async function() {
     const tbody = document.getElementById('parent-accounts-tbody');
     if (!tbody) return;
     const students = (window.allStudents || []).slice();
     const coaches = window.allCoaches || [];
+    const batches = window.allBatches || [];
     const q = (document.getElementById('parent-accounts-search')?.value || '').toLowerCase().trim();
 
     const coachName = (cid) => {
@@ -73,6 +87,25 @@ window.renderParentAccounts = function() {
         return;
     }
 
+    // Pre-fetch batch passwords so we can show the effective password for
+    // students who are using a batch password instead of an individual one.
+    const batchIds = [...new Set(rows.map(s => s.batch_id).filter(Boolean))];
+    const batchPasswordPromises = batchIds.map(async (bid) => {
+      try {
+        const res = await window.apiCall(`/api/security?batchId=${encodeURIComponent(bid)}`);
+        if (res.ok) {
+          const data = await res.json();
+          return { batchId: bid, password: data.batch_password || null };
+        }
+      } catch (e) {
+        console.warn('Failed to load batch password for', bid, e);
+      }
+      return { batchId: bid, password: null };
+    });
+
+    const batchPasswordResults = await Promise.all(batchPasswordPromises);
+    const batchPasswordMap = new Map(batchPasswordResults.map(r => [r.batchId, r.password]));
+
     const esc = window.escapeHtml || (x => x);
     const statusBadge = (st) => {
         const s = (st || 'active').toLowerCase();
@@ -84,24 +117,36 @@ window.renderParentAccounts = function() {
 
     tbody.innerHTML = rows.map(s => {
         const phone = s.parent_phone || s.phone || '—';
-        const hasCustomPwd = s.password ? true : false;
-        const pwdBadge = hasCustomPwd
-            ? '<span class="badge badge-success" style="font-size:10px;">🔑 Custom</span>'
-            : '<span class="badge badge-outline" style="font-size:10px;">📱 Phone</span>';
+        const individualPwd = s.password || null;
+        const batchPwd = s.batch_id ? (batchPasswordMap.get(String(s.batch_id)) || null) : null;
+        const effectivePwd = individualPwd || batchPwd || phone;
+        const pwdSource = individualPwd ? 'individual' : (batchPwd ? 'batch' : 'phone');
         const escId = String(s.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         const escName = (s.name || '—').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const escPwd = window.escapeHtml(String(effectivePwd));
+
+        const passwordControls = `
+            <div id="ppw-${escId}" style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+                <span id="ppt-${escId}" style="font-family:var(--font-mono); font-size:12px; color:var(--ivory); background:var(--bg3); padding:2px 6px; border-radius:4px; user-select:all; cursor:text; line-height:1.2;" title="${pwdSource === 'batch' ? 'Batch password' : pwdSource === 'individual' ? 'Individual password' : 'Phone password'}">${escPwd}</span>
+                <button class="btn btn-outline-grey btn-sm" style="padding:1px 6px; font-size:10px; height:22px; display:inline-flex; align-items:center; justify-content:center;" onclick="window.toggleParentPwd('${escId}')" title="Hide password">🙈</button>
+                <button class="btn btn-outline-grey btn-sm" style="padding:1px 6px; font-size:10px; height:22px; display:inline-flex; align-items:center; justify-content:center;" onclick="window.startEditParentPwd('${escId}', '${escName}')" title="Edit password">✏️</button>
+            </div>
+            <div id="ppe-${escId}" style="display:none; gap:4px; align-items:center;">
+                <input type="text" id="ppi-${escId}" value="${escPwd}" class="input-field" style="width:100px; padding:3px 6px; font-size:11px; margin:0; height:26px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:4px;" autocomplete="new-password">
+                <button class="btn btn-gold btn-sm" style="padding:2px 8px; font-size:10px; height:22px;" onclick="window.saveParentPwd('${escId}', '${escName}')" title="Save">💾</button>
+                <button class="btn btn-outline-grey btn-sm" style="padding:2px 6px; font-size:10px; height:22px;" onclick="window.cancelParentPwd('${escId}')" title="Cancel">✕</button>
+            </div>
+        `;
+
         return `<tr>
             <td style="font-weight:600; color:var(--ivory);">${esc(s.name || '—')}</td>
             <td style="color:var(--ivory2);">${esc(s.parent_name || '—')}</td>
             <td style="font-family:var(--font-mono); font-size:12px; color:var(--ivory-dim);">${esc(String(phone))}</td>
             <td style="color:var(--ivory2); font-size:12px;">${esc(coachName(s.coach_id))}</td>
-            <td>${pwdBadge}</td>
+            <td style="min-width:150px;">${passwordControls}</td>
             <td>${statusBadge(s.status)}</td>
             <td style="text-align:center;">
-                <div style="display:flex; justify-content:center; gap:6px;">
-                    <button class="btn btn-outline-grey btn-sm" style="padding:4px 10px; font-size:11px;" onclick="window.quickSwitchPreviewStudent && window.quickSwitchPreviewStudent('${escId}'); window.setPage && window.setPage('child');" title="Open portal preview">Open ↗</button>
-                    <button class="btn btn-outline-grey btn-sm" style="padding:4px; font-size:11px;" onclick="window.editStudentPassword('${escId}', '${escName}')" title="Edit Password">🔑</button>
-                </div>
+                <button class="btn btn-outline-grey btn-sm" style="padding:4px 10px; font-size:11px;" onclick="window.quickSwitchPreviewStudent && window.quickSwitchPreviewStudent('${escId}'); window.setPage && window.setPage('child');" title="Open portal preview">Open ↗</button>
             </td>
         </tr>`;
     }).join('');
@@ -142,6 +187,102 @@ window.editStudentPassword = async function(studentId, studentName) {
     }
 };
 
+window.toggleParentPwd = function(studentId) {
+    const textEl = document.getElementById('ppt-' + studentId);
+    if (!textEl) return;
+    const wrap = document.getElementById('ppw-' + studentId);
+    const btn = wrap ? wrap.querySelector('button') : null;
+    if (textEl.style.display === 'none') {
+        textEl.style.display = 'inline';
+        if (btn) { btn.textContent = '🙈'; btn.title = 'Hide password'; }
+    } else {
+        textEl.style.display = 'none';
+        if (btn) { btn.textContent = '👁'; btn.title = 'Show password'; }
+    }
+};
+
+window.startEditParentPwd = function(studentId) {
+    const wrap = document.getElementById('ppw-' + studentId);
+    const edit = document.getElementById('ppe-' + studentId);
+    const input = document.getElementById('ppi-' + studentId);
+    if (wrap) wrap.style.display = 'none';
+    if (edit) edit.style.display = 'flex';
+    if (input) input.focus();
+};
+
+window.saveParentPwd = async function(studentId, studentName) {
+    const input = document.getElementById('ppi-' + studentId);
+    if (!input) return;
+    const newPassword = input.value.trim();
+    if (!newPassword) {
+        if (window.toast) window.toast('Password cannot be empty', 'error');
+        return;
+    }
+    try {
+        const res = await window.apiCall(`/api/students?id=${encodeURIComponent(studentId)}`, {
+            method: 'PUT',
+            body: JSON.stringify({ password: newPassword })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `Server error ${res.status}`);
+        }
+        const student = (window.allStudents || []).find(s => String(s.id) === String(studentId));
+        if (student) student.password = newPassword;
+        if (window.toast) window.toast('Password updated successfully', 'success');
+        window.renderParentAccounts();
+    } catch (e) {
+        console.error('Failed to update student password:', e);
+        if (window.toast) window.toast(`Failed to update password: ${e.message}`, 'error');
+    }
+};
+
+window.cancelParentPwd = function(studentId) {
+    const wrap = document.getElementById('ppw-' + studentId);
+    const edit = document.getElementById('ppe-' + studentId);
+    if (wrap) wrap.style.display = 'flex';
+    if (edit) edit.style.display = 'none';
+};
+
+window.startSetParentPwd = function(studentId) {
+    const setRow = document.getElementById('pps-' + studentId);
+    const input = document.getElementById('psi-' + studentId);
+    if (setRow) setRow.style.display = 'flex';
+    if (input) input.focus();
+};
+
+window.saveNewParentPwd = async function(studentId, studentName) {
+    const input = document.getElementById('psi-' + studentId);
+    if (!input) return;
+    const newPassword = input.value.trim();
+    if (!newPassword) {
+        if (window.toast) window.toast('Password cannot be empty', 'error');
+        return;
+    }
+    try {
+        const res = await window.apiCall(`/api/students?id=${encodeURIComponent(studentId)}`, {
+            method: 'PUT',
+            body: JSON.stringify({ password: newPassword })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `Server error ${res.status}`);
+        }
+        const student = (window.allStudents || []).find(s => String(s.id) === String(studentId));
+        if (student) student.password = newPassword;
+        if (window.toast) window.toast('Password set successfully', 'success');
+        window.renderParentAccounts();
+    } catch (e) {
+        console.error('Failed to set password:', e);
+        if (window.toast) window.toast(`Failed to set password: ${e.message}`, 'error');
+    }
+};
+
+window.cancelSetParentPwd = function(studentId) {
+    const setRow = document.getElementById('pps-' + studentId);
+    if (setRow) setRow.style.display = 'none';
+};
+
   window.renderAccessTable = function() {
     const tbody = document.getElementById('access-users-tbody');
     if (!tbody) return;
@@ -170,19 +311,29 @@ window.editStudentPassword = async function(studentId, studentName) {
       const escEmail = window.escapeHtml(u.email || '');
       
       const pwdInfo = u.password_info || {};
-      const pwdSource = pwdInfo.source || '—';
-      const pwdMasked = pwdInfo.masked || '••••••••';
-      const pwdVisible = pwdInfo.visible && pwdInfo.value;
-      const escPwd = pwdVisible ? window.escapeHtml(pwdInfo.value) : '';
+      const pwdValue = pwdInfo.value || pwdInfo.masked || '••••••••';
+      const isVisible = !!pwdInfo.value;
+      const escPwd = isVisible ? window.escapeHtml(pwdInfo.value) : '';
       
       html += `<tr>
           <td style="font-weight:600; color:var(--ivory);">${escEmail}</td>
           <td><span class="badge ${roleBadge}" style="text-transform:uppercase; font-size:10px;">${window.escapeHtml(roleLabel)}</span></td>
           <td style="color:var(--ivory2); font-size:12px;">${createdDate}</td>
           <td style="color:var(--ivory2); font-size:12px;">${signInDate}</td>
-          <td style="font-family:var(--font-mono); font-size:12px; color:var(--ivory-dim);">
-            ${pwdVisible ? `<span id="pwd-${escId}" style="display:none;">${escPwd}</span><span id="pwd-mask-${escId}">${pwdMasked}</span>
-            <button class="btn btn-outline-grey btn-sm" style="padding:2px 8px; font-size:10px; margin-left:6px;" onclick="togglePasswordVisibility('${escId}', '${pwdVisible ? '1' : '0'}')" ${pwdVisible ? '' : 'disabled'}>👁</button>` : pwdMasked}
+          <td style="font-family:var(--font-mono); font-size:12px; color:var(--ivory-dim); min-width:150px;">
+            ${isVisible ? `
+              <div id="apw-${escId}" style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+                <span id="apt-${escId}" style="color:var(--ivory); background:var(--bg3); padding:2px 6px; border-radius:4px; user-select:all; cursor:text; line-height:1.2; font-size:12px;">${escPwd}</span>
+                <button class="btn btn-outline-grey btn-sm" style="padding:1px 6px; font-size:10px; height:22px; display:inline-flex; align-items:center; justify-content:center;" onclick="window.toggleAccessPwd('${escId}')" title="Hide password">🙈</button>
+                <button class="btn btn-outline-grey btn-sm" style="padding:1px 6px; font-size:10px; height:22px; display:inline-flex; align-items:center; justify-content:center;" onclick="window.startEditAccessPwd('${escId}')" title="Change password">✏️</button>
+              </div>
+              <div id="ape-${escId}" style="display:none; gap:4px; align-items:center; margin-top:4px;">
+                <input type="text" id="api-${escId}" value="${escPwd}" class="input-field" style="width:120px; padding:3px 6px; font-size:11px; margin:0; height:26px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:4px;" autocomplete="new-password">
+                <button class="btn btn-gold btn-sm" style="padding:2px 8px; font-size:10px; height:22px;" onclick="window.saveAccessPwd('${escId}')" title="Save">💾</button>
+                <button class="btn btn-outline-grey btn-sm" style="padding:2px 6px; font-size:10px; height:22px;" onclick="window.cancelAccessPwd('${escId}')" title="Cancel">✕</button>
+              </div>
+            ` : `<span style="opacity:0.5; line-height:1.2;">${window.escapeHtml(pwdValue)}</span>
+              <button class="btn btn-outline-grey btn-sm" style="padding:2px 6px; font-size:10px; height:22px; display:inline-flex; align-items:center; justify-content:center;" onclick="promptEditUserRole('${escId}', '${escRole}', '${escEmail}')" title="Set / reset password">🔑</button>`}
           </td>
           <td style="text-align:center;">
               <div style="display:flex; justify-content:center; gap:6px;">
@@ -195,18 +346,69 @@ window.editStudentPassword = async function(studentId, studentName) {
     tbody.innerHTML = html;
   };
 
-  window.togglePasswordVisibility = function(userId, isVisible) {
+  window.togglePasswordVisibility = function(userId) {
     const pwdEl = document.getElementById('pwd-' + userId);
     const maskEl = document.getElementById('pwd-mask-' + userId);
+    const btnEl = document.getElementById('pwd-btn-' + userId);
     if (!pwdEl || !maskEl) return;
-    if (isVisible === '1') {
-      pwdEl.style.display = 'none';
-      maskEl.style.display = 'inline';
-    } else {
-      pwdEl.style.display = 'inline';
+    if (pwdEl.style.display === 'none') {
+      pwdEl.style.display = 'inline-block';
       maskEl.style.display = 'none';
+      if (btnEl) btnEl.textContent = '🙈';
+    } else {
+      pwdEl.style.display = 'none';
+      maskEl.style.display = 'inline-block';
+      if (btnEl) btnEl.textContent = '👁';
     }
   };
+
+window.toggleAccessPwd = function(userId) {
+    const textEl = document.getElementById('apt-' + userId);
+    if (!textEl) return;
+    const wrap = document.getElementById('apw-' + userId);
+    const btn = wrap ? wrap.querySelector('button') : null;
+    if (textEl.style.display === 'none') {
+        textEl.style.display = 'inline';
+        if (btn) { btn.textContent = '🙈'; }
+    } else {
+        textEl.style.display = 'none';
+        if (btn) { btn.textContent = '👁'; }
+    }
+};
+
+window.startEditAccessPwd = function(userId) {
+    const wrap = document.getElementById('apw-' + userId);
+    const edit = document.getElementById('ape-' + userId);
+    if (wrap) wrap.style.display = 'none';
+    if (edit) edit.style.display = 'flex';
+};
+
+window.saveAccessPwd = async function(userId) {
+    const input = document.getElementById('api-' + userId);
+    if (!input) return;
+    const newPassword = input.value.trim();
+    try {
+        const res = await window.apiCall('/api/access_control', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'role': window.role },
+            body: JSON.stringify({ id: userId, password: newPassword || null })
+        });
+        const data = await safeJson(res);
+        if (data.error) throw new Error(data.error);
+        if (window.toast) window.toast('Password updated successfully', 'success');
+        window.loadAccessControl();
+    } catch (e) {
+        console.error('Failed to update password:', e);
+        if (window.toast) window.toast(`Failed to update password: ${e.message}`, 'error');
+    }
+};
+
+window.cancelAccessPwd = function(userId) {
+    const wrap = document.getElementById('apw-' + userId);
+    const edit = document.getElementById('ape-' + userId);
+    if (wrap) wrap.style.display = 'flex';
+    if (edit) edit.style.display = 'none';
+};
 
 // ── Create / Edit user via proper modal (replaces prompt() dialogs) ──
 function setAccessUserError(msg) {
@@ -239,12 +441,11 @@ window.submitAccessUserForm = function() {
 
     if (!isEdit) {
         if (!email) return setAccessUserError('Email / username is required.');
-        if (!password || password.length < 6) return setAccessUserError('Password must be at least 6 characters.');
+        if (!password) return setAccessUserError('Password is required.');
         if (window.closeModals) window.closeModals();
         window.createAccessUser(email, password, role);
     } else {
         // Edit: role always sent; password only if provided (reset)
-        if (password && password.length < 6) return setAccessUserError('Password must be at least 6 characters (or leave blank).');
         if (window.closeModals) window.closeModals();
         window.updateAccessUser(id, role, password || null);
     }
@@ -258,7 +459,7 @@ window.createAccessUser = async function(email, password, role) {
             body: JSON.stringify({ email, password, role })
         });
         
-        const data = await response.json().catch(() => ({}));
+        const data = await safeJson(response);
         if (data.error) throw new Error(data.error);
         
         if (window.toast) window.toast('User created successfully', 'success');
@@ -291,7 +492,7 @@ window.updateAccessUser = async function(id, role, password) {
             body: JSON.stringify({ id, role, password })
         });
         
-        const data = await response.json().catch(() => ({}));
+        const data = await safeJson(response);
         if (data.error) throw new Error(data.error);
         
         if (window.toast) window.toast('User updated successfully', 'success');
@@ -311,7 +512,7 @@ window.deleteUserAccess = async function(id, email) {
             body: JSON.stringify({ id })
         });
         
-        const data = await response.json().catch(() => ({}));
+        const data = await safeJson(response);
         if (data.error) throw new Error(data.error);
         
         if (window.toast) window.toast('User access revoked', 'success');

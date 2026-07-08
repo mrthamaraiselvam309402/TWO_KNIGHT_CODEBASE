@@ -20,20 +20,46 @@ async function handleLichessProxy(username) {
   try {
     let profile = null;
     let ratingHistory = [];
+    let profileOk = false;
 
     const profileRes = await fetch(
       `https://lichess.org/api/user/${encodeURIComponent(username)}`,
-      { headers: { 'Accept': 'application/json' }, signal }
-    ).catch(() => ({ ok: false }));
+      { 
+        headers: { 
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Encoding': 'gzip, deflate',
+          'Accept-Language': 'en-US,en;q=0.9'
+        }, 
+        signal 
+      }
+    ).catch((e) => {
+      console.error(`[Lichess Proxy] Fetch threw for ${username}:`, e.message);
+      return { ok: false, _error: e.message };
+    });
 
     if (profileRes && profileRes.ok) {
-      profile = await profileRes.json();
+      try { profile = await profileRes.json(); profileOk = true; } catch { profile = null; }
+    } else if (profileRes) {
+      const errorText = await profileRes.text().catch(() => '');
+      console.error(`[Lichess Proxy] Profile fetch failed for ${username}:`, profileRes.status, profileRes.statusText, errorText);
     }
 
     const historyRes = await fetch(
       `https://lichess.org/api/user/${encodeURIComponent(username)}/rating-history`,
-      { headers: { 'Accept': 'application/x-ndjson' }, signal }
-    ).catch(() => ({ ok: false }));
+      { 
+        headers: { 
+          'Accept': 'application/x-ndjson',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Encoding': 'gzip, deflate',
+          'Accept-Language': 'en-US,en;q=0.9'
+        }, 
+        signal 
+      }
+    ).catch((e) => {
+      console.error(`[Lichess Proxy] History fetch threw for ${username}:`, e.message);
+      return { ok: false, _error: e.message };
+    });
 
     if (historyRes && historyRes.ok) {
       const text = await historyRes.text();
@@ -41,6 +67,8 @@ async function handleLichessProxy(username) {
       ratingHistory = lines.map((line) => {
         try { return JSON.parse(line); } catch { return null; }
       }).filter(Boolean);
+    } else if (historyRes) {
+      console.error(`[Lichess Proxy] History fetch failed for ${username}:`, historyRes.status, historyRes.statusText);
     }
 
     clear();
@@ -64,7 +92,13 @@ async function handleChesscomProxy(username) {
 
     const profileRes = await fetch(
       `https://api.chess.com/pub/player/${encodeURIComponent(username)}`,
-      { headers: { 'Accept': 'application/json' }, signal }
+      { 
+        headers: { 
+          'Accept': 'application/json',
+          'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)'
+        }, 
+        signal 
+      }
     ).catch(() => ({ ok: false, status: 500 }));
 
     if (profileRes && profileRes.ok) {
@@ -97,11 +131,16 @@ async function handleChesscomProxy(username) {
   }
 }
 
-async function handleLichessGamesProxy(username, url) {
-  const max = url.searchParams.get('max') || '10';
+async function handleLichessGamesProxy(username, req) {
+  const max = req.query.max || '10';
   const response = await fetch(
     `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${max}&pgnInJson=true`,
-    { headers: { 'Accept': 'application/x-ndjson' } }
+    { 
+      headers: { 
+        'Accept': 'application/x-ndjson',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    }
   ).catch(() => ({ ok: false }));
 
   if (!response || !response.ok) {
@@ -118,10 +157,14 @@ async function handleLichessGamesProxy(username, url) {
 }
 
 async function handleLichessExtrasProxy(username) {
+  const headers = { 
+    'Accept': 'application/json',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  };
   try {
     const [trophiesRes, statusRes] = await Promise.all([
-      fetch(`https://lichess.org/api/user/${encodeURIComponent(username)}/trophies`, { headers: { 'Accept': 'application/json' } }),
-      fetch(`https://lichess.org/api/users/${encodeURIComponent(username)}/online-status`, { headers: { 'Accept': 'application/json' } })
+      fetch(`https://lichess.org/api/user/${encodeURIComponent(username)}/trophies`, { headers }),
+      fetch(`https://lichess.org/api/users/${encodeURIComponent(username)}/online-status`, { headers })
     ]);
 
     const trophies = trophiesRes?.ok ? await trophiesRes.json().catch(() => []) : [];
@@ -212,38 +255,125 @@ async function handleGeoProxy() {
   return { status: 200, body: { ip: '127.0.0.1', country_code: 'IN' } };
 }
 
+async function handleLichessTest(username) {
+  try {
+    const testRes = await fetch(
+      `https://lichess.org/api/user/${encodeURIComponent(username)}`,
+      { 
+        headers: { 
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Encoding': 'gzip, deflate',
+          'Accept-Language': 'en-US,en;q=0.9'
+        },
+        compress: false
+      }
+    );
+    const status = testRes.status;
+    const statusText = testRes.statusText;
+    let body = null;
+    try { body = await testRes.json(); } catch { body = await testRes.text(); }
+    return { status: 200, body: { upstreamStatus: status, upstreamStatusText: statusText, upstreamBody: body } };
+  } catch (e) {
+    return { status: 200, body: { error: e.message } };
+  }
+}
+
+async function handleAccessControl(req) {
+  const method = req.method;
+  
+  if (method === 'OPTIONS') {
+    return { status: 200, body: {} };
+  }
+
+  if (method === 'GET') {
+    const mockUsers = [
+      {
+        id: '1',
+        email: 'admin121@gmail.com',
+        role: 'admin',
+        created_at: '2024-01-15T10:00:00Z',
+        last_sign_in_at: '2026-07-08T05:30:00Z',
+        password_info: { source: 'Environment Variable', masked: 'Env Configured', visible: false }
+      },
+      {
+        id: '2',
+        email: 'coach.prahadheeshwar@academy.com',
+        role: 'coach',
+        created_at: '2024-06-01T08:00:00Z',
+        last_sign_in_at: '2026-07-07T14:20:00Z',
+        password_info: { source: 'Supabase Auth', masked: '●●●●●●●●', visible: false }
+      },
+      {
+        id: '3',
+        email: 'parent.aadhiseetha@gmail.com',
+        role: 'parent',
+        created_at: '2025-10-12T09:00:00Z',
+        last_sign_in_at: '2026-07-06T18:45:00Z',
+        password_info: { source: 'Custom (plaintext)', masked: '••••••••', visible: true, value: 'parent123' }
+      }
+    ];
+    return { status: 200, body: { users: mockUsers } };
+  }
+
+  if (method === 'POST') {
+    const body = await req.json().catch(() => ({}));
+    return { status: 200, body: { success: true, user: { id: Date.now().toString(), ...body } } };
+  }
+
+  if (method === 'PUT') {
+    const body = await req.json().catch(() => ({}));
+    return { status: 200, body: { success: true, user: body } };
+  }
+
+  if (method === 'DELETE') {
+    const body = await req.json().catch(() => ({}));
+    return { status: 200, body: { success: true } };
+  }
+
+  return { status: 405, body: { error: 'Method not allowed' } };
+}
+
 app.use('/api', async (req, res) => {
   const username = req.query.username;
   const pathname = req.path;
+  console.log(`[Proxy] ${req.method} ${req.originalUrl} -> pathname=${pathname}, username=${username || 'none'}`);
 
   try {
     let result;
 
-    if (pathname === '/lichess-proxy' && username) {
+    if ((pathname === '/lichess-proxy' || pathname === '/api/lichess-proxy') && username) {
       result = await handleLichessProxy(username);
-    } else if (pathname === '/chesscom-proxy' && username) {
+    } else if ((pathname === '/chesscom-proxy' || pathname === '/api/chesscom-proxy') && username) {
       result = await handleChesscomProxy(username);
-    } else if (pathname === '/lichess-games-proxy' && username) {
+    } else if ((pathname === '/lichess-games-proxy' || pathname === '/api/lichess-games-proxy') && username) {
       result = await handleLichessGamesProxy(username, req);
-    } else if (pathname === '/lichess-extras-proxy' && username) {
+    } else if ((pathname === '/lichess-extras-proxy' || pathname === '/api/lichess-extras-proxy') && username) {
       result = await handleLichessExtrasProxy(username);
-    } else if (pathname === '/chesscom-games-proxy' && username) {
+    } else if ((pathname === '/chesscom-games-proxy' || pathname === '/api/chesscom-games-proxy') && username) {
       result = await handleChesscomGamesProxy(username, req);
-    } else if (pathname === '/chesscom-clubs-proxy' && username) {
+    } else if ((pathname === '/chesscom-clubs-proxy' || pathname === '/api/chesscom-clubs-proxy') && username) {
       result = await handleChesscomClubsProxy(username);
-    } else if (pathname === '/zoho-payment-init') {
+    } else if (pathname === '/zoho-payment-init' || pathname === '/api/zoho-payment-init') {
       result = await handleZohoPaymentInit(req);
-    } else if (pathname === '/zoho-webhook') {
+    } else if (pathname === '/zoho-webhook' || pathname === '/api/zoho-webhook') {
       result = await handleZohoWebhook(req);
-    } else if (pathname === '/geo') {
+    } else if (pathname === '/geo' || pathname === '/api/geo') {
       result = await handleGeoProxy();
+    } else if (pathname === '/test-lichess' || pathname === '/api/test-lichess') {
+      result = await handleLichessTest(username || 'aadhiseetha');
+    } else if (pathname === '/health' || pathname === '/api/health') {
+      result = { status: 200, body: { status: 'ok', proxy: 'dev-server', timestamp: Date.now() } };
+    } else if (pathname === '/access_control' || pathname === '/api/access_control') {
+      result = await handleAccessControl(req);
     } else {
+      console.log(`[Proxy] Fallthrough to Supabase: ${pathname}`);
       const queryString = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
       const targetUrl = `https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1${pathname}${queryString}`;
       const response = await fetch(targetUrl, {
         method: req.method,
         headers: Object.fromEntries(Object.entries(req.headers).filter(([k, v]) => k && v && k.toLowerCase() !== 'host' && k.toLowerCase() !== 'connection')),
-        body: ['POST', 'PUT', 'PATCH'].includes(req.method) && req.body ? JSON.stringify(req.body) : undefined
+        body: ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body ? JSON.stringify(req.body) : undefined
       });
       const headers = Object.fromEntries(response.headers.entries());
       delete headers['content-encoding'];
@@ -265,5 +395,10 @@ app.get(/(.*)/, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Development proxy server running on http://localhost:${PORT}`);
+  console.log(`\n========================================`);
+  console.log(`ChessKidoo Dev Proxy Server`);
+  console.log(`  Local:    http://localhost:${PORT}`);
+  console.log(`  Health:   http://localhost:${PORT}/api/health`);
+  console.log(`  Test:     http://localhost:${PORT}/api/test-lichess?username=aadhiseetha`);
+  console.log(`========================================\n`);
 });

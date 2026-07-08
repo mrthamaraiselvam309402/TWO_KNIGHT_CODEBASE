@@ -9,12 +9,18 @@ export default async function handler(request) {
   }
 
   try {
+    const headers = { 
+      'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Encoding': 'gzip, deflate',
+      'Accept-Language': 'en-US,en;q=0.9'
+    };
     const [trophiesRes, statusRes] = await Promise.all([
       fetch(`https://lichess.org/api/user/${encodeURIComponent(username)}/trophies`, {
-        headers: { 'Accept': 'application/json' }
+        headers
       }),
       fetch(`https://lichess.org/api/users/${encodeURIComponent(username)}/online-status`, {
-        headers: { 'Accept': 'application/json' }
+        headers
       })
     ]);
 

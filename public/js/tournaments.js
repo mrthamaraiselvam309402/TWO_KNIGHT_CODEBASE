@@ -315,7 +315,10 @@
         students = [window.currentStudent];
       }
     }
-    const opts = students.map(s => 
+    const opts = students
+      .slice()
+      .sort((a, b) => (a.name || a.full_name || '').localeCompare(b.name || b.full_name || ''))
+      .map(s => 
       `<option value="${s.id}" ${String(s.id) === String(currentStudentId) ? 'selected' : ''}>${escapeHtml(s.name || s.full_name)} (${s.rating || 1000} ELO)</option>`
     ).join('');
     studentSelectHtml = `

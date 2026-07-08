@@ -315,11 +315,11 @@ return new Response(JSON.stringify({
 
       if (!studentError && studentData && studentData.valid) {
         console.log(`[Auth] Successful student login via email: ${studentData.name}`);
-        const token = await createCustomTokenSession(supabase, 'student', studentData.name, studentData.id);
+        const token = await createParentToken(supabase, studentData.id, studentData.name);
         return new Response(JSON.stringify({
           success: true,
           token,
-          role: 'student',
+          role: 'parent',
           student_id: studentData.id,
           user: studentData.name
         }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });

@@ -163,44 +163,52 @@ Deno.serve(async (req) => {
      const originalPhone = String(s.parent_phone || s.phone || '');
      const parsed = parseStoredPhone(originalPhone);
 
-     return {
-       id: s.id,
-       name: s.name || '',
-       full_name: s.name || '',
-       email: s.email || '',
-       phone: parsed.localNumber || originalPhone,
-       parent_phone: parsed.localNumber || originalPhone,
-       parent_name: s.parent_name || '',
-       age: s.age || null,
-       grade: s.grade || null,
-       level: s.grade || 'Beginner',
-       enrollment_date: s.enrollment_date || '',
-       join_date: s.enrollment_date || '',
-       address: s.address || '',
-       country_code: (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN'),
-       status: status,
-       payment_status: s.payment_status || null,
-       coach_id: s.coach_id || null,
-       rating: s.rating || 800,
-       current_rating: s.rating || 800,
-       notes: (typeof s.notes === 'string' ? s.notes.replace(/\[LM:(online|offline)\]/g, '').trim() : ''),
-       learning_mode: (typeof s.notes === 'string' && s.notes.includes('[LM:offline]')) ? 'offline' : 'online',
-       session_mode: s.session_mode || null,
-       session_time: s.session_time || null,
-       batch_type: s.session_mode || null,
-       batch_time: s.session_time || null,
-       monthly_fee: parseInt(String(fee)) || 0,
-       due_date: s.due_date || null,
-       account_status: s.account_status || 'active',
-       father_name: s.father_name || '',
-       father_phone: s.father_phone || '',
-       mother_name: s.mother_name || '',
-       mother_phone: s.mother_phone || '',
-       dob: s.dob || '',
-       school_name: s.school_name || '',
-       place: s.place || '',
-       special_notes: s.special_notes || '',
-chesscom_username: s.chesscom_username || '',
+return {
+        id: s.id,
+        name: s.name || '',
+        full_name: s.name || '',
+        email: s.email || '',
+        phone: parsed.localNumber || originalPhone,
+        parent_phone: parsed.localNumber || originalPhone,
+        parent_name: s.parent_name || '',
+        age: s.age || null,
+        grade: s.grade || null,
+        level: s.grade || 'Beginner',
+        enrollment_date: s.enrollment_date || '',
+        join_date: s.enrollment_date || '',
+        address: s.address || '',
+        country_code: (parsed.countryCode && parsed.countryCode !== 'IN') ? parsed.countryCode : (s.country_code || 'IN'),
+        status: status,
+        payment_status: s.payment_status || null,
+        coach_id: s.coach_id || null,
+        rating: s.rating || 800,
+        current_rating: s.rating || 800,
+        notes: (typeof s.notes === 'string' ? s.notes.replace(/\[LM:(online|offline)\]/g, '').trim() : ''),
+        learning_mode: (typeof s.notes === 'string' && s.notes.includes('[LM:offline]')) ? 'offline' : 'online',
+        session_mode: s.session_mode || null,
+        session_time: s.session_time || null,
+        batch_type: s.session_mode || null,
+        batch_time: s.session_time || null,
+        monthly_fee: parseInt(String(fee)) || 0,
+        due_date: s.due_date || null,
+        account_status: s.account_status || 'active',
+        father_name: s.father_name || '',
+        father_phone: s.father_phone || '',
+        father_qualification: s.father_qualification || '',
+        father_profession: s.father_profession || '',
+        father_email: s.father_email || '',
+        father_whatsapp: s.father_whatsapp || '',
+        mother_name: s.mother_name || '',
+        mother_phone: s.mother_phone || '',
+        mother_qualification: s.mother_qualification || '',
+        mother_profession: s.mother_profession || '',
+        mother_email: s.mother_email || '',
+        mother_whatsapp: s.mother_whatsapp || '',
+        dob: s.dob || '',
+        school_name: s.school_name || '',
+        place: s.place || '',
+        special_notes: s.special_notes || '',
+        chesscom_username: s.chesscom_username || '',
         lichess_username: s.lichess_username || '',
         days: s.days || '',
         admission_fee: parseInt(String(s.admission_fee)) || 0,
@@ -332,18 +340,18 @@ chesscom_username: s.chesscom_username || '',
        const address = sanitizeString(rawBody.address, 500)
        const countryCode = validateCountryCode(rawBody.country_code)
 
-       const newStudent: Record<string, unknown> = {
-         id: crypto.randomUUID(),
-         name: name,
-         phone: phone,  // Will be encrypted via trigger
-         parent_phone: parentPhone,  // Will be encrypted via trigger
-         email: email,  // Will be encrypted via trigger
-         address: address,  // Will be encrypted via trigger
-         country_code: countryCode,
-         parent_name: sanitizeString(rawBody.parent_name, 100),
-         age: rawBody.age ? parseInt(String(rawBody.age)) || null : null,
-         grade: sanitizeString(rawBody.grade || rawBody.level, 50),
-enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0],
+const newStudent: Record<string, unknown> = {
+          id: crypto.randomUUID(),
+          name: name,
+          phone: phone,  // Will be encrypted via trigger
+          parent_phone: parentPhone,  // Will be encrypted via trigger
+          email: email,  // Will be encrypted via trigger
+          address: address,  // Will be encrypted via trigger
+          country_code: countryCode,
+          parent_name: sanitizeString(rawBody.parent_name, 100),
+          age: rawBody.age ? parseInt(String(rawBody.age)) || null : null,
+          grade: sanitizeString(rawBody.grade || rawBody.level, 50),
+          enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0],
           status: validateStatus(rawBody.status),
           coach_id: rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null,
           rating: validateRating(rawBody.rating || rawBody.current_rating),
@@ -351,28 +359,37 @@ enrollment_date: sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10
           session_time: sanitizeString(rawBody.session_time || rawBody.batch_time, 100) || null,
           monthly_fee: parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0,
           admission_fee: parseInt(String(rawBody.admission_fee)) || 0,
+          payment_status: "Pending",
           father_name: sanitizeString(rawBody.father_name, 100) || null,
-         father_phone: sanitizeString(rawBody.father_phone, 20) || null,
-         mother_name: sanitizeString(rawBody.mother_name, 100) || null,
-         mother_phone: sanitizeString(rawBody.mother_phone, 20) || null,
-         dob: sanitizeString(rawBody.dob, 20) || null,
-         school_name: sanitizeString(rawBody.school_name, 150) || null,
-         place: sanitizeString(rawBody.place, 150) || null,
-         special_notes: sanitizeString(rawBody.special_notes, 1000) || null,
+          father_phone: sanitizeString(rawBody.father_phone, 20) || null,
+          father_qualification: sanitizeString(rawBody.father_qualification, 100) || null,
+          father_profession: sanitizeString(rawBody.father_profession, 100) || null,
+          father_email: sanitizeString(rawBody.father_email, 254) || null,
+          father_whatsapp: sanitizeString(rawBody.father_whatsapp, 20) || null,
+          mother_name: sanitizeString(rawBody.mother_name, 100) || null,
+          mother_phone: sanitizeString(rawBody.mother_phone, 20) || null,
+          mother_qualification: sanitizeString(rawBody.mother_qualification, 100) || null,
+          mother_profession: sanitizeString(rawBody.mother_profession, 100) || null,
+          mother_email: sanitizeString(rawBody.mother_email, 254) || null,
+          mother_whatsapp: sanitizeString(rawBody.mother_whatsapp, 20) || null,
+          dob: sanitizeString(rawBody.dob, 20) || null,
+          school_name: sanitizeString(rawBody.school_name, 150) || null,
+          place: sanitizeString(rawBody.place, 150) || null,
+          special_notes: sanitizeString(rawBody.special_notes, 1000) || null,
           chesscom_username: sanitizeString(rawBody.chesscom_username, 50) || null,
           lichess_username: sanitizeString(rawBody.lichess_username, 50) || null,
           days: rawBody.days ? sanitizeString(String(rawBody.days), 100) : null,
           // If due_date is missing, default to the 5th of the next month
-due_date: rawBody.due_date && String(rawBody.due_date).trim() ? String(rawBody.due_date).trim() : (() => {
-             const now = new Date();
-             let y = now.getUTCFullYear();
-             let m = now.getUTCMonth() + 1; // next month
-             if (m > 11) { m = 0; y++; }
-             return new Date(Date.UTC(y, m, 5)).toISOString().split('T')[0];
-          })(),
-         notes: `[LM:${sanitizeString(rawBody.learning_mode, 50) || 'online'}] ${sanitizeString(rawBody.notes, 2000)}`.trim(),
-         account_status: 'active',
-         created_at: new Date().toISOString()
+          due_date: rawBody.due_date && String(rawBody.due_date).trim() ? String(rawBody.due_date).trim() : (() => {
+              const now = new Date();
+              let y = now.getUTCFullYear();
+              let m = now.getUTCMonth() + 1; // next month
+              if (m > 11) { m = 0; y++; }
+              return new Date(Date.UTC(y, m, 5)).toISOString().split('T')[0];
+           })(),
+          notes: `[LM:${sanitizeString(rawBody.learning_mode, 50) || 'online'}] ${sanitizeString(rawBody.notes, 2000)}`.trim(),
+          account_status: 'active',
+          created_at: new Date().toISOString()
         }
       
       let insertedStudent = null
@@ -425,25 +442,23 @@ due_date: rawBody.due_date && String(rawBody.due_date).trim() ? String(rawBody.d
         await supabase.rpc('update_user_password', { p_user_type: 'student', p_id: insertedStudent.id, p_new_password: rawBody.password });
       }
 
-      // Calculate billing anchor (grace day = 26: late-month joins bill from next month)
-      const enrollDateStr = sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0];
-      const enrollDate = new Date(enrollDateStr + 'T00:00:00Z');
-      const enrollDay = enrollDate.getUTCDate();
-      let anchorYear = enrollDate.getUTCFullYear();
-      let anchorMonth = enrollDate.getUTCMonth() + 1;
-      if (enrollDay >= 26) {
-        anchorMonth += 1;
-        if (anchorMonth > 12) { anchorMonth = 1; anchorYear += 1; }
-      }
-      await supabase.from('students').update({ billing_anchor_year: anchorYear, billing_anchor_month: anchorMonth }).eq('id', insertedStudent.id);
-
-      // Auto-create first-month invoice with admission fee + monthly tuition
+      // Auto-create first-month invoice with admission fee + monthly tuition.
+      // The payment is recorded against its own month via applied_month, so the
+      // per-month status derivation marks that month Paid automatically.
       const admissionFee = parseInt(String(rawBody.admission_fee)) || 0;
       const monthlyFee = parseInt(String(rawBody.monthly_fee || rawBody.fee)) || 0;
       if (admissionFee > 0 || monthlyFee > 0) {
         const totalInvoice = monthlyFee + admissionFee;
+        const enrollDateStr = sanitizeString(rawBody.enrollment_date || rawBody.join_date, 10) || new Date().toISOString().split('T')[0];
+        const enrollDate = new Date(enrollDateStr + 'T00:00:00Z');
+        let anchorYear = enrollDate.getUTCFullYear();
+        let anchorMonth = enrollDate.getUTCMonth() + 1;
+        if (enrollDate.getUTCDate() >= 26) {
+          anchorMonth += 1;
+          if (anchorMonth > 12) { anchorMonth = 1; anchorYear += 1; }
+        }
         const targetMonthKey = `${anchorYear}-${String(anchorMonth).padStart(2, '0')}`;
-        const { data: paymentRow, error: paymentError } = await supabase
+        await supabase
           .from('payments')
           .insert({
             student_id: insertedStudent.id,
@@ -458,20 +473,6 @@ due_date: rawBody.due_date && String(rawBody.due_date).trim() ? String(rawBody.d
           })
           .select()
           .single();
-
-        if (!paymentError && paymentRow) {
-          try {
-            await supabase.rpc('apply_payment_debt_first', {
-              p_student_id: insertedStudent.id,
-              p_payment_id: paymentRow.id,
-              p_amount: totalInvoice,
-              p_paid_on: new Date().toISOString(),
-              p_target_month: targetMonthKey
-            });
-          } catch (rpcErr) {
-            console.error('[students] auto-payment allocation error:', rpcErr);
-          }
-        }
       }
 
       let decryptedStudent = null
@@ -535,11 +536,19 @@ due_date: rawBody.due_date && String(rawBody.due_date).trim() ? String(rawBody.d
       }
       if (rawBody.parent_name !== undefined) updateData.parent_name = sanitizeString(rawBody.parent_name, 100);
       if (rawBody.address !== undefined) updateData.address = sanitizeString(rawBody.address, 500);
-      if (rawBody.father_name !== undefined) updateData.father_name = sanitizeString(rawBody.father_name, 100);
-      if (rawBody.father_phone !== undefined) updateData.father_phone = sanitizeString(rawBody.father_phone, 20);
-      if (rawBody.mother_name !== undefined) updateData.mother_name = sanitizeString(rawBody.mother_name, 100);
-      if (rawBody.mother_phone !== undefined) updateData.mother_phone = sanitizeString(rawBody.mother_phone, 20);
-      if (rawBody.dob !== undefined) updateData.dob = sanitizeString(rawBody.dob, 20);
+if (rawBody.father_name !== undefined) updateData.father_name = sanitizeString(rawBody.father_name, 100);
+       if (rawBody.father_phone !== undefined) updateData.father_phone = sanitizeString(rawBody.father_phone, 20);
+       if (rawBody.father_qualification !== undefined) updateData.father_qualification = sanitizeString(rawBody.father_qualification, 100);
+       if (rawBody.father_profession !== undefined) updateData.father_profession = sanitizeString(rawBody.father_profession, 100);
+       if (rawBody.father_email !== undefined) updateData.father_email = sanitizeString(rawBody.father_email, 254);
+       if (rawBody.father_whatsapp !== undefined) updateData.father_whatsapp = sanitizeString(rawBody.father_whatsapp, 20);
+       if (rawBody.mother_name !== undefined) updateData.mother_name = sanitizeString(rawBody.mother_name, 100);
+       if (rawBody.mother_phone !== undefined) updateData.mother_phone = sanitizeString(rawBody.mother_phone, 20);
+       if (rawBody.mother_qualification !== undefined) updateData.mother_qualification = sanitizeString(rawBody.mother_qualification, 100);
+       if (rawBody.mother_profession !== undefined) updateData.mother_profession = sanitizeString(rawBody.mother_profession, 100);
+       if (rawBody.mother_email !== undefined) updateData.mother_email = sanitizeString(rawBody.mother_email, 254);
+       if (rawBody.mother_whatsapp !== undefined) updateData.mother_whatsapp = sanitizeString(rawBody.mother_whatsapp, 20);
+       if (rawBody.dob !== undefined) updateData.dob = sanitizeString(rawBody.dob, 20);
       if (rawBody.school_name !== undefined) updateData.school_name = sanitizeString(rawBody.school_name, 150);
       if (rawBody.place !== undefined) updateData.place = sanitizeString(rawBody.place, 150);
       if (rawBody.special_notes !== undefined) updateData.special_notes = sanitizeString(rawBody.special_notes, 1000);
@@ -556,22 +565,10 @@ if (rawBody.enrollment_date !== undefined || rawBody.join_date !== undefined) {
         updateData.status = validateStatus(rawBody.status);
         updateData.account_status = validateStatus(rawBody.status);
       }
-      if (rawBody.payment_status !== undefined) {
-        const pstatus = String(rawBody.payment_status);
-        updateData.payment_status = pstatus;
-        
-        // Convenience: sync status for backwards compatibility if needed (only if status is not explicitly set)
-        if (updateData.status === undefined) {
-          const lowStatus = pstatus.toLowerCase();
-          if (lowStatus === 'paid') {
-            updateData.status = 'active';
-            updateData.account_status = 'active';
-          } else if (lowStatus === 'pending') {
-            updateData.status = 'pending';
-            updateData.account_status = 'pending';
-          }
-        }
-      }
+if (rawBody.payment_status !== undefined) {
+         const pstatus = String(rawBody.payment_status);
+         updateData.payment_status = pstatus;
+       }
       if (rawBody.coach_id !== undefined) updateData.coach_id = rawBody.coach_id ? sanitizeString(String(rawBody.coach_id), 50) : null;
       if (rawBody.rating !== undefined || rawBody.current_rating !== undefined) {
         updateData.rating = validateRating(rawBody.rating || rawBody.current_rating);

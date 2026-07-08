@@ -1,5 +1,27 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// Decode the role claim from a Supabase JWT without verifying the signature
+// (the gateway has already validated it). Returns '' if it can't be read.
+function decodeJwtRole(token: string): string {
+  try {
+    const raw = token.replace(/^Bearer\s+/i, '').split('.')[1];
+    if (!raw) return '';
+    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+    const json = new TextDecoder().decode(
+      Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)),
+    );
+    const payload = JSON.parse(json);
+    return (
+      payload?.user_metadata?.role ||
+      payload?.app_metadata?.role ||
+      payload?.role ||
+      ''
+    );
+  } catch {
+    return '';
+  }
+}
+
 Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -29,17 +51,29 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Verify requester has admin/master role via custom header
-  // For development, accept any JWT token (starting with eyJ)
-  const requestRole = req.headers.get('role');
-  const headerToken = req.headers.get('Authorization') || req.headers.get('authorization');
-  const isDevelopment = headerToken && headerToken.startsWith('Bearer eyJ');
+  // Verify requester has admin/master role. The Supabase gateway already
+  // validates the JWT, so any request that reaches this function is
+  // authenticated. We accept the role from the custom `role`/`x-user-role`
+  // header OR from the JWT's user_metadata (admin logins carry role there).
+  const requestRole =
+    req.headers.get('role') || req.headers.get('x-user-role') || '';
+  const headerToken =
+    req.headers.get('Authorization') || req.headers.get('authorization') || '';
+  const isAuthenticated = headerToken.startsWith('Bearer ');
+  const jwtRole = decodeJwtRole(headerToken);
+  const effectiveRole = requestRole || jwtRole;
 
-  if (!isDevelopment && requestRole !== 'master' && requestRole !== 'admin') {
-    return new Response(JSON.stringify({ error: 'Unauthorized: Admin privileges required' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders }
-    });
+  if (
+    !isAuthenticated ||
+    (effectiveRole !== 'master' && effectiveRole !== 'admin')
+  ) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized: Admin privileges required' }),
+      {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      },
+    );
   }
 
   try {
@@ -55,18 +89,21 @@ Deno.serve(async (req) => {
       const { data: studentRows } = await supabase.from('students').select('email,password,password_hash').in('email', emails);
       const { data: coachRows } = await supabase.from('coaches').select('email,password_hash').in('email', emails);
 
-      const studentMap = new Map((studentRows || []).map(s => [s.email, s]));
-      const coachMap = new Map((coachRows || []).map(c => [c.email, c]));
+      const studentMap = new Map<string, any>((studentRows || []).map((s: any) => [s.email, s]));
+      const coachMap = new Map<string, any>((coachRows || []).map((c: any) => [c.email, c]));
 
       const masterUser = Deno.env.get('MASTER_USERNAME') || '';
       const adminUser = Deno.env.get('ADMIN_USERNAME') || '';
 
-      const safeUsers = users.users.map(u => {
+       const safeUsers = users.users.map((u: any) => {
         const email = u.email || '';
         const role = u.user_metadata?.role || 'unknown';
-        let passwordInfo = { source: 'Supabase Auth', masked: '●●●●●●●●', visible: false };
+        const passwordPlain = u.user_metadata?.password_plain || u.user_metadata?.password_info?.value || u.user_metadata?.password;
+        let passwordInfo: { source: string; masked: string; visible: boolean; value?: string } = { source: 'Supabase Auth', masked: '●●●●●●●●', visible: false };
 
-        if (role === 'master' || role === 'admin') {
+        if (passwordPlain) {
+          passwordInfo = { source: 'Supabase Metadata', masked: '••••••••', visible: true, value: passwordPlain };
+        } else if (role === 'master' || role === 'admin') {
           if (email && (email === masterUser || email === adminUser)) {
             passwordInfo = { source: 'Environment Variable', masked: 'Env Configured', visible: false };
           } else {
@@ -77,9 +114,9 @@ Deno.serve(async (req) => {
           const coach = coachMap.get(email);
           if (student) {
             if (student.password) {
-              passwordInfo = { source: 'Custom (plaintext)', masked: '••••••••', visible: true, value: student.password };
+              passwordInfo = { source: 'Custom (plaintext)', masked: student.password, visible: true, value: student.password };
             } else if (student.password_hash) {
-              passwordInfo = { source: 'Custom (bcrypt)', masked: '••••••••', visible: false };
+              passwordInfo = { source: 'Custom (bcrypt)', masked: student.password_hash, visible: true, value: student.password_hash };
             }
           } else if (coach) {
             if (coach.password_hash) {
@@ -118,7 +155,7 @@ Deno.serve(async (req) => {
         email: email,
         password: password,
         email_confirm: true,
-        user_metadata: { role: role }
+        user_metadata: { role: role, password_plain: password }
       });
 
       if (error) throw error;
@@ -140,8 +177,15 @@ Deno.serve(async (req) => {
       }
 
       const updates: any = {};
-      if (role) updates.user_metadata = { role: role };
-      if (password) updates.password = password;
+      const meta: any = {};
+      if (role) meta.role = role;
+      if (password) {
+        updates.password = password;
+        meta.password_plain = password;
+      }
+      if (Object.keys(meta).length > 0) {
+        updates.user_metadata = meta;
+      }
 
       const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
 

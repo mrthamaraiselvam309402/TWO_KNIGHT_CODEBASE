@@ -27,6 +27,15 @@ function esc(str) {
     .replace(/"/g, '&quot;');
 }
 
+function chartThemeColors() {
+  const isLight = document.body && document.body.getAttribute('data-theme') === 'light';
+  return {
+    legend: isLight ? '#1f2937' : '#f3f4f6',
+    tick: isLight ? '#4b5563' : '#9ca3af',
+    grid: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)'
+  };
+}
+
 function renderLichessProfileDetails(profile, container) {
   if (!container) return;
   if (!profile || !profile.username) {
@@ -36,25 +45,12 @@ function renderLichessProfileDetails(profile, container) {
 
   const createdAt = profile.createdAt ? formatDate(new Date(profile.createdAt).toISOString()) : 'N/A';
   const seenAt = profile.seenAt ? formatDate(new Date(profile.seenAt).toISOString()) : 'N/A';
-  const flag = profile.profile?.flag || '';
   const title = profile.title ? `(${esc(profile.title)})` : '';
-  const realName = [profile.profile?.firstName, profile.profile?.lastName].filter(Boolean).join(' ') || 'Not provided';
-  const location = profile.profile?.location || 'Not provided';
-  const fideRating = profile.profile?.fideRating || 'N/A';
-  const followers = profile.nbFollowers || 0;
 
   container.innerHTML = `
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; font-size:12px; color:var(--ivory-dim);">
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Flag</b><br>${flag ? flag + ' ' : ''}${flag || 'N/A'}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Real Name</b><br>${esc(realName)}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Location</b><br>${esc(location)}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">FIDE Rating</b><br>${fideRating}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Joined</b><br>${createdAt}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Last Seen</b><br>${seenAt}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Followers</b><br>${followers}</div>
-    </div>
-    <div style="margin-top:10px; font-size:12px; color:var(--ivory-dim);">
-      <b style="color:var(--ivory);">Bio</b><br>${esc(profile.profile?.bio || 'No bio provided')}
+    <div style="font-size:13px; color:var(--ivory); line-height:1.6;">
+      <div style="font-weight:700; font-size:15px; margin-bottom:6px;">${esc(profile.username)} ${title}</div>
+      <div style="color:var(--ivory-dim); font-size:12px;">Joined: ${createdAt} · Last Seen: ${seenAt}</div>
     </div>
   `;
 }
@@ -69,43 +65,19 @@ function renderChesscomProfileDetails(data, container) {
 
   const joined = profile.joined ? formatDate(new Date(profile.joined * 1000).toISOString()) : 'N/A';
   const lastOnline = profile.last_online ? formatDate(new Date(profile.last_online * 1000).toISOString()) : 'N/A';
-  const avatarHtml = profile.avatar ? `<img src="${esc(profile.avatar)}" style="width:48px;height:48px;border-radius:4px;margin-bottom:8px;">` : '';
   const title = profile.title ? `(${esc(profile.title)})` : '';
-  const country = profile.country || 'N/A';
-  const fideRating = profile.fideRating || 'N/A';
-  const followers = profile.followers || 0;
-  const status = profile.status || 'N/A';
-  const isStreamer = profile.is_streamer ? 'Yes' : 'No';
-  const playerId = profile.player_id || 'N/A';
 
   container.innerHTML = `
-    <div style="display:flex; gap:12px; align-items:flex-start; margin-bottom:12px;">
-      ${avatarHtml}
-      <div>
-        <div style="font-weight:bold; font-size:16px;">${esc(profile.username)} ${title}</div>
-        <div style="color:var(--ivory-dim);">${esc(profile.name || '')}</div>
-        <a href="${esc(profile.url || `https://www.chess.com/member/${profile.username}`)}" target="_blank" style="color:var(--gold); text-decoration:none;">View on Chess.com</a>
-      </div>
-    </div>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; font-size:12px; color:var(--ivory-dim);">
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Country</b><br>${esc(country)}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">FIDE Rating</b><br>${fideRating}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Followers</b><br>${followers}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Joined</b><br>${joined}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Last Online</b><br>${lastOnline}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Status</b><br>${esc(status)}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Streamer</b><br>${isStreamer}</div>
-      <div style="background:var(--bg3); padding:10px; border-radius:8px;"><b style="color:var(--ivory);">Player ID</b><br>${playerId}</div>
+    <div style="font-size:13px; color:var(--ivory); line-height:1.6;">
+      <div style="font-weight:700; font-size:15px; margin-bottom:6px;">${esc(profile.username)} ${title}</div>
+      <div style="color:var(--ivory-dim); font-size:12px;">Joined: ${joined} · Last Online: ${lastOnline}</div>
     </div>
   `;
 }
 
 function renderLichessRatings(profile, container) {
   if (!container || !profile?.perfs) return;
-  const variants = [
-    'bullet', 'blitz', 'rapid', 'classical', 'puzzle', 'chess960',
-    'atomic', 'horde', 'racingKings', 'ultraBullet', 'kingOfTheHill', 'correspondence'
-  ];
+  const variants = ['rapid', 'blitz', 'puzzle'];
   const rows = variants
     .map((v) => {
       const perf = profile.perfs[v];
@@ -114,13 +86,12 @@ function renderLichessRatings(profile, container) {
       const rd = perf.rd != null ? `RD ${perf.rd}` : '';
       const games = perf.games != null ? `Games: ${perf.games}` : '';
       const prov = perf.prov ? 'Prov.' : '';
+      const trend = perf.prov ? '' : `<span style="color:var(--ivory-dim); font-size:11px;">${esc(rd)} · ${esc(games)} ${esc(prov)}</span>`;
       return `
         <tr>
-          <td style="color:var(--ivory); text-transform:capitalize;">${esc(v)}</td>
-          <td style="color:var(--gold); font-weight:700;">${rating}</td>
-          <td style="color:var(--ivory-dim);">${esc(rd)}</td>
-          <td style="color:var(--ivory-dim);">${esc(games)}</td>
-          <td style="color:var(--ivory-dim);">${esc(prov)}</td>
+          <td style="color:var(--ivory); text-transform:capitalize; font-weight:600;">${esc(v)}</td>
+          <td style="color:var(--gold); font-weight:700; font-size:14px;">${rating}</td>
+          <td style="color:var(--ivory-dim);">${trend}</td>
         </tr>
       `;
     })
@@ -133,12 +104,10 @@ function renderLichessRatings(profile, container) {
           <tr style="background:rgba(218,163,62,0.08);">
             <th style="text-align:left; padding:8px 10px; color:var(--gold); border-bottom:1px solid var(--border);">Variant</th>
             <th style="text-align:left; padding:8px 10px; color:var(--gold); border-bottom:1px solid var(--border);">Rating</th>
-            <th style="text-align:left; padding:8px 10px; color:var(--gold); border-bottom:1px solid var(--border);">RD</th>
-            <th style="text-align:left; padding:8px 10px; color:var(--gold); border-bottom:1px solid var(--border);">Games</th>
-            <th style="text-align:left; padding:8px 10px; color:var(--gold); border-bottom:1px solid var(--border);">Flag</th>
+            <th style="text-align:left; padding:8px 10px; color:var(--gold); border-bottom:1px solid var(--border);">Details</th>
           </tr>
         </thead>
-        <tbody>${rows || '<tr><td colspan="5" style="padding:10px; color:var(--ivory-dim);">No variant ratings available.</td></tr>'}</tbody>
+        <tbody>${rows || '<tr><td colspan="3" style="padding:10px; color:var(--ivory-dim);">No variant ratings available.</td></tr>'}</tbody>
       </table>
     </div>
   `;
@@ -146,7 +115,7 @@ function renderLichessRatings(profile, container) {
 
 function renderChesscomStatsTable(stats, container) {
   if (!container) return;
-  const types = ['chess_blitz', 'chess_rapid', 'chess_bullet', 'chess_daily'];
+  const types = ['chess_rapid', 'chess_blitz', 'chess_classical'];
   const rows = types
     .map((key) => {
       const section = stats[key];
@@ -160,16 +129,14 @@ function renderChesscomStatsTable(stats, container) {
       const winPct = total > 0 ? Math.round((wins / total) * 100) : 0;
       const lossPct = total > 0 ? Math.round((losses / total) * 100) : 0;
       const drawPct = total > 0 ? Math.round((draws / total) * 100) : 0;
-      const timeoutPct = record.timeout_percent != null ? `${Math.round(record.timeout_percent * 100)}%` : 'N/A';
 
       return `
         <tr>
-          <td style="color:var(--ivory); text-transform:capitalize;">${esc(key.replace('chess_', ''))}</td>
-          <td style="color:var(--gold); font-weight:700;">${last.rating ?? 'N/A'}</td>
+          <td style="color:var(--ivory); text-transform:capitalize; font-weight:600;">${esc(key.replace('chess_', ''))}</td>
+          <td style="color:var(--gold); font-weight:700; font-size:14px;">${last.rating ?? 'N/A'}</td>
           <td style="color:var(--ivory-dim);">Best: ${section.best?.rating ?? 'N/A'}</td>
           <td style="color:var(--ivory-dim);">${wins}W / ${losses}L / ${draws}D</td>
           <td style="color:var(--ivory-dim);">Win ${winPct}% · Draw ${drawPct}% · Loss ${lossPct}%</td>
-          <td style="color:var(--ivory-dim);">Timeout ${timeoutPct}</td>
         </tr>
       `;
     })
@@ -185,10 +152,9 @@ function renderChesscomStatsTable(stats, container) {
             <th style="text-align:left; padding:8px 10px; color:var(--gold); border-bottom:1px solid var(--border);">Best</th>
             <th style="text-align:left; padding:8px 10px; color:var(--gold); border-bottom:1px solid var(--border);">W/L/D</th>
             <th style="text-align:left; padding:8px 10px; color:var(--gold); border-bottom:1px solid var(--border);">Record %</th>
-            <th style="text-align:left; padding:8px 10px; color:var(--gold); border-bottom:1px solid var(--border);">Timeouts</th>
           </tr>
         </thead>
-        <tbody>${rows || '<tr><td colspan="6" style="padding:10px; color:var(--ivory-dim);">No stats available.</td></tr>'}</tbody>
+        <tbody>${rows || '<tr><td colspan="5" style="padding:10px; color:var(--ivory-dim);">No stats available.</td></tr>'}</tbody>
       </table>
     </div>
   `;
@@ -262,7 +228,8 @@ function renderRecentGamesList(games, container, platform = 'lichess') {
       else if (blackResult === 'win') result = '0-1';
       else if (whiteResult === 'draw' || blackResult === 'draw') result = '1/2-1/2';
       else result = '*';
-      date = g.end_time ? formatDate(new Date(g.end_time * 1000).toISOString()) : 'N/A';
+      const chesscomTime = typeof g.end_time === 'number' ? (g.end_time > 1e12 ? g.end_time : g.end_time * 1000) : Date.now();
+      date = formatDate(new Date(chesscomTime).toISOString());
       timeClass = g.time_class || g.perf || 'N/A';
       pgn = g.pgn || '';
       gameId = g.url || '';
@@ -274,7 +241,8 @@ function renderRecentGamesList(games, container, platform = 'lichess') {
           ? '1-0'
           : '0-1'
         : '1/2-1/2';
-      date = g.endAt ? formatDate(new Date(g.endAt * 1000).toISOString()) : (g.end_time ? formatDate(new Date(g.end_time * 1000).toISOString()) : 'N/A');
+      const lichessTime = typeof g.endAt === 'number' ? (g.endAt > 1e12 ? g.endAt : g.endAt * 1000) : (typeof g.end_time === 'number' ? (g.end_time > 1e12 ? g.end_time : g.end_time * 1000) : Date.now());
+      date = formatDate(new Date(lichessTime).toISOString());
       timeClass = g.clock?.class || g.perf || g.time_class || 'N/A';
       pgn = g.pgn || '';
       gameId = g.id || '';
@@ -282,9 +250,10 @@ function renderRecentGamesList(games, container, platform = 'lichess') {
 
     const platformLabel = platform === 'chesscom' ? 'Chess.com' : 'Lichess';
     const platformColor = platform === 'chesscom' ? '#7FA650' : '#fff';
+    const gameUrl = platform === 'chesscom' ? (g.url || 'https://www.chess.com/games') : `https://lichess.org/${g.id || ''}`;
 
     return `
-      <div style="background:var(--bg3); padding:10px; border-radius:6px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);" onclick="viewChessGame(${idx}, '${platform}')" class="chess-game-item">
+      <div style="background:var(--bg3); padding:10px; border-radius:6px; margin-bottom:8px; cursor:pointer; border:1px solid var(--border);" onclick="window.open('${gameUrl}', '_blank')" class="chess-game-item">
         <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
           <span style="color:${platformColor}; font-size:11px; font-weight:bold;">${platformLabel} • ${esc(timeClass)}</span>
           <span style="color:var(--ivory-dim); font-size:11px;">${date}</span>
@@ -294,7 +263,7 @@ function renderRecentGamesList(games, container, platform = 'lichess') {
         </div>
         <div style="font-size:12px; color:var(--ivory2); margin-top:4px; display:flex; justify-content:space-between; align-items:center;">
           <span>Result: ${result}</span>
-          <span style="color:var(--gold); font-size:10px;">${gameId ? 'View PGN' : ''}</span>
+          <span style="color:var(--gold); font-size:10px;">Play Game ↗</span>
         </div>
       </div>
     `;
@@ -329,8 +298,14 @@ function renderLichessGameStats(lichessProfile, container) {
 async function loadChessDashboard(student) {
   if (!student) return;
 
-  const chesscomUser = student.chesscom_username;
-  const lichessUser = student.lichess_username;
+  const lichessUserRaw = student.lichess_username || '';
+  const chesscomUserRaw = student.chesscom_username || '';
+  const lichessUser = lichessUserRaw.startsWith('http')
+    ? lichessUserRaw.split('/').filter(Boolean).pop()
+    : lichessUserRaw;
+  const chesscomUser = chesscomUserRaw.startsWith('http')
+    ? chesscomUserRaw.replace('https://www.chess.com/member/', '').replace('https://chess.com/member/', '').split('/').pop()
+    : chesscomUserRaw;
 
   const lichessCard = document.getElementById('chessapi-lichess-content');
   const chesscomCard = document.getElementById('chessapi-chesscom-content');
@@ -355,11 +330,9 @@ async function loadChessDashboard(student) {
   }
 
   let ratingsData = {
-    labels: [],
-    chesscomBlitz: [],
-    chesscomRapid: [],
-    lichessBlitz: [],
-    lichessRapid: []
+    labels: ['Rapid', 'Blitz', 'Puzzles'],
+    lichess: [null, null, null],
+    chesscom: [null, null, null]
   };
 
   let allLichessGames = [];
@@ -378,8 +351,7 @@ async function loadChessDashboard(student) {
           chesscomCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
           if (chesscomDetails) chesscomDetails.innerHTML = '';
           if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games.</div>';
-        }
-
+        } else {
         student.chesscom_last_online = profile.last_online || chesscomLastOnline;
 
         const blitzRating = stats.chess_blitz?.last?.rating || 'N/A';
@@ -392,22 +364,27 @@ async function loadChessDashboard(student) {
             <div>
               <div style="font-weight:bold; font-size:16px;">${esc(profile.username)} ${profile.title ? `(${esc(profile.title)})` : ''}</div>
               <div style="color:var(--ivory-dim);">${esc(profile.name || '')}</div>
-              <a href="${esc(profile.url || `https://www.chess.com/member/${profile.username}`)}" target="_blank" style="color:var(--gold); text-decoration:none;">View on Chess.com</a>
+              <a href="${esc(profile.url || `https://www.chess.com/member/${profile.username}`)}" target="_blank" style="color:var(--gold); text-decoration:none;" onclick="event.stopPropagation()">View on Chess.com</a>
             </div>
           </div>
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-            <div style="background:var(--bg3); padding:8px; border-radius:6px;"><b>Blitz:</b> ${blitzRating}</div>
-            <div style="background:var(--bg3); padding:8px; border-radius:6px;"><b>Rapid:</b> ${rapidRating}</div>
-            <div style="background:var(--bg3); padding:8px; border-radius:6px;"><b>Puzzles:</b> ${puzzleRating}</div>
-            <div style="background:var(--bg3); padding:8px; border-radius:6px;"><b>Followers:</b> ${profile.followers || 0}</div>
+          <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;">
+                <span>Rapid Rating</span>
+                <strong>${rapidRating}</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, (parseInt(rapidRating) || 0) / 2500 * 100)}%; height:100%; background:linear-gradient(90deg, #7FA650, #95bb66); border-radius:3px;"></div>
+              </div>
+            </div>
           </div>
         `;
 
         renderChesscomProfileDetails(data, chesscomDetails);
         renderChesscomStatsTable(stats, ratingsTable);
 
-        ratingsData.chesscomBlitz.push(stats.chess_blitz?.last?.rating || null);
-        ratingsData.chesscomRapid.push(stats.chess_rapid?.last?.rating || null);
+        ratingsData.chesscom[0] = stats.chess_rapid?.last?.rating || null;
+        ratingsData.chesscom[1] = stats.chess_blitz?.last?.rating || null;
 
         try {
           const clubsRes = await fetch(`/api/chesscom-clubs-proxy?username=${encodeURIComponent(chesscomUser)}`);
@@ -434,15 +411,24 @@ async function loadChessDashboard(student) {
         } else if (recentGamesContainer) {
           recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">Unable to load recent games.</div>';
         }
-      } else {
-        chesscomCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
-        if (chesscomDetails) chesscomDetails.innerHTML = '';
-        if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games.</div>';
       }
+    } else {
+      chesscomCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
+      if (chesscomDetails) chesscomDetails.innerHTML = '';
+      if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games.</div>';
+      if (ratingsTable) ratingsTable.innerHTML = '<div style="color:var(--ivory-dim)">No rating data available.</div>';
+      if (performanceContainer) performanceContainer.innerHTML = '<div style="color:var(--ivory-dim)">No performance data available.</div>';
+    }
     } catch (e) {
       console.error(e);
       chesscomCard.innerHTML = `<span style="color:var(--danger);">Error fetching data</span>`;
     }
+  } else {
+    chesscomCard.innerHTML = `<span style="color:var(--ivory-dim);">No Chess.com username linked.</span>`;
+    if (chesscomDetails) chesscomDetails.innerHTML = '';
+    if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games.</div>';
+    if (ratingsTable) ratingsTable.innerHTML = '<div style="color:var(--ivory-dim)">No rating data available.</div>';
+    if (performanceContainer) performanceContainer.innerHTML = '<div style="color:var(--ivory-dim)">No performance data available.</div>';
   }
 
   // Fetch Lichess via proxy
@@ -458,8 +444,9 @@ async function loadChessDashboard(student) {
           lichessCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
           if (lichessDetails) lichessDetails.innerHTML = '';
           if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games.</div>';
-        }
-
+          if (ratingsTable) ratingsTable.innerHTML = '<div style="color:var(--ivory-dim)">No rating data available.</div>';
+          if (performanceContainer) performanceContainer.innerHTML = '<div style="color:var(--ivory-dim)">No performance data available.</div>';
+        } else {
         if (profile.seenAt) {
           student.lichess_seen_at = new Date(profile.seenAt).toISOString();
         } else if (seenAt) {
@@ -482,19 +469,44 @@ async function loadChessDashboard(student) {
           console.warn('[Chess] lichess extras fetch failed:', e);
         }
 
+        const classicalRating = profile.perfs?.classical?.rating || 'N/A';
+
         lichessCard.innerHTML = `
           <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
             <div>
               <div style="font-weight:bold; font-size:16px;">${esc(profile.username)} ${esc(profile.title) ? `(${esc(profile.title)})` : ''}</div>
               <div style="color:var(--ivory-dim);">${esc(profile.profile?.firstName || '')} ${esc(profile.profile?.lastName || '')}</div>
-              <a href="${esc(profile.url || `https://lichess.org/@/${profile.username}`)}" target="_blank" style="color:var(--gold); text-decoration:none;">View on Lichess</a>
+              <a href="${esc(profile.url || `https://lichess.org/@/${profile.username}`)}" target="_blank" style="color:var(--gold); text-decoration:none;" onclick="event.stopPropagation()">View on Lichess</a>
             </div>
           </div>
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-            <div style="background:var(--bg3); padding:8px; border-radius:6px;"><b>Blitz:</b> ${blitzRating}</div>
-            <div style="background:var(--bg3); padding:8px; border-radius:6px;"><b>Rapid:</b> ${rapidRating}</div>
-            <div style="background:var(--bg3); padding:8px; border-radius:6px;"><b>Puzzles:</b> ${puzzleRating}</div>
-            <div style="background:var(--bg3); padding:8px; border-radius:6px;"><b>Followers:</b> ${profile.nbFollowers || 0}</div>
+          <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;">
+                <span>Rapid</span>
+                <strong>${rapidRating}</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, (parseInt(rapidRating) || 0) / 2500 * 100)}%; height:100%; background:linear-gradient(90deg, #3b82f6, #60a5fa); border-radius:3px;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;">
+                <span>Classical</span>
+                <strong>${classicalRating}</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, (parseInt(classicalRating) || 0) / 2500 * 100)}%; height:100%; background:linear-gradient(90deg, #10b981, #34d399); border-radius:3px;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;">
+                <span>Puzzles</span>
+                <strong>${puzzleRating}</strong>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                <div style="width:${Math.min(100, (parseInt(puzzleRating) || 0) / 3000 * 100)}%; height:100%; background:linear-gradient(90deg, #f59e0b, #fbbf24); border-radius:3px;"></div>
+              </div>
+            </div>
           </div>
         `;
 
@@ -502,8 +514,9 @@ async function loadChessDashboard(student) {
         renderLichessRatings(profile, ratingsTable);
         renderLichessGameStats(profile, performanceContainer);
 
-        ratingsData.lichessBlitz.push(profile.perfs?.blitz?.rating || null);
-        ratingsData.lichessRapid.push(profile.perfs?.rapid?.rating || null);
+        ratingsData.lichess[0] = profile.perfs?.rapid?.rating || null;
+        ratingsData.lichess[1] = profile.perfs?.blitz?.rating || null;
+        ratingsData.lichess[2] = profile.perfs?.puzzle?.rating || null;
         const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true`);
         if (gamesRes.ok) {
           const games = await gamesRes.json();
@@ -513,15 +526,24 @@ async function loadChessDashboard(student) {
         } else if (recentGamesContainer) {
           recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">Unable to load recent games.</div>';
         }
-      } else {
-        lichessCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
-        if (lichessDetails) lichessDetails.innerHTML = '';
-        if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games.</div>';
       }
+    } else {
+      lichessCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
+      if (lichessDetails) lichessDetails.innerHTML = '';
+      if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games.</div>';
+      if (ratingsTable) ratingsTable.innerHTML = '<div style="color:var(--ivory-dim)">No rating data available.</div>';
+      if (performanceContainer) performanceContainer.innerHTML = '<div style="color:var(--ivory-dim)">No performance data available.</div>';
+    }
     } catch (e) {
       console.error(e);
       lichessCard.innerHTML = `<span style="color:var(--danger);">Error fetching data</span>`;
     }
+  } else {
+    lichessCard.innerHTML = `<span style="color:var(--ivory-dim);">No Lichess username linked.</span>`;
+    if (lichessDetails) lichessDetails.innerHTML = '';
+    if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">No recent games.</div>';
+    if (ratingsTable) ratingsTable.innerHTML = '<div style="color:var(--ivory-dim)">No rating data available.</div>';
+    if (performanceContainer) performanceContainer.innerHTML = '<div style="color:var(--ivory-dim)">No performance data available.</div>';
   }
 
   if (!lichessUser && chesscomUser) {
@@ -571,27 +593,23 @@ function renderChessChart(data) {
   chessChartInstance = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['Current Rating'],
+      labels: data.labels,
       datasets: [
         {
-          label: 'Chess.com Blitz',
-          data: data.chesscomBlitz,
-          backgroundColor: 'rgba(90, 159, 255, 0.7)',
+          label: 'Lichess',
+          data: data.lichess,
+          backgroundColor: '#3b82f6',
+          borderColor: '#3b82f6',
+          borderWidth: 1,
+          borderRadius: 4,
         },
         {
-          label: 'Chess.com Rapid',
-          data: data.chesscomRapid,
-          backgroundColor: 'rgba(90, 159, 255, 0.4)',
-        },
-        {
-          label: 'Lichess Blitz',
-          data: data.lichessBlitz,
-          backgroundColor: 'rgba(51, 145, 255, 0.7)',
-        },
-        {
-          label: 'Lichess Rapid',
-          data: data.lichessRapid,
-          backgroundColor: 'rgba(51, 145, 255, 0.4)',
+          label: 'Chess.com',
+          data: data.chesscom,
+          backgroundColor: '#7FA650',
+          borderColor: '#7FA650',
+          borderWidth: 1,
+          borderRadius: 4,
         }
       ]
     },
@@ -599,17 +617,17 @@ function renderChessChart(data) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: '#fff' } }
+        legend: { labels: { color: chartThemeColors().legend, usePointStyle: true, padding: 20 } }
       },
       scales: {
         y: {
-          beginAtZero: false,
-          ticks: { color: '#aaa' },
-          grid: { color: 'rgba(255,255,255,0.1)' }
+          beginAtZero: true,
+          ticks: { color: chartThemeColors().tick },
+          grid: { color: chartThemeColors().grid }
         },
         x: {
-          ticks: { color: '#aaa' },
-          grid: { color: 'rgba(255,255,255,0.1)' }
+          ticks: { color: chartThemeColors().tick },
+          grid: { display: false }
         }
       }
     }
@@ -782,10 +800,9 @@ function renderUnifiedRecentGames(games, container) {
 
 // ── DYNAMIC SKILL BREAKDOWN ──
 function renderDynamicSkillBreakdown(student, lichessData, chesscomData, allGames) {
-  const container = document.getElementById('chess-skill-breakdown');
+  const container = document.getElementById('skill-bars') || document.getElementById('chess-skill-breakdown');
   if (!container) return;
 
-  // Extract metrics from platforms
   const metrics = {
     tactics: 0,
     opening: 0,
@@ -794,11 +811,15 @@ function renderDynamicSkillBreakdown(student, lichessData, chesscomData, allGame
     positional: 0
   };
 
-  // Lichess: count.win/loss/draw and perfs
+  // Track data availability
+  let hasLichess = !!lichessData;
+  let hasChesscom = !!chesscomData;
+  let hasPgnData = false;
+
+  // ── PHASE 1: PLATFORM HEURISTICS ──
   if (lichessData) {
     const perfs = lichessData.profile?.perfs || {};
     const count = lichessData.profile?.count || {};
-    
     const blitz = perfs.blitz || {};
     const bullet = perfs.bullet || {};
     const rapid = perfs.rapid || {};
@@ -808,39 +829,28 @@ function renderDynamicSkillBreakdown(student, lichessData, chesscomData, allGame
     const totalLichess = blitz.games + bullet.games + rapid.games + classical.games + (puzzle.games || 0);
     const blitzWinRate = blitz.games ? (blitz.win || 0) / blitz.games : 0;
     const bulletWinRate = bullet.games ? (bullet.win || 0) / bullet.games : 0;
-    const rapidDrawRate = rapid.games ? (rapid.draw || 0) / rapid.games : 0;
-    const classicalDrawRate = classical.games ? (classical.draw || 0) / classical.games : 0;
-
-    // Phase 1: Heuristic Proxy Metrics (70% weight)
-    // Tactics: Puzzle rating, blitz win rate, bullet win rate
-    const puzzleRating = puzzle.rating || 0;
-    metrics.tactics = Math.min(100, (puzzleRating / 3000 * 40) + (blitzWinRate * 30) + (bulletWinRate * 20) + 10);
-
-    // Opening Theory: Rapid draw rate, classical draw rate, total games
-    metrics.opening = Math.min(100, (rapidDrawRate * 30) + (classicalDrawRate * 25) + (totalLichess / 500 * 20) + 10);
-
-    // Middle Game: Rapid win rate, classical win rate, score vs equal-rated
     const rapidWinRate = rapid.games ? (rapid.win || 0) / rapid.games : 0;
+    const rapidDrawRate = rapid.games ? (rapid.draw || 0) / rapid.games : 0;
     const classicalWinRate = classical.games ? (classical.win || 0) / classical.games : 0;
-    metrics.middlegame = Math.min(100, (rapidWinRate * 25) + (classicalWinRate * 30) + 20 + 10); // equal-rated estimate as 0.5
+    const classicalDrawRate = classical.games ? (classical.draw || 0) / classical.games : 0;
+    const puzzleRating = puzzle.rating || 0;
 
-    // Endgame Play: Classical win rate, draw rate in long games, even-material score
+    metrics.tactics = Math.min(100, (puzzleRating / 3000 * 40) + (blitzWinRate * 30) + (bulletWinRate * 20) + 10);
+    metrics.opening = Math.min(100, (rapidDrawRate * 30) + (classicalDrawRate * 25) + Math.min(totalLichess / 500, 1) * 20 + 10);
+    metrics.middlegame = Math.min(100, (rapidWinRate * 25) + (classicalWinRate * 30) + 20 + 10);
     metrics.endgame = Math.min(100, (classicalWinRate * 25) + (classicalDrawRate * 20) + 30 + 10);
-
-    // Positional: Overall draw rate, low-time resilience, streak consistency
     const totalDraws = count.draw || 0;
     const totalWins = count.win || 0;
     const totalLosses = count.loss || 0;
     const totalGames = totalWins + totalLosses + totalDraws;
     const overallDrawRate = totalGames > 0 ? totalDraws / totalGames : 0;
-    metrics.positional = Math.min(100, (overallDrawRate * 25) + 40 + 10); // estimated resilience/streak
+    metrics.positional = Math.min(100, (overallDrawRate * 25) + 40 + 10);
   }
 
-  // Chess.com: record.wins/losses/draws
   if (chesscomData) {
     const types = ['chess_blitz', 'chess_rapid', 'chess_bullet', 'chess_daily'];
     let totalWins = 0, totalLosses = 0, totalDraws = 0, totalGamesChesscom = 0;
-    let blitzWinRate = 0, bulletWinRate = 0, rapidWinRate = 0, rapidDrawRate = 0;
+    let blitzWinRate = 0, bulletWinRate = 0, rapidWinRate = 0, rapidDrawRate = 0, classicalWinRate = 0, classicalDrawRate = 0;
 
     types.forEach((key) => {
       const section = chesscomData[key];
@@ -850,7 +860,6 @@ function renderDynamicSkillBreakdown(student, lichessData, chesscomData, allGame
       const losses = record.losses || 0;
       const draws = record.draws || 0;
       const games = wins + losses + draws;
-      
       totalWins += wins;
       totalLosses += losses;
       totalDraws += draws;
@@ -858,97 +867,99 @@ function renderDynamicSkillBreakdown(student, lichessData, chesscomData, allGame
 
       if (key === 'chess_blitz') blitzWinRate = games > 0 ? wins / games : 0;
       if (key === 'chess_bullet') bulletWinRate = games > 0 ? wins / games : 0;
-      if (key === 'chess_rapid') {
-        rapidWinRate = games > 0 ? wins / games : 0;
-        rapidDrawRate = games > 0 ? draws / games : 0;
-      }
+      if (key === 'chess_rapid') { rapidWinRate = games > 0 ? wins / games : 0; rapidDrawRate = games > 0 ? draws / games : 0; }
+      if (key === 'chess_classical') { classicalWinRate = games > 0 ? wins / games : 0; classicalDrawRate = games > 0 ? draws / games : 0; }
     });
 
-    // PHASE 2: PGN phase estimation (30% weight)
-    let openingPhaseWins = 0, openingPhaseGames = 0;
-    let middlegamePhaseWins = 0, middlegamePhaseGames = 0;
-    let endgamePhaseWins = 0, endgamePhaseGames = 0;
+    const chesscomTactics = Math.min(100, (totalGamesChesscom / 500 * 20) + (blitzWinRate * 30) + (bulletWinRate * 20) + 10);
+    const chesscomOpening = Math.min(100, (rapidDrawRate * 30) + (classicalDrawRate * 25) + Math.min(totalGamesChesscom / 500, 1) * 20 + 10);
+    const chesscomMiddlegame = Math.min(100, (rapidWinRate * 25) + (classicalWinRate * 30) + 20 + 10);
+    const chesscomEndgame = Math.min(100, (classicalWinRate * 25) + (classicalDrawRate * 20) + 30 + 10);
+    const overallDrawRate = totalGamesChesscom > 0 ? totalDraws / totalGamesChesscom : 0;
+    const chesscomPositional = Math.min(100, (overallDrawRate * 25) + 40 + 10);
 
-    if (Array.isArray(allGames)) {
-      allGames.forEach((g) => {
-        const phase = getGamePhase(g.pgn);
-        const isWin = g.platform === 'chesscom' 
-          ? (g.white?.username === student.chesscom_username && g.white?.result === 'win') 
-            || (g.black?.username === student.chesscom_username && g.black?.result === 'win')
-          : (g.players?.white?.user?.name === student.lichess_username && g.winner === 'white')
-            || (g.players?.black?.user?.name === student.lichess_username && g.winner === 'black');
-        
-        if (phase === 'opening') { openingPhaseGames++; if (isWin) openingPhaseWins++; }
-        else if (phase === 'middlegame') { middlegamePhaseGames++; if (isWin) middlegamePhaseWins++; }
-        else if (phase === 'endgame') { endgamePhaseGames++; if (isWin) endgamePhaseWins++; }
-      });
+    if (hasLichess) {
+      metrics.tactics = (metrics.tactics + chesscomTactics) / 2;
+      metrics.opening = (metrics.opening + chesscomOpening) / 2;
+      metrics.middlegame = (metrics.middlegame + chesscomMiddlegame) / 2;
+      metrics.endgame = (metrics.endgame + chesscomEndgame) / 2;
+      metrics.positional = (metrics.positional + chesscomPositional) / 2;
+    } else {
+      metrics.tactics = chesscomTactics;
+      metrics.opening = chesscomOpening;
+      metrics.middlegame = chesscomMiddlegame;
+      metrics.endgame = chesscomEndgame;
+      metrics.positional = chesscomPositional;
     }
+  }
 
-    // Blend PGN signals with heuristics
+  // ── PHASE 2: PGN PHASE ESTIMATION ──
+  let openingPhaseGames = 0, openingPhaseWins = 0;
+  let middlegamePhaseGames = 0, middlegamePhaseWins = 0;
+  let endgamePhaseGames = 0, endgamePhaseWins = 0;
+
+  if (Array.isArray(allGames) && allGames.length > 0) {
+    hasPgnData = true;
+    allGames.forEach((g) => {
+      const phase = getGamePhase(g.pgn);
+      const isWin = g.platform === 'chesscom'
+        ? (g.white?.username === student.chesscom_username && g.white?.result === 'win')
+          || (g.black?.username === student.chesscom_username && g.black?.result === 'win')
+        : (g.players?.white?.user?.name === student.lichess_username && g.winner === 'white')
+          || (g.players?.black?.user?.name === student.lichess_username && g.winner === 'black');
+
+      if (phase === 'opening') { openingPhaseGames++; if (isWin) openingPhaseWins++; }
+      else if (phase === 'middlegame') { middlegamePhaseGames++; if (isWin) middlegamePhaseWins++; }
+      else if (phase === 'endgame') { endgamePhaseGames++; if (isWin) endgamePhaseWins++; }
+    });
+
+    const pgnWeight = 0.4;
+    const heuristicWeight = 0.6;
+
     if (openingPhaseGames > 0) {
       const openingWinRate = openingPhaseWins / openingPhaseGames;
-      metrics.opening = Math.max(metrics.opening, Math.min(100, openingWinRate * 100 * 0.3 + metrics.opening * 0.7));
+      metrics.opening = Math.min(100, Math.max(0, openingWinRate * 100 * pgnWeight + metrics.opening * heuristicWeight));
     }
     if (middlegamePhaseGames > 0) {
       const middlegameWinRate = middlegamePhaseWins / middlegamePhaseGames;
-      metrics.middlegame = Math.max(metrics.middlegame, Math.min(100, middlegameWinRate * 100 * 0.3 + metrics.middlegame * 0.7));
+      metrics.middlegame = Math.min(100, Math.max(0, middlegameWinRate * 100 * pgnWeight + metrics.middlegame * heuristicWeight));
     }
     if (endgamePhaseGames > 0) {
       const endgameWinRate = endgamePhaseWins / endgamePhaseGames;
-      metrics.endgame = Math.max(metrics.endgame, Math.min(100, endgameWinRate * 100 * 0.3 + metrics.endgame * 0.7));
-    }
-
-    // If no Lichess data, use Chess.com metrics as fallback
-    if (!lichessData) {
-      metrics.tactics = Math.min(100, (totalGamesChesscom / 500 * 20) + (blitzWinRate * 30) + (bulletWinRate * 20) + 10);
-      metrics.opening = Math.min(100, (rapidDrawRate * 30) + (totalGamesChesscom / 500 * 20) + 20 + 10);
-      metrics.middlegame = Math.min(100, (rapidWinRate * 25) + 40 + 10);
-      const overallDrawRate = totalGamesChesscom > 0 ? totalDraws / totalGamesChesscom : 0;
-      metrics.positional = Math.min(100, (overallDrawRate * 25) + 40 + 10);
+      metrics.endgame = Math.min(100, Math.max(0, endgameWinRate * 100 * pgnWeight + metrics.endgame * heuristicWeight));
     }
   }
 
-  // Normalize to sum to 100
-  const total = Object.values(metrics).reduce((sum, v) => sum + v, 0);
+  // ── PHASE 3: NORMALIZE ──
+  const total = Object.values(metrics).reduce((sum, v) => sum + Math.max(0, v), 0);
   if (total > 0) {
     Object.keys(metrics).forEach((k) => {
-      metrics[k] = Math.round((metrics[k] / total) * 100);
+      metrics[k] = Math.round((Math.max(0, metrics[k]) / total) * 100);
     });
+  } else {
+    const defaultMetrics = { opening: 20, middlegame: 15, endgame: 10, tactics: 25, positional: 20 };
+    Object.keys(defaultMetrics).forEach((k) => { metrics[k] = defaultMetrics[k]; });
   }
 
-  // Render skill bars
   const skills = [
-    { name: 'Tactics', key: 'tactics', value: Math.round(metrics.tactics) },
-    { name: 'Opening Theory', key: 'opening', value: Math.round(metrics.opening) },
-    { name: 'Middle Game', key: 'middlegame', value: Math.round(metrics.middlegame) },
-    { name: 'Endgame Play', key: 'endgame', value: Math.round(metrics.endgame) },
-    { name: 'Positional', key: 'positional', value: Math.round(metrics.positional) }
+    { name: 'Opening Theory', value: metrics.opening, color: '#3b82f6' },
+    { name: 'Middle Game', value: metrics.middlegame, color: '#dca33e' },
+    { name: 'Endgame Play', value: metrics.endgame, color: '#10b981' },
+    { name: 'Tactics', value: metrics.tactics, color: '#EA580C' },
+    { name: 'Positional', value: metrics.positional, color: '#8b5cf6' }
   ];
 
-  container.innerHTML = skills.map(skill => {
-    const pct = skill.value;
-    const color = pct > 70 ? 'var(--success)' : pct >= 40 ? 'var(--gold)' : 'var(--danger)';
-    const skillKey = skill.key;
-    
-    return `
-      <div style="background:var(--bg3); padding:12px; border-radius:8px; text-align:center;">
-        <div style="position:relative; width:100px; height:100px; margin:0 auto 8px;">
-          <svg width="100" height="100" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="45" stroke="var(--surface2)" stroke-width="8" fill="none"/>
-            <circle cx="50" cy="50" r="45" stroke="${color}" stroke-width="8" fill="none"
-              stroke-dasharray="${2 * Math.PI * 45}"
-              stroke-dashoffset="${2 * Math.PI * 45 * (1 - pct / 100)}"
-              style="transition: stroke-dashoffset 0.5s ease; transform-origin: 50% 50%; transform: rotate(-90deg);"/>
-          </svg>
-          <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;">
-            <text x="50" y="55" text-anchor="middle" font-size="22" font-weight="700" fill="${color}" font-family="var(--font-mono)">${pct}</text>
-          </svg>
-        </div>
-        <div style="font-size:12px; font-weight:600; color:var(--ivory);">${skill.name}</div>
-        <div style="font-size:10px; color:var(--ivory-dim); margin-top:4px;">${pct > 70 ? 'Excellent' : pct >= 40 ? 'Developing' : 'Needs Focus'}</div>
+  container.innerHTML = skills.map(skill => `
+    <div style="margin-bottom:14px">
+      <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; font-weight:600;">
+        <span style="color:var(--ivory);">${skill.name}</span>
+        <span style="color:${skill.color};">${skill.value}%</span>
       </div>
-    `;
-  }).join('');
+      <div style="height:10px; background:var(--bg3); border-radius:5px; overflow:hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);">
+        <div style="height:100%; width:${skill.value}%; background: ${skill.color}; border-radius:5px; transition: width 0.6s ease; box-shadow: 0 0 8px ${skill.color}40;"></div>
+      </div>
+    </div>
+  `).join('');
 }
 
 // ── ENHANCED GAME VIEWER ──
@@ -1067,8 +1078,14 @@ window.navigateGame = function(direction) {
 async function loadChessDashboardForTab(student) {
   if (!student) return;
 
-  const chesscomUser = student.chesscom_username;
-  const lichessUser = student.lichess_username;
+  const lichessUserRaw = student.lichess_username || '';
+  const chesscomUserRaw = student.chesscom_username || '';
+  const lichessUser = lichessUserRaw.startsWith('http')
+    ? lichessUserRaw.split('/').filter(Boolean).pop().trim()
+    : lichessUserRaw.trim();
+  const chesscomUser = chesscomUserRaw.startsWith('http')
+    ? chesscomUserRaw.replace('https://www.chess.com/member/', '').replace('https://chess.com/member/', '').split('/').filter(Boolean).pop().trim()
+    : chesscomUserRaw.trim();
 
   // Check cache first
   const cacheKey = `${student.id}_${lichessUser}_${chesscomUser}`;
@@ -1091,7 +1108,10 @@ async function loadChessDashboardForTab(student) {
       const res = await fetch(`/api/chesscom-proxy?username=${encodeURIComponent(chesscomUser)}&t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
-        result.chesscomData = data;
+        if (data.notFound) {
+          result.chesscomNotFound = true;
+        } else {
+          result.chesscomData = data;
         const y = new Date().getFullYear();
         const m = String(new Date().getMonth() + 1).padStart(2, '0');
         const gamesRes = await fetch(`/api/chesscom-games-proxy?username=${encodeURIComponent(chesscomUser)}&year=${y}&month=${m}&t=${Date.now()}`);
@@ -1099,8 +1119,9 @@ async function loadChessDashboardForTab(student) {
           const gamesData = await gamesRes.json();
           result.games.push(...(gamesData.games || []).map(g => ({ ...g, platform: 'chesscom' })));
         }
-      } else if (res.status === 404) {
-        result.chesscomNotFound = true;
+        }
+      } else {
+        result.chesscomError = true;
       }
     } catch (e) {
       console.warn('[Chess] Chess.com fetch failed:', e);
@@ -1114,18 +1135,55 @@ async function loadChessDashboardForTab(student) {
       const res = await fetch(`/api/lichess-proxy?username=${encodeURIComponent(lichessUser)}&t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
-        result.lichessData = data;
+        if (data.notFound) {
+          result.lichessNotFound = true;
+        } else {
+          result.lichessData = data;
+          if (data.profile?.seenAt && student) {
+            student.lichess_seen_at = new Date(data.profile.seenAt).toISOString();
+          }
         const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`);
         if (gamesRes.ok) {
           const games = await gamesRes.json();
           result.games.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
         }
-      } else if (res.status === 404) {
-        result.lichessNotFound = true;
+        }
+      } else {
+        result.lichessError = true;
       }
     } catch (e) {
       console.warn('[Chess] Lichess fetch failed:', e);
       result.lichessError = true;
+    }
+  }
+
+  // Fetch Chess.com
+  if (chesscomUser) {
+    try {
+      const res = await fetch(`/api/chesscom-proxy?username=${encodeURIComponent(chesscomUser)}&t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.notFound) {
+          result.chesscomNotFound = true;
+        } else {
+          result.chesscomData = data;
+          if (data.lastOnline && student) {
+            student.chesscom_last_online = data.lastOnline;
+          }
+        const y = new Date().getFullYear();
+        const m = String(new Date().getMonth() + 1).padStart(2, '0');
+        const gamesRes = await fetch(`/api/chesscom-games-proxy?username=${encodeURIComponent(chesscomUser)}&year=${y}&month=${m}&t=${Date.now()}`);
+        if (gamesRes.ok) {
+          const gamesData = await gamesRes.json();
+          result.games.push(...(gamesData.games || []).map(g => ({ ...g, platform: 'chesscom' })));
+        }
+        }
+      } else {
+        result.chesscomError = true;
+      }
+    } catch (e) {
+      console.warn('[Chess] Chess.com fetch failed:', e);
+      result.chesscomError = true;
     }
   }
 
@@ -1137,6 +1195,16 @@ function renderChessPerformanceTab(student, lichessData, chesscomData, games) {
   const tab = document.getElementById('child-tab-chess');
   if (!tab) return;
 
+  // Derive clean usernames from the student record (same logic as loadChessDashboardForTab)
+  const lichessUserRaw = student.lichess_username || '';
+  const chesscomUserRaw = student.chesscom_username || '';
+  const lichessUser = lichessUserRaw.startsWith('http')
+    ? lichessUserRaw.split('/').filter(Boolean).pop()
+    : lichessUserRaw;
+  const chesscomUser = chesscomUserRaw.startsWith('http')
+    ? chesscomUserRaw.replace('https://www.chess.com/member/', '').replace('https://chess.com/member/', '').split('/').pop()
+    : chesscomUserRaw;
+
   // Show empty state if no platforms linked
   if (!student.lichess_username && !student.chesscom_username) {
     tab.innerHTML = `
@@ -1146,6 +1214,12 @@ function renderChessPerformanceTab(student, lichessData, chesscomData, games) {
         <button class="btn btn-gold btn-sm cta-btn" onclick="openStudentEditPortalModal()">Link Chess.com or Lichess</button>
       </div>
     `;
+    // The static Rating Dashboard / Performance Overview cards on the student
+    // detail page are never auto-cleared, so they'd be stuck on "Loading…".
+    const rt = document.getElementById('chessapi-ratings-table');
+    if (rt) rt.innerHTML = '<div style="color:var(--ivory-dim)">No chess platforms linked.</div>';
+    const pe = document.getElementById('chessapi-performance');
+    if (pe) pe.innerHTML = '<div style="color:var(--ivory-dim)">No chess platforms linked.</div>';
     return;
   }
 
@@ -1222,28 +1296,36 @@ function renderChessPerformanceTab(student, lichessData, chesscomData, games) {
   const chesscomClubs = document.getElementById('chess-chesscom-clubs');
   const chesscomTournaments = document.getElementById('chess-chesscom-tournaments');
 
-  if (lichessData && lichessProfile) {
-    renderLichessProfileDetails(lichessData.profile || {}, lichessProfile);
-    renderLichessRatings(lichessData.profile || {}, lichessRatings);
-    renderLichessGameStats(lichessData.profile || {}, lichessGamestats);
-    // Fetch extras
-    fetch(`/api/lichess-extras-proxy?username=${encodeURIComponent(lichessUser)}`)
-      .then(r => r.ok ? r.json() : {})
-      .then(d => renderLichessExtras(d.trophies || [], d.status || {}, lichessExtras))
-      .catch(() => { if (lichessExtras) lichessExtras.innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">Unable to load extra data.</div>'; });
+  if (lichessProfile) {
+    if (lichessData) {
+      renderLichessProfileDetails(lichessData.profile || {}, lichessProfile);
+      renderLichessRatings(lichessData.profile || {}, lichessRatings);
+      renderLichessGameStats(lichessData.profile || {}, lichessGamestats);
+      // Fetch extras
+      fetch(`/api/lichess-extras-proxy?username=${encodeURIComponent(lichessUser)}`)
+        .then(r => r.ok ? r.json() : {})
+        .then(d => renderLichessExtras(d.trophies || [], d.status || {}, lichessExtras))
+        .catch(() => { if (lichessExtras) lichessExtras.innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">Unable to load extra data.</div>'; });
+    } else {
+      lichessProfile.innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">Profile not found or unavailable.</div>';
+    }
   }
 
-  if (chesscomData && chesscomProfile) {
-    renderChesscomProfileDetails(chesscomData, chesscomProfile);
-    renderChesscomStatsTable(chesscomData, chesscomStats);
-    // Fetch clubs/tournaments
-    fetch(`/api/chesscom-clubs-proxy?username=${encodeURIComponent(chesscomUser)}`)
-      .then(r => r.ok ? r.json() : {})
-      .then(d => {
-        renderChesscomClubs(d.clubs || [], chesscomClubs);
-        renderChesscomTournaments(d.tournaments || [], chesscomTournaments);
-      })
-      .catch(() => {});
+  if (chesscomProfile) {
+    if (chesscomData) {
+      renderChesscomProfileDetails(chesscomData, chesscomProfile);
+      renderChesscomStatsTable(chesscomData, chesscomStats);
+      // Fetch clubs/tournaments
+      fetch(`/api/chesscom-clubs-proxy?username=${encodeURIComponent(chesscomUser)}`)
+        .then(r => r.ok ? r.json() : {})
+        .then(d => {
+          renderChesscomClubs(d.clubs || [], chesscomClubs);
+          renderChesscomTournaments(d.tournaments || [], chesscomTournaments);
+        })
+        .catch(() => {});
+    } else {
+      chesscomProfile.innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">Profile not found or unavailable.</div>';
+    }
   }
 
   // Section 3.6: Performance Overview
@@ -1255,12 +1337,73 @@ function renderChessPerformanceTab(student, lichessData, chesscomData, games) {
   // Section 3.7: Enhanced Game Viewer
   renderEnhancedGameViewer(games);
 
-  // Section 3.8: Recent Games Log
-  const recentGamesLog = document.getElementById('chess-recent-games-log');
-  renderUnifiedRecentGames(games, recentGamesLog);
+   // Section 3.8: Recent Games Log
+   const recentGamesLog = document.getElementById('chess-recent-games-log');
+   renderUnifiedRecentGames(games, recentGamesLog);
 
-  // Store games for viewer
-  window.currentChessGames = games;
+    // Section 3.9: Rating Dashboard + Performance Overview (static student
+    // detail cards that were previously left on "Loading ratings…" / "Loading
+    // performance data…" because nothing updated them).
+    const ratingsTable = document.getElementById('chessapi-ratings-table');
+    if (ratingsTable) {
+      const rows = [];
+      const perfs = lichessData?.profile?.perfs || {};
+      const ratingHistory = lichessData?.ratingHistory || [];
+      
+      const getTrend = (variant) => {
+        const history = ratingHistory.find(h => h.name === variant);
+        if (!history || history.points.length < 2) return '';
+        const current = history.points[history.points.length - 1][3];
+        const previous = history.points[history.points.length - 2][3];
+        const diff = current - previous;
+        if (diff > 0) return `<span style="color:var(--success);font-size:11px;">▲ +${diff}</span>`;
+        if (diff < 0) return `<span style="color:var(--danger);font-size:11px;">▼ ${diff}</span>`;
+        return `<span style="color:var(--ivory-dim);font-size:11px;">-</span>`;
+      };
+
+      ['rapid', 'blitz', 'classical', 'puzzle'].forEach((k) => {
+        if (perfs[k]?.rating) {
+          const trend = getTrend(k);
+          rows.push(`<div style="padding:4px 0; display:flex; align-items:center; gap:8px;">
+            <span style="color:var(--ivory); font-weight:600; min-width:80px;">${k}</span>
+            <b style="color:var(--gold); font-size:15px;">${perfs[k].rating}</b>
+            <span style="color:var(--ivory-dim);font-size:11px;">(±${perfs[k].rd ?? '?'})</span>
+            ${trend ? `<span style="margin-left:auto;">${trend}</span>` : ''}
+          </div>`);
+        }
+      });
+      
+      if (chesscomData) {
+        ['chess_rapid', 'chess_blitz', 'chess_bullet', 'chess_classical'].forEach((k) => {
+          if (chesscomData[k]?.last?.rating) {
+            rows.push(`<div style="padding:4px 0; display:flex; align-items:center; gap:8px;">
+              <span style="color:var(--ivory); font-weight:600; min-width:80px;">Chess.com ${k.replace('chess_', '')}</span>
+              <b style="color:var(--gold); font-size:15px;">${chesscomData[k].last.rating}</b>
+              <span style="color:var(--ivory-dim);font-size:11px;">Best: ${chesscomData[k].best?.rating ?? 'N/A'}</span>
+            </div>`);
+          }
+        });
+      }
+      ratingsTable.innerHTML = rows.length
+        ? rows.join('')
+        : '<div style="color:var(--ivory-dim)">No rating data available.</div>';
+    }
+
+   const perfEl = document.getElementById('chessapi-performance');
+   if (perfEl) {
+     const recentCount = (games || []).length;
+     const totalLichess = lichessData?.profile?.perfs
+       ? Object.values(lichessData.profile.perfs).reduce((a, p) => a + (p.games || 0), 0)
+       : 0;
+     perfEl.innerHTML = `
+       <div style="padding:3px 0;">Recent online games analyzed: <b>${recentCount}</b></div>
+       ${totalLichess ? `<div style="padding:3px 0;">Total Lichess games: <b>${totalLichess}</b></div>` : ''}
+       ${chesscomData ? `<div style="padding:3px 0;">Chess.com profile: <b>Connected</b></div>` : ''}
+     `;
+   }
+
+   // Store games for viewer
+   window.currentChessGames = games;
 }
 
 // ── LINK/UNLINK PLATFORM FUNCTIONS ──
@@ -1331,10 +1474,30 @@ window.unlinkChesscom = function() {
 };
 
 // Expose for parent portal
+window.getCachedChessData = getCachedChessData;
+window.renderDynamicSkillBreakdown = renderDynamicSkillBreakdown;
 window.loadChessDashboardForTab = loadChessDashboardForTab;
 window.retryChessDashboard = function() {
   const student = window.currentStudent;
   if (student && typeof window.renderChildChessPerformance === 'function') {
     window.renderChildChessPerformance(student);
   }
+};
+
+window.openLichessProfile = function() {
+  const s = window.currentStudent;
+  if (!s) return;
+  const username = s.lichess_username || '';
+  if (!username) return;
+  const url = username.startsWith('http') ? username : `https://lichess.org/@/${username}`;
+  window.open(url, '_blank');
+};
+
+window.openChesscomProfile = function() {
+  const s = window.currentStudent;
+  if (!s) return;
+  const username = s.chesscom_username || '';
+  if (!username) return;
+  const url = username.startsWith('http') ? username : `https://www.chess.com/member/${username}`;
+  window.open(url, '_blank');
 };

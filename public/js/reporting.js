@@ -49,7 +49,7 @@ window.generateReportPDF = async function() {
 
      // 1. Data Aggregation (Filtered by Period)
      const monthEndLimit = new Date(Date.UTC(targetYear, targetMonth + 1, 0)); // last day of month at 00:00 UTC
-     const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
+     const baseline = new Date(Date.UTC(2026, 5, 1, 0, 0, 0)); // June 1st Baseline (UTC)
      
      const targetStudents = allStudents.filter(s => {
           const sStatus = getStudentStatus(s);
@@ -886,7 +886,7 @@ window.generateReportPPT = async function() {
         const targetYM = `${targetYear}-${targetMonth}`;
         const monthStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
         const monthEndLimit = new Date(Date.UTC(targetYear, targetMonth + 1, 0));
-        const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0));
+        const baseline = new Date(Date.UTC(2026, 5, 1, 0, 0, 0));
 
         const targetStudents = allStudents.filter(s => {
             const sStatus = getStudentStatus(s);
@@ -1573,7 +1573,40 @@ window.getAcademySnapshot = function() {
             attendanceSampleSize: monthAtt.length
         },
         roster: coachData,
-        systemHealth: monthAtt.length > 0 ? 'Optimal' : 'Limited Telemetry'
+        systemHealth: monthAtt.length > 0 ? 'Optimal' : 'Limited Telemetry',
+        // Full lists so the AI advisor (TOM) reports real student/coach counts
+        // and can run its analysis (weak students, coach performance, finance…).
+        // Without these, the server falls back to ctx.students_list which is
+        // absent here, so TOM shows "0 active students and 0 coaches".
+        students_list: students.map((s) => ({
+            id: s.id,
+            name: typeof getStudentName === 'function' ? getStudentName(s) : (s.name || s.full_name || ''),
+            status: typeof getStudentStatus === 'function' ? getStudentStatus(s) : (s.status || 'active'),
+            rating: typeof getStudentRating === 'function' ? getStudentRating(s) : (s.rating || 0),
+            level: typeof getStudentLevel === 'function' ? getStudentLevel(s) : (s.level || ''),
+            coach_id: s.coach_id || '',
+            coach_name: s.coach_id ? getCoachName(coaches.find((c) => String(c.id) === String(s.coach_id)) || {}) : '',
+            fee: typeof getStudentMonthlyFee === 'function' ? getStudentMonthlyFee(s) : (s.monthly_fee || 0),
+            payment_status: typeof getStudentPaymentStatus === 'function' ? getStudentPaymentStatus(s, tm, ty) : (s.payment_status || ''),
+            attendance_rate: s.attendance_rate != null ? s.attendance_rate : (s.attendanceRate != null ? s.attendanceRate : null),
+            lichess_username: s.lichess_username || '',
+            chesscom_username: s.chesscom_username || ''
+        })),
+        coaches_list: coaches
+            .filter((c) => (c.status || 'active') !== 'archived')
+            .map((c) => ({
+                id: c.id,
+                name: typeof getCoachName === 'function' ? getCoachName(c) : (c.name || 'Coach'),
+                specialty: c.specialty || '',
+                studentCount: students.filter(
+                    (s) => String(s.coach_id) === String(c.id) &&
+                        ((typeof getStudentStatus === 'function' ? getStudentStatus(s) : (s.status || 'active')) !== 'archived')
+                ).length,
+                salary_cost: c.salary || 0,
+                collected_revenue: 0,
+                net_profit: 0,
+                roi: 'N/A'
+            }))
     };
 };
 

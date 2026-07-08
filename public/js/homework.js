@@ -133,6 +133,7 @@
     const assignee = $('homework-assignee-filter') ? $('homework-assignee-filter').value : '';
     const status = $('homework-status-filter') ? $('homework-status-filter').value : '';
     const [year, monthNumber] = (month || monthKey(homeworkCalendarMonth)).split('-').map(Number);
+    const query = ($('homework-search') ? $('homework-search').value : '').toLowerCase().trim();
     const coachId = window.role === 'coach' ? (window.currentCoachId || window.userId) : null;
     const coachStudentIds = coachId ? new Set((window.allStudents || []).filter(s => String(s.coach_id) === String(coachId)).map(s => String(s.id))) : null;
     const coachBatchIds = coachId ? new Set((window.allBatches || []).filter(b => String(b.coach_id) === String(coachId)).map(b => String(b.id))) : null;
@@ -140,6 +141,14 @@
     return sortHomework((window.allHomework || []).filter((assignment) => {
       if (status && assignment.status !== status) return false;
       if (assignee && assigneeKey(assignment) !== assignee) return false;
+      if (query) {
+        const hay = (
+          (assignment.title || '') + ' ' +
+          (assignment.description || '') + ' ' +
+          (Array.isArray(assignment.attachment_urls) ? assignment.attachment_urls.join(' ') : '')
+        ).toLowerCase();
+        if (!hay.includes(query)) return false;
+      }
       if (coachStudentIds || coachBatchIds) {
         const appliesToStudent = assignment.target_type === 'student' && coachStudentIds.has(String(assignment.student_id));
         const appliesToBatch = assignment.target_type === 'batch' && coachBatchIds.has(String(assignment.batch_id));
@@ -180,8 +189,8 @@ let homeworkSubmissionCache = [];
 
     if (targetSelect && !targetSelect.options.length) {
       targetSelect.innerHTML = `
+        <option value="batch">Batch (A–Z)</option>
         <option value="student">Individual Student</option>
-        <option value="batch">Batch</option>
         <option value="all">All Active Students</option>
       `;
     }
@@ -222,14 +231,20 @@ let homeworkSubmissionCache = [];
       const coachId = window.role === 'coach' ? (window.currentCoachId || window.userId) : null;
       const students = coachId ? (window.allStudents || []).filter(s => String(s.coach_id) === String(coachId)) : (window.allStudents || []);
       const batches = coachId ? (window.allBatches || []).filter(b => String(b.coach_id) === String(coachId)) : (window.allBatches || []);
-      students.filter((student) => (student.status || 'active') !== 'archived').forEach((student) => options.set(`student:${student.id}`, studentName(student)));
       batches.filter((batch) => (batch.status || 'active') !== 'archived').forEach((batch) => options.set(`batch:${batch.id}`, batchName(batch)));
+      students.filter((student) => (student.status || 'active') !== 'archived').forEach((student) => options.set(`student:${student.id}`, studentName(student)));
       (window.allHomework || []).forEach((assignment) => {
         const key = assigneeKey(assignment);
         if (!options.has(key)) options.set(key, assigneeLabel(assignment));
       });
       assigneeSelect.innerHTML = Array.from(options.entries())
-        .sort((a, b) => a[1].localeCompare(b[1]))
+        .sort((a, b) => {
+          const aIsBatch = a[0].startsWith('batch:');
+          const bIsBatch = b[0].startsWith('batch:');
+          if (aIsBatch && !bIsBatch) return -1;
+          if (!aIsBatch && bIsBatch) return 1;
+          return a[1].localeCompare(b[1]);
+        })
         .map(([value, label]) => `<option value="${escapeValue(value)}">${escapeValue(label)}</option>`)
         .join('');
       if (Array.from(options.keys()).includes(current)) assigneeSelect.value = current;
@@ -253,7 +268,77 @@ let homeworkSubmissionCache = [];
     if ($('hw-due-date')) $('hw-due-date').value = '';
     if ($('hw-file-input')) $('hw-file-input').value = '';
     if ($('hw-file-preview')) $('hw-file-preview').innerHTML = '';
+    if ($('hw-past-search')) $('hw-past-search').value = '';
+    updatePastHomeworkHistory();
     window.openModal && window.openModal('homework-assignment-modal');
+  }
+
+  function updatePastHomeworkHistory() {
+    const targetType = $('hw-target-type') ? $('hw-target-type').value : 'student';
+    const studentId = $('hw-student-select') ? $('hw-student-select').value : '';
+    const batchId = $('hw-batch-select') ? $('hw-batch-select').value : '';
+    const historySection = $('hw-past-history-section');
+    const pastList = $('hw-past-list');
+
+    if (!historySection || !pastList) return;
+
+    let showHistory = false;
+    let filtered = [];
+
+    if (targetType === 'student' && studentId) {
+      filtered = (window.allHomework || []).filter(h => assignmentAppliesToStudent(h, studentId, window.allStudents || []));
+      showHistory = true;
+    } else if (targetType === 'batch' && batchId) {
+      filtered = (window.allHomework || []).filter(h => assignmentAppliesToBatch(h, batchId, window.allStudents || [], window.allBatches || []));
+      showHistory = true;
+    } else if (targetType === 'all') {
+      filtered = (window.allHomework || []).filter(h => h.target_type === 'all');
+      showHistory = true;
+    }
+
+    if (!showHistory) {
+      historySection.style.display = 'none';
+      return;
+    }
+
+    historySection.style.display = '';
+    window.currentFilteredPastHomework = filtered;
+    filterPastHomeworkList();
+  }
+
+  function filterPastHomeworkList() {
+    const pastList = $('hw-past-list');
+    if (!pastList) return;
+
+    const query = ($('hw-past-search') ? $('hw-past-search').value : '').toLowerCase().trim();
+    const items = window.currentFilteredPastHomework || [];
+
+    const filteredItems = items.filter(h => {
+      const title = (h.title || '').toLowerCase();
+      const desc = (h.description || '').toLowerCase();
+      const files = Array.isArray(h.attachment_urls) ? h.attachment_urls.join(' ').toLowerCase() : '';
+      return title.includes(query) || desc.includes(query) || files.includes(query);
+    });
+
+    if (filteredItems.length === 0) {
+      pastList.innerHTML = '<div style="color:var(--ivory-dim); font-size:11px; padding:4px;">No past homework found matching your query.</div>';
+      return;
+    }
+
+    pastList.innerHTML = filteredItems.map(h => {
+      const due = h.due_date ? formatDate(h.due_date) : 'No due date';
+      return `
+        <div style="background:var(--bg3); padding:8px; border-radius:4px; border:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-weight:600; color:var(--ivory);">
+            <span>${escapeValue(h.title || 'Untitled')}</span>
+            <span style="font-size:10px; color:var(--gold); font-weight:normal;">Due: ${due}</span>
+          </div>
+          <div style="font-size:11px; color:var(--ivory2); margin-top:2px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis;">
+            ${escapeValue(h.description || 'No description')}
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
 async function uploadHomeworkFile(file) {
@@ -679,15 +764,25 @@ async function uploadHomeworkFile(file) {
 
   function populateHomeworkSubmissionFilters() {
     const assignmentSelect = $('homework-submission-assignment-filter');
+    const batchSelect = $('homework-submission-batch-filter');
     const studentSelect = $('homework-submission-student-filter');
     if (!assignmentSelect || !studentSelect) return;
 
     const assignmentCurrent = assignmentSelect.value;
+    const batchCurrent = batchSelect ? batchSelect.value : '';
     const studentCurrent = studentSelect.value;
     assignmentSelect.innerHTML = '<option value="">All Assignments</option>' + (window.allHomework || [])
       .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')))
       .map((assignment) => `<option value="${assignment.id}">${escapeValue(assignment.title || 'Untitled Homework')}</option>`)
       .join('');
+    if (batchSelect) {
+      const batches = (window.allBatches || [])
+        .filter((batch) => (batch.status || 'active') !== 'archived')
+        .sort((a, b) => batchName(a).localeCompare(batchName(b)));
+      batchSelect.innerHTML = '<option value="">All Batches</option>' + batches
+        .map((batch) => `<option value="${batch.id}">${escapeValue(batchName(batch))}</option>`)
+        .join('');
+    }
     const studs = window.role === 'coach'
       ? (window.allStudents || []).filter(s => String(s.coach_id) === String(window.userId))
       : (window.allStudents || []);
@@ -697,18 +792,26 @@ async function uploadHomeworkFile(file) {
       .map((student) => `<option value="${student.id}">${escapeValue(studentName(student))}</option>`)
       .join('');
     if ([...assignmentSelect.options].some((option) => option.value === assignmentCurrent)) assignmentSelect.value = assignmentCurrent;
+    if (batchSelect && [...batchSelect.options].some((option) => option.value === batchCurrent)) batchSelect.value = batchCurrent;
     if ([...studentSelect.options].some((option) => option.value === studentCurrent)) studentSelect.value = studentCurrent;
   }
 
   function getFilteredHomeworkSubmissions() {
     const assignmentId = $('homework-submission-assignment-filter') ? $('homework-submission-assignment-filter').value : '';
+    const batchId = $('homework-submission-batch-filter') ? $('homework-submission-batch-filter').value : '';
     const studentId = $('homework-submission-student-filter') ? $('homework-submission-student-filter').value : '';
     const status = $('homework-submission-status-filter') ? $('homework-submission-status-filter').value : '';
     const coachId = window.role === 'coach' ? (window.currentCoachId || window.userId) : null;
     const coachStudentIds = coachId ? new Set((window.allStudents || []).filter(s => String(s.coach_id) === String(coachId)).map(s => String(s.id))) : null;
+    const batchStudentIds = batchId ? new Set(
+      (window.allBatches || [])
+        .filter(b => String(b.id) === String(batchId))
+        .flatMap(b => (Array.isArray(b.student_ids) ? b.student_ids.map(String) : []))
+    ) : null;
     return (homeworkSubmissionCache || []).filter((submission) => {
       if (coachStudentIds && !coachStudentIds.has(String(submission.student_id))) return false;
       if (assignmentId && String(submission.assignment_id) !== assignmentId) return false;
+      if (batchId && (!batchStudentIds || !batchStudentIds.has(String(submission.student_id)))) return false;
       if (studentId && String(submission.student_id) !== studentId) return false;
       if (status && String(submission.status) !== status) return false;
       return true;
@@ -767,6 +870,10 @@ async function uploadHomeworkFile(file) {
     const batchSelect = $('homework-batch-preview');
     const list = $('homework-batch-preview-list');
     if (!batchSelect || !list) return;
+    if (!batchSelect.options.length) {
+      const batches = (window.allBatches || []).filter((b) => (b.status || 'active') !== 'archived').sort((a, b) => batchName(a).localeCompare(batchName(b)));
+      batchSelect.innerHTML = '<option value="">Select a batch</option>' + batches.map((b) => `<option value="${b.id}">${escapeValue(batchName(b))}</option>`).join('');
+    }
     const batchId = batchSelect.value;
     if (!batchId) {
       list.innerHTML = '<div class="loading-state"><span class="spinner"></span> Select a batch to preview homework</div>';
@@ -835,7 +942,8 @@ async function uploadHomeworkFile(file) {
       if (!searchTopic) return true;
       const title = (a.title || '').toLowerCase();
       const desc = (a.description || '').toLowerCase();
-      return title.includes(searchTopic) || desc.includes(searchTopic);
+      const files = Array.isArray(a.attachment_urls) ? a.attachment_urls.join(' ').toLowerCase() : '';
+      return title.includes(searchTopic) || desc.includes(searchTopic) || files.includes(searchTopic);
     });
 
     if (!filteredAssignments.length) {
@@ -889,6 +997,8 @@ async function uploadHomeworkFile(file) {
 
   window.updateHomeworkTargetFields = updateHomeworkTargetFields;
   window.openHomeworkAssignmentModal = openHomeworkAssignmentModal;
+  window.updatePastHomeworkHistory = updatePastHomeworkHistory;
+  window.filterPastHomeworkList = filterPastHomeworkList;
   window.saveHomeworkAssignment = saveHomeworkAssignment;
   window.updateHomeworkStatus = updateHomeworkStatus;
   window.applyBulkHomeworkStatus = applyBulkHomeworkStatus;

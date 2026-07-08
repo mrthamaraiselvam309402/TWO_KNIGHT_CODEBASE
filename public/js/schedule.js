@@ -4,293 +4,370 @@
  * WhatsApp sharing, and contextual AI insights.
  */
 
-
 (function () {
-    let currentScheduleData = {};
+  let currentScheduleData = {};
 
-    // Single source of truth for the schedule's coach name. Prefers the coach
-    // chosen in the Schedule Manager (schedData.coachId / coachName), then the
-    // student's globally-assigned coach, then 'TBD'. Used by the admin preview,
-    // the parent schedule card, and the .ics calendar export so they always agree.
-    function resolveScheduleCoachName(schedData, student) {
-        const coaches = window.allCoaches || window.coaches || [];
-        if (schedData && schedData.coachId) {
-            const c = coaches.find(c => String(c.id) === String(schedData.coachId));
-            if (c) return c.name;
-        }
-        if (schedData && schedData.coachName) return schedData.coachName;
-        if (student && student.coach_id) {
-            const c = coaches.find(c => String(c.id) === String(student.coach_id));
-            if (c) return c.name;
-        }
-        return 'TBD';
+  // Single source of truth for the schedule's coach name. Prefers the coach
+  // chosen in the Schedule Manager (schedData.coachId / coachName), then the
+  // student's globally-assigned coach, then 'TBD'. Used by the admin preview,
+  // the parent schedule card, and the .ics calendar export so they always agree.
+  function resolveScheduleCoachName(schedData, student) {
+    const coaches = window.allCoaches || window.coaches || [];
+    if (schedData && schedData.coachId) {
+      const c = coaches.find((c) => String(c.id) === String(schedData.coachId));
+      if (c) return c.name;
     }
-    window.resolveScheduleCoachName = resolveScheduleCoachName;
-
-    window.setScheduleMode = function (mode) {
-        const individualPanel = document.getElementById('sch-individual-panel');
-        const groupPanel = document.getElementById('sch-group-panel');
-        const individualBtn = document.getElementById('sch-mode-individual');
-        const groupBtn = document.getElementById('sch-mode-group');
-        const saveBtn = document.getElementById('sch-save-btn');
-        const groupSaveBtn = document.getElementById('sch-group-save-btn');
-
-        if (!individualPanel || !groupPanel) return;
-
-        if (mode === 'individual') {
-            individualPanel.style.display = 'block';
-            groupPanel.style.display = 'none';
-            if (individualBtn) { individualBtn.style.background = 'var(--gold)'; individualBtn.style.color = '#111'; }
-            if (groupBtn) { groupBtn.style.background = 'transparent'; groupBtn.style.color = 'var(--ivory)'; }
-            if (saveBtn) saveBtn.style.display = '';
-            if (groupSaveBtn) groupSaveBtn.style.display = 'none';
-        } else {
-            individualPanel.style.display = 'none';
-            groupPanel.style.display = 'block';
-            if (groupBtn) { groupBtn.style.background = 'var(--gold)'; groupBtn.style.color = '#111'; }
-            if (individualBtn) { individualBtn.style.background = 'transparent'; individualBtn.style.color = 'var(--ivory)'; }
-            if (saveBtn) saveBtn.style.display = 'none';
-            if (groupSaveBtn) groupSaveBtn.style.display = '';
-            if (window.toggleScheduleGroup) window.toggleScheduleGroup();
-        }
-    };
-
-    window.initSchedulePage = function () {
-        populateStudentSelect();
-        populateCoachSelect();
-        window.setScheduleMode('individual');
-        resetScheduleInputs();
-        if (window.generateSchedulePreview) window.generateSchedulePreview();
-    };
-
-    function populateStudentSelect() {
-        const sel = document.getElementById('sch-student-select');
-        if (!sel) return;
-        sel.innerHTML = '<option value="">-- Select Student --</option>';
-        const students = window.allStudents || window.students || [];
-        const role = window.role || 'admin';
-        const coachId = window.currentCoachId || window.userId;
-        const list = role === 'coach' && coachId ? students.filter(s => String(s.coach_id) === String(coachId)) : students;
-        if (list.length) {
-            list.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.id;
-                opt.textContent = s.name + (s.parent_name ? ` (Parent: ${s.parent_name})` : '');
-                sel.appendChild(opt);
-            });
-        }
+    if (schedData && schedData.coachName) return schedData.coachName;
+    if (student && student.coach_id) {
+      const c = coaches.find((c) => String(c.id) === String(student.coach_id));
+      if (c) return c.name;
     }
+    return "TBD";
+  }
+  window.resolveScheduleCoachName = resolveScheduleCoachName;
 
-    function populateCoachSelect() {
-        const sel = document.getElementById('sch-coach-select');
-        if (!sel) return;
-        sel.innerHTML = '<option value="">-- Select Coach --</option>';
-        const coaches = window.allCoaches || window.coaches || [];
-        if (coaches.length) {
-            coaches.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = c.name;
-                sel.appendChild(opt);
-            });
-        }
-    }
+  window.setScheduleMode = function (mode) {
+    const individualPanel = document.getElementById("sch-individual-panel");
+    const groupPanel = document.getElementById("sch-group-panel");
+    const individualBtn = document.getElementById("sch-mode-individual");
+    const groupBtn = document.getElementById("sch-mode-group");
+    const saveBtn = document.getElementById("sch-save-btn");
+    const groupSaveBtn = document.getElementById("sch-group-save-btn");
 
-    function resetScheduleInputs() {
-        if(document.getElementById('sch-reg-days')) document.getElementById('sch-reg-days').value = '';
-        if(document.getElementById('sch-reg-time')) document.getElementById('sch-reg-time').value = '';
-        if(document.getElementById('sch-meet-link')) document.getElementById('sch-meet-link').value = '';
-        if(document.getElementById('sch-coach-select')) document.getElementById('sch-coach-select').value = '';
-        if(document.getElementById('sch-footnote')) document.getElementById('sch-footnote').value = 'Welcome to Two Knights Academy! We look forward to an exciting chess learning journey together.';
-    }
+    if (!individualPanel || !groupPanel) return;
 
-    // UTF-8 safe base64 helpers. The server sanitizes the `notes` column and
-    // strips quotes (" ' ` < > ;), which would corrupt a raw [SCHEDULE:{json}]
-    // tag. So we persist the schedule as [SCHEDULE64:<base64>] — base64's
-    // alphabet (A-Za-z0-9+/=) survives sanitization intact.
-    function encodeSchedulePayload(obj) {
-        try {
-            return window.btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
-        } catch (e) {
-            return '';
-        }
+    if (mode === "individual") {
+      individualPanel.style.display = "block";
+      groupPanel.style.display = "none";
+      if (individualBtn) {
+        individualBtn.style.background = "var(--gold)";
+        individualBtn.style.color = "#111";
+      }
+      if (groupBtn) {
+        groupBtn.style.background = "transparent";
+        groupBtn.style.color = "var(--ivory)";
+      }
+      if (saveBtn) saveBtn.style.display = "";
+      if (groupSaveBtn) groupSaveBtn.style.display = "none";
+    } else if (mode === "group") {
+      individualPanel.style.display = "none";
+      groupPanel.style.display = "block";
+      if (individualBtn) {
+        individualBtn.style.background = "transparent";
+        individualBtn.style.color = "var(--ivory)";
+      }
+      if (groupBtn) {
+        groupBtn.style.background = "var(--gold)";
+        groupBtn.style.color = "#111";
+      }
+      if (saveBtn) saveBtn.style.display = "none";
+      if (groupSaveBtn) groupSaveBtn.style.display = "";
+      if (window.toggleScheduleGroup) window.toggleScheduleGroup();
+    } else {
+      individualPanel.style.display = "none";
+      groupPanel.style.display = "block";
+      if (groupBtn) {
+        groupBtn.style.background = "var(--gold)";
+        groupBtn.style.color = "#111";
+      }
+      if (individualBtn) {
+        individualBtn.style.background = "transparent";
+        individualBtn.style.color = "var(--ivory)";
+      }
+      if (saveBtn) saveBtn.style.display = "none";
+      if (groupSaveBtn) groupSaveBtn.style.display = "";
+      if (window.toggleScheduleGroup) window.toggleScheduleGroup();
     }
-    function decodeSchedulePayload(b64) {
-        try {
-            return JSON.parse(decodeURIComponent(escape(window.atob(b64))));
-        } catch (e) {
-            return null;
-        }
-    }
+  };
 
-    // Parses the embedded schedule tag from the notes column. Supports the new
-    // sanitization-safe [SCHEDULE64:...] format and the legacy [SCHEDULE:{...}].
-    window.extractScheduleJSON = function (notesString, student = null) {
-        if (!notesString) {
-            // FALLBACK: Check student's days column first, then batch lookup
-            if (student) {
-                // First try: use student's days column
-                if (student.days) {
-                    const dayArray = String(student.days).split(',').map(d => d.trim()).filter(Boolean);
-                    const timeVal = student.session_time || student.batch_time || 'TBD';
-                    return {
-                        regDays: dayArray.join(' & '),
-                        regTime: timeVal,
-                        regCoachName: student.coach_name || student.coaching_coach || 'TBD',
-                        meetLink: student.notes ? student.notes.match(/https?:\/\/[^\s]+/)?.[0] || '' : '',
-                        isMatrixOverride: false
-                    };
-                }
-                // Second try: Look up student's live batch schedule dynamically
-                if (student.id && window.allBatches) {
-                    const myBatch = window.allBatches.find(b => {
-                        const ids = Array.isArray(b.student_ids) ? b.student_ids.map(String) : [];
-                        return ids.includes(String(student.id));
-                    });
-                    if (myBatch) {
-                        const coaches = window.allCoaches || window.coaches || [];
-                        const c = coaches.find(co => String(co.id) === String(myBatch.coach_id));
-                        return {
-                            regDays: myBatch.days || 'TBD',
-                            regTime: myBatch.time_slot || 'TBD',
-                            regCoachName: c ? c.name : 'TBD',
-                            meetLink: myBatch.notes || '',
-                            isMatrixOverride: false
-                        };
-                    }
-                }
-            }
-            return null;
+  window.initSchedulePage = function () {
+    populateStudentSelect();
+    populateCoachSelect();
+    window.setScheduleMode("individual");
+    resetScheduleInputs();
+    if (window.generateSchedulePreview) window.generateSchedulePreview();
+  };
+
+  function populateStudentSelect() {
+    const sel = document.getElementById("sch-student-select");
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Select Student --</option>';
+    const students = window.allStudents || window.students || [];
+    const role = window.role || "admin";
+    const coachId = window.currentCoachId || window.userId;
+    const list =
+      role === "coach" && coachId
+        ? students.filter((s) => String(s.coach_id) === String(coachId))
+        : students;
+    if (list.length) {
+      list.forEach((s) => {
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent =
+          s.name + (s.parent_name ? ` (Parent: ${s.parent_name})` : "");
+        sel.appendChild(opt);
+      });
+    }
+  }
+
+  function populateCoachSelect() {
+    const sel = document.getElementById("sch-coach-select");
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Select Coach --</option>';
+    const coaches = window.allCoaches || window.coaches || [];
+    if (coaches.length) {
+      coaches.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+    }
+  }
+
+  function resetScheduleInputs() {
+    if (document.getElementById("sch-reg-days"))
+      document.getElementById("sch-reg-days").value = "";
+    if (document.getElementById("sch-reg-time"))
+      document.getElementById("sch-reg-time").value = "";
+    if (document.getElementById("sch-meet-link"))
+      document.getElementById("sch-meet-link").value = "";
+    if (document.getElementById("sch-coach-select"))
+      document.getElementById("sch-coach-select").value = "";
+    if (document.getElementById("sch-footnote"))
+      document.getElementById("sch-footnote").value =
+        "Welcome to Two Knights Academy! We look forward to an exciting chess learning journey together.";
+  }
+
+  // UTF-8 safe base64 helpers. The server sanitizes the `notes` column and
+  // strips quotes (" ' ` < > ;), which would corrupt a raw [SCHEDULE:{json}]
+  // tag. So we persist the schedule as [SCHEDULE64:<base64>] — base64's
+  // alphabet (A-Za-z0-9+/=) survives sanitization intact.
+  function encodeSchedulePayload(obj) {
+    try {
+      return window.btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+    } catch (e) {
+      return "";
+    }
+  }
+  function decodeSchedulePayload(b64) {
+    try {
+      return JSON.parse(decodeURIComponent(escape(window.atob(b64))));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Parses the embedded schedule tag from the notes column. Supports the new
+  // sanitization-safe [SCHEDULE64:...] format and the legacy [SCHEDULE:{...}].
+  window.extractScheduleJSON = function (notesString, student = null) {
+    if (!notesString) {
+      // FALLBACK: Check student's days column first, then batch lookup
+      if (student) {
+        // First try: use student's days column
+        if (student.days) {
+          const dayArray = String(student.days)
+            .split(",")
+            .map((d) => d.trim())
+            .filter(Boolean);
+          const timeVal = student.session_time || student.batch_time || "TBD";
+          return {
+            regDays: dayArray.join(" & "),
+            regTime: timeVal,
+            regCoachName: student.coach_name || student.coaching_coach || "TBD",
+            meetLink: student.notes
+              ? student.notes.match(/https?:\/\/[^\s]+/)?.[0] || ""
+              : "",
+            isMatrixOverride: false,
+          };
         }
-        const m64 = notesString.match(/\[SCHEDULE64:([A-Za-z0-9+/=]+)\]/);
-        if (m64 && m64[1]) {
-            const decoded = decodeSchedulePayload(m64[1]);
-            if (decoded) return decoded;
+        // Second try: Look up student's live batch schedule dynamically
+        if (student.id && window.allBatches) {
+          const myBatch = window.allBatches.find((b) => {
+            const ids = Array.isArray(b.student_ids)
+              ? b.student_ids.map(String)
+              : [];
+            return ids.includes(String(student.id));
+          });
+          if (myBatch) {
+            const coaches = window.allCoaches || window.coaches || [];
+            const c = coaches.find(
+              (co) => String(co.id) === String(myBatch.coach_id),
+            );
+            return {
+              regDays: myBatch.days || "TBD",
+              regTime: myBatch.time_slot || "TBD",
+              regCoachName: c ? c.name : "TBD",
+              meetLink: myBatch.notes || "",
+              isMatrixOverride: false,
+            };
+          }
         }
-        const match = notesString.match(/\[SCHEDULE:({.*?})\]/);
-        if (match && match[1]) {
-            try {
-                return JSON.parse(match[1]);
-            } catch (e) {
-                console.warn("Failed to parse legacy schedule JSON", e);
-                return null;
-            }
-        }
+      }
+      return null;
+    }
+    const m64 = notesString.match(/\[SCHEDULE64:([A-Za-z0-9+/=]+)\]/);
+    if (m64 && m64[1]) {
+      const decoded = decodeSchedulePayload(m64[1]);
+      if (decoded) return decoded;
+    }
+    const match = notesString.match(/\[SCHEDULE:({.*?})\]/);
+    if (match && match[1]) {
+      try {
+        return JSON.parse(match[1]);
+      } catch (e) {
+        console.warn("Failed to parse legacy schedule JSON", e);
         return null;
-    };
+      }
+    }
+    return null;
+  };
 
-    window.removeScheduleJSON = function (notesString) {
-        if (!notesString) return notesString;
-        return notesString
-            .replace(/\[SCHEDULE64:[A-Za-z0-9+/=]+\]/g, '')
-            .replace(/\[SCHEDULE:({.*?})\]/g, '')
-            .trim();
-    };
+  window.removeScheduleJSON = function (notesString) {
+    if (!notesString) return notesString;
+    return notesString
+      .replace(/\[SCHEDULE64:[A-Za-z0-9+/=]+\]/g, "")
+      .replace(/\[SCHEDULE:({.*?})\]/g, "")
+      .trim();
+  };
 
-    window.loadStudentScheduleData = function (studentId) {
-        resetScheduleInputs();
-        if (!studentId) {
-            if (window.generateSchedulePreview) window.generateSchedulePreview();
-            return;
-        }
-
-        const student = (window.allStudents || []).find(s => s.id == studentId);
-        if (student && student.notes) {
-            const schedData = window.extractScheduleJSON(student.notes);
-            if (schedData) {
-                if(document.getElementById('sch-reg-days')) document.getElementById('sch-reg-days').value = schedData.regDays || '';
-                if(document.getElementById('sch-reg-time')) document.getElementById('sch-reg-time').value = schedData.regTime || '';
-                if(document.getElementById('sch-meet-link')) document.getElementById('sch-meet-link').value = schedData.meetLink || '';
-                if(document.getElementById('sch-coach-select')) document.getElementById('sch-coach-select').value = schedData.coachId || '';
-                if(document.getElementById('sch-footnote')) document.getElementById('sch-footnote').value = schedData.footnote || '';
-            }
-        }
-
-        if (window.generateSchedulePreview) window.generateSchedulePreview();
-
-        // Call Contextual AI Insight for the Schedule block
-        if(window.generateContextualInsight) {
-            window.generateContextualInsight('schedule', studentId);
-        }
-    };
-
-    window.toggleDayShortcut = function (day) {
-        const input = document.getElementById('sch-reg-days');
-        if (!input) return;
-        let days = input.value.split('&').map(d => d.trim()).filter(Boolean);
-        if (days.includes(day)) {
-            days = days.filter(d => d !== day);
-        } else {
-            days.push(day);
-        }
-        input.value = days.join(' & ');
-        
-        // Update button active states
-        const buttons = document.querySelectorAll('#sch-days-shortcuts .sch-day-btn');
-        buttons.forEach(btn => {
-            const btnDay = btn.dataset.day;
-            if (days.includes(btnDay)) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-        
-        if (window.generateSchedulePreview) window.generateSchedulePreview();
-    };
-
-    // Returns the base CSS color for a coach
-    function getCoachColor(name) {
-        const n = (name || '').toLowerCase();
-        if (n.includes('rohith')) return '#3b5998';
-        if (n.includes('ranjith')) return '#27ae60';
-        if (n.includes('gyana')) return '#8e44ad';
-        if (n.includes('arivu')) return '#d35400';
-        if (n.includes('yogesh')) return '#2ecc71';
-        if (n.includes('sudhin')) return '#f39c12';
-        if (n.includes('vasanth')) return '#16a085';
-        if (n.includes('vishnu')) return '#7f8c8d';
-        return '#4f5d75'; // default
+  window.loadStudentScheduleData = function (studentId) {
+    resetScheduleInputs();
+    if (!studentId) {
+      if (window.generateSchedulePreview) window.generateSchedulePreview();
+      return;
     }
 
-    // Shared function to render the Schedule Card HTML using the Master Matrix theme
-    function buildScheduleCardHtml(studentName, schedData, coachName, isChildView, studentId, studentBatches = []) {
-        const regDays = schedData.regDays || 'TBD';
-        const regTime = schedData.regTime || 'TBD';
-        const meetLink = schedData.meetLink || '';
-        const footnote = schedData.footnote || '';
-        
-        const coachColor = getCoachColor(coachName);
+    const student = (window.allStudents || []).find((s) => s.id == studentId);
+    if (student && student.notes) {
+      const schedData = window.extractScheduleJSON(student.notes);
+      if (schedData) {
+        if (document.getElementById("sch-reg-days"))
+          document.getElementById("sch-reg-days").value =
+            schedData.regDays || "";
+        if (document.getElementById("sch-reg-time"))
+          document.getElementById("sch-reg-time").value =
+            schedData.regTime || "";
+        if (document.getElementById("sch-meet-link"))
+          document.getElementById("sch-meet-link").value =
+            schedData.meetLink || "";
+        if (document.getElementById("sch-coach-select"))
+          document.getElementById("sch-coach-select").value =
+            schedData.coachId || "";
+        if (document.getElementById("sch-footnote"))
+          document.getElementById("sch-footnote").value =
+            schedData.footnote || "";
+      }
+    }
 
-        // Generate Weekly Calendar View HTML matching the Master Matrix table header style
-        const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        const activeDaysStr = regDays.toLowerCase();
-        
-        let weekGridHtml = '<div style="display:flex; gap:4px; margin-top:12px; margin-bottom:12px; justify-content:space-between; width:100%;">';
-        const dayIcons = ['📅', '🥏', '🎯', '🎲', '🎉', '🎊', '⚽'];
-        for (let i = 0; i < 7; i++) {
-            const isActive = activeDaysStr.includes(daysOfWeek[i].toLowerCase()) || activeDaysStr.includes(shortDays[i].toLowerCase());
-            if (isActive) {
-                weekGridHtml += `<div title="${daysOfWeek[i]}" style="flex:1; text-align:center; padding:8px 4px; border-radius:4px; background:linear-gradient(135deg, ${coachColor}, ${coachColor}cc); color:#ffffff; font-weight:600; font-size:11px; border:1px solid ${coachColor}; text-transform:uppercase; box-shadow:0 2px 8px rgba(0,0,0,0.2);">${shortDays[i]}<span style="display:block; font-size:9px; opacity:0.9;">${dayIcons[i]}</span></div>`;
-            } else {
-                weekGridHtml += `<div title="${daysOfWeek[i]}" style="flex:1; text-align:center; padding:8px 4px; border-radius:4px; background-color:#1c2030; color:#a4b0cb; font-weight:600; font-size:11px; border:1px solid #2c3242; text-transform:uppercase; opacity:0.6;">${shortDays[i]}<span style="display:block; font-size:9px;">${dayIcons[i]}</span></div>`;
-            }
-        }
-        weekGridHtml += '</div>';
+    if (window.generateSchedulePreview) window.generateSchedulePreview();
 
-        // Action Buttons
-        let actionButtons = '';
-        if (isChildView) {
-            actionButtons = `
+    // Call Contextual AI Insight for the Schedule block
+    if (window.generateContextualInsight) {
+      window.generateContextualInsight("schedule", studentId);
+    }
+  };
+
+  window.toggleDayShortcut = function (day) {
+    const input = document.getElementById("sch-reg-days");
+    if (!input) return;
+    let days = input.value
+      .split("&")
+      .map((d) => d.trim())
+      .filter(Boolean);
+    if (days.includes(day)) {
+      days = days.filter((d) => d !== day);
+    } else {
+      days.push(day);
+    }
+    input.value = days.join(" & ");
+
+    // Update button active states
+    const buttons = document.querySelectorAll(
+      "#sch-days-shortcuts .sch-day-btn",
+    );
+    buttons.forEach((btn) => {
+      const btnDay = btn.dataset.day;
+      if (days.includes(btnDay)) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+
+    if (window.generateSchedulePreview) window.generateSchedulePreview();
+  };
+
+  // Returns the base CSS color for a coach
+  function getCoachColor(name) {
+    const n = (name || "").toLowerCase();
+    if (n.includes("rohith")) return "#3b5998";
+    if (n.includes("ranjith")) return "#27ae60";
+    if (n.includes("gyana")) return "#8e44ad";
+    if (n.includes("arivu")) return "#d35400";
+    if (n.includes("yogesh")) return "#2ecc71";
+    if (n.includes("sudhin")) return "#f39c12";
+    if (n.includes("vasanth")) return "#16a085";
+    if (n.includes("vishnu")) return "#7f8c8d";
+    return "#4f5d75"; // default
+  }
+
+  // Shared function to render the Schedule Card HTML using the Master Matrix theme
+  function buildScheduleCardHtml(
+    studentName,
+    schedData,
+    coachName,
+    isChildView,
+    studentId,
+    studentBatches = [],
+  ) {
+    const regDays = schedData.regDays || "TBD";
+    const regTime = schedData.regTime || "TBD";
+    const meetLink = schedData.meetLink || "";
+    const footnote = schedData.footnote || "";
+
+    const coachColor = getCoachColor(coachName);
+
+    // Generate Weekly Calendar View HTML matching the Master Matrix table header style
+    const daysOfWeek = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
+    const shortDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const activeDaysStr = regDays.toLowerCase();
+
+    let weekGridHtml =
+      '<div style="display:flex; gap:4px; margin-top:12px; margin-bottom:12px; justify-content:space-between; width:100%;">';
+    const dayIcons = ["📅", "🥏", "🎯", "🎲", "🎉", "🎊", "⚽"];
+    for (let i = 0; i < 7; i++) {
+      const isActive =
+        activeDaysStr.includes(daysOfWeek[i].toLowerCase()) ||
+        activeDaysStr.includes(shortDays[i].toLowerCase());
+      if (isActive) {
+        weekGridHtml += `<div title="${daysOfWeek[i]}" style="flex:1; text-align:center; padding:8px 4px; border-radius:4px; background:linear-gradient(135deg, ${coachColor}, ${coachColor}cc); color:#ffffff; font-weight:600; font-size:11px; border:1px solid ${coachColor}; text-transform:uppercase; box-shadow:0 2px 8px rgba(0,0,0,0.2);">${shortDays[i]}<span style="display:block; font-size:9px; opacity:0.9;">${dayIcons[i]}</span></div>`;
+      } else {
+        weekGridHtml += `<div title="${daysOfWeek[i]}" style="flex:1; text-align:center; padding:8px 4px; border-radius:4px; background-color:#1c2030; color:#a4b0cb; font-weight:600; font-size:11px; border:1px solid #2c3242; text-transform:uppercase; opacity:0.6;">${shortDays[i]}<span style="display:block; font-size:9px;">${dayIcons[i]}</span></div>`;
+      }
+    }
+    weekGridHtml += "</div>";
+
+    // Action Buttons
+    let actionButtons = "";
+    if (isChildView) {
+      actionButtons = `
                 <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; justify-content:center;">
-                    ${meetLink ? `<a href="${meetLink}" target="_blank" style="background:${coachColor}; color:#ffffff; padding:10px 20px; border-radius:4px; text-decoration:none; font-weight:600; font-size:13px; box-shadow:0 4px 15px rgba(0,0,0,0.3); display:flex; align-items:center; gap:6px;">Join Class 🎥</a>` : ''}
+                    ${meetLink ? `<a href="${meetLink}" target="_blank" style="background:${coachColor}; color:#ffffff; padding:10px 20px; border-radius:4px; text-decoration:none; font-weight:600; font-size:13px; box-shadow:0 4px 15px rgba(0,0,0,0.3); display:flex; align-items:center; gap:6px;">Join Class 🎥</a>` : ""}
                     <button onclick="window.syncClassCalendar('${studentId}')" style="background:#1c2030; border:1px solid #2c3242; color:#ffffff; padding:10px 20px; border-radius:4px; font-weight:600; font-size:13px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:6px;" onmouseover="this.style.background='#2c3242'" onmouseout="this.style.background='#1c2030'">Add to Calendar 📅</button>
-                    ${(window.currentUser && window.currentUser.role === 'admin') ? `<button onclick="window.editStudentSchedule('${studentId}')" style="background:#4f5d75; border:1px solid rgba(255,255,255,0.2); color:#fff; padding:10px 20px; border-radius:4px; font-weight:600; font-size:13px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:6px;">Edit Schedule ✏️</button>` : ''}
+                    ${window.currentUser && window.currentUser.role === "admin" ? `<button onclick="window.editStudentSchedule('${studentId}')" style="background:#4f5d75; border:1px solid rgba(255,255,255,0.2); color:#fff; padding:10px 20px; border-radius:4px; font-weight:600; font-size:13px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:6px;">Edit Schedule ✏️</button>` : ""}
                 </div>`;
-        }
+    }
 
-        return `
+    return `
         <div id="sch-render-target" style="
             background-color: #141722;
             border: 1px solid #2c3242;
@@ -337,327 +414,486 @@
                     <span style="font-weight:bold; font-size:13px; color:${coachColor};">${coachName}</span>
                 </div>
 
-                ${!isChildView && meetLink ? `
+                ${
+                  !isChildView && meetLink
+                    ? `
                 <div style="margin-top:16px; text-align:center;">
                     <a href="${meetLink}" target="_blank" style="display:inline-block; background:${coachColor}; color:#ffffff; padding:8px 20px; border-radius:4px; text-decoration:none; font-weight:600; font-size:12px;">Join Class 🎥</a>
-                </div>` : ''}
+                </div>`
+                    : ""
+                }
             </div>
 
-            ${isChildView && studentBatches.length > 0 ? `
+            ${
+              isChildView && studentBatches.length > 0
+                ? `
             <!-- Batch / Group Info -->
             <div style="background-color:#1a1e2e; border:1px solid #2c3242; border-radius:4px; padding:16px; margin-bottom:16px;">
                 <div style="font-size:10px; text-transform:uppercase; color:#a4b0cb; font-weight:600; letter-spacing:0.5px; margin-bottom:8px;">Your Batches</div>
-                ${studentBatches.map(b => `
+                ${studentBatches
+                  .map(
+                    (b) => `
                 <div style="margin-bottom:10px;">
                     <div style="font-weight:600; color:#ffffff; font-size:12px; margin-bottom:4px;">${b.name}</div>
                     <div style="font-size:11px; color:#8a90a6;">
-                        ${b.days || ''} • ${b.time_slot || ''}
-                        ${window.allCoaches && b.coach_id ? 
-                            `<span style="color:${coachColor};"> • Coach: ${(window.allCoaches.find(c => String(c.id) === String(b.coach_id))?.name || 'TBD')}</span>` : ''}
+                        ${b.days || ""} • ${b.time_slot || ""}
+                        ${
+                          window.allCoaches && b.coach_id
+                            ? `<span style="color:${coachColor};"> • Coach: ${window.allCoaches.find((c) => String(c.id) === String(b.coach_id))?.name || "TBD"}</span>`
+                            : ""
+                        }
                     </div>
-                    ${Array.isArray(b.student_ids) && b.student_ids.length > 1 ? `
+                    ${
+                      Array.isArray(b.student_ids) && b.student_ids.length > 1
+                        ? `
                     <div style="font-size:10px; color:#a4b0cb; margin-top:6px;">
-                        <span style="color:#8a90a6;">Group mates:</span> ${b.student_ids.map(sid => {
-                            const s = (window.allStudents || []).find(x => String(x.id) === String(sid));
-                            return s ? s.name : '';
-                        }).filter(Boolean).join(', ')}
-                    </div>` : ''}
+                        <span style="color:#8a90a6;">Group mates:</span> ${b.student_ids
+                          .map((sid) => {
+                            const s = (window.allStudents || []).find(
+                              (x) => String(x.id) === String(sid),
+                            );
+                            return s ? s.name : "";
+                          })
+                          .filter(Boolean)
+                          .join(", ")}
+                    </div>`
+                        : ""
+                    }
                 </div>
-                `).join('')}
+                `,
+                  )
+                  .join("")}
             </div>
-            ` : ''}
+            `
+                : ""
+            }
 
             ${actionButtons}
 
-            ${footnote ? `<div style="font-size:10px; color:#4f5d75; text-align:center; font-style:italic; line-height:1.4; margin-top:16px;">"${footnote}"</div>` : ''}
+            ${footnote ? `<div style="font-size:10px; color:#4f5d75; text-align:center; font-style:italic; line-height:1.4; margin-top:16px;">"${footnote}"</div>` : ""}
         </div>
         `;
-    }
+  }
 
-    window.generateSchedulePreview = function () {
-        const wrapper = document.getElementById('sch-card-preview-wrapper');
-        const studentId = document.getElementById('sch-student-select') ? document.getElementById('sch-student-select').value : null;
-        
-        if (!studentId || !wrapper) {
-            if(wrapper) {
-                wrapper.innerHTML = `
+  window.generateSchedulePreview = function () {
+    const wrapper = document.getElementById("sch-card-preview-wrapper");
+    const isGroupMode =
+      document.getElementById("sch-group-panel") &&
+      document.getElementById("sch-group-panel").style.display === "block";
+    const studentId = document.getElementById("sch-student-select")
+      ? document.getElementById("sch-student-select").value
+      : null;
+
+    if (!isGroupMode && !studentId) {
+      if (wrapper) {
+        wrapper.innerHTML = `
                 <div class="twoknights-schedule-card" style="text-align:center; padding:40px; color:var(--ivory-dim); border:4px dashed var(--border); background:rgba(0,0,0,0.15)">
                   <span style="font-size:40px; display:block; margin-bottom:12px;">♟️</span>
-                  Select a student and click "Preview Card" to view the beautiful layout.
+                  Select a student or group and click "Preview Card" to view the beautiful layout.
                 </div>`;
-            }
-            return;
-        }
-
-        const student = (window.allStudents || []).find(s => s.id == studentId);
-        const stName = student ? student.name : 'Student';
-        
-        const schedData = {
-            regDays: document.getElementById('sch-reg-days').value || 'TBD',
-            regTime: document.getElementById('sch-reg-time').value || 'TBD',
-            meetLink: document.getElementById('sch-meet-link') ? document.getElementById('sch-meet-link').value : '',
-            footnote: document.getElementById('sch-footnote').value || ''
-        };
-        
-        // Update day button active states
-        const buttons = document.querySelectorAll('#sch-days-shortcuts .sch-day-btn');
-        const days = schedData.regDays.split('&').map(d => d.trim()).filter(Boolean);
-        buttons.forEach(btn => {
-            if (days.includes(btn.dataset.day)) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-        
-        const coachId = document.getElementById('sch-coach-select').value;
-        let coachName = 'TBD';
-        if (coachId && (window.allCoaches || window.coaches)) {
-            const coach = (window.allCoaches || window.coaches || []).find(c => c.id == coachId);
-            if (coach) coachName = coach.name;
-        }
-
-        wrapper.innerHTML = buildScheduleCardHtml(stName, schedData, coachName, false, studentId);
-    };
-
-    // Reads the current schedule form into a schedData object (shared by the
-    // single-student save and the group save).
-    function buildScheduleDataFromForm() {
-        const coachId = document.getElementById('sch-coach-select').value;
-        const coachObj = (window.allCoaches || window.coaches || []).find(c => String(c.id) === String(coachId));
-        return {
-            regDays: document.getElementById('sch-reg-days').value,
-            regTime: document.getElementById('sch-reg-time').value,
-            meetLink: document.getElementById('sch-meet-link') ? document.getElementById('sch-meet-link').value : '',
-            coachId: coachId,
-            coachName: coachObj ? coachObj.name : '', // denormalized so the parent card is correct even if rosters change
-            footnote: document.getElementById('sch-footnote').value
-        };
+      }
+      return;
     }
 
-    // Persists a schedData payload onto one student's notes (PUT). Returns true on success.
-    async function persistScheduleForStudent(student, schedData) {
-        if (!student) return false;
-        const notesWithoutSchedule = window.removeScheduleJSON(student.notes || '');
-        const newNotes = (notesWithoutSchedule + ` [SCHEDULE64:${encodeSchedulePayload(schedData)}]`).trim();
-        try {
-            const res = await window.apiCall('/api/students?id=' + encodeURIComponent(student.id), {
-                method: 'PUT',
-                body: JSON.stringify({ notes: newNotes, learning_mode: student.learning_mode || 'online' })
-            });
-            if (res.ok) { student.notes = newNotes; return true; }
-            return false;
-        } catch (e) {
-            console.error('[Schedule] save failed for', student.id, e);
-            return false;
-        }
+    let stName = "Student";
+    if (isGroupMode) {
+      const grpSel = document.getElementById("sch-batch-select");
+      stName =
+        grpSel && grpSel.value
+          ? grpSel.options[grpSel.selectedIndex].text
+          : "Group Schedule";
+    } else {
+      const student = (window.allStudents || []).find((s) => s.id == studentId);
+      if (student) stName = student.name;
     }
-    window.persistScheduleForStudent = persistScheduleForStudent;
-    window.encodeSchedulePayload = encodeSchedulePayload;
 
-    window.saveStudentSchedule = async function () {
-        const studentId = document.getElementById('sch-student-select').value;
-        if (!studentId) return window.toast('Please select a student', 'error');
-        const student = (window.allStudents || []).find(s => s.id == studentId);
-        if (!student) return;
-
-        window.toast('Saving schedule...', 'info');
-        const ok = await persistScheduleForStudent(student, buildScheduleDataFromForm());
-        window.toast(ok ? 'Schedule saved successfully!' : 'Failed to save schedule.', ok ? 'success' : 'error');
+    const schedData = {
+      regDays: document.getElementById("sch-reg-days").value || "TBD",
+      regTime: document.getElementById("sch-reg-time").value || "TBD",
+      meetLink: document.getElementById("sch-meet-link")
+        ? document.getElementById("sch-meet-link").value
+        : "",
+      footnote: document.getElementById("sch-footnote").value || "",
     };
 
-    // ─── Group / Batch Class Scheduling ─────────────────────────────
-    // Toggle the group panel and (re)build the multi-select student list.
-    window.toggleScheduleGroup = function () {
-        const panel = document.getElementById('sch-group-panel');
-        if (!panel) return;
-        
-        // Populate batch dropdown
-        const batchSelect = document.getElementById('sch-batch-select');
-        if (batchSelect && window.allBatches) {
-            const currentOpts = batchSelect.options.length;
-            if (currentOpts <= 1) {
-                batchSelect.innerHTML = '<option value="">-- Select Batch --</option>' + 
-                    window.allBatches.map(b => `<option value="${b.id}">${(window.escapeHtml ? window.escapeHtml(b.name) : b.name)} (${(Array.isArray(b.student_ids) ? b.student_ids.length : 0)} students)</option>`).join('');
-            }
-        }
-        
-        const coachId = window.currentCoachId || window.userId;
-        const role = window.role || 'admin';
-        const students = (window.allStudents || []).filter(s => {
-            if ((s.status || 'active').toLowerCase() === 'archived') return false;
-            if (role === 'coach' && coachId && String(s.coach_id) !== String(coachId)) return false;
-            return true;
-        });
-        const list = students
-            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        const listEl = document.getElementById('sch-group-list');
-        if (listEl) {
-            listEl.innerHTML = list.map(s =>
-                `<label style="display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:6px; font-size:12px; color:var(--ivory); cursor:pointer;">
-                   <input type="checkbox" class="sch-group-cb" value="${s.id}" style="accent-color:var(--gold);">
-                   <span>${(window.escapeHtml ? window.escapeHtml(s.name) : s.name)}${s.session_mode ? ` <span style="color:var(--ivory-dim); font-size:10px;">(${s.session_mode})</span>` : ''}</span>
-                 </label>`
-            ).join('');
-        }
-        panel.style.display = 'block';
+    // Update day button active states
+    const buttons = document.querySelectorAll(
+      "#sch-days-shortcuts .sch-day-btn",
+    );
+    const days = schedData.regDays
+      .split("&")
+      .map((d) => d.trim())
+      .filter(Boolean);
+    buttons.forEach((btn) => {
+      if (days.includes(btn.dataset.day)) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+
+    const coachId = document.getElementById("sch-coach-select").value;
+    let coachName = "TBD";
+    if (coachId && (window.allCoaches || window.coaches)) {
+      const coach = (window.allCoaches || window.coaches || []).find(
+        (c) => c.id == coachId,
+      );
+      if (coach) coachName = coach.name;
+    }
+
+    wrapper.innerHTML = buildScheduleCardHtml(
+      stName,
+      schedData,
+      coachName,
+      false,
+      studentId,
+    );
+  };
+
+  // Reads the current schedule form into a schedData object (shared by the
+  // single-student save and the group save).
+  function buildScheduleDataFromForm() {
+    const coachId = document.getElementById("sch-coach-select").value;
+    const coachObj = (window.allCoaches || window.coaches || []).find(
+      (c) => String(c.id) === String(coachId),
+    );
+    return {
+      regDays: document.getElementById("sch-reg-days").value,
+      regTime: document.getElementById("sch-reg-time").value,
+      meetLink: document.getElementById("sch-meet-link")
+        ? document.getElementById("sch-meet-link").value
+        : "",
+      coachId: coachId,
+      coachName: coachObj ? coachObj.name : "", // denormalized so the parent card is correct even if rosters change
+      footnote: document.getElementById("sch-footnote").value,
     };
+  }
 
-    window.schGroupSelect = function (mode) {
-        const cbs = document.querySelectorAll('.sch-group-cb');
-        const students = window.allStudents || [];
-        cbs.forEach(cb => {
-            if (mode === 'all') cb.checked = true;
-            else if (mode === 'none') cb.checked = false;
-            else if (mode === 'group') {
-                const s = students.find(x => String(x.id) === String(cb.value));
-                cb.checked = !!(s && String(s.session_mode || s.batch_type || '').toLowerCase() === 'group');
-            }
-        });
-    };
+  // Persists a schedData payload onto one student's notes (PUT). Returns true on success.
+  async function persistScheduleForStudent(student, schedData) {
+    if (!student) return false;
+    const notesWithoutSchedule = window.removeScheduleJSON(student.notes || "");
+    const newNotes = (
+      notesWithoutSchedule + ` [SCHEDULE64:${encodeSchedulePayload(schedData)}]`
+    ).trim();
+    try {
+      const res = await window.apiCall(
+        "/api/students?id=" + encodeURIComponent(student.id),
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            notes: newNotes,
+            learning_mode: student.learning_mode || "online",
+          }),
+        },
+      );
+      if (res.ok) {
+        student.notes = newNotes;
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error("[Schedule] save failed for", student.id, e);
+      return false;
+    }
+  }
+  window.persistScheduleForStudent = persistScheduleForStudent;
+  window.encodeSchedulePayload = encodeSchedulePayload;
 
-    window.schGroupSelectBatch = function (batchId) {
-        if (!batchId) return;
-        const batch = (window.allBatches || []).find(b => String(b.id) === String(batchId));
-        if (!batch || !Array.isArray(batch.student_ids)) return;
-        const cbs = document.querySelectorAll('.sch-group-cb');
-        const batchStudentIds = batch.student_ids.map(String);
-        cbs.forEach(cb => {
-            cb.checked = batchStudentIds.includes(String(cb.value));
-        });
-    };
+  window.saveStudentSchedule = async function () {
+    const studentId = document.getElementById("sch-student-select").value;
+    if (!studentId) return window.toast("Please select a student", "error");
+    const student = (window.allStudents || []).find((s) => s.id == studentId);
+    if (!student) return;
 
-    window.saveScheduleToGroup = async function () {
-        const ids = Array.from(document.querySelectorAll('.sch-group-cb:checked')).map(cb => cb.value);
-        if (ids.length === 0) return window.toast('Select at least one student for the group.', 'error');
-        const schedData = buildScheduleDataFromForm();
-        window.toast(`Saving schedule to ${ids.length} students...`, 'info');
-        let ok = 0;
-        for (const id of ids) {
-            const student = (window.allStudents || []).find(s => String(s.id) === String(id));
-            if (await persistScheduleForStudent(student, schedData)) ok++;
-        }
-        window.toast(`Group schedule saved to ${ok}/${ids.length} students.`, ok === ids.length ? 'success' : 'warning');
-    };
+    window.toast("Saving schedule...", "info");
+    const ok = await persistScheduleForStudent(
+      student,
+      buildScheduleDataFromForm(),
+    );
+    window.toast(
+      ok ? "Schedule saved successfully!" : "Failed to save schedule.",
+      ok ? "success" : "error",
+    );
+  };
 
-    window.downloadScheduleCardImage = function () {
-        const target = document.getElementById('sch-render-target');
-        if (!target) return window.toast('Please generate preview first', 'warning');
-        const stName = document.getElementById('sch-student-select').options[document.getElementById('sch-student-select').selectedIndex].text.split('(')[0].trim() || 'Student';
+  // ─── Group / Batch Class Scheduling ─────────────────────────────
+  // Toggle the group panel and (re)build the multi-select student list.
+  window.toggleScheduleGroup = function () {
+    const panel = document.getElementById("sch-group-panel");
+    if (!panel) return;
 
-        if (typeof html2canvas === 'undefined') {
-            return window.toast('html2canvas library is not loaded', 'error');
-        }
+    // Populate batch dropdown
+    const batchSelect = document.getElementById("sch-batch-select");
+    if (batchSelect && window.allBatches) {
+      const currentOpts = batchSelect.options.length;
+      if (currentOpts <= 1) {
+        const sortedBatches = [...window.allBatches].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        batchSelect.innerHTML =
+          '<option value="">-- Select Batch --</option>' +
+          sortedBatches
+            .map(
+              (b) =>
+                `<option value="${b.id}">${window.escapeHtml ? window.escapeHtml(b.name) : b.name} (${window.parseStudentIds ? window.parseStudentIds(b.student_ids).length : 0} students)</option>`,
+            )
+            .join("");
+      }
+    }
 
-        window.toast('Generating image...', 'info');
-        window.html2canvas(target, { backgroundColor: null, scale: 2 }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = `twoknights_Schedule_${stName.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            window.toast('Image downloaded!', 'success');
-        }).catch(err => {
-            console.error('Canvas error:', err);
-            window.toast('Error creating image', 'error');
-        });
-    };
+    const coachId = window.currentCoachId || window.userId;
+    const role = window.role || "admin";
+    const students = (window.allStudents || []).filter((s) => {
+      if ((s.status || "active").toLowerCase() === "archived") return false;
+      if (role === "coach" && coachId && String(s.coach_id) !== String(coachId))
+        return false;
+      return true;
+    });
+    const list = students.sort((a, b) => {
+      const nameA = window.getStudentName ? window.getStudentName(a) : (a.name || "");
+      const nameB = window.getStudentName ? window.getStudentName(b) : (b.name || "");
+      return nameA.localeCompare(nameB);
+    });
+    const listEl = document.getElementById("sch-group-list");
+    if (listEl) {
+      listEl.innerHTML = list
+        .map(
+          (s) =>
+            `<label style="display:flex; align-items:center; gap:10px; padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:13px; color:var(--ivory); cursor:pointer; width:100%; box-sizing:border-box;">
+                   <input type="checkbox" class="sch-group-cb" value="${s.id}" style="accent-color:var(--gold); margin:0; flex-shrink:0; width:16px; height:16px;">
+                   <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;">${window.escapeHtml ? window.escapeHtml(window.getStudentName ? window.getStudentName(s) : s.name) : s.name}${s.session_mode ? ` <span style="color:var(--ivory-dim); font-size:11px; margin-left:4px;">(${s.session_mode})</span>` : ""}</span>
+                 </label>`,
+        )
+        .join("");
+    }
+    panel.style.display = "block";
+  };
 
-    window.shareScheduleViaWhatsApp = function () {
-        const studentId = document.getElementById('sch-student-select').value;
-        if (!studentId) return window.toast('Please select a student', 'error');
-        const student = (window.allStudents || []).find(s => s.id == studentId);
-        if (!student) return;
+  window.schGroupSelect = function (mode) {
+    const cbs = document.querySelectorAll(".sch-group-cb");
+    const students = window.allStudents || [];
+    cbs.forEach((cb) => {
+      if (mode === "all") cb.checked = true;
+      else if (mode === "none") cb.checked = false;
+      else if (mode === "group") {
+        const s = students.find((x) => String(x.id) === String(cb.value));
+        cb.checked = !!(
+          s &&
+          String(s.session_mode || s.batch_type || "").toLowerCase() === "group"
+        );
+      }
+    });
+  };
 
-        const regDays = document.getElementById('sch-reg-days').value || 'TBD';
-        const regTime = document.getElementById('sch-reg-time').value || 'TBD';
-        const meetLink = document.getElementById('sch-meet-link') ? document.getElementById('sch-meet-link').value : '';
-        const coachId = document.getElementById('sch-coach-select').value;
-        let coachName = 'TBD';
-        if (coachId && (window.allCoaches || window.coaches)) {
-            const coach = (window.allCoaches || window.coaches || []).find(c => c.id == coachId);
-            if (coach) coachName = coach.name;
-        }
-        const footnote = document.getElementById('sch-footnote').value || '';
+  window.schGroupSelectBatch = function (batchId) {
+    if (!batchId) return;
+    const batch = (window.allBatches || []).find(
+      (b) => String(b.id) === String(batchId),
+    );
+    if (!batch) return;
+    const cbs = document.querySelectorAll(".sch-group-cb");
+    const batchStudentIds = window.parseStudentIds(batch.student_ids);
+    cbs.forEach((cb) => {
+      cb.checked = batchStudentIds.includes(String(cb.value));
+    });
+  };
 
-        const stName = student.name;
-        const phone = student.parent_phone || '';
-        
-        if (!phone) {
-            return window.toast('Student does not have a parent phone number saved', 'error');
-        }
+  window.saveScheduleToGroup = async function () {
+    const ids = Array.from(
+      document.querySelectorAll(".sch-group-cb:checked"),
+    ).map((cb) => cb.value);
+    if (ids.length === 0)
+      return window.toast(
+        "Select at least one student for the group.",
+        "error",
+      );
+    const schedData = buildScheduleDataFromForm();
+    window.toast(`Saving schedule to ${ids.length} students...`, "info");
+    let ok = 0;
+    for (const id of ids) {
+      const student = (window.allStudents || []).find(
+        (s) => String(s.id) === String(id),
+      );
+      if (await persistScheduleForStudent(student, schedData)) ok++;
+    }
+    window.toast(
+      `Group schedule saved to ${ok}/${ids.length} students.`,
+      ok === ids.length ? "success" : "warning",
+    );
+  };
 
-        // Strip any internal learning-mode marker that may have leaked into the
-        // stored name (e.g. "Prajesh --offline academy") for a clean parent message.
-        const cleanName = (stName || 'Student').replace(/\s*-+\s*(offline|online)(\s+academy)?\s*$/i, '').trim() || stName;
+  window.downloadScheduleCardImage = function () {
+    const target = document.getElementById("sch-render-target");
+    if (!target)
+      return window.toast("Please generate preview first", "warning");
 
-        // NOTE: emojis are written as \u{...} escapes (pure ASCII in source) so
-        // they can never be corrupted to "?" by file-encoding / build / transport.
-        let msg = `\u{1F451} *Two Knights ACADEMY*\n_Official Class Schedule_\n\n`;            // 👑
-        msg += `Hello Sir/Madam, \u{1F44B}\n\n`;                                              // 👋
-        msg += `We are happy to inform you that *${cleanName}* has been scheduled for chess classes at our academy. \u{265F}\u{FE0F}\n\n`; // ♟️
-        msg += `\u{1F5D3}\u{FE0F} *REGULAR CLASS*\n`;                                          // 🗓️
-        msg += `\u{1F4C6} Days: ${regDays}\n`;                                                 // 📆
-        msg += `\u{23F1}\u{FE0F} Timing: ${regTime}\n`;                                        // ⏱️
-        msg += `\u{1F393} Coach: ${coachName}\n\n`;                                            // 🎓
-        if (meetLink) msg += `\u{1F3A5} *Join Online Class:* ${meetLink}\n\n`;                 // 🎥
-        if (footnote) msg += `\u{2728} _${footnote}_\n`;                                       // ✨
+    let stName = "Student";
+    const isGroupMode =
+      document.getElementById("sch-group-panel") &&
+      document.getElementById("sch-group-panel").style.display === "block";
+    if (isGroupMode) {
+      const grpSel = document.getElementById("sch-batch-select");
+      stName =
+        grpSel && grpSel.value
+          ? grpSel.options[grpSel.selectedIndex].text
+          : "Group Schedule";
+    } else {
+      const sel = document.getElementById("sch-student-select");
+      if (sel && sel.selectedIndex >= 0) {
+        stName =
+          sel.options[sel.selectedIndex].text.split("(")[0].trim() || "Student";
+      }
+    }
 
-        const waUrl = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
-        window.open(waUrl, '_blank');
-    };
+    if (typeof html2canvas === "undefined") {
+      return window.toast("html2canvas library is not loaded", "error");
+    }
 
-    window.renderChildSchedule = function (student, coachName) {
-        const wrapper = document.getElementById('child-schedule-card-container');
-        if (!wrapper) return;
+    window.toast("Generating image...", "info");
+    window
+      .html2canvas(target, { backgroundColor: null, scale: 2 })
+      .then((canvas) => {
+        const link = document.createElement("a");
+        link.download = `twoknights_Schedule_${stName.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        window.toast("Image downloaded!", "success");
+      })
+      .catch((err) => {
+        console.error("Canvas error:", err);
+        window.toast("Error creating image", "error");
+      });
+  };
 
-        const schedData = window.extractScheduleJSON(student.notes, student);
+  window.shareScheduleViaWhatsApp = function () {
+    const studentId = document.getElementById("sch-student-select").value;
+    if (!studentId) return window.toast("Please select a student", "error");
+    const student = (window.allStudents || []).find((s) => s.id == studentId);
+    if (!student) return;
 
-        if (!schedData) {
-            wrapper.innerHTML = `
+    const regDays = document.getElementById("sch-reg-days").value || "TBD";
+    const regTime = document.getElementById("sch-reg-time").value || "TBD";
+    const meetLink = document.getElementById("sch-meet-link")
+      ? document.getElementById("sch-meet-link").value
+      : "";
+    const coachId = document.getElementById("sch-coach-select").value;
+    let coachName = "TBD";
+    if (coachId && (window.allCoaches || window.coaches)) {
+      const coach = (window.allCoaches || window.coaches || []).find(
+        (c) => c.id == coachId,
+      );
+      if (coach) coachName = coach.name;
+    }
+    const footnote = document.getElementById("sch-footnote").value || "";
+
+    const stName = student.name;
+    const phone = student.parent_phone || "";
+
+    if (!phone) {
+      return window.toast(
+        "Student does not have a parent phone number saved",
+        "error",
+      );
+    }
+
+    // Strip any internal learning-mode marker that may have leaked into the
+    // stored name (e.g. "Prajesh --offline academy") for a clean parent message.
+    const cleanName =
+      (stName || "Student")
+        .replace(/\s*-+\s*(offline|online)(\s+academy)?\s*$/i, "")
+        .trim() || stName;
+
+    // NOTE: emojis are written as \u{...} escapes (pure ASCII in source) so
+    // they can never be corrupted to "?" by file-encoding / build / transport.
+    let msg = `\u{1F451} *Two Knights ACADEMY*\n_Official Class Schedule_\n\n`; // 👑
+    msg += `Hello Sir/Madam, \u{1F44B}\n\n`; // 👋
+    msg += `We are happy to inform you that *${cleanName}* has been scheduled for chess classes at our academy. \u{265F}\u{FE0F}\n\n`; // ♟️
+    msg += `\u{1F5D3}\u{FE0F} *REGULAR CLASS*\n`; // 🗓️
+    msg += `\u{1F4C6} Days: ${regDays}\n`; // 📆
+    msg += `\u{23F1}\u{FE0F} Timing: ${regTime}\n`; // ⏱️
+    msg += `\u{1F393} Coach: ${coachName}\n\n`; // 🎓
+    if (meetLink) msg += `\u{1F3A5} *Join Online Class:* ${meetLink}\n\n`; // 🎥
+    if (footnote) msg += `\u{2728} _${footnote}_\n`; // ✨
+
+    const waUrl = `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, "_blank");
+  };
+
+  window.renderChildSchedule = function (student, coachName) {
+    const wrapper = document.getElementById("child-schedule-card-container");
+    if (!wrapper) return;
+
+    const schedData = window.extractScheduleJSON(student.notes, student);
+
+    if (!schedData) {
+      wrapper.innerHTML = `
             <div class="card" style="padding:40px; text-align:center; color:var(--ivory-dim); width:100%;">
               <span style="font-size:36px; display:block; margin-bottom:12px;">📅</span>
               No active schedule found. Please contact the administrator.
             </div>`;
-            return;
-        }
+      return;
+    }
 
-        // Resolve the coach actually chosen for this schedule (falls back to the
-        // student's assigned coach / passed-in name).
-        const resolvedCoachName = schedData.regCoachName || resolveScheduleCoachName(schedData, student) || coachName || 'TBD';
+    // Resolve the coach actually chosen for this schedule (falls back to the
+    // student's assigned coach / passed-in name).
+    const resolvedCoachName =
+      schedData.regCoachName ||
+      resolveScheduleCoachName(schedData, student) ||
+      coachName ||
+      "TBD";
 
-        // Find student's batch
-        const studentBatches = (window.allBatches || []).filter(b => 
-            Array.isArray(b.student_ids) && b.student_ids.map(String).includes(String(student.id))
-        );
+    // Find student's batch
+    const studentBatches = (window.allBatches || []).filter(
+      (b) =>
+        Array.isArray(b.student_ids) &&
+        b.student_ids.map(String).includes(String(student.id)),
+    );
 
-        wrapper.innerHTML = buildScheduleCardHtml(student.name, schedData, resolvedCoachName, true, student.id, studentBatches);
-        
-        // Trigger AI Insight update for Parent Portal Schedule
-        if(window.generateContextualInsight) {
-            window.generateContextualInsight('child_schedule', student.id);
-        }
+    wrapper.innerHTML = buildScheduleCardHtml(
+      student.name,
+      schedData,
+      resolvedCoachName,
+      true,
+      student.id,
+      studentBatches,
+    );
+
+    // Trigger AI Insight update for Parent Portal Schedule
+    if (window.generateContextualInsight) {
+      window.generateContextualInsight("child_schedule", student.id);
+    }
+  };
+
+  window.syncClassCalendar = function (studentId) {
+    const student = (window.allStudents || []).find((s) => s.id == studentId);
+    if (!student || !student.notes) return;
+    const schedData = window.extractScheduleJSON(student.notes);
+    if (!schedData) return;
+
+    // Parse days
+    const daysMap = {
+      monday: "MO",
+      tuesday: "TU",
+      wednesday: "WE",
+      thursday: "TH",
+      friday: "FR",
+      saturday: "SA",
+      sunday: "SU",
     };
+    const days = (schedData.regDays || "")
+      .toLowerCase()
+      .replace(/&/g, ",")
+      .split(",")
+      .map((d) => d.trim());
+    const byDayStr = days
+      .map((d) => daysMap[d])
+      .filter(Boolean)
+      .join(",");
 
-    window.syncClassCalendar = function(studentId) {
-        const student = (window.allStudents || []).find(s => s.id == studentId);
-        if (!student || !student.notes) return;
-        const schedData = window.extractScheduleJSON(student.notes);
-        if (!schedData) return;
+    // Default to current time as the class start timestamp
+    const d = new Date();
+    const startStr = d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 
-        // Parse days
-        const daysMap = {
-            'monday': 'MO', 'tuesday': 'TU', 'wednesday': 'WE',
-            'thursday': 'TH', 'friday': 'FR', 'saturday': 'SA', 'sunday': 'SU'
-        };
-        const days = (schedData.regDays || '').toLowerCase().replace(/&/g, ',').split(',').map(d => d.trim());
-        const byDayStr = days.map(d => daysMap[d]).filter(Boolean).join(',');
-
-        // Default to current time as the class start timestamp
-        const d = new Date();
-        const startStr = d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-        
-        let icsContent = 
-`BEGIN:VCALENDAR
+    let icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Two Knights Academy//Class Schedule//EN
 BEGIN:VEVENT
@@ -665,45 +901,49 @@ UID:class-${student.id}@Two Knights.com
 DTSTAMP:${startStr}
 DTSTART:${startStr}
 SUMMARY:Two Knights Class
-LOCATION:${schedData.meetLink ? schedData.meetLink : 'Online / Academy'}
-DESCRIPTION:Regular chess class timing: ${schedData.regTime || 'TBD'}. Coach: ${resolveScheduleCoachName(schedData, student)}
+LOCATION:${schedData.meetLink ? schedData.meetLink : "Online / Academy"}
+DESCRIPTION:Regular chess class timing: ${schedData.regTime || "TBD"}. Coach: ${resolveScheduleCoachName(schedData, student)}
 `;
-        
-        if (byDayStr) {
-            icsContent += `RRULE:FREQ=WEEKLY;BYDAY=${byDayStr}\n`;
-        }
-        
-        icsContent += `END:VEVENT\nEND:VCALENDAR`;
 
-        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `twoknights_Classes_${student.name.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    if (byDayStr) {
+      icsContent += `RRULE:FREQ=WEEKLY;BYDAY=${byDayStr}\n`;
+    }
 
-        if (window.toast) window.toast('Class schedule calendar downloaded!', 'success');
-    };
+    icsContent += `END:VEVENT\nEND:VCALENDAR`;
 
-    window.editStudentSchedule = function (studentId) {
-        if (!window.currentUser || window.currentUser.role !== 'admin') return;
-        
-        // Find the student
-        const student = window.allStudents.find(s => String(s.id) === String(studentId));
-        if (!student) return;
+    const blob = new Blob([icsContent], {
+      type: "text/calendar;charset=utf-8",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `twoknights_Classes_${student.name.replace(/[^a-zA-Z0-9]/g, "_")}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-        // Open the Schedule Manager tab
-        if (window.setPage) window.setPage('schedule');
+    if (window.toast)
+      window.toast("Class schedule calendar downloaded!", "success");
+  };
 
-        // Allow DOM to render page
-        setTimeout(() => {
-            const studentSelect = document.getElementById("sch-student-select");
-            if (studentSelect) {
-                studentSelect.value = studentId;
-                studentSelect.dispatchEvent(new window.Event('change')); // Trigger logic to load their existing schedule
-            }
-        }, 100);
-    };
+  window.editStudentSchedule = function (studentId) {
+    if (!window.currentUser || window.currentUser.role !== "admin") return;
 
+    // Find the student
+    const student = window.allStudents.find(
+      (s) => String(s.id) === String(studentId),
+    );
+    if (!student) return;
+
+    // Open the Schedule Manager tab
+    if (window.setPage) window.setPage("schedule");
+
+    // Allow DOM to render page
+    setTimeout(() => {
+      const studentSelect = document.getElementById("sch-student-select");
+      if (studentSelect) {
+        studentSelect.value = studentId;
+        studentSelect.dispatchEvent(new window.Event("change")); // Trigger logic to load their existing schedule
+      }
+    }, 100);
+  };
 })();

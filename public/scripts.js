@@ -133,6 +133,10 @@
   // ═══════════════════════════════════════════════════════════════
   let allCoaches = [];
   let allStudents = [];
+  // Persisted student-registry selection. Kept in a Set so selections survive
+  // table re-renders triggered by realtime/polling sync (the cause of the
+  // "0 selected" bug where the count reset after every refresh).
+  let selectedStudentIds = new Set();
   let allPayments = [];
   let allAttendance = [];
   let allBatches = [];
@@ -185,6 +189,23 @@
   };
 
   // ── CORE UTILITIES ──
+  function chartThemeColors() {
+    const isLight = document.body && document.body.getAttribute('data-theme') === 'light';
+    return {
+      legend: isLight ? '#1f2937' : '#f3f4f6',
+      tick: isLight ? '#4b5563' : '#9ca3af',
+      grid: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)'
+    };
+  }
+
+  function getRatingTrend(lichessData, variant) {
+    if (!lichessData?.ratingHistory) return 0;
+    const history = lichessData.ratingHistory.find(h => h.name === variant);
+    if (!history || history.points.length < 2) return 0;
+    const current = history.points[history.points.length - 1][3];
+    const previous = history.points[history.points.length - 2][3];
+    return current - previous;
+  }
   window.apiCall = async function (endpoint, options = {}) {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       const err = new TypeError("Failed to fetch (offline)");
@@ -744,9 +765,12 @@ const headers = {
               label: "Internal ELO",
               data,
               borderColor: "#dca33e",
-              backgroundColor: "rgba(220,161,62,0.1)",
+              backgroundColor: "rgba(220,161,62,0.15)",
               fill: true,
               tension: 0.4,
+              pointBackgroundColor: "#dca33e",
+              pointBorderColor: "#dca33e",
+              pointRadius: 4,
             },
           ],
         },
@@ -754,75 +778,412 @@ const headers = {
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: chartThemeColors().grid }, ticks: { color: chartThemeColors().tick } },
+            x: { grid: { display: false }, ticks: { color: chartThemeColors().tick } }
+          },
         },
       });
     }
 
-    // Render Lichess Chart
-    const lichessCard = document.getElementById("lichess-chart-card");
-    const lichessCtx = document.getElementById("chartLichessElo");
-    if (s.lichess_username && lichessCard && lichessCtx && typeof Chart !== "undefined") {
-      lichessCard.style.display = "block";
-      try {
-        const res = await fetch(`/api/lichess-proxy?username=${s.lichess_username}`);
-        const data = await res.json();
-        const rapidHistory = Array.isArray(data?.ratingHistory) ? data.ratingHistory.find(d => d.name === "Rapid") : null;
-        
-        if (chartInstances.lichessElo) chartInstances.lichessElo.destroy();
-        
-        let labels = ["No Data"];
-        let chartData = [0];
-        
-        if (rapidHistory && rapidHistory.points && rapidHistory.points.length > 0) {
-            // Take the last 10 points for a cleaner graph
-            const recent = rapidHistory.points.slice(-10);
-            labels = recent.map(p => `${p[0]}-${String(p[1]+1).padStart(2,'0')}-${String(p[2]).padStart(2,'0')}`);
-            chartData = recent.map(p => p[3]);
-        }
+    let lichessData = null;
+    let chesscomData = null;
+    const allGames = [];
 
-        chartInstances.lichessElo = new Chart(lichessCtx, {
-          type: "line",
-          data: {
-            labels,
-            datasets: [{ label: "Lichess Rapid", data: chartData, borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.1)", fill: true, tension: 0.4 }]
-          },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: "rgba(255,255,255,0.05)" } }, x: { grid: { display: false } } } }
-        });
+    // Fetch Lichess data
+    if (s.lichess_username) {
+      try {
+        const res = await fetch(`/api/lichess-proxy?username=${encodeURIComponent(s.lichess_username)}&t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.notFound) {
+            lichessData = data;
+            if (data.profile?.seenAt) {
+              s.lichess_seen_at = new Date(data.profile.seenAt).toISOString();
+            }
+            const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(s.lichess_username)}&max=10&pgnInJson=true&t=${Date.now()}`);
+            if (gamesRes.ok) {
+              const games = await gamesRes.json();
+              allGames.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
+            }
+          }
+        }
       } catch (e) {
-          console.error("Lichess fetch error", e);
+        console.error("Lichess fetch error", e);
+      }
+    }
+
+    // Fetch Chess.com data
+    if (s.chesscom_username) {
+      try {
+        const res = await fetch(`/api/chesscom-proxy?username=${encodeURIComponent(s.chesscom_username)}&t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.notFound) {
+            chesscomData = data;
+            const y = new Date().getFullYear();
+            const m = String(new Date().getMonth() + 1).padStart(2, '0');
+            const gamesRes = await fetch(`/api/chesscom-games-proxy?username=${encodeURIComponent(s.chesscom_username)}&year=${y}&month=${m}&t=${Date.now()}`);
+            if (gamesRes.ok) {
+              const gamesData = await gamesRes.json();
+              allGames.push(...(gamesData.games || []).map(g => ({ ...g, platform: 'chesscom' })));
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Chesscom fetch error", e);
+      }
+    }
+
+    // Render Lichess Charts
+    const lichessCard = document.getElementById("lichess-chart-card");
+    if (s.lichess_username && lichessCard && typeof Chart !== "undefined") {
+      lichessCard.style.display = "block";
+      
+      // Stat cards
+      const statCards = document.getElementById("lichess-stat-cards");
+      if (statCards && lichessData?.profile?.perfs) {
+        const perfs = lichessData.profile.perfs;
+        const cards = [
+          { label: 'Rapid', value: perfs.rapid?.rating || '—', trend: getRatingTrend(lichessData, 'Rapid') },
+          { label: 'Classical', value: perfs.classical?.rating || '—', trend: getRatingTrend(lichessData, 'Classical') },
+          { label: 'Blitz', value: perfs.blitz?.rating || '—', trend: getRatingTrend(lichessData, 'Blitz') },
+          { label: 'Puzzles', value: perfs.puzzle?.rating || '—', trend: getRatingTrend(lichessData, 'Puzzle') },
+        ];
+        statCards.innerHTML = cards.map(c => {
+          const trendColor = c.trend > 0 ? 'var(--success)' : c.trend < 0 ? 'var(--danger)' : 'var(--ivory-dim)';
+          const trendIcon = c.trend > 0 ? '↑' : c.trend < 0 ? '↓' : '→';
+          return `
+            <div style="background:var(--bg3); padding:12px; border-radius:8px; text-align:center; border:1px solid var(--border);">
+              <div style="font-size:10px; color:var(--ivory-dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">${c.label}</div>
+              <div style="font-size:20px; font-weight:700; color:var(--ivory);">${c.value}</div>
+              <div style="font-size:11px; color:${trendColor}; font-weight:600;">${trendIcon} ${c.trend !== 0 ? (c.trend > 0 ? '+' : '') + c.trend : 'No change'}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Summary bar
+      const summaryBar = document.getElementById("lichess-summary-bar");
+      if (summaryBar && lichessData?.profile) {
+        const count = lichessData.profile.count || {};
+        const totalGames = count.all || 0;
+        const wins = count.win || 0;
+        const losses = count.loss || 0;
+        const draws = count.draw || 0;
+        const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+        summaryBar.innerHTML = `
+          <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:space-between; width:100%;">
+            <span style="font-size:12px; color:var(--ivory-dim);">📊 <b style="color:var(--ivory);">${totalGames}</b> total games played</span>
+            <span style="font-size:12px; color:var(--ivory-dim);">🏆 <b style="color:var(--success);">${wins}</b> wins · <b style="color:var(--danger);">${losses}</b> losses · <b style="color:var(--gold);">${draws}</b> draws</span>
+            <span style="font-size:12px; color:var(--ivory-dim);">📈 <b style="color:var(--ivory);">${winRate}%</b> win rate</span>
+          </div>
+        `;
+      }
+
+      // Rapid chart
+      const rapidCtx = document.getElementById("chartLichessRapid");
+      if (rapidCtx && typeof Chart !== "undefined") {
+        if (chartInstances.lichessRapid) chartInstances.lichessRapid.destroy();
+        const rapidHistory = Array.isArray(lichessData?.ratingHistory) ? lichessData.ratingHistory.find(d => d.name === "Rapid") : null;
+        let labels = [], chartData = [];
+        if (rapidHistory?.points?.length) {
+          const recent = rapidHistory.points.slice(-10);
+          labels = recent.map(p => `${p[0]}-${String(p[1]+1).padStart(2,'0')}-${String(p[2]).padStart(2,'0')}`);
+          chartData = recent.map(p => p[3]);
+        }
+        if (chartData.length) {
+          chartInstances.lichessRapid = new Chart(rapidCtx, {
+            type: "bar",
+            data: { 
+              labels, 
+              datasets: [{ 
+                label: "Rapid Rating", 
+                data: chartData, 
+                backgroundColor: "rgba(59,130,246,0.7)",
+                borderColor: "#3b82f6",
+                borderWidth: 1,
+                borderRadius: 6,
+                barPercentage: 0.6
+              }] 
+            },
+            options: { 
+              responsive: true, 
+              maintainAspectRatio: false, 
+              plugins: { 
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) => `Rating: ${ctx.raw}`
+                  }
+                }
+              }, 
+              scales: { 
+                y: { 
+                  beginAtZero: false,
+                  grid: { color: chartThemeColors().grid }, 
+                  ticks: { color: chartThemeColors().tick, callback: (v) => v },
+                  title: { display: true, text: 'Rating', color: chartThemeColors().tick }
+                }, 
+                x: { 
+                  grid: { display: false }, 
+                  ticks: { color: chartThemeColors().tick, maxRotation: 45 }
+                } 
+              } 
+            }
+          });
+        }
+      }
+
+      // Classical chart
+      const classicalCtx = document.getElementById("chartLichessClassical");
+      if (classicalCtx && typeof Chart !== "undefined") {
+        if (chartInstances.lichessClassical) chartInstances.lichessClassical.destroy();
+        const classicalHistory = Array.isArray(lichessData?.ratingHistory) ? lichessData.ratingHistory.find(d => d.name === "Classical") : null;
+        let labels = [], chartData = [];
+        if (classicalHistory?.points?.length) {
+          const recent = classicalHistory.points.slice(-10);
+          labels = recent.map(p => `${p[0]}-${String(p[1]+1).padStart(2,'0')}-${String(p[2]).padStart(2,'0')}`);
+          chartData = recent.map(p => p[3]);
+        }
+        if (chartData.length) {
+          chartInstances.lichessClassical = new Chart(classicalCtx, {
+            type: "bar",
+            data: { 
+              labels, 
+              datasets: [{ 
+                label: "Classical Rating", 
+                data: chartData, 
+                backgroundColor: "rgba(220,161,62,0.7)",
+                borderColor: "#dca33e",
+                borderWidth: 1,
+                borderRadius: 6,
+                barPercentage: 0.6
+              }] 
+            },
+            options: { 
+              responsive: true, 
+              maintainAspectRatio: false, 
+              plugins: { 
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) => `Rating: ${ctx.raw}`
+                  }
+                }
+              }, 
+              scales: { 
+                y: { 
+                  beginAtZero: false,
+                  grid: { color: chartThemeColors().grid }, 
+                  ticks: { color: chartThemeColors().tick, callback: (v) => v },
+                  title: { display: true, text: 'Rating', color: chartThemeColors().tick }
+                }, 
+                x: { 
+                  grid: { display: false }, 
+                  ticks: { color: chartThemeColors().tick, maxRotation: 45 }
+                } 
+              } 
+            }
+          });
+        }
+      }
+
+      // Puzzles chart
+      const puzzlesCtx = document.getElementById("chartLichessPuzzles");
+      if (puzzlesCtx && typeof Chart !== "undefined") {
+        if (chartInstances.lichessPuzzles) chartInstances.lichessPuzzles.destroy();
+        const puzzleHistory = Array.isArray(lichessData?.ratingHistory) ? lichessData.ratingHistory.find(d => d.name === "Puzzles") : null;
+        let labels = [], chartData = [];
+        if (puzzleHistory?.points?.length) {
+          const recent = puzzleHistory.points.slice(-10);
+          labels = recent.map(p => `${p[0]}-${String(p[1]+1).padStart(2,'0')}-${String(p[2]).padStart(2,'0')}`);
+          chartData = recent.map(p => p[3]);
+        }
+        if (chartData.length) {
+          chartInstances.lichessPuzzles = new Chart(puzzlesCtx, {
+            type: "bar",
+            data: { 
+              labels, 
+              datasets: [{ 
+                label: "Puzzle Rating", 
+                data: chartData, 
+                backgroundColor: "rgba(234,88,12,0.7)",
+                borderColor: "#EA580C",
+                borderWidth: 1,
+                borderRadius: 6,
+                barPercentage: 0.6
+              }] 
+            },
+            options: { 
+              responsive: true, 
+              maintainAspectRatio: false, 
+              plugins: { 
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) => `Rating: ${ctx.raw}`
+                  }
+                }
+              }, 
+              scales: { 
+                y: { 
+                  beginAtZero: false,
+                  grid: { color: chartThemeColors().grid }, 
+                  ticks: { color: chartThemeColors().tick, callback: (v) => v },
+                  title: { display: true, text: 'Rating', color: chartThemeColors().tick }
+                }, 
+                x: { 
+                  grid: { display: false }, 
+                  ticks: { color: chartThemeColors().tick, maxRotation: 45 }
+                } 
+              } 
+            }
+          });
+        }
+      }
+
+      // Recent games
+      const lichessGamesContainer = document.getElementById("lichess-recent-games");
+      if (lichessGamesContainer) {
+        const lichessGames = allGames.filter(g => g.platform === 'lichess');
+        if (window.renderRecentGamesList) {
+          window.renderRecentGamesList(lichessGames, lichessGamesContainer, 'lichess');
+        }
       }
     } else if (lichessCard) {
       lichessCard.style.display = "none";
     }
 
-    // Render Chess.com Chart
+    // Render Chess.com Charts
     const chesscomCard = document.getElementById("chesscom-chart-card");
-    const chesscomCtx = document.getElementById("chartChesscomElo");
-    if (s.chesscom_username && chesscomCard && chesscomCtx && typeof Chart !== "undefined") {
+    if (s.chesscom_username && chesscomCard && typeof Chart !== "undefined") {
       chesscomCard.style.display = "block";
-      try {
-        const res = await fetch(`/api/chesscom-proxy?username=${s.chesscom_username}`);
-        const data = await res.json();
-        
-        if (chartInstances.chesscomElo) chartInstances.chesscomElo.destroy();
-        
-        const currentRapid = data?.chess_rapid?.last?.rating || 0;
-        const labels = ["Current"];
-        const chartData = [currentRapid];
 
-        chartInstances.chesscomElo = new Chart(chesscomCtx, {
+      // Stat cards
+      const ccStatCards = document.getElementById("chesscom-stat-cards");
+      if (ccStatCards && chesscomData) {
+        const cards = [
+          { label: 'Rapid', value: chesscomData.chess_rapid?.last?.rating || '—' },
+          { label: 'Blitz', value: chesscomData.chess_blitz?.last?.rating || '—' },
+          { label: 'Bullet', value: chesscomData.chess_bullet?.last?.rating || '—' },
+          { label: 'Classical', value: chesscomData.chess_classical?.last?.rating || '—' },
+        ];
+        ccStatCards.innerHTML = cards.map(c => `
+          <div style="background:var(--bg3); padding:10px; border-radius:6px; text-align:center;">
+            <div style="font-size:11px; color:var(--ivory-dim); margin-bottom:4px;">${c.label}</div>
+            <div style="font-size:18px; font-weight:bold; color:#7FA650;">${c.value}</div>
+          </div>
+        `).join('');
+      }
+
+      // Summary bar
+      const ccSummaryBar = document.getElementById("chesscom-summary-bar");
+      if (ccSummaryBar && chesscomData) {
+        const types = ['chess_blitz', 'chess_rapid', 'chess_bullet', 'chess_daily'];
+        let totalWins = 0, totalLosses = 0, totalDraws = 0;
+        types.forEach(key => {
+          const rec = chesscomData[key]?.record || {};
+          totalWins += rec.wins || 0;
+          totalLosses += rec.losses || 0;
+          totalDraws += rec.draws || 0;
+        });
+        const totalGames = totalWins + totalLosses + totalDraws;
+        ccSummaryBar.innerHTML = `
+          <span>Total Games: <b>${totalGames}</b></span>
+          <span>Wins: <b style="color:var(--success)">${totalWins}</b></span>
+          <span>Losses: <b style="color:var(--danger)">${totalLosses}</b></span>
+          <span>Draws: <b>${totalDraws}</b></span>
+          <span>Win Rate: <b>${totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : 0}%</b></span>
+        `;
+      }
+
+      // Combined Chess.com ratings chart
+      const ccRatingsCtx = document.getElementById("chartChesscomRatings");
+      if (ccRatingsCtx && typeof Chart !== "undefined" && chesscomData) {
+        if (chartInstances.chesscomRatings) chartInstances.chesscomRatings.destroy();
+        
+        const labels = [];
+        const data = [];
+        const colors = [];
+        
+        if (chesscomData.chess_rapid?.last?.rating) {
+          labels.push('Rapid');
+          data.push(chesscomData.chess_rapid.last.rating);
+          colors.push('#7FA650');
+        }
+        if (chesscomData.chess_blitz?.last?.rating) {
+          labels.push('Blitz');
+          data.push(chesscomData.chess_blitz.last.rating);
+          colors.push('#10b981');
+        }
+        if (chesscomData.chess_bullet?.last?.rating) {
+          labels.push('Bullet');
+          data.push(chesscomData.chess_bullet.last.rating);
+          colors.push('#f59e0b');
+        }
+        if (chesscomData.chess_classical?.last?.rating) {
+          labels.push('Classical');
+          data.push(chesscomData.chess_classical.last.rating);
+          colors.push('#dca33e');
+        }
+        
+        chartInstances.chesscomRatings = new Chart(ccRatingsCtx, {
           type: "bar",
           data: {
             labels,
-            datasets: [{ label: "Chess.com Rapid", data: chartData, backgroundColor: "#7FA650" }]
+            datasets: [{
+              label: "Chess.com Rating",
+              data,
+              backgroundColor: colors,
+              borderColor: colors,
+              borderWidth: 1,
+              borderRadius: 6,
+              barPercentage: 0.6
+            }]
           },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: "rgba(255,255,255,0.05)" } }, x: { grid: { display: false } } } }
+          options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { 
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.raw} rating`
+                }
+              }
+            }, 
+            scales: { 
+              y: { 
+                beginAtZero: true,
+                grid: { color: chartThemeColors().grid }, 
+                ticks: { color: chartThemeColors().tick, callback: (v) => v },
+                title: { display: true, text: 'Rating', color: chartThemeColors().tick }
+              }, 
+              x: { 
+                grid: { display: false }, 
+                ticks: { color: chartThemeColors().tick, font: { weight: 'bold' } }
+              } 
+            } 
+          }
         });
-      } catch (e) {
-          console.error("Chesscom fetch error", e);
+      }
+
+      // Recent games
+      const ccGamesContainer = document.getElementById("chesscom-recent-games");
+      if (ccGamesContainer) {
+        const ccGames = allGames.filter(g => g.platform === 'chesscom');
+        if (window.renderChesscomRecentGames) {
+          window.renderChesscomRecentGames(ccGames, ccGamesContainer);
+        }
       }
     } else if (chesscomCard) {
       chesscomCard.style.display = "none";
+    }
+
+    // Update dynamic skill breakdown
+    if (typeof window.renderDynamicSkillBreakdown === "function") {
+      window.renderDynamicSkillBreakdown(s, lichessData, chesscomData, allGames);
     }
 
     // Render Chessable Progress
@@ -1578,26 +1939,71 @@ const headers = {
   }
 
    window.renderAttendanceList = function () {
-    const tbody = $("att-marking-body");
-    if (!tbody) return;
+     const tbody = $("att-marking-body");
+     if (!tbody) return;
 
-    const dateEl = $("att-date");
-    const date = dateEl?.value || new Date().toISOString().split("T")[0];
-    if (dateEl && !dateEl.value) dateEl.value = date;
+     const dateEl = $("att-date");
+     const date = dateEl?.value || new Date().toISOString().split("T")[0];
+     if (dateEl && !dateEl.value) dateEl.value = date;
 
-    const coachId = $("att-coach-filter")?.value;
-    const currentCoachId = window.currentCoachId || window.userId;
+     const coachId = $("att-coach-filter")?.value;
+      const batchId = $("att-batch-filter")?.value;
+      const batchType = $("att-batch-type-filter")?.value;
+      const studentSearch = ($("att-student-search")?.value || "").toLowerCase().trim();
+      const currentCoachId = window.currentCoachId || window.userId;
 
-    let filteredStudents = allStudents.filter((s) => (s.status || "").toLowerCase() === "active");
-    if (coachId) {
-      filteredStudents = filteredStudents.filter(
-        (s) => String(s.coach_id) === String(coachId),
-      );
-    } else if (role === "coach" && currentCoachId) {
-      filteredStudents = filteredStudents.filter(
-        (s) => String(s.coach_id) === String(currentCoachId),
-      );
-    }
+      let filteredStudents = allStudents.filter((s) => (s.status || "").toLowerCase() === "active");
+
+      // When a batch is selected, restrict to that batch's students and
+      // auto-sync the coach + session-type filters to match the batch.
+      if (batchId === "__unassigned__") {
+        const allBatchStudentIds = new Set(
+          (window.allBatches || [])
+            .filter((b) => Array.isArray(b.student_ids))
+            .flatMap((b) => b.student_ids.map(String)),
+        );
+        filteredStudents = filteredStudents.filter(
+          (s) => !allBatchStudentIds.has(String(s.id)),
+        );
+      } else if (batchId) {
+        const batch = (window.allBatches || []).find((b) => String(b.id) === String(batchId));
+        const batchStudentIds = Array.isArray(batch?.student_ids)
+          ? batch.student_ids.map(String)
+          : [];
+        filteredStudents = filteredStudents.filter((s) =>
+          batchStudentIds.includes(String(s.id)),
+        );
+        if (batch) {
+          if ($("att-coach-filter") && batch.coach_id) {
+            $("att-coach-filter").value = batch.coach_id;
+          }
+          if ($("att-batch-type-filter") && batch.session_mode) {
+            $("att-batch-type-filter").value = getStudentBatchType({ session_mode: batch.session_mode });
+          }
+        }
+      } else if (coachId) {
+        filteredStudents = filteredStudents.filter(
+          (s) => String(s.coach_id) === String(coachId),
+        );
+      } else if (role === "coach" && currentCoachId) {
+        filteredStudents = filteredStudents.filter(
+          (s) => String(s.coach_id) === String(currentCoachId),
+        );
+      }
+
+      if (batchType) {
+        filteredStudents = filteredStudents.filter(
+          (s) => getStudentBatchType(s) === batchType,
+        );
+      }
+
+      if (studentSearch) {
+        filteredStudents = filteredStudents.filter((s) =>
+          getStudentName(s).toLowerCase().includes(studentSearch),
+        );
+      }
+
+     filteredStudents.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
 
     const dayRecords = allAttendance.filter((a) => a.date === date);
 
@@ -1640,6 +2046,46 @@ const headers = {
       .join("");
 
     updateAttStats();
+  };
+
+  // Opens the Attendance Manager focused on the batch a given student belongs
+  // to, so an admin can mark that student's attendance directly from the
+  // Student Registry.
+  window.openBatchAttendanceForStudent = function (studentId) {
+    const s = allStudents.find((x) => String(x.id) === String(studentId));
+    if (!s) {
+      toast("Student not found", "error");
+      return;
+    }
+
+    // Ensure the batch dropdown is populated before selecting.
+    if (typeof syncCoachDropdowns === "function") syncCoachDropdowns();
+
+    const batch = (allBatches || []).find((b) => {
+      const ids = Array.isArray(b.student_ids)
+        ? b.student_ids.map(String)
+        : [];
+      return ids.includes(String(s.id));
+    });
+
+    setPage("attendance");
+
+    // setPage() switches tabs and repopulates the Attendance Manager dropdowns
+    // asynchronously, so apply the student's batch/coach selection on the next
+    // tick, once the attendance DOM is fully rendered.
+    setTimeout(() => {
+      if (typeof syncCoachDropdowns === "function") syncCoachDropdowns();
+      if (batch && $("att-batch-filter")) {
+        $("att-batch-filter").value = batch.id;
+      } else if ($("att-batch-filter")) {
+        $("att-batch-filter").value = "";
+      }
+      if ($("att-coach-filter")) $("att-coach-filter").value = s.coach_id || "";
+      if (!$("att-date")?.value) {
+        $("att-date").value = new Date().toISOString().split("T")[0];
+      }
+      if (typeof renderAttendanceList === "function") renderAttendanceList();
+    }, 60);
   };
 
   window.updateAttStats = function () {
@@ -2298,6 +2744,16 @@ const headers = {
         }
       }, 10);
     });
+    // Keep the Student Registry bulk-action counter in sync when individual
+    // row checkboxes are toggled.
+    document.addEventListener("change", (e) => {
+      if (e.target && e.target.classList && e.target.classList.contains("stud-check")) {
+        updateStudentBulkCount();
+      }
+    });
+    if (typeof initStudentRegistry === "function") {
+      initStudentRegistry();
+    }
   }
 
   window.executeDelete = async function () {
@@ -2305,9 +2761,19 @@ const headers = {
     const type = $("delete-type").value;
     const isHardDelete = $("hard-delete").checked;
 
-    if (!isHardDelete && type === "event") {
-      await archiveEvent(id);
+    // Events already expose a dedicated "Archive" action on the card, so the
+    // Delete confirmation here always performs a real deletion (the
+    // "Permanently delete" checkbox is honoured for the other entity types).
+    if (type === "event") {
+      const res = await apiCall("/api/events?id=" + id, { method: "DELETE" });
+      if (res.ok) {
+        toast("Event deleted!", "success");
+      } else {
+        const err = await res.text().then((t) => t || "Server error").catch(() => "Server error");
+        toast("Delete failed: " + err, "error");
+      }
       closeModals();
+      loadAllData(true);
       return;
     }
 
@@ -2403,6 +2869,32 @@ const headers = {
     const raw = s.full_name || s.name || "";
     return cleanText(raw);
   }
+  // Parse a batch's student_ids field into a clean array of string IDs.
+  // Accepts: a real array, a JSON-array string ("[1,2,3]"), or a
+  // comma/space separated string ("1, 2, 3"). Used by the Schedule Manager
+  // group mode so each batch shows its real student count and selection.
+  window.parseStudentIds = function (ids) {
+    if (!ids) return [];
+    if (Array.isArray(ids)) {
+      return ids.map((x) => String(x).trim()).filter(Boolean);
+    }
+    if (typeof ids === "string") {
+      const str = ids.trim();
+      if (!str) return [];
+      if (str.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(str);
+          if (Array.isArray(parsed)) {
+            return parsed.map((x) => String(x).trim()).filter(Boolean);
+          }
+        } catch (e) {
+          /* fall through to delimiter split */
+        }
+      }
+      return str.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean);
+    }
+    return [];
+  };
   function getStudentLevel(s) {
     return capitalizeFirst(s.level || s.grade || "Beginner");
   }
@@ -2605,50 +3097,9 @@ const headers = {
     const targetMonthEnd = new Date(
       Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59),
     );
-    const baselineDate = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st, 2026 baseline (UTC)
-    const _anchor = getBillingAnchor(s, baselineDate);
-    const targetMonthStr = String(targetMonth + 1).padStart(2, "0");
-    const targetMonthKey = `${targetYear}-${targetMonthStr}`;
-    const anchorMonthStr = String(_anchor.month + 1).padStart(2, "0");
-    const anchorMonthKey = `${_anchor.year}-${anchorMonthStr}`;
+    const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}`;
 
-    // TRUST THE DATABASE FOR CURRENT MONTH (v4 billing engine)
-    if (isCurrentMonth && s.payment_status) {
-      return s.payment_status;
-    }
-
-    // 0. Cumulative Audit (All-Time Payment Count)
-    const s_id_key = String(s.id || "")
-      .trim()
-      .toLowerCase();
-
-    let paidMonths = new Set();
-    let hasPaymentThisMonth = false;
-
-    (allPayments || []).forEach((p) => {
-      const psid = String(p.student_id || "")
-        .trim()
-        .toLowerCase();
-      if (psid === s_id_key && p.status === "paid") {
-        const pDate = new Date(p.payment_date || p.created_at);
-        const pMonthKey = p.applied_month || `${pDate.getUTCFullYear()}-${String(pDate.getUTCMonth() + 1).padStart(2, '0')}`;
-        
-        // Only count payments that occurred in or before the target month and are at or after the billing anchor month
-        if (pDate <= targetMonthEnd && pMonthKey >= anchorMonthKey) {
-          paidMonths.add(pMonthKey);
-        }
-        if (pMonthKey === targetMonthKey) {
-          hasPaymentThisMonth = true;
-        }
-      }
-    });
-
-    const totalPaidInvoices = paidMonths.size;
-
-    // Did they explicitly pay for this month? (Overrides inactive/archived states)
-    if (hasPaymentThisMonth) return "Paid";
-
-    // 1. Enrollment Check
+    // 1. Enrollment gate
     const enrollStatus = getStudentStatus(s);
     if (
       enrollStatus === "pending" ||
@@ -2663,80 +3114,57 @@ const headers = {
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
     if (!enrollDate || enrollDate > targetMonthEnd) return "Not Enrolled";
 
-    const monthsRequired =
-      (targetYear - _anchor.year) * 12 + (targetMonth - _anchor.month) + 1;
-    // Target period precedes the first billed month (the free grace month) →
-    // nothing is due yet.
-    if (monthsRequired <= 0) return "Pending";
-
-    // 3. Status Determination Logic:
-
-    // MANUAL OVERRIDE CHECK: If the admin has explicitly set a payment status in the database, 
-    // and we are looking at the current month, we should respect it. 
-    // This allows the admin to dynamically change the status to Due/Pending/Paid.
-    if (isCurrentMonth && s.payment_status && ['Pending', 'Due', 'Overdue'].includes(s.payment_status)) {
-       return s.payment_status;
+    // 2. Current month: trust the stored status (maintained by the backend cron)
+    if (
+      isCurrentMonth &&
+      s.payment_status &&
+      ["Paid", "Pending", "Due", "Overdue"].includes(s.payment_status)
+    ) {
+      return s.payment_status;
     }
 
-    // A. PAID AUDIT: Cumulative overpayments or pre-payments
-    if (totalPaidInvoices >= monthsRequired) return "Paid";
-
-    // C. DATE-BASED TRANSITION (Current Month): Transition automatically based on student-specific due date
-    if (isCurrentMonth) {
-      // Trust the DB status for the current month if it's there as a fallback
-      if (s.payment_status && ['Due', 'Pending', 'Overdue'].includes(s.payment_status)) {
-          return s.payment_status;
+    // 3. Paid for this specific month? (payment dated or applied to this month)
+    const sIdKey = String(s.id || "").trim().toLowerCase();
+    const paidThisMonth = (allPayments || []).some((p) => {
+      if (String(p.student_id || "").trim().toLowerCase() !== sIdKey) return false;
+      if (p.status !== "paid") return false;
+      if (p.applied_month === targetKey) return true;
+      if (!p.applied_month) {
+        const d = new Date(p.payment_date || p.created_at);
+        const pm =
+          d.getUTCFullYear() +
+          "-" +
+          String(d.getUTCMonth() + 1).padStart(2, "0");
+        return pm === targetKey;
       }
-      
-      // If the student has unpaid dues from previous months (arrears/overdue), they are immediately 'Overdue'
-      if (totalPaidInvoices < monthsRequired - 1) {
-        return "Overdue";
-      }
+      return false;
+    });
+    if (paidThisMonth) return "Paid";
 
-      const coach = allCoaches.find((c) => String(c.id) === String(s.coach_id));
-      const coachName = coach ? coach.name || "" : "";
-      const dueCfg = getStudentDueConfig(s, coachName, targetMonth, targetYear);
-
-      const currentDate = new Date();
-      const dueDateObj = new Date(
-        targetYear,
-        targetMonth,
-        dueCfg.day,
-        23,
-        59,
-        59,
-      );
-
-      // We omit isFirstMonth || here because dueDateObj is correctly set to their enrollment date for their first month.
-      // They will automatically transition from 'Pending' to 'Due' precisely on their join date.
-      if (currentDate < dueDateObj) return "Pending";
-      const diffTime = currentDate - dueDateObj;
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays > 5 ? "Overdue" : "Due";
-    }
-
-    // C2. FUTURE PERIODS: If target month is in the future
+    // 4. Due-date based transition (no arrears / debt-first carry-over)
     const now = new Date();
-    const currentUTCMonth = now.getUTCMonth();
-    const currentUTCFullYear = now.getUTCFullYear();
-    const isFuturePeriod =
-      targetYear > currentUTCFullYear ||
-      (targetYear === currentUTCFullYear && targetMonth > currentUTCMonth);
-    if (isFuturePeriod) {
-      const currentMonthsRequired =
-        (currentUTCFullYear - _anchor.year) * 12 +
-        (currentUTCMonth - _anchor.month) +
-        1;
-      if (totalPaidInvoices < currentMonthsRequired) {
-        return "Overdue";
-      }
-      return "Pending";
-    }
+    const isFuture =
+      targetYear > now.getUTCFullYear() ||
+      (targetYear === now.getUTCFullYear() && targetMonth > now.getUTCMonth());
+    const coach = allCoaches.find((c) => String(c.id) === String(s.coach_id));
+    const dueCfg = getStudentDueConfig(
+      s,
+      coach ? coach.name || "" : "",
+      targetMonth,
+      targetYear,
+    );
+    const dueDateObj = new Date(
+      targetYear,
+      targetMonth,
+      dueCfg.day,
+      23,
+      59,
+      59,
+    );
 
-    // D. ARREARS (Past Months): If missing payments and in the past, status is 'Overdue'
-    if (totalPaidInvoices < monthsRequired) return "Overdue";
-
-    return "Due";
+    if (isFuture || now < dueDateObj) return "Pending";
+    const diffDays = Math.floor((now - dueDateObj) / (1000 * 60 * 60 * 24));
+    return diffDays > 3 ? "Overdue" : "Due";
   }
 
   // ── COUNTRY PHONE VALIDATION ──
@@ -3226,11 +3654,12 @@ const headers = {
       // Populate student select dropdown
       const selectEl = $("ev-add-student-select");
       selectEl.innerHTML = '<option value="">-- Select Student --</option>';
-      allStudents.forEach((s) => {
-        if (!regStudents.includes(s.id)) {
-          selectEl.innerHTML += `<option value="${s.id}">${getStudentName(s)}</option>`;
-        }
-      });
+      allStudents
+        .filter((s) => !regStudents.includes(s.id))
+        .sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)))
+         .forEach((s) => {
+           selectEl.innerHTML += `<option value="${s.id}">${getStudentName(s)}</option>`;
+         });
 
       let html = "";
       if (regStudents.length === 0) {
@@ -3249,8 +3678,10 @@ const headers = {
             (p) =>
               p.student_id === sid &&
               (p.description === eventDescString ||
-                (p.details && p.details.event_id === id)),
+                p.event_id === id ||
+                p.event_id === e.id),
           );
+
           const isPaid = regData.payment_status === "paid" || !!payment;
           const currentAttendance = regData.attendance || "absent";
           const isWaitlisted = regData.registration_status === "waitlisted";
@@ -5052,10 +5483,29 @@ const headers = {
       $("att-coach-filter").innerHTML =
         '<option value="">All Coaches</option>' + options;
 
+    // Populate the Attendance Manager batch filter (was never filled in,
+    // which is why selecting a batch did nothing).
+    if ($("att-batch-filter")) {
+      const saved = $("att-batch-filter").value;
+      $("att-batch-filter").innerHTML =
+        '<option value="">-- Select Batch --</option>' +
+        '<option value="__unassigned__">Unassigned (No Batch)</option>' +
+        (allBatches || [])
+          .slice()
+          .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+          .map(
+            (b) =>
+              `<option value="${b.id}">${escapeHtml(b.name || "Batch")}</option>`,
+          )
+          .join("");
+      if (saved) $("att-batch-filter").value = saved;
+    }
+
     if ($("award-student"))
       $("award-student").innerHTML =
         '<option value="">Select Student</option>' +
         allStudents
+          .sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)))
           .map(
             (s) =>
               `<option value="${s.id}">${escapeHtml(getStudentName(s))}</option>`,
@@ -5311,7 +5761,7 @@ const headers = {
   }
 
   const PAGE_TITLES = {
-    dash: "TWO KNIGHTS Academy Overview",
+    dash: "Two Knights Chess Academy Overview",
     stud: "Student Registry",
     "coach-mgmt": "Coach Management",
     batches: "Classroom / Batch Manager",
@@ -5429,7 +5879,7 @@ const headers = {
 if (p === "stud")
            btnArea.innerHTML = `
            <button class="btn btn-outline-grey" onclick="openMonthlyMatrix()">📅 Monthly Matrix</button>
-           <button class="btn btn-outline-grey" onclick="openAttendanceMarking()">🗓️  Batch Attendance</button>
+            <button class="btn btn-outline-grey" onclick="setPage('attendance')">🗓️  Batch Attendance</button>
            <button class="btn btn-gold" onclick="openEnroll()">+ New Enrollment</button>
            `;
         if (p === "batches") {
@@ -6757,12 +7207,9 @@ setTimeout(function () {
       theadRow.innerHTML = `
         <th style="width:40px"><input type="checkbox" id="stud-check-all" onclick="window.toggleAllStudents(this.checked)"></th>
         <th style="width:50px">#</th>
-        <th>Student</th>
-        <th>Level / ELO</th>
-        <th>Coach</th>
-        <th>Join Date</th>
-        <th>Session</th>
-        <th>Schedule</th>
+            <th>Student</th>
+            <th>Coach</th>
+            <th>Schedule</th>
         <th>Fee</th>
         <th>Status</th>
         <th>Due Date</th>
@@ -6821,7 +7268,7 @@ setTimeout(function () {
       if (fSearch) {
         studs = studs.filter((s) => {
           const name = (getStudentName(s) || "").toLowerCase();
-          const phone = (s.phone || s.parent_phone || "").toLowerCase();
+          const phone = String(s.phone || s.parent_phone || "").toLowerCase();
           return name.includes(fSearch) || phone.includes(fSearch);
         });
       }
@@ -6918,14 +7365,17 @@ setTimeout(function () {
 
         studs = studs.filter((s) => {
           const name = getStudentName(s) || "";
-          const studentPhone = s.phone || "";
-          const parentPhone = s.parent_phone || "";
-          const nameMatch =
-            !fSearch || name.toLowerCase().includes(fSearch);
-          const phoneMatch =
+          const studentPhone = String(s.phone || "");
+          const parentPhone = String(s.parent_phone || "");
+          const fatherPhone = String(s.father_phone || "");
+          const motherPhone = String(s.mother_phone || "");
+          const searchMatch =
             !fSearch ||
+            name.toLowerCase().includes(fSearch) ||
             studentPhone.toLowerCase().includes(fSearch) ||
-            parentPhone.toLowerCase().includes(fSearch);
+            parentPhone.toLowerCase().includes(fSearch) ||
+            fatherPhone.toLowerCase().includes(fSearch) ||
+            motherPhone.toLowerCase().includes(fSearch);
           const coachMatch = !fCoach || String(s.coach_id) === String(fCoach);
           const sessionMatch = !fSession || getStudentBatchType(s) === fSession;
           const statusMatch =
@@ -6961,8 +7411,7 @@ setTimeout(function () {
             !fLearningMode || (s.learning_mode || "online") === fLearningMode;
 
           return (
-            nameMatch &&
-            phoneMatch &&
+            searchMatch &&
             coachMatch &&
             sessionMatch &&
             statusMatch &&
@@ -7008,9 +7457,9 @@ setTimeout(function () {
       }
 
       if (!studs || studs.length === 0) {
-        const cols = role === "coach" ? 7 : 12;
+        const cols = role === "coach" ? 7 : 9;
         tbody.innerHTML =
-          `<tr><td colspan="${cols}" class="text-center">No students found matching filters for this period</td></tr>`;
+          `<tr><td colspan="${role === "coach" ? 7 : 9}" class="text-center">No students found matching filters for this period</td></tr>`;
         return;
       }
 
@@ -7023,7 +7472,6 @@ setTimeout(function () {
         .map((s, i) => {
           try {
             const status = getStudentPaymentStatus(s, targetMonth, targetYear);
-            const session = getStudentBatchType(s);
             const time = s.session_time || s.class_time || s.batch_time || "";
             const coach = allCoaches.find(
               (c) => String(c.id) === String(s.coach_id),
@@ -7119,7 +7567,7 @@ setTimeout(function () {
             } else if (status === "Paid") {
               dueDateHtml = `<span class="text-success" style="opacity: 0.85; font-weight: 500; cursor:pointer" onclick="viewPaymentHistory('${s.id}')">${dueDateString}</span>`;
             } else if (isOverdue) {
-              dueDateHtml = `<span class="text-danger" style="font-weight: 700;">⚠️ ${dueDateString}</span>`;
+              dueDateHtml = `<span class="text-danger" style="font-weight: 700;">${dueDateString}</span>`;
             } else {
               dueDateHtml = `<span style="color: var(--warning); font-weight: 600;">${dueDateString}</span>`;
             }
@@ -7127,6 +7575,10 @@ setTimeout(function () {
             // Primary action buttons (always visible)
             let primaryActions = "";
             let moreActions = "";
+
+            // "Batch Attendance" opens the Attendance Manager pre-filtered to
+            // this student's batch so admins can mark their attendance fast.
+            const batchAttBtn = `<button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="setPage('attendance')">📋 Batch Attendance</button>`;
 
             if (status === "Paid") {
               primaryActions = `
@@ -7137,6 +7589,7 @@ setTimeout(function () {
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                   <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
                   <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="togglePaymentStatus('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">🔄 Mark Unpaid</button>
+                  ${batchAttBtn}
                   </div>
                 `;
               moreActions = `
@@ -7156,9 +7609,10 @@ setTimeout(function () {
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                    <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
                    <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
-                   <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
-                   </div>
-                 `;
+                    <button class="btn btn-outline-info btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
+                    ${batchAttBtn}
+                    </div>
+                  `;
               moreActions = `
                  <button class="btn btn-gold btn-sm" style="width:100%;margin-bottom:4px" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
                  <button class="btn btn-outline-grey btn-sm" style="width:100%;margin-bottom:4px" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
@@ -7169,18 +7623,20 @@ setTimeout(function () {
                   <div style="display:flex;gap:4px;flex-wrap:nowrap">
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="viewStudent('${s.id}')">View</button>
                   <button class="btn btn-outline-grey btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="openEdit('${s.id}')">Edit</button>
-                  <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
-                  </div>
-                `;
+                   <button class="btn btn-danger btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="deleteStudent('${s.id}', '${jsAttrEncode(getStudentName(s))}')">Delete</button>
+                   ${batchAttBtn}
+                   </div>
+                 `;
               moreActions = "";
             } else {
               primaryActions = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
               moreActions = "";
             }
 
+            const isSel = selectedStudentIds.has(String(s.id));
             const checkboxHtml = isNonActive
-              ? `<input type="checkbox" class="stud-check" data-id="${s.id}" disabled title="Non-active students cannot be selected for payments">`
-              : `<input type="checkbox" class="stud-check" data-id="${s.id}">`;
+              ? `<input type="checkbox" class="stud-check" data-id="${s.id}" disabled title="Non-active students cannot be selected for payments" onchange="window.updateStudentBulkCount()" onclick="window.updateStudentBulkCount()">`
+              : `<input type="checkbox" class="stud-check" data-id="${s.id}" ${isSel ? "checked" : ""} onchange="window.updateStudentBulkCount()" onclick="window.updateStudentBulkCount()">`;
 
             const learningMode =
               s.learning_mode === "offline" ? "Offline" : "Online";
@@ -7222,10 +7678,7 @@ setTimeout(function () {
               <td>${checkboxHtml}</td>
               <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
               <td>${studentNameHtml}</td>
-              <td>${escapeHtml(getStudentLevel(s))} - ${escapeHtml(getStudentRating(s))} ELO</td>
               <td>${coachName}</td>
-              <td>${getStudentDate(s) || "-"}</td>
-              <td>${session}</td>
               <td>${time}</td>
               <td>${feeHtml}</td>
               <td><span class="${statusClass}" style="font-weight: 600;">${statusText}</span></td>
@@ -7248,14 +7701,15 @@ setTimeout(function () {
             </tr>`;
           } catch (rowErr) {
             console.error(`[UI] Error rendering student row ${i}:`, rowErr, s);
-            return `<tr><td colspan="12" style="color:var(--danger)">Error rendering student ${s.name || i}</td></tr>`;
+            return `<tr><td colspan="9" style="color:var(--danger)">Error rendering student ${s.name || i}</td></tr>`;
           }
         })
         .join("");
+      updateStudentBulkCount();
     } catch (err) {
       console.error("[UI] renderStudents critical error:", err);
       if (tbody)
-        tbody.innerHTML = `<tr><td colspan="${role === "coach" ? 7 : 12}" class="text-center text-danger">Failed to load students. Please refresh the page.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${role === "coach" ? 7 : 9}" class="text-center text-danger">Failed to load students. Please refresh the page.</td></tr>`;
     }
   }
 
@@ -7330,6 +7784,7 @@ setTimeout(function () {
     const savedCoachId = s.coach_id || "";
     $("e-id").value = s.id;
     $("e-name").value = getStudentName(s);
+    if ($("e-email")) $("e-email").value = s.email || "";
     // Render country dropdown for edit modal
     renderCountryDropdown("country-dropdown-edit", "selectCountryEdit");
     // Set country first so phone placeholder/validation matches
@@ -7417,9 +7872,10 @@ setTimeout(function () {
     }
 
     // Send fee under every possible field name so whichever Supabase column exists gets updated
-const data = {
+ const data = {
        full_name: $("e-name").value,
        name: $("e-name").value,
+       email: $("e-email") ? ($("e-email").value.trim() || null) : (s.email || null),
        phone: fullPhone,
        parent_phone: fullPhone,
        country_code: countryCode,
@@ -7647,6 +8103,7 @@ const data = {
   }
   function openEnroll() {
     $("m-name").value = "";
+    if ($("m-email")) $("m-email").value = "";
     $("m-phone").value = "";
     $("m-level").value = "Beginner";
     $("m-join").value = "";
@@ -7706,8 +8163,9 @@ const data = {
     const selectedStatus = $("m-status")?.value || "active";
     const defaultPaymentStatus =
       selectedStatus === "active" ? "Due" : "Pending";
-const data = {
+ const data = {
        full_name: $("m-name").value.trim(),
+       email: $("m-email") ? ($("m-email").value.trim() || null) : null,
        phone: fullPhone,
        parent_phone: fullPhone,
        country_code: countryCode,
@@ -7826,12 +8284,6 @@ due_date: (function () {
           (s) => String(s.coach_id) === String(c.id),
         );
         const studentCount = studs.length;
-        const avgRating = studs.length
-          ? Math.round(
-              studs.reduce((a, s) => a + (getStudentRating(s) || 0), 0) /
-                studs.length,
-            )
-          : 800;
         let photo = c.photo_url || c.photo || c.image;
         if (photo) {
           // Allow data URLs and Supabase storage URLs; block external services
@@ -7866,12 +8318,8 @@ due_date: (function () {
                <span class="coach-stat-label">Students</span>
                <span class="coach-stat-val">${studentCount}</span>
              </div>
-             <div class="coach-stat">
-               <span class="coach-stat-label">Avg ELO</span>
-               <span class="coach-stat-val">${avgRating}</span>
-             </div>
-             <div class="coach-stat">
-               <span class="coach-stat-label">Salary</span>
+              <div class="coach-stat">
+                <span class="coach-stat-label">Salary</span>
                <span class="coach-stat-val">₹${(getCoachSalary(c) || 0).toLocaleString()}</span>
              </div>
              <div class="coach-stat">
@@ -7964,13 +8412,6 @@ due_date: (function () {
     const studs = allStudents.filter(
       (s) => String(s.coach_id) === String(c.id),
     );
-    const avgRating = studs.length
-      ? Math.round(
-          studs.reduce((a, s) => a + (getStudentRating(s) || 0), 0) /
-            studs.length,
-        )
-      : 800;
-
     $("cv-name").innerText = getCoachName(c);
     $("cv-spec").innerText = getCoachSpecialty(c) || "General Coach";
     $("cv-phone").innerText = c.phone || "N/A";
@@ -7982,7 +8423,6 @@ due_date: (function () {
     $("cv-bio").innerText =
       c.bio || c.additional_details || "No biography available.";
     $("cv-stud-count").innerText = studs.length;
-    $("cv-avg-elo").innerText = avgRating;
     $("cv-exp").innerText = (c.experience || 0) + "y";
     let photo2 = c.photo_url || c.photo || c.image;
     if (photo2) {
@@ -8056,7 +8496,8 @@ due_date: (function () {
           const s = (window.allStudents || []).find((st) => String(st.id) === sid);
           return s ? getStudentName(s) : null;
         })
-        .filter(Boolean);
+        .filter(Boolean)
+        .sort((a, b) => (a || "").localeCompare(b || ""));
 
       return {
         name: b.name,
@@ -8291,6 +8732,21 @@ due_date: (function () {
         });
         if (res.ok) {
           toast("Coach added successfully!", "success");
+          const coachEmail = data.email;
+          if (coachEmail) {
+            const defaultPassword = "Coach@123";
+            try {
+              await apiCall("/api/access_control", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", role: window.role },
+                body: JSON.stringify({ email: coachEmail, password: defaultPassword, role: "coach" }),
+              });
+              toast(`Coach access created. Default password: ${defaultPassword}`, "success");
+            } catch (accessErr) {
+              console.error("Failed to create coach access:", accessErr);
+              toast("Coach saved, but access creation failed. You can manually create the coach login.", "error");
+            }
+          }
           closeModals();
           loadAllData(true);
         } else {
@@ -8774,12 +9230,14 @@ due_date: (function () {
     const currentCoachId = window.currentCoachId || window.userId;
     const isCoach = role === "coach" && currentCoachId;
 
-    const filteredBatches = allBatches.filter((b) => {
-      if (isCoach && String(b.coach_id) !== String(currentCoachId)) return false;
-      const matchName = b.name.toLowerCase().includes(searchTerm);
-      const matchStatus = statusFilter === "all" || b.status === statusFilter;
-      return matchName && matchStatus;
-    });
+    const filteredBatches = allBatches
+      .filter((b) => {
+        if (isCoach && String(b.coach_id) !== String(currentCoachId)) return false;
+        const matchName = b.name.toLowerCase().includes(searchTerm);
+        const matchStatus = statusFilter === "all" || b.status === statusFilter;
+        return matchName && matchStatus;
+      })
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
     if (filteredBatches.length === 0) {
       grid.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--ivory-dim);">No batches match your filters.</div>';
@@ -8826,6 +9284,7 @@ due_date: (function () {
           
           <div style="display: flex; gap: 8px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border);">
             <button class="btn btn-outline" style="flex: 1;" onclick="openHomeworkAssignmentModal('batch', '${b.id}')">Assign Homework</button>
+            <button class="btn btn-outline" style="flex: 1;" onclick="window.openViewBatchModal('${b.id}')">👥 View Students</button>
             ${canEdit ? `<button class="btn btn-outline" style="flex: 1;" onclick="openCreateBatchModal('${b.id}')">Edit</button>` : ''}
             ${canEdit ? `<button class="btn btn-outline text-danger" style="flex: 1;" onclick="deleteBatch('${b.id}')">Delete</button>` : ''}
           </div>
@@ -8833,6 +9292,145 @@ due_date: (function () {
       `;
       })
       .join("");
+  };
+
+  window.openViewBatchModal = function (batchId) {
+    const batch = (window.allBatches || []).find((b) => String(b.id) === String(batchId));
+    if (!batch) {
+      toast("Batch not found", "error");
+      return;
+    }
+
+    $("vb-batch-id").value = batchId;
+    $("vb-title").textContent = batch.name || "Batch Details";
+
+    window.renderBatchStudentList(batch);
+    window.loadUnassignedStudents(batchId);
+    openModal("view-batch-modal");
+  };
+
+  window.renderBatchStudentList = function (batch) {
+    const list = $("vb-student-list");
+    const countBadge = $("vb-student-count-badge");
+    if (!list) return;
+
+    const batchStudentIds = Array.isArray(batch.student_ids)
+      ? batch.student_ids.map(String)
+      : [];
+    const students = (allStudents || [])
+      .filter((s) => batchStudentIds.includes(String(s.id)) && s.status !== "archived")
+      .sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
+
+    if (countBadge) countBadge.textContent = String(students.length);
+
+    if (students.length === 0) {
+      list.innerHTML =
+        '<div style="color:var(--ivory-dim);font-size:12px;padding:8px;">No students in this batch.</div>';
+      return;
+    }
+
+    list.innerHTML = students
+      .map((s) => {
+        const sid = escapeHtml(String(s.id));
+        const name = escapeHtml(getStudentName(s));
+        return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;color:var(--ivory);">${name} <span style="font-size:10px;color:var(--ivory-dim);">(${s.level || "Beginner"})</span></span>
+          <button class="btn btn-outline-danger btn-sm" style="padding:2px 8px;font-size:11px;" onclick="window.removeStudentFromBatch('${sid}')">Remove</button>
+        </div>
+      `;
+      })
+      .join("");
+  };
+
+  window.loadUnassignedStudents = function (batchId) {
+    const select = $("vb-student-select");
+    if (!select) return;
+
+    const batch = (window.allBatches || []).find((b) => String(b.id) === String(batchId));
+    const batchStudentIds = Array.isArray(batch?.student_ids)
+      ? batch.student_ids.map(String)
+      : [];
+
+    const available = (allStudents || [])
+      .filter((s) => s.status !== "archived" && !batchStudentIds.includes(String(s.id)))
+      .sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
+
+    select.innerHTML =
+      '<option value="">-- Select Student --</option>' +
+      available
+        .map(
+          (s) =>
+            `<option value="${s.id}">${escapeHtml(getStudentName(s))} (${s.level || "Beginner"})</option>`,
+        )
+        .join("");
+  };
+
+  window.addStudentToCurrentBatch = async function () {
+    const select = $("vb-student-select");
+    const batchId = $("vb-batch-id").value;
+    if (!select || !batchId || !select.value) {
+      toast("Please select a student", "warning");
+      return;
+    }
+
+    const studentId = select.value;
+    const batch = (window.allBatches || []).find((b) => String(b.id) === String(batchId));
+    if (!batch) return;
+
+    const currentIds = Array.isArray(batch.student_ids)
+      ? batch.student_ids.map(String)
+      : [];
+    if (!currentIds.includes(String(studentId))) {
+      currentIds.push(studentId);
+    }
+
+    try {
+      const res = await apiCall(`/api/batches?id=${batchId}`, {
+        method: "PUT",
+        body: JSON.stringify({ student_ids: currentIds }),
+      });
+      if (res.ok) {
+        toast("Student added to batch", "success");
+        await loadAllData(true);
+        window.openViewBatchModal(batchId);
+      } else {
+        toast("Failed to add student", "error");
+      }
+    } catch (e) {
+      toast("Error: " + (e.message || "connection error"), "error");
+    }
+  };
+
+  window.removeStudentFromBatch = async function (studentId) {
+    const batchId = $("vb-batch-id").value;
+    if (!batchId) return;
+
+    if (!confirm("Remove this student from the batch?")) return;
+
+    const batch = (window.allBatches || []).find((b) => String(b.id) === String(batchId));
+    if (!batch) return;
+
+    const currentIds = Array.isArray(batch.student_ids)
+      ? batch.student_ids.map(String)
+      : [];
+    const newIds = currentIds.filter((id) => String(id) !== String(studentId));
+
+    try {
+      const res = await apiCall(`/api/batches?id=${batchId}`, {
+        method: "PUT",
+        body: JSON.stringify({ student_ids: newIds }),
+      });
+      if (res.ok) {
+        toast("Student removed from batch", "success");
+        await loadAllData(true);
+        window.openViewBatchModal(batchId);
+      } else {
+        toast("Failed to remove student", "error");
+      }
+    } catch (e) {
+      toast("Error: " + (e.message || "connection error"), "error");
+    }
   };
 
   window.openBatchModal = function() { window.openCreateBatchModal(null); };
@@ -8860,28 +9458,48 @@ due_date: (function () {
         .join("");
 
     // Populate Students (Checkboxes)
-    const activeStudents = allStudents
-      .filter((s) => s.status !== "archived")
+    // When CREATING: show only students not already assigned to any batch.
+    // When EDITING: show this batch's own students (pre-checked) plus other
+    // unassigned students, but never students assigned to OTHER batches.
+    const editingBatch = id
+      ? allBatches.find((x) => String(x.id) === String(id))
+      : null;
+    const otherAssignedIds = new Set(
+      (allBatches || [])
+        .filter((b) => !editingBatch || String(b.id) !== String(editingBatch.id))
+        .flatMap((b) => (Array.isArray(b.student_ids) ? b.student_ids.map(String) : []))
+        .filter((sid) => sid),
+    );
+    const anyBatchIds = new Set(
+      (allBatches || [])
+        .flatMap((b) => (Array.isArray(b.student_ids) ? b.student_ids.map(String) : []))
+        .filter((sid) => sid),
+    );
+    const candidateStudents = allStudents
+      .filter((s) => {
+        if (s.status === "archived") return false;
+        if (!editingBatch) {
+          return !anyBatchIds.has(String(s.id));
+        }
+        return !otherAssignedIds.has(String(s.id));
+      })
       .sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
 
     let existingStudentIds = [];
 
-    if (id) {
-      const b = allBatches.find((x) => String(x.id) === String(id));
-      if (b) {
-        $("eb-name").value = b.name || "";
-        $("eb-coach").value = b.coach_id || "";
-        $("eb-level").value = b.level || "Beginner";
-        $("eb-status").value = b.status || "active";
-        $("eb-days").value = b.days || "";
-        $("eb-time").value = b.time_slot || "";
-        $("eb-notes").value = b.notes || "";
-        if ($("eb-chessable")) $("eb-chessable").value = b.chessable_url || "";
-        $("eb-modal-title").textContent = "Edit Batch";
-        existingStudentIds = Array.isArray(b.student_ids)
-          ? b.student_ids.map(String)
-          : [];
-      }
+    if (editingBatch) {
+      $("eb-name").value = editingBatch.name || "";
+      $("eb-coach").value = editingBatch.coach_id || "";
+      $("eb-level").value = editingBatch.level || "Beginner";
+      $("eb-status").value = editingBatch.status || "active";
+      $("eb-days").value = editingBatch.days || "";
+      $("eb-time").value = editingBatch.time_slot || "";
+      $("eb-notes").value = editingBatch.notes || "";
+      if ($("eb-chessable")) $("eb-chessable").value = editingBatch.chessable_url || "";
+      $("eb-modal-title").textContent = "Edit Batch";
+      existingStudentIds = Array.isArray(editingBatch.student_ids)
+        ? editingBatch.student_ids.map(String)
+        : [];
     } else {
       $("eb-name").value = "";
       $("eb-coach").value = "";
@@ -8895,7 +9513,7 @@ due_date: (function () {
     }
 
     const stList = $("eb-student-list");
-    stList.innerHTML = activeStudents
+    stList.innerHTML = candidateStudents
       .map((s) => {
         const isChecked = existingStudentIds.includes(String(s.id))
           ? "checked"
@@ -10144,7 +10762,7 @@ Best regards,
 
     if (!allStudents || allStudents.length === 0) {
       tbody.innerHTML =
-        '<tr><td colspan="8"><div class="empty-state">No payment records found</div></td></tr>';
+        '<tr><td colspan="9"><div class="empty-state">No payment records found</div></td></tr>';
       return;
     }
 
@@ -10185,15 +10803,22 @@ Best regards,
       );
     }
     if (fBillSearch) {
-      filteredStudents = filteredStudents.filter((s) =>
-        getStudentName(s).toLowerCase().includes(fBillSearch),
-      );
+      const q = fBillSearch;
+      filteredStudents = filteredStudents.filter((s) => {
+        if (getStudentName(s).toLowerCase().includes(q)) return true;
+        const phones = [s.phone, s.parent_phone, s.father_phone, s.mother_phone]
+          .filter(Boolean)
+          .map((p) => String(p).toLowerCase());
+        return phones.some((p) => p.includes(q));
+      });
     }
     if (fBillCoach) {
       filteredStudents = filteredStudents.filter(
         (s) => String(s.coach_id) === String(fBillCoach),
       );
     }
+
+    filteredStudents.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
 
     const now = new Date();
     const currentMonth = now.getUTCMonth();
@@ -10208,7 +10833,7 @@ Best regards,
     );
 
     tbody.innerHTML = filteredStudents
-      .map((s) => {
+      .map((s, i) => {
         const enrollDateStr = getStudentDate(s);
         const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
 
@@ -10223,6 +10848,7 @@ Best regards,
           enrollDate && enrollDate <= targetMonthEnd && !isNotEnrolled;
         if (!wasEnrolled || isNotEnrolled) {
           return `<tr>
+          <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
           <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">INV-${s.id ? s.id.toString().slice(-6) : "000000"}</span></td>
           <td>
             <div style="font-weight:600;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div>
@@ -10280,6 +10906,7 @@ Best regards,
         }
 
         return `<tr>
+        <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
         <td><span style="font-family:var(--font-mono);color:var(--gold);font-size:13px">${invoiceId}</span></td>
         <td>
           <div style="font-weight:600;color:var(--ivory)">${escapeHtml(getStudentName(s))}</div>
@@ -10303,11 +10930,71 @@ Best regards,
   window.toggleAllStudents = function (checked) {
     document
       .querySelectorAll(".stud-check")
-      .forEach((cb) => (cb.checked = checked));
+      .forEach((cb) => {
+        if (!cb.disabled) {
+          cb.checked = checked;
+          if (checked) selectedStudentIds.add(String(cb.dataset.id));
+          else selectedStudentIds.delete(String(cb.dataset.id));
+        }
+      });
+    updateStudentBulkCount();
   };
 
+  // Keeps the bulk-action counter and the "select all" checkbox in sync with
+  // the individually checked student rows, and persists the selection in
+  // selectedStudentIds so it survives table re-renders.
+  function updateStudentBulkCount() {
+    // Sync the persisted Set from the currently rendered (visible) checkboxes.
+    document.querySelectorAll(".stud-check").forEach((cb) => {
+      if (cb.disabled) {
+        selectedStudentIds.delete(String(cb.dataset.id));
+      } else if (cb.checked) {
+        selectedStudentIds.add(String(cb.dataset.id));
+      } else {
+        selectedStudentIds.delete(String(cb.dataset.id));
+      }
+    });
+
+    const countEl = $("student-bulk-count");
+    if (!countEl) return;
+    const total = document.querySelectorAll(".stud-check").length;
+    const checked = document.querySelectorAll(".stud-check:checked").length;
+    countEl.textContent = `${checked} selected`;
+    const all = $("stud-check-all");
+    if (all) all.checked = total > 0 && checked === total;
+  }
+
+  // Returns the list of currently selected student IDs (persisted Set), only
+  // including students that still exist and are selectable.
+  function getSelectedStudentIds() {
+    return [...selectedStudentIds].filter((id) => {
+      const s = allStudents.find((x) => String(x.id) === String(id));
+      return s && (s.status || "active").toLowerCase() === "active";
+    });
+  }
+  window.getSelectedStudentIds = getSelectedStudentIds;
+
+  // Keep the Student Registry bulk-action counter in sync when individual
+  // row checkboxes are toggled.
+  function initStudentRegistry() {
+    const studBody = $("stud-body");
+    if (!studBody) return;
+    studBody.addEventListener("change", (e) => {
+      if (e.target && e.target.classList && e.target.classList.contains("stud-check")) {
+        updateStudentBulkCount();
+      }
+    });
+    studBody.addEventListener("click", (e) => {
+      if (e.target && e.target.classList && e.target.classList.contains("stud-check")) {
+        requestAnimationFrame(() => updateStudentBulkCount());
+      }
+    });
+  }
+  window.initStudentRegistry = initStudentRegistry;
+  window.updateStudentBulkCount = updateStudentBulkCount;
+
   async function bulkMarkPaid() {
-    const checked = document.querySelectorAll(".stud-check:checked");
+    const checked = getSelectedStudentIds();
     if (checked.length === 0) {
       toast("Please select students first", "warning");
       return;
@@ -10316,8 +11003,7 @@ Best regards,
     if (!confirm(`Mark ${checked.length} students as Paid?`)) return;
 
     toast(`Processing ${checked.length} students...`, "info");
-    for (const cb of checked) {
-      const studentId = cb.dataset.id;
+    for (const studentId of checked) {
       const s = allStudents.find((x) => String(x.id) === String(studentId));
       const amt = s ? getStudentMonthlyFee(s) : 5000;
 
@@ -10373,8 +11059,45 @@ Best regards,
     loadAllData(true);
   }
 
+  window.bulkMarkUnpaid = async function () {
+    const checked = getSelectedStudentIds();
+    if (checked.length === 0) {
+      toast("Please select students first", "warning");
+      return;
+    }
+    if (!confirm(`Mark ${checked.length} students as Unpaid?`)) return;
+
+    toast(`Processing ${checked.length} students...`, "info");
+    const monthKey = `${window.reportYear}-${String(window.reportMonth + 1).padStart(2, "0")}`;
+    for (const studentId of checked) {
+      const s = allStudents.find((x) => String(x.id) === String(studentId));
+      try {
+        // Remove the paid payment recorded for the currently viewed month so
+        // the derived status flips back to unpaid (Pending).
+        const paid = (allPayments || []).find((p) => {
+          if (String(p.student_id) !== String(studentId) || p.status !== "paid") return false;
+          const d = new Date(p.payment_date || p.created_at);
+          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}` === monthKey;
+        });
+        if (paid && paid.id) {
+          await apiCall(`${API_BASE}/payments?id=${paid.id}`, { method: "DELETE" }).catch(() => {});
+        }
+        await apiCall(`${API_BASE}/students?id=${studentId}`, {
+          method: "PUT",
+          body: JSON.stringify({ payment_status: "Pending" }),
+        });
+      } catch (e) {
+        console.error("Bulk mark unpaid error for student", studentId, e);
+        toast(`Failed to process student ${getStudentName(s)}: ${e.message}`, "error");
+      }
+    }
+    toast("Marked selected students as unpaid!", "success");
+    window.totalPaymentsMap = null;
+    loadAllData(true);
+  };
+
   window.bulkDeleteStudents = async function () {
-    const checked = document.querySelectorAll(".stud-check:checked");
+    const checked = getSelectedStudentIds();
     if (checked.length === 0) {
       toast("Please select students to delete", "warning");
       return;
@@ -10389,9 +11112,8 @@ Best regards,
 
     toast(`Deleting ${checked.length} students...`, "info");
     let successCount = 0;
-    for (const cb of checked) {
+    for (const id of checked) {
       try {
-        const id = cb.dataset.id;
         const res = await apiCall(`/api/students?id=${id}`, {
           method: "DELETE",
         });
@@ -11035,7 +11757,15 @@ Best regards,
   ) {
     const student = (allStudents || []).find(s => String(s.id) === String(id));
     const admissionFee = student ? (parseInt(String(student.admission_fee)) || 0) : 0;
-    const url = `receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&admission_fee=${admissionFee}&level=${encodeURIComponent(level)}&rating=${rating}&coach=${encodeURIComponent(coach)}&method=${encodeURIComponent(paymentMode)}&date=${encodeURIComponent(dateStr)}&type=${encodeURIComponent(type)}&eventName=${encodeURIComponent(eventName)}&print=true`;
+    // Always resolve the coach from the student record so the receipt shows the
+    // real coach name even when a caller passes a hardcoded "N/A".
+    const coachObj = student && student.coach_id
+      ? (allCoaches || []).find((c) => String(c.id) === String(student.coach_id))
+      : null;
+    const resolvedCoach = coachObj
+      ? (coachObj.name || coachObj.full_name || 'N/A')
+      : (coach && coach !== 'N/A' ? coach : 'N/A');
+    const url = `receipt.html?id=${id}&name=${encodeURIComponent(name)}&amount=${fee}&admission_fee=${admissionFee}&level=${encodeURIComponent(level)}&rating=${rating}&coach=${encodeURIComponent(resolvedCoach)}&method=${encodeURIComponent(paymentMode)}&date=${encodeURIComponent(dateStr)}&type=${encodeURIComponent(type)}&eventName=${encodeURIComponent(eventName)}&print=true`;
     window.open(url, "_blank");
     toast("Opening receipt for printing...", "success");
   }
@@ -11427,31 +12157,37 @@ Best regards,
       window.loadChessDashboard(s).catch((e) => console.warn("[Child] loadChessDashboard failed:", e));
     }
 
-    const engagementEl = $("c-engagement-flag");
-    if (engagementEl && s) {
-      const lichessSeen = s.lichess_seen_at || null;
-      const chesscomLast = s.chesscom_last_online || null;
-      const daysSince = (date) => {
-        if (!date) return null;
-        const diff = Date.now() - new Date(date).getTime();
-        return Math.floor(diff / (1000 * 60 * 60 * 24));
-      };
-      const lichessDays = daysSince(lichessSeen);
-      const chesscomDays = daysSince(chesscomLast);
-      const activeThreshold = 14;
-      const lichessActive = lichessDays !== null && lichessDays <= activeThreshold;
-      const chesscomActive = chesscomDays !== null && chesscomDays <= activeThreshold;
-      const anyActive = lichessActive || chesscomActive;
-      const statusColor = anyActive ? "var(--success)" : "var(--danger)";
-      const statusText = anyActive ? "Active" : "Inactive";
-      const lichessText = s.lichess_username ? `${lichessActive ? '♘ Active' : '♘ Idle'}${lichessDays !== null ? ` (${lichessDays}d)` : ''}` : '';
-      const chesscomText = s.chesscom_username ? `${chesscomActive ? '♟️ Active' : '♟️ Idle'}${chesscomDays !== null ? ` (${chesscomDays}d)` : ''}` : '';
-      engagementEl.innerHTML = `
-        <span style="font-weight:700; color:${statusColor}; margin-right:8px;">● ${statusText}</span>
-        ${lichessText ? `<span style="margin-right:10px;">${lichessText}</span>` : ''}
-        ${chesscomText ? `<span>${chesscomText}</span>` : ''}
-      `;
-    }
+      const engagementEl = $("c-engagement-flag");
+      if (engagementEl && s) {
+        const isParentPortal = document.body.classList.contains("parent-mode");
+        const isChildPage = window.currentPage === "child";
+        if (!isParentPortal && !isChildPage) {
+          const lichessSeen = s.lichess_seen_at || null;
+          const chesscomLast = s.chesscom_last_online || null;
+          const daysSince = (date) => {
+            if (!date) return null;
+            const diff = Date.now() - new Date(date).getTime();
+            return Math.floor(diff / (1000 * 60 * 60 * 24));
+          };
+          const lichessDays = daysSince(lichessSeen);
+          const chesscomDays = daysSince(chesscomLast);
+          const activeThreshold = 14;
+          const lichessActive = lichessDays !== null && lichessDays <= activeThreshold;
+          const chesscomActive = chesscomDays !== null && chesscomDays <= activeThreshold;
+          const anyActive = lichessActive || chesscomActive;
+          const statusColor = anyActive ? "var(--success)" : "var(--danger)";
+          const statusText = anyActive ? "Active" : "Inactive";
+          const lichessText = s.lichess_username ? `${lichessActive ? '♘ Active' : '♘ Idle'}${lichessDays !== null ? ` (${lichessDays}d)` : ''}` : '';
+          const chesscomText = s.chesscom_username ? `${chesscomActive ? '♟️ Active' : '♟️ Idle'}${chesscomDays !== null ? ` (${chesscomDays}d)` : ''}` : '';
+          engagementEl.innerHTML = `
+            <span style="font-weight:700; color:${statusColor}; margin-right:8px;">● ${statusText}</span>
+            ${lichessText ? `<span style="margin-right:10px;">${lichessText}</span>` : ''}
+            ${chesscomText ? `<span>${chesscomText}</span>` : ''}
+          `;
+        } else {
+          engagementEl.innerHTML = '';
+        }
+      }
 
     if (loadingEl) loadingEl.style.display = "none";
     if (contentEl) contentEl.style.display = "block";
@@ -11558,52 +12294,73 @@ Best regards,
     const skillBars = $("skill-bars");
     if (!skillBars) return;
 
-    const level = getStudentLevel(s);
-    const skills = {
-      "Opening Theory": {
-        Beginner: 20,
-        Intermediate: 40,
-        Advanced: 60,
-        Elite: 80,
-      },
-      "Middle Game": {
-        Beginner: 15,
-        Intermediate: 35,
-        Advanced: 55,
-        Elite: 75,
-      },
-      "Endgame Play": {
-        Beginner: 10,
-        Intermediate: 30,
-        Advanced: 50,
-        Elite: 70,
-      },
-      Tactics: { Beginner: 25, Intermediate: 45, Advanced: 65, Elite: 85 },
-      Positional: { Beginner: 20, Intermediate: 35, Advanced: 55, Elite: 75 },
-    };
+    if (typeof window.renderDynamicSkillBreakdown === "function") {
+      let lichessData = null;
+      let chesscomData = null;
+      let allGames = [];
 
-    skillBars.innerHTML = Object.entries(skills)
-      .map(([skill, levelProgs]) => {
-        const prog = levelProgs[level] || 30;
-        const color =
-          prog >= 70
-            ? "var(--success)"
-            : prog >= 50
-              ? "var(--gold)"
-              : "var(--blue)";
-        return `
-        <div style="margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-            <span>${skill}</span>
-            <span style="color:${color}">${prog}%</span>
-          </div>
-          <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${prog}%;background:${color};border-radius:3px"></div>
-          </div>
-        </div>
-      `;
-      })
-      .join("");
+      if (typeof window.getCachedChessData === "function") {
+        const lichessUserRaw = s.lichess_username || '';
+        const chesscomUserRaw = s.chesscom_username || '';
+        const lichessUser = lichessUserRaw.startsWith('http')
+          ? lichessUserRaw.split('/').filter(Boolean).pop().trim()
+          : lichessUserRaw.trim();
+        const chesscomUser = chesscomUserRaw.startsWith('http')
+          ? chesscomUserRaw.replace('https://www.chess.com/member/', '').replace('https://chess.com/member/', '').split('/').filter(Boolean).pop().trim()
+          : chesscomUserRaw.trim();
+        const cacheKey = `${s.id}_${lichessUser}_${chesscomUser}`;
+        const cached = window.getCachedChessData(cacheKey);
+        if (cached) {
+          window.renderDynamicSkillBreakdown(s, cached.lichessData, cached.chesscomData, cached.games);
+          return;
+        }
+      }
+
+      if (s.lichess_username) {
+        const lichessUser = (s.lichess_username || '').trim();
+        fetch(`/api/lichess-proxy?username=${encodeURIComponent(lichessUser)}&t=${Date.now()}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data && !data.notFound) {
+              lichessData = data;
+              return fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`)
+                .then(r => r.ok ? r.json() : [])
+                .then(games => {
+                  allGames = Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : [];
+                  window.renderDynamicSkillBreakdown(s, lichessData, chesscomData, allGames);
+                });
+            }
+          })
+          .catch(() => {});
+      }
+
+      if (s.chesscom_username) {
+        const chesscomUser = (s.chesscom_username || '').trim();
+        fetch(`/api/chesscom-proxy?username=${encodeURIComponent(chesscomUser)}&t=${Date.now()}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data && !data.notFound) {
+              chesscomData = data;
+              const y = new Date().getFullYear();
+              const m = String(new Date().getMonth() + 1).padStart(2, '0');
+              return fetch(`/api/chesscom-games-proxy?username=${encodeURIComponent(chesscomUser)}&year=${y}&month=${m}&t=${Date.now()}`)
+                .then(r => r.ok ? r.json() : { games: [] })
+                .then(gamesData => {
+                  allGames = allGames.concat((gamesData.games || []).map(g => ({ ...g, platform: 'chesscom' })));
+                  window.renderDynamicSkillBreakdown(s, lichessData, chesscomData, allGames);
+                });
+            }
+          })
+          .catch(() => {});
+      }
+
+      if (!lichessData && !chesscomData) {
+        window.renderDynamicSkillBreakdown(s, null, null, []);
+      }
+      return;
+    }
+
+    skillBars.innerHTML = '<div style="color:var(--ivory-dim);">Skill analysis requires chess data.</div>';
   }
   window.renderChildChessPerformance = async function(student) {
     if (!student) return;
@@ -13406,27 +14163,34 @@ window.deleteStudent = deleteStudent;
     if (!container) return;
     let html = "";
 
+    if (!window.selectedRecipientsMap) {
+      window.selectedRecipientsMap = new Map();
+    }
+
     if (type === "student") {
       const list = (allStudents || [])
         .filter((s) => {
           const name = (getStudentName(s) || "").toLowerCase();
-          const phone = (getStudentPhone(s) || "").toLowerCase();
+          const phone = String(getStudentPhone(s) || "").toLowerCase();
           const level = (getStudentLevel(s) || "").toLowerCase();
           if (!query) return true;
           return name.includes(query) || phone.includes(query) || level.includes(query);
         })
+        .sort((a, b) => (getStudentName(a) || "").localeCompare(getStudentName(b) || ""))
         .slice(0, 200);
       html =
         list.length === 0
           ? '<div style="padding:10px; color:var(--ivory-dim); font-size:12px;">No matching students.</div>'
           : list
               .map(
-                (s) =>
-                  `<label style="display:flex; align-items:center; gap:8px; padding:6px 8px; cursor:pointer; border-bottom:1px solid var(--border);">
-                    <input type="checkbox" class="msg-recipient-cb" data-type="student" data-id="${escapeHtml(String(s.id))}" data-name="${escapeHtml(getStudentName(s))}">
-                    <span style="font-size:13px; color:var(--ivory)">${escapeHtml(getStudentName(s))}</span>
-                    <span style="font-size:11px; color:var(--ivory-dim); margin-left:auto;">${escapeHtml(getStudentLevel(s))} · ${escapeHtml(getStudentPhone(s) || '')}</span>
-                  </label>`,
+                (s) => {
+                  const isChecked = window.selectedRecipientsMap.has(String(s.id)) ? "checked" : "";
+                  return `<label style="display:flex; align-items:center; gap:10px; padding:7px 10px; cursor:pointer; border-bottom:1px solid var(--border);">
+                    <input type="checkbox" class="msg-recipient-cb" data-type="student" data-id="${escapeHtml(String(s.id))}" data-name="${escapeHtml(getStudentName(s))}" onchange="window.toggleRecipientSelection('${escapeHtml(String(s.id))}', 'student', '${escapeHtml(getStudentName(s))}', this.checked)" ${isChecked} style="flex-shrink:0;">
+                    <span style="font-size:13px; color:var(--ivory); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0;">${escapeHtml(getStudentName(s))}</span>
+                    <span style="font-size:11px; color:var(--ivory-dim); white-space:nowrap; flex-shrink:0;">${escapeHtml(getStudentLevel(s))} · ${escapeHtml(getStudentPhone(s) || '')}</span>
+                  </label>`;
+                }
               )
               .join("");
     } else if (type === "coach") {
@@ -13436,18 +14200,21 @@ window.deleteStudent = deleteStudent;
           if (!query) return true;
           return name.includes(query);
         })
+        .sort((a, b) => (getCoachName(a) || "").localeCompare(getCoachName(b) || ""))
         .slice(0, 200);
       html =
         list.length === 0
           ? '<div style="padding:10px; color:var(--ivory-dim); font-size:12px;">No matching coaches.</div>'
           : list
               .map(
-                (c) =>
-                  `<label style="display:flex; align-items:center; gap:8px; padding:6px 8px; cursor:pointer; border-bottom:1px solid var(--border);">
-                    <input type="checkbox" class="msg-recipient-cb" data-type="coach" data-id="${escapeHtml(String(c.id))}" data-name="${escapeHtml(getCoachName(c))}">
-                    <span style="font-size:13px; color:var(--ivory)">${escapeHtml(getCoachName(c))}</span>
-                    <span style="font-size:11px; color:var(--ivory-dim); margin-left:auto;">${escapeHtml(c.specialty || c.role || '')}</span>
-                  </label>`,
+                (c) => {
+                  const isChecked = window.selectedRecipientsMap.has(String(c.id)) ? "checked" : "";
+                  return `<label style="display:flex; align-items:center; gap:10px; padding:7px 10px; cursor:pointer; border-bottom:1px solid var(--border);">
+                    <input type="checkbox" class="msg-recipient-cb" data-type="coach" data-id="${escapeHtml(String(c.id))}" data-name="${escapeHtml(getCoachName(c))}" onchange="window.toggleRecipientSelection('${escapeHtml(String(c.id))}', 'coach', '${escapeHtml(getCoachName(c))}', this.checked)" ${isChecked} style="flex-shrink:0;">
+                    <span style="font-size:13px; color:var(--ivory); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0;">${escapeHtml(getCoachName(c))}</span>
+                    <span style="font-size:11px; color:var(--ivory-dim); white-space:nowrap; flex-shrink:0;">${escapeHtml(c.specialty || c.role || '')}</span>
+                  </label>`;
+                }
               )
               .join("");
     } else if (type === "batch") {
@@ -13457,35 +14224,46 @@ window.deleteStudent = deleteStudent;
           if (!query) return true;
           return name.includes(query);
         })
+        .sort((a, b) => (a.name || a.batch_name || "").localeCompare(b.name || b.batch_name || ""))
         .slice(0, 200);
       html =
         list.length === 0
           ? '<div style="padding:10px; color:var(--ivory-dim); font-size:12px;">No matching batches.</div>'
           : list
               .map(
-                (b) =>
-                  `<label style="display:flex; align-items:center; gap:8px; padding:6px 8px; cursor:pointer; border-bottom:1px solid var(--border);">
-                    <input type="checkbox" class="msg-recipient-cb" data-type="batch" data-id="${escapeHtml(String(b.id))}" data-name="${escapeHtml(b.name || b.batch_name || ('Batch ' + b.id))}">
-                    <span style="font-size:13px; color:var(--ivory)">${escapeHtml(b.name || b.batch_name || ('Batch ' + b.id))}</span>
-                    <span style="font-size:11px; color:var(--ivory-dim); margin-left:auto;">${escapeHtml(b.days || '')}${b.days && b.time_slot ? ' · ' : ''}${escapeHtml(b.time_slot || '')}</span>
-                  </label>`,
+                (b) => {
+                  const batchName = b.name || b.batch_name || ('Batch ' + b.id);
+                  const isChecked = window.selectedRecipientsMap.has(String(b.id)) ? "checked" : "";
+                  return `<label style="display:flex; align-items:center; gap:10px; padding:7px 10px; cursor:pointer; border-bottom:1px solid var(--border);">
+                    <input type="checkbox" class="msg-recipient-cb" data-type="batch" data-id="${escapeHtml(String(b.id))}" data-name="${escapeHtml(batchName)}" onchange="window.toggleRecipientSelection('${escapeHtml(String(b.id))}', 'batch', '${escapeHtml(batchName)}', this.checked)" ${isChecked} style="flex-shrink:0;">
+                    <span style="font-size:13px; color:var(--ivory); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0;">${escapeHtml(batchName)}</span>
+                    <span style="font-size:11px; color:var(--ivory-dim); white-space:nowrap; flex-shrink:0;">${escapeHtml(b.days || '')}${b.days && b.time_slot ? ' · ' : ''}${escapeHtml(b.time_slot || '')}</span>
+                  </label>`;
+                }
               )
               .join("");
     }
 
-container.innerHTML = html;
+    container.innerHTML = html;
     updateRecipientCount();
   }
 
+  window.toggleRecipientSelection = function(id, type, name, isChecked) {
+    const key = String(id);
+    if (!window.selectedRecipientsMap) {
+      window.selectedRecipientsMap = new Map();
+    }
+    if (isChecked) {
+      window.selectedRecipientsMap.set(key, { id, type, name });
+    } else {
+      window.selectedRecipientsMap.delete(key);
+    }
+    updateRecipientCount();
+  };
+
   function getSelectedMessageRecipients() {
-    const cbs = document.querySelectorAll(".msg-recipient-cb:checked");
-    const type = document.querySelector('input[name="msg-recipient-type"]:checked')?.value || "student";
-    const recipients = Array.from(cbs).map((cb) => ({
-      type: cb.dataset.type || type,
-      id: cb.dataset.id,
-      name: cb.dataset.name,
-    }));
-    return recipients;
+    if (!window.selectedRecipientsMap) return [];
+    return Array.from(window.selectedRecipientsMap.values());
   }
 
   async function sendAdminMessage() {
@@ -13585,6 +14363,7 @@ container.innerHTML = html;
       toast("Only admins can compose messages", "error");
       return;
     }
+    window.selectedRecipientsMap = new Map();
     $("msg-subject").value = "";
     $("msg-body").value = "";
     $("msg-recipient-search").value = "";
@@ -13599,31 +14378,45 @@ container.innerHTML = html;
     openModal("compose-message-modal");
   };
 
-window.renderRecipientOptions = renderRecipientOptions;
-   window.getSelectedMessageRecipients = getSelectedMessageRecipients;
-   window.sendAdminMessage = sendAdminMessage;
-   window.applyMsgTemplate = applyMsgTemplate;
-   
-   window.selectAllRecipients = function(type) {
-     const cbs = document.querySelectorAll(`.msg-recipient-cb[data-type="${type}"]`);
-     cbs.forEach(cb => { if (!cb.checked) cb.checked = true; });
-     updateRecipientCount();
-   };
-   
-   window.clearRecipientSelection = function() {
-     document.querySelectorAll(".msg-recipient-cb").forEach(cb => cb.checked = false);
-     updateRecipientCount();
-   };
-   
-   function updateRecipientCount() {
-     const countEl = $("msg-selected-count");
-     if (countEl) {
-       const count = document.querySelectorAll(".msg-recipient-cb:checked").length;
-       countEl.textContent = count;
-     }
-   }
-   
-   window.renderChild = renderChild;
+  window.renderRecipientOptions = renderRecipientOptions;
+  window.getSelectedMessageRecipients = getSelectedMessageRecipients;
+  window.sendAdminMessage = sendAdminMessage;
+  window.applyMsgTemplate = applyMsgTemplate;
+  
+  window.selectAllRecipients = function(type) {
+    const cbs = document.querySelectorAll(`.msg-recipient-cb[data-type="${type}"]`);
+    cbs.forEach(cb => {
+      if (!cb.checked) {
+        cb.checked = true;
+        if (!window.selectedRecipientsMap) {
+          window.selectedRecipientsMap = new Map();
+        }
+        window.selectedRecipientsMap.set(String(cb.dataset.id), {
+          id: cb.dataset.id,
+          type: type,
+          name: cb.dataset.name
+        });
+      }
+    });
+    updateRecipientCount();
+  };
+  
+  window.clearRecipientSelection = function() {
+    document.querySelectorAll(".msg-recipient-cb").forEach(cb => cb.checked = false);
+    if (window.selectedRecipientsMap) {
+      window.selectedRecipientsMap.clear();
+    }
+    updateRecipientCount();
+  };
+  
+  function updateRecipientCount() {
+    const countEl = $("msg-selected-count");
+    if (countEl) {
+      countEl.textContent = window.selectedRecipientsMap ? window.selectedRecipientsMap.size : 0;
+    }
+  }
+
+  window.renderChild = renderChild;
   window.setChildTab = setChildTab;
   window.renderChildEvents = renderChildEvents;
   window.renderChildBilling = renderChildBilling;
@@ -13667,13 +14460,17 @@ window.renderRecipientOptions = renderRecipientOptions;
   function renderChessableStudentList(studentsList) {
     const container = $("chessable-student-list");
     if (!container) return;
-    
-    if (studentsList.length === 0) {
+
+    const sorted = (studentsList || [])
+      .slice()
+      .sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
+
+    if (sorted.length === 0) {
       container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--ivory-dim)">No students found.</div>`;
       return;
     }
-    
-    container.innerHTML = studentsList.map(s => {
+
+    container.innerHTML = sorted.map(s => {
       const username = s.chessable_username || '';
       const profileUrl = username ? `https://www.chessable.com/profile/${username}/` : 'https://www.chessable.com';
       return `
@@ -13970,13 +14767,15 @@ window.renderRecipientOptions = renderRecipientOptions;
     if (!content) return;
 
     const unread = allMessages.filter((m) => m.status === "unread");
-    const due = allStudents.filter((s) => {
-      const st = getStudentPaymentStatus(s);
-      return (
-        (st === "Due" || st === "Overdue") &&
-        !dismissedNotifications.payments.includes(s.id)
-      );
-    });
+    const due = allStudents
+      .filter((s) => {
+        const st = getStudentPaymentStatus(s);
+        return (
+          (st === "Due" || st === "Overdue") &&
+          !dismissedNotifications.payments.includes(s.id)
+        );
+      })
+      .sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
     const auditLogs = JSON.parse(localStorage.getItem("audit_logs") || "[]");
     const failedLogins = auditLogs
       .filter((l) => l.action === "login_failed")
@@ -14120,7 +14919,7 @@ window.renderRecipientOptions = renderRecipientOptions;
       type: "baseline",
       severity: "success",
       icon: "📊",
-      text: `<strong>TWO KNIGHTS Academy Overview:</strong> You currently have <strong>${activeStudentCount} active students</strong> and <strong>${activeCoachCount} active coaches</strong>. Your academy is operating smoothly.`,
+      text: `<strong>Two Knights Chess Academy Overview:</strong> You currently have <strong>${activeStudentCount} active students</strong> and <strong>${activeCoachCount} active coaches</strong>. Your academy is operating smoothly.`,
     });
 
     // --- 1. Promotion Suggestions ---
@@ -14274,7 +15073,7 @@ window.renderRecipientOptions = renderRecipientOptions;
       type: "all",
       icon: "📊",
       severity: "info",
-      text: `<strong>TWO KNIGHTS Academy Overview:</strong> You currently have <strong>${allStudents.length}</strong> registered students and <strong>${allCoaches.length}</strong> active coaches. The system is operating normally.`,
+      text: `<strong>Two Knights Chess Academy Overview:</strong> You currently have <strong>${allStudents.length}</strong> registered students and <strong>${allCoaches.length}</strong> active coaches. The system is operating normally.`,
     });
 
     // Update Quick Metric Counts
@@ -14541,7 +15340,10 @@ window.renderRecipientOptions = renderRecipientOptions;
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
 
-    const rows = allStudents.map((s) => {
+    const rows = allStudents
+      .slice()
+      .sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)))
+      .map((s) => {
       const coach = allCoaches.find((c) => String(c.id) === String(s.coach_id));
       const coachName = coach ? getCoachName(coach) : "Unassigned";
 

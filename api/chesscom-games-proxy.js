@@ -23,7 +23,10 @@ export default async function handler(request) {
     }
 
     const response = await fetch(target, {
-      headers: { 'Accept': 'application/json' }
+      headers: { 
+        'Accept': 'application/json',
+        'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)'
+      }
     });
 
     if (!response.ok) {

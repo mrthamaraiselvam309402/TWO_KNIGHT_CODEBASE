@@ -18,7 +18,13 @@ export default async function handler(request) {
     try {
       const profileRes = await fetch(
         `https://api.chess.com/pub/player/${encodeURIComponent(username)}`,
-        { headers: { 'Accept': 'application/json' }, signal: controller.signal }
+        { 
+          headers: { 
+            'Accept': 'application/json',
+            'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)'
+          }, 
+          signal: controller.signal 
+        }
       );
       if (profileRes.ok) {
         profile = await profileRes.json();
@@ -43,7 +49,13 @@ export default async function handler(request) {
     try {
       const statsRes = await fetch(
         `https://api.chess.com/pub/player/${encodeURIComponent(username)}/stats`,
-        { headers: { 'Accept': 'application/json' }, signal: controller.signal }
+        { 
+          headers: { 
+            'Accept': 'application/json',
+            'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)'
+          }, 
+          signal: controller.signal 
+        }
       );
       if (statsRes.ok) {
         stats = await statsRes.json();

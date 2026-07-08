@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     return {
       id: p.id,
       student_id: p.student_id,
-      amount: parseFloat(p.amount || 0),
+      amount: parseFloat(String(p.amount || 0)),
       status: p.status || 'pending',
       payment_method: p.payment_method || '',
       description: p.description || '',
@@ -177,19 +177,11 @@ Deno.serve(async (req) => {
         })
       }
 
-      // --- DEBT-FIRST ALLOCATION ENGINE ---
+      // Refresh the student's current-month payment status.
       try {
-        const rpcRes = await supabase.rpc('apply_payment_debt_first', {
-          p_student_id: studentId,
-          p_payment_id: newPayment.id as string,
-          p_amount: amount,
-          p_target_month: new Date().toISOString().slice(0, 7)
-        })
-        if (rpcRes.error) {
-          console.error('[payments] apply_payment_debt_first error:', rpcRes.error.message)
-        }
+        await supabase.rpc('recompute_payment_statuses')
       } catch (rpcErr) {
-        console.error('[payments] apply_payment_debt_first failed:', rpcErr)
+        console.error('[payments] recompute_payment_statuses failed:', rpcErr)
       }
 
       return new Response(JSON.stringify(insertedPayment ? transformPayment(insertedPayment) : { success: true }), {
@@ -214,15 +206,7 @@ Deno.serve(async (req) => {
         .eq('id', id)
         .single()
 
-      // 2. Remove allocations first (to preserve trigger balance)
-      if (existingPayment?.student_id) {
-        await supabase
-          .from('payment_allocations')
-          .delete()
-          .eq('payment_id', id)
-      }
-
-      // 3. Remove the payment record
+      // 2. Remove the payment record
       const { error: deleteError } = await supabase
         .from('payments')
         .delete()
@@ -233,6 +217,15 @@ Deno.serve(async (req) => {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
+      }
+
+      // 3. Refresh the student's current-month payment status
+      if (existingPayment?.student_id) {
+        try {
+          await supabase.rpc('recompute_payment_statuses')
+        } catch (rpcErr) {
+          console.error('[payments] recompute_payment_statuses failed:', rpcErr)
+        }
       }
 
       return new Response(JSON.stringify({ 

@@ -9,19 +9,8 @@
 
     // Start fetching IP and geo data immediately on load with fallback through local proxy
     async function prefetchGeoData() {
-        try {
-            const res = await fetch('/api/geo').catch(() => null);
-            if (res && res.ok) {
-                const data = await res.json().catch(() => null);
-                if (data && data.ip) {
-                    cachedIP = data.ip;
-                    cachedCountry = data.country_code || data.country || 'IN';
-                    isFetched = true;
-                    return;
-                }
-            }
-        } catch {
-        }
+        // Feature removed as /api/geo endpoint is deprecated
+        isFetched = true;
     }
 
     prefetchGeoData();

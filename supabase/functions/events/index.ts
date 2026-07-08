@@ -324,7 +324,8 @@ Deno.serve(async (req) => {
       const allowedColumns = [
         'title', 'description', 'event_date', 'event_time', 'location', 
         'type', 'status', 'max_participants', 'current_participants', 
-        'qr_poster_url', 'fee', 'prize', 'prize_pool', 'map_url', 'img_url', 'registration_url'
+        'qr_poster_url', 'fee', 'prize', 'prize_pool', 'map_url', 'img_url', 'registration_url',
+        'archived'
       ];
       
       const updateData: any = {};

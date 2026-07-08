@@ -1,53 +1,34 @@
 // Financial Logic Test
 // This tests the logic extracted from scripts.js for getStudentPaymentAllocations
 
+// Mirrors the simplified per-month payment-status model:
+// Paid if a payment is dated/applied to the target month, else due-date based.
 function getPaymentStatusLogic(studentId, enrollDateStr, payments, targetMonth, targetYear, todayDate = new Date(Date.UTC(2026, 5, 22))) {
-  const sid = String(studentId).toLowerCase();
-  
-  const studentPayments = payments
-    .filter(p => String(p.student_id || '').trim().toLowerCase() === sid && (p.status === 'paid' || p.status === 'completed'))
-    .sort((a, b) => new Date(a.payment_date || a.created_at) - new Date(b.payment_date || b.created_at));
-    
-  let totalPaid = studentPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-  const monthlyFee = 1500; // Mock fee
-  
-  const baseline = new Date(Date.UTC(2026, 3, 1));
-  let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
-  if (enrollDate < baseline) enrollDate = baseline;
-  
-  let y = enrollDate.getUTCFullYear();
-  let m = enrollDate.getUTCMonth();
-  
-  const allocs = {};
-  const maxYear = todayDate.getUTCFullYear() + 2; 
-  
-  while (y <= maxYear) {
-    const key = `${y}-${String(m + 1).padStart(2, '0')}`;
-    let status;
-    
-    if (totalPaid >= monthlyFee) {
-      status = 'Paid';
-      totalPaid -= monthlyFee;
-    } else {
-      totalPaid = 0;
-      if (y > todayDate.getUTCFullYear() || (y === todayDate.getUTCFullYear() && m > todayDate.getUTCMonth())) {
-        status = 'Pending';
-      } else if (y === todayDate.getUTCFullYear() && m === todayDate.getUTCMonth()) {
-        const dueDay = 5;
-        const dueDateObj = new Date(y, m, dueDay, 23, 59, 59);
-        status = (todayDate >= dueDateObj) ? 'Overdue' : 'Due';
-      } else {
-        status = 'Overdue';
-      }
-    }
-    
-    allocs[key] = status;
-    m++;
-    if (m > 11) { m = 0; y++; }
-  }
-
+  const sid = String(studentId).trim().toLowerCase();
+  const dueDay = 5;
   const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
-  return allocs[targetKey] || 'Pending';
+
+  const paidThisMonth = payments.some(p => {
+    if (String(p.student_id || '').trim().toLowerCase() !== sid) return false;
+    if (p.status !== 'paid' && p.status !== 'completed') return false;
+    if (p.applied_month === targetKey) return true;
+    if (!p.applied_month) {
+      const d = new Date(p.payment_date || p.created_at);
+      const pm = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      return pm === targetKey;
+    }
+    return false;
+  });
+  if (paidThisMonth) return 'Paid';
+
+  const dueDateObj = new Date(Date.UTC(targetYear, targetMonth, dueDay, 23, 59, 59));
+  const isFuture =
+    targetYear > todayDate.getUTCFullYear() ||
+    (targetYear === todayDate.getUTCFullYear() && targetMonth > todayDate.getUTCMonth());
+  if (isFuture || todayDate < dueDateObj) return 'Pending';
+
+  const diffDays = Math.floor((todayDate - dueDateObj) / (1000 * 60 * 60 * 24));
+  return diffDays > 3 ? 'Overdue' : 'Due';
 }
 
 test('getStudentPaymentStatus returns Paid if sufficient payments exist since enrollment', () => {

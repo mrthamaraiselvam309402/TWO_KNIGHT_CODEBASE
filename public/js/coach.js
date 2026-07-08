@@ -112,25 +112,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const tbody = document.getElementById('coach-students-tbody');
     if (!tbody) return;
 
-    const myStudents = (window.allStudents || []).filter(s => String(s.coach_id) === String(coachId));
-    
+    const myStudents = (window.allStudents || [])
+      .filter(s => String(s.coach_id) === String(coachId))
+      .sort((a, b) => (window.getStudentName ? window.getStudentName(a) : a.name).localeCompare(window.getStudentName ? window.getStudentName(b) : b.name));
+
     if (myStudents.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="coach-loading-cell">No students assigned yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="coach-loading-cell">No students assigned yet.</td></tr>';
       return;
     }
 
     tbody.innerHTML = myStudents.map((s, idx) => {
       const name = window.getStudentName ? window.getStudentName(s) : s.name;
-      const level = window.getStudentLevel ? window.getStudentLevel(s) : '—';
-      const rating = window.getStudentRating ? window.getStudentRating(s) : '—';
       const phone = window.getStudentPhone ? window.getStudentPhone(s) : (s.phone || '—');
       return `
         <tr>
           <td style="color:var(--ivory-dim)">${idx + 1}</td>
           <td style="font-weight:500; color:var(--ivory)">${window.escapeHtml ? window.escapeHtml(name) : name}</td>
-          <td><span class="badge badge-info">${level} / ${rating}</span></td>
-          <td style="font-size:12px; color:var(--ivory-dim)">${s.session_type || '—'}</td>
-          <td style="font-size:12px; color:var(--ivory-dim)">${s.schedule || '—'}</td>
           <td style="font-family:monospace; font-size:12px;">${phone}</td>
           <td><button class="btn btn-outline btn-sm" onclick="if(window.openStudentDetail)window.openStudentDetail('${s.id}')">View</button></td>
         </tr>
@@ -299,7 +296,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const date = dateEl ? dateEl.value : new Date().toISOString().split('T')[0];
     if (dateEl && !dateEl.value) dateEl.value = date;
 
-    const myStudents = (window.allStudents || []).filter(s => String(s.coach_id) === String(coachId));
+    const myStudents = (window.allStudents || [])
+      .filter(s => String(s.coach_id) === String(coachId))
+      .sort((a, b) => (window.getStudentName ? window.getStudentName(a) : a.name).localeCompare(window.getStudentName ? window.getStudentName(b) : b.name));
     if (myStudents.length === 0) {
       container.innerHTML = '<tr><td colspan="3" class="coach-loading-cell">No students assigned yet.</td></tr>';
       if (summary) summary.innerHTML = '';
@@ -722,11 +721,13 @@ window.renderCoachChess = function () {
     return;
   }
 
-  const myStudents = (window.allStudents || []).filter(s => String(s.coach_id) === String(coachId));
-  if (myStudents.length === 0) {
-    container.innerHTML = '<div class="coach-loading-cell">No students assigned yet.</div>';
-    return;
-  }
+    const myStudents = (window.allStudents || [])
+      .filter(s => String(s.coach_id) === String(coachId))
+      .sort((a, b) => (window.getStudentName ? window.getStudentName(a) : a.name).localeCompare(window.getStudentName ? window.getStudentName(b) : b.name));
+    if (myStudents.length === 0) {
+      container.innerHTML = '<div class="coach-loading-cell">No students assigned yet.</div>';
+      return;
+    }
 
   const rows = myStudents.map((s) => {
     const name = window.getStudentName ? window.getStudentName(s) : s.name;

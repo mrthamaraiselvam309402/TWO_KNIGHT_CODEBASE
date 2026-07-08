@@ -1,6 +1,7 @@
 export default async function handler(request) {
   const url = new URL(request.url);
   const username = url.searchParams.get('username');
+
   if (!username) {
     return new Response(JSON.stringify({ error: 'Missing username parameter' }), {
       status: 400,
@@ -9,12 +10,16 @@ export default async function handler(request) {
   }
 
   try {
+    const headers = { 
+      'Accept': 'application/json',
+      'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)'
+    };
     const [clubsRes, tournamentsRes] = await Promise.all([
       fetch(`https://api.chess.com/pub/player/${encodeURIComponent(username)}/clubs`, {
-        headers: { 'Accept': 'application/json' }
+        headers
       }),
       fetch(`https://api.chess.com/pub/player/${encodeURIComponent(username)}/tournaments`, {
-        headers: { 'Accept': 'application/json' }
+        headers
       })
     ]);
 
