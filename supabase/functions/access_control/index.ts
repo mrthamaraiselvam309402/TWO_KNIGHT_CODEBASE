@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifySignedToken } from './_verify_token.js';
 
 // Decode the role claim from a Supabase JWT without verifying the signature
 // (the gateway has already validated it). Returns '' if it can't be read.
@@ -51,22 +52,33 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Verify requester has admin/master role. The Supabase gateway already
-  // validates the JWT, so any request that reaches this function is
-  // authenticated. We accept the role from the custom `role`/`x-user-role`
-  // header OR from the JWT's user_metadata (admin logins carry role there).
-  const requestRole =
-    req.headers.get('role') || req.headers.get('x-user-role') || '';
+  // Verify requester has admin/master role. We accept:
+  // - Custom Two Knights token in `x-twoknights-token`
+  // - Supabase JWT in `Authorization: Bearer ...`
+  // - Role header `role` / `x-user-role`
+  const customTokenHeader = req.headers.get('x-twoknights-token') || '';
   const headerToken =
     req.headers.get('Authorization') || req.headers.get('authorization') || '';
-  const isAuthenticated = headerToken.startsWith('Bearer ');
-  const jwtRole = decodeJwtRole(headerToken);
-  const effectiveRole = requestRole || jwtRole;
+  const requestRole =
+    req.headers.get('role') || req.headers.get('x-user-role') || '';
 
-  if (
-    !isAuthenticated ||
-    (effectiveRole !== 'master' && effectiveRole !== 'admin')
-  ) {
+  let effectiveRole = requestRole || '';
+
+  if (!effectiveRole && customTokenHeader) {
+    try {
+      const customPayload = await verifySignedToken(customTokenHeader);
+      if (customPayload && (customPayload.role === 'master' || customPayload.role === 'admin')) {
+        effectiveRole = customPayload.role;
+      }
+    } catch (e) {}
+  }
+
+  if (!effectiveRole && headerToken) {
+    const jwtRole = decodeJwtRole(headerToken);
+    effectiveRole = jwtRole;
+  }
+
+  if (!effectiveRole || (effectiveRole !== 'master' && effectiveRole !== 'admin')) {
     return new Response(
       JSON.stringify({ error: 'Unauthorized: Admin privileges required' }),
       {

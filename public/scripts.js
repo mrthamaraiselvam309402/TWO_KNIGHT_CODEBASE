@@ -224,12 +224,12 @@
     try {
       auth = JSON.parse(sessionStorage.getItem("twoknights_auth") || "{}");
     } catch (e) {}
-    const bearer =
-      storedTok && storedTok.startsWith("eyJ") ? storedTok : SUPABASE_ANON_KEY;
-const headers = {
+    const customToken = (storedTok && storedTok.startsWith("eyJ")) ? storedTok : null;
+    const headers = {
        "Content-Type": "application/json",
        apikey: SUPABASE_ANON_KEY,
-       Authorization: `Bearer ${bearer}`,
+       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+       ...(customToken ? { "x-twoknights-token": customToken } : {}),
        ...(auth.role ? { "x-user-role": auth.role } : {}),
        ...(auth.studentId ? { "x-student-id": auth.studentId } : {}),
        ...(auth.coachId ? { "x-coach-id": auth.coachId } : {}),

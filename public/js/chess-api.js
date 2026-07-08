@@ -1132,24 +1132,61 @@ async function loadChessDashboardForTab(student) {
   // Fetch Lichess
   if (lichessUser) {
     try {
-      const res = await fetch(`/api/lichess-proxy?username=${encodeURIComponent(lichessUser)}&t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.notFound) {
-          result.lichessNotFound = true;
-        } else {
-          result.lichessData = data;
-          if (data.profile?.seenAt && student) {
-            student.lichess_seen_at = new Date(data.profile.seenAt).toISOString();
+      const username = lichessUser;
+      let cacheRes;
+      try {
+        cacheRes = await fetch(`/api/lichess?username=${encodeURIComponent(username)}&t=${Date.now()}`);
+      } catch (e) {
+        cacheRes = null;
+      }
+
+      if (cacheRes && cacheRes.ok) {
+        const cacheData = await cacheRes.json();
+        if (cacheData.data) {
+          result.lichessData = cacheData.data;
+          if (cacheData.data.profile?.seenAt && student) {
+            student.lichess_seen_at = new Date(cacheData.data.profile.seenAt).toISOString();
           }
-        const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`);
-        if (gamesRes.ok) {
-          const games = await gamesRes.json();
-          result.games.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
-        }
+
+          const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`);
+          if (gamesRes.ok) {
+            const games = await gamesRes.json();
+            result.games.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
+          }
+        } else if (cacheData.cached === false && cacheData.error) {
+          // No cache and sync failed - trigger background sync
+          fetch('/api/lichess', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+          }).catch(() => {});
         }
       } else {
-        result.lichessError = true;
+        // Fall back to old proxy for backward compatibility
+        try {
+          const res = await fetch(`/api/lichess-proxy?username=${encodeURIComponent(lichessUser)}&t=${Date.now()}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (!data.notFound) {
+              result.lichessData = data;
+              if (data.profile?.seenAt && student) {
+                student.lichess_seen_at = new Date(data.profile.seenAt).toISOString();
+              }
+              const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`);
+              if (gamesRes.ok) {
+                const games = await gamesRes.json();
+                result.games.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
+              }
+            } else {
+              result.lichessNotFound = true;
+            }
+          } else {
+            result.lichessError = true;
+          }
+        } catch (e) {
+          console.warn('[Chess] Lichess proxy fallback failed:', e);
+          result.lichessError = true;
+        }
       }
     } catch (e) {
       console.warn('[Chess] Lichess fetch failed:', e);
