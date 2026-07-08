@@ -431,12 +431,24 @@ async function loadChessDashboard(student) {
     if (performanceContainer) performanceContainer.innerHTML = '<div style="color:var(--ivory-dim)">No performance data available.</div>';
   }
 
-  // Fetch Lichess via proxy
+  // Fetch Lichess via cache-first endpoint (falls back to the live proxy, which is unreliable on Vercel)
   if (lichessUser) {
     try {
-      const res = await fetch(`/api/lichess-proxy?username=${encodeURIComponent(lichessUser)}`);
-      if (res.ok) {
-        const data = await res.json();
+      let data = null;
+      try {
+        const cacheRes = await fetch(`/api/lichess?username=${encodeURIComponent(lichessUser)}`);
+        if (cacheRes.ok) {
+          const cacheData = await cacheRes.json();
+          if (cacheData.data) data = cacheData.data;
+        }
+      } catch (e) {
+        // ignore, fall back below
+      }
+      if (!data) {
+        const res = await fetch(`/api/lichess-proxy?username=${encodeURIComponent(lichessUser)}`);
+        if (res.ok) data = await res.json();
+      }
+      if (data) {
         const profile = data.profile || {};
         const ratingHistory = Array.isArray(data.ratingHistory) ? data.ratingHistory : [];
 

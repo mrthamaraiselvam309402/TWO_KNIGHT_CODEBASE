@@ -786,6 +786,38 @@
       });
     }
 
+    // Render attendance heatmap immediately from already-loaded in-memory data,
+    // so a slow/failing Lichess or Chess.com fetch below never delays it.
+    const heatmap = document.getElementById("attendance-heatmap");
+    if (heatmap) {
+      const myAtt = allAttendance.filter(
+        (a) => String(a.student_id) === String(s.id),
+      );
+      const last30 = [];
+      const now = new Date();
+      const days = ["S", "M", "T", "W", "T", "F", "S"];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        const dStr = d.toISOString().split("T")[0];
+        const record = myAtt.find((a) => a.date === dStr);
+        last30.push({
+          date: d.getDate(),
+          day: days[d.getDay()],
+          status: record ? record.status : "none",
+        });
+      }
+      heatmap.innerHTML =
+        '<div class="heatmap-day-label" style="grid-column:1/-1;display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;color:var(--ivory3)">' +
+        "<span>30 days ago</span><span>Today</span></div>" +
+        last30
+          .map(
+            (d) =>
+              `<div class="heatmap-day ${d.status}" title="${d.status || "No class"} - Day ${d.date}">${d.date}<span class="day-label">${d.day}</span></div>`,
+          )
+          .join("");
+    }
+
     let lichessData = null;
     let chesscomData = null;
     const allGames = [];
@@ -1247,36 +1279,6 @@
       }
     } else if (chessableCard) {
       chessableCard.style.display = "none";
-    }
-
-    const heatmap = document.getElementById("attendance-heatmap");
-    if (heatmap) {
-      const myAtt = allAttendance.filter(
-        (a) => String(a.student_id) === String(s.id),
-      );
-      const last30 = [];
-      const now = new Date();
-      const days = ["S", "M", "T", "W", "T", "F", "S"];
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(now.getDate() - i);
-        const dStr = d.toISOString().split("T")[0];
-        const record = myAtt.find((a) => a.date === dStr);
-        last30.push({
-          date: d.getDate(),
-          day: days[d.getDay()],
-          status: record ? record.status : "none",
-        });
-      }
-      heatmap.innerHTML =
-        '<div class="heatmap-day-label" style="grid-column:1/-1;display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;color:var(--ivory3)">' +
-        "<span>30 days ago</span><span>Today</span></div>" +
-        last30
-          .map(
-            (d) =>
-              `<div class="heatmap-day ${d.status}" title="${d.status || "No class"} - Day ${d.date}">${d.date}<span class="day-label">${d.day}</span></div>`,
-          )
-          .join("");
     }
   }
 
@@ -15221,7 +15223,7 @@ window.deleteStudent = deleteStudent;
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { position: "bottom", labels: { color: "#bbb" } },
+            legend: { position: "bottom", labels: { color: chartThemeColors().tick } },
           },
           cutout: "70%",
         },
@@ -15272,10 +15274,10 @@ window.deleteStudent = deleteStudent;
           plugins: { legend: { display: false } },
           scales: {
             y: {
-              ticks: { color: "#bbb", stepSize: 1 },
-              grid: { color: "rgba(255,255,255,0.05)" },
+              ticks: { color: chartThemeColors().tick, stepSize: 1 },
+              grid: { color: chartThemeColors().grid },
             },
-            x: { ticks: { color: "#bbb" }, grid: { display: false } },
+            x: { ticks: { color: chartThemeColors().tick }, grid: { display: false } },
           },
         },
       });
@@ -15308,10 +15310,10 @@ window.deleteStudent = deleteStudent;
           plugins: { legend: { display: false } },
           scales: {
             x: {
-              ticks: { color: "#bbb" },
-              grid: { color: "rgba(255,255,255,0.05)" },
+              ticks: { color: chartThemeColors().tick },
+              grid: { color: chartThemeColors().grid },
             },
-            y: { ticks: { color: "#bbb" }, grid: { display: false } },
+            y: { ticks: { color: chartThemeColors().tick }, grid: { display: false } },
           },
         },
       });

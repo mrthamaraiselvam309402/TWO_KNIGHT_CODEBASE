@@ -51,8 +51,8 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/lichess", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/lichess" },
-    { "source": "/api/lichess/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/lichess/:match*" },
+    { "source": "/api/lichess", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/lichess-sync" },
+    { "source": "/api/lichess/:match*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/lichess-sync/:match*" },
     { "source": "/api/lichess-proxy", "destination": "/api/lichess-proxy" },
     { "source": "/api/lichess-proxy/:match*", "destination": "/api/lichess-proxy" },
     { "source": "/api/lichess-extras-proxy", "destination": "/api/lichess-extras-proxy" },

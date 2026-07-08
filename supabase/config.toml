@@ -64,3 +64,6 @@ verify_jwt = false
 
 [functions.productivity]
 verify_jwt = false
+
+[functions.lichess-sync]
+verify_jwt = false

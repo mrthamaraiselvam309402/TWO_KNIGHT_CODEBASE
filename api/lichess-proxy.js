@@ -26,61 +26,39 @@ export default async function handler(request) {
     let historyOk = false;
     let profileStatus = 500;
     let profileStatusText = 'Unknown';
-    let historyStatus = 500;
-    let historyStatusText = 'Unknown';
 
-    // Fetch profile with timeout
-    try {
+    // Fetch profile and rating history in PARALLEL with tight timeouts.
+    // Sequential fetches (6s + 4s scrape + 6s = 16s worst case) exceeded
+    // Vercel's 10s serverless limit and caused 504s in production.
+    const fetchWithTimeout = async (target, timeoutMs) => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-      const profileRes = await fetch(profileUrl, { headers, signal: controller.signal });
-      clearTimeout(timeoutId);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(target, { headers, signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
+    const [profileResult, historyResult] = await Promise.allSettled([
+      fetchWithTimeout(profileUrl, 5000),
+      fetchWithTimeout(historyUrl, 5000)
+    ]);
+
+    if (profileResult.status === 'fulfilled') {
+      const profileRes = profileResult.value;
       profileStatus = profileRes.status;
       profileStatusText = profileRes.statusText;
       console.log(`[Lichess Proxy] Profile response for ${username}:`, profileRes.status, profileRes.statusText);
       if (profileRes.ok) {
         try { profile = await profileRes.json(); profileOk = true; } catch { profile = null; }
-      } else if (profileRes.status === 404) {
-        console.log(`[Lichess Proxy] API 404 for ${username}, trying profile page scrape...`);
-        try {
-          const scrapeController = new AbortController();
-          const scrapeTimeout = setTimeout(() => scrapeController.abort(), 4000);
-          const pageRes = await fetch(`https://lichess.org/@/${encodeURIComponent(username)}`, {
-            headers: { 'User-Agent': userAgent },
-            signal: scrapeController.signal
-          });
-          clearTimeout(scrapeTimeout);
-          if (pageRes.ok) {
-            const html = await pageRes.text();
-            const jsonMatch = html.match(/window\.lichess\s*=\s*({.*?});/s) ||
-                             html.match(/<script[^>]*>([\s\S]*?window\.lichess[\s\S]*?)<\/script>/);
-            if (jsonMatch) {
-              try {
-                const userData = JSON.parse(jsonMatch[1].replace('window.lichess = ', '').replace(';', ''));
-                profile = userData.user || userData.profile || userData;
-                profileOk = true;
-                console.log(`[Lichess Proxy] Scrape fallback succeeded for ${username}`);
-              } catch {
-                console.log(`[Lichess Proxy] Scrape JSON parse failed for ${username}`);
-              }
-            }
-          }
-        } catch (scrapeErr) {
-          console.error(`[Lichess Proxy] Scrape fallback failed for ${username}:`, scrapeErr.message);
-        }
       }
-    } catch (err) {
-      console.error(`[Lichess] Profile fetch threw for ${username}:`, err);
+    } else {
+      console.error(`[Lichess] Profile fetch threw for ${username}:`, profileResult.reason);
     }
 
-    // Fetch rating history with timeout
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-      const historyRes = await fetch(historyUrl, { headers, signal: controller.signal });
-      clearTimeout(timeoutId);
-      historyStatus = historyRes.status;
-      historyStatusText = historyRes.statusText;
+    if (historyResult.status === 'fulfilled') {
+      const historyRes = historyResult.value;
       console.log(`[Lichess Proxy] History response for ${username}:`, historyRes.status, historyRes.statusText);
       if (historyRes.ok) {
         try {
@@ -92,8 +70,8 @@ export default async function handler(request) {
           historyOk = true;
         } catch { ratingHistory = []; }
       }
-    } catch (err) {
-      console.error(`[Lichess] Rating history fetch threw for ${username}:`, err);
+    } else {
+      console.error(`[Lichess] Rating history fetch threw for ${username}:`, historyResult.reason);
     }
 
     if (!profileOk) {
@@ -102,8 +80,7 @@ export default async function handler(request) {
         error: status === 404 ? 'Lichess profile not found' : 'Failed to fetch Lichess profile',
         notFound: status === 404,
         upstreamStatus: status,
-        upstreamStatusText: profileStatusText,
-        debug: 'Profile API failed and scrape fallback did not find data'
+        upstreamStatusText: profileStatusText
       }), {
         status: status === 404 ? 404 : status,
         headers: { 'Content-Type': 'application/json' }
