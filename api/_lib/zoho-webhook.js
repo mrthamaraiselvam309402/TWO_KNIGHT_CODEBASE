@@ -10,7 +10,7 @@ import {
   sbRest,
   sbRpc,
   parseReferenceId
-} from './_lib/zoho.js';
+} from './zoho.js';
 
 async function hmacSha256Hex(secret, message) {
   const enc = new TextEncoder();

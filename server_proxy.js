@@ -2,8 +2,9 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import zohoPaymentInit from './api/zoho-payment-init.js';
-import zohoWebhook from './api/zoho-webhook.js';
+import zohoPaymentInit from './api/_lib/zoho-init.js';
+import zohoWebhook from './api/_lib/zoho-webhook.js';
+import zohoPaymentStatus from './api/_lib/zoho-status.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -346,6 +347,7 @@ function adaptWebHandler(handler) {
 }
 app.use('/api/zoho-payment-init', adaptWebHandler(zohoPaymentInit));
 app.use('/api/zoho-webhook', adaptWebHandler(zohoWebhook));
+app.use('/api/zoho-payment-status', adaptWebHandler(zohoPaymentStatus));
 
 // Proxy /api requests to Supabase edge functions cleanly using standard middleware
 app.use('/api', async (req, res) => {

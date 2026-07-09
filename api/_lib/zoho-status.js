@@ -15,7 +15,7 @@ import {
   sbRest,
   sbRpc,
   parseReferenceId
-} from './_lib/zoho.js';
+} from './zoho.js';
 
 export default async function handler(request) {
   const corsHeaders = {

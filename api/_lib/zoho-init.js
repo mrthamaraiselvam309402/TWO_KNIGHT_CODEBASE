@@ -9,7 +9,7 @@ import {
   supabaseConfigured,
   sbRest,
   buildReferenceId
-} from './_lib/zoho.js';
+} from './zoho.js';
 
 export default async function handler(request) {
   const allowedOrigins = [
