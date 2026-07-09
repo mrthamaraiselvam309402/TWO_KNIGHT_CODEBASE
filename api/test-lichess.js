@@ -1,5 +1,5 @@
 export default async function handler(request) {
-  const url = new URL(request.url);
+  const url = new URL(request.url, 'http://localhost');
   const username = url.searchParams.get('username') || 'aadhiseetha';
 
   try {
@@ -9,8 +9,7 @@ export default async function handler(request) {
       {
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Encoding': 'gzip, deflate',
+          'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)',
           'Accept-Language': 'en-US,en;q=0.9'
         }
       }

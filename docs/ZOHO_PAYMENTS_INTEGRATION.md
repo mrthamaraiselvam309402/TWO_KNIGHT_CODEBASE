@@ -105,6 +105,21 @@ to live.
 | **3. Admission workflow** | admission screen fields (fee editable, both Paid toggles, collected amount), block auto-billing for admission month | students table already has `admission_fee`; UI toggles pending |
 | **4. Ops extras** | refunds via `/refunds`, payment-mode summary on admin dashboard, link cancellation on fee change / Inactive | dashboard summary exists; refunds pending |
 
+## 6b. Status polling & reconciliation (added)
+
+`GET /api/zoho-payment-status?ref=TKCA-{studentId}-{YYYYMM}` — checks the `payments` table
+first; if unpaid, asks Zoho for the live payment-link status and, when Zoho reports `paid`
+but no webhook ever landed, **records the payment itself** (idempotent by transaction id,
+then `recompute_payment_statuses()`), mirroring the webhook exactly.
+
+The frontend uses it twice:
+- after `initiateZohoPay` opens checkout, it polls every 6s (max ~5 min) and refreshes data
+  + toasts on success — the parent sees "Paid" without reloading;
+- on return from Zoho (`/?payment=success&ref=…`) it verifies + records, then cleans the URL.
+
+Consequence: payments auto-record even if the Zoho webhook is unregistered or missed —
+the webhook remains the primary path, polling is the safety net.
+
 ## 7. Failure & security posture
 
 - Webhook is **idempotent** (`transaction_id` unique check before insert) — Zoho retries are safe.

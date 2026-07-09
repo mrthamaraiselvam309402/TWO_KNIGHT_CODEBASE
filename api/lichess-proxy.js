@@ -10,7 +10,9 @@ export default async function handler(request) {
       });
     }
 
-    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    // Lichess asks API clients to identify themselves; spoofed browser UAs from
+    // datacenter IPs are more likely to be blocked/throttled.
+    const userAgent = 'ChessKidoo-Admin/1.0 (chess academy management tool)';
     const headers = {
       'Accept': 'application/json',
       'User-Agent': userAgent,
@@ -62,11 +64,16 @@ export default async function handler(request) {
       console.log(`[Lichess Proxy] History response for ${username}:`, historyRes.status, historyRes.statusText);
       if (historyRes.ok) {
         try {
+          // /api/user/{u}/rating-history returns a plain JSON array:
+          // [{ name: 'Bullet', points: [[y, m, d, rating], ...] }, ...]
+          // (Previously parsed as NDJSON, which nested the array and broke the chart.)
           const text = await historyRes.text();
-          const lines = text.split('\n').filter((line) => line.trim());
-          ratingHistory = lines.map((line) => {
-            try { return JSON.parse(line); } catch { return null; }
-          }).filter(Boolean);
+          const parsed = JSON.parse(text);
+          ratingHistory = Array.isArray(parsed) ? parsed : [];
+          // Defensive: unwrap a nested [[...]] shape from older parsing.
+          if (ratingHistory.length === 1 && Array.isArray(ratingHistory[0])) {
+            ratingHistory = ratingHistory[0];
+          }
           historyOk = true;
         } catch { ratingHistory = []; }
       }

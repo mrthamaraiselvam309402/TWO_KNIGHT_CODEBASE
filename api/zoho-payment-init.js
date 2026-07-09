@@ -15,6 +15,7 @@ export default async function handler(request) {
   const allowedOrigins = [
     'https://chesskidoo-ai-admin.vercel.app',
     'https://twoknights-ai-admin.vercel.app',
+    'https://twoknightacademy.vercel.app',
     'http://localhost:3000',
     'http://localhost:5000'
   ];

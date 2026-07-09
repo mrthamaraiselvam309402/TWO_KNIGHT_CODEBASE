@@ -133,6 +133,8 @@ Deno.serve(async (req) => {
 
       if (body.password) {
         await supabase.rpc('update_user_password', { p_user_type: 'coach', p_id: insertedCoach.id, p_new_password: body.password });
+        // Keep the admin-visible plaintext copy in sync (Access Control page).
+        await supabase.from('coaches').update({ password: body.password }).eq('id', insertedCoach.id);
       }
 
       return new Response(JSON.stringify(insertedCoach ? transformCoach(insertedCoach) : null), {
@@ -154,6 +156,8 @@ Deno.serve(async (req) => {
       }
 
       const updateData: Record<string, unknown> = {};
+      // Keep the admin-visible plaintext copy in sync (Access Control page).
+      if (body.password) updateData.password = body.password;
       
       if (body.name !== undefined) {
         updateData.name = body.name;

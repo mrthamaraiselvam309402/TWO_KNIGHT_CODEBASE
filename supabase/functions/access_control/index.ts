@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       // Enrich with password metadata from students/coaches tables
       const emails = users.users.map(u => u.email || '').filter(Boolean);
       const { data: studentRows } = await supabase.from('students').select('email,password,password_hash').in('email', emails);
-      const { data: coachRows } = await supabase.from('coaches').select('email,password_hash').in('email', emails);
+      const { data: coachRows } = await supabase.from('coaches').select('email,password,password_hash').in('email', emails);
 
       const studentMap = new Map<string, any>((studentRows || []).map((s: any) => [s.email, s]));
       const coachMap = new Map<string, any>((coachRows || []).map((c: any) => [c.email, c]));
@@ -126,13 +126,16 @@ Deno.serve(async (req) => {
           const coach = coachMap.get(email);
           if (student) {
             if (student.password) {
-              passwordInfo = { source: 'Custom (plaintext)', masked: student.password, visible: true, value: student.password };
+              passwordInfo = { source: 'Custom (plaintext)', masked: '••••••••', visible: true, value: student.password };
             } else if (student.password_hash) {
-              passwordInfo = { source: 'Custom (bcrypt)', masked: student.password_hash, visible: true, value: student.password_hash };
+              // Hash can't be reversed — admin can set a new visible password via Edit.
+              passwordInfo = { source: 'Custom (bcrypt — set a new one to view)', masked: '••••••••', visible: false };
             }
           } else if (coach) {
-            if (coach.password_hash) {
-              passwordInfo = { source: 'Custom (bcrypt)', masked: '••••••••', visible: false };
+            if (coach.password) {
+              passwordInfo = { source: 'Coach (plaintext)', masked: '••••••••', visible: true, value: coach.password };
+            } else if (coach.password_hash) {
+              passwordInfo = { source: 'Coach (bcrypt — set a new one to view)', masked: '••••••••', visible: false };
             }
           }
         }
@@ -188,18 +191,43 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Merge with the user's existing metadata: sending a partial
+      // user_metadata object would otherwise wipe the stored role when only
+      // the password changes (and vice versa).
+      const { data: existingUser, error: fetchError } = await supabase.auth.admin.getUserById(id);
+      if (fetchError) throw fetchError;
+      const currentMeta = existingUser?.user?.user_metadata || {};
+
       const updates: any = {};
-      const meta: any = {};
+      const meta: any = { ...currentMeta };
       if (role) meta.role = role;
       if (password) {
         updates.password = password;
         meta.password_plain = password;
       }
-      if (Object.keys(meta).length > 0) {
-        updates.user_metadata = meta;
-      }
+      updates.user_metadata = meta;
 
       const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
+
+      // If this auth user is also a coach/student row, keep the custom-auth
+      // password (hash + admin-visible plaintext) in sync so both logins match.
+      if (password && existingUser?.user?.email) {
+        const email = existingUser.user.email;
+        try {
+          const { data: coachRow } = await supabase.from('coaches').select('id').eq('email', email).maybeSingle();
+          if (coachRow) {
+            await supabase.rpc('update_user_password', { p_user_type: 'coach', p_id: coachRow.id, p_new_password: password });
+            await supabase.from('coaches').update({ password }).eq('id', coachRow.id);
+          }
+          const { data: studentRow } = await supabase.from('students').select('id').eq('email', email).maybeSingle();
+          if (studentRow) {
+            await supabase.rpc('update_user_password', { p_user_type: 'student', p_id: studentRow.id, p_new_password: password });
+            await supabase.from('students').update({ password }).eq('id', studentRow.id);
+          }
+        } catch (syncErr) {
+          console.warn('Password sync to coaches/students failed:', syncErr?.message || syncErr);
+        }
+      }
 
       if (error) throw error;
 

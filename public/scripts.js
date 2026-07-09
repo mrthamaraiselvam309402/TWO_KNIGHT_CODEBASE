@@ -200,7 +200,11 @@
 
   function getRatingTrend(lichessData, variant) {
     if (!lichessData?.ratingHistory) return 0;
-    const history = lichessData.ratingHistory.find(h => h.name === variant);
+    let rh = lichessData.ratingHistory;
+    // Self-heal older cached data that was NDJSON-parsed into a nested [[...]] shape.
+    if (Array.isArray(rh) && rh.length === 1 && Array.isArray(rh[0])) rh = rh[0];
+    if (!Array.isArray(rh)) return 0;
+    const history = rh.find(h => h.name === variant);
     if (!history || history.points.length < 2) return 0;
     const current = history.points[history.points.length - 1][3];
     const previous = history.points[history.points.length - 2][3];
@@ -924,6 +928,9 @@
           const cacheData = await cacheRes.json();
           if (cacheData.data) {
             lichessData = cacheData.data;
+            if (Array.isArray(lichessData.ratingHistory) && lichessData.ratingHistory.length === 1 && Array.isArray(lichessData.ratingHistory[0])) {
+              lichessData.ratingHistory = lichessData.ratingHistory[0];
+            }
             if (lichessData.profile?.seenAt) {
               s.lichess_seen_at = new Date(lichessData.profile.seenAt).toISOString();
             }
@@ -950,6 +957,9 @@
               const data = await res.json();
               if (!data.notFound) {
                 lichessData = data;
+                if (Array.isArray(lichessData.ratingHistory) && lichessData.ratingHistory.length === 1 && Array.isArray(lichessData.ratingHistory[0])) {
+                  lichessData.ratingHistory = lichessData.ratingHistory[0];
+                }
                 if (data.profile?.seenAt) {
                   s.lichess_seen_at = new Date(data.profile.seenAt).toISOString();
                 }
@@ -11470,12 +11480,66 @@ Best regards,
         closeModal("pay-modal");
         toast("Complete the payment in the Zoho tab. Status updates automatically once paid.", "info");
       }, 1500);
+
+      // Auto-record: poll the reconciliation endpoint until Zoho confirms
+      // payment (works even if the webhook is missed), then refresh data.
+      if (data.referenceId) pollZohoPaymentStatus(data.referenceId);
     } catch (e) {
       console.error("[ZohoPay]", e);
       log(`Unexpected error: ${e.message}`, "var(--danger)");
       if (titleEl) titleEl.textContent = "Payment link failed";
     }
   };
+
+  // ── Zoho payment status polling ────────────────────────────────────
+  // Checks /api/zoho-payment-status every few seconds; the endpoint also
+  // reconciles (records the payment) if Zoho says paid but no webhook landed.
+  let zohoPollTimer = null;
+  function pollZohoPaymentStatus(referenceId, { intervalMs = 6000, maxAttempts = 50 } = {}) {
+    if (zohoPollTimer) clearInterval(zohoPollTimer);
+    let attempts = 0;
+    zohoPollTimer = setInterval(async () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(zohoPollTimer);
+        zohoPollTimer = null;
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/zoho-payment-status?ref=${encodeURIComponent(referenceId)}&t=${Date.now()}`);
+        if (!res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        if (data.paid) {
+          clearInterval(zohoPollTimer);
+          zohoPollTimer = null;
+          toast("✅ Payment received! Updating records…", "success");
+          loadAllData(true);
+        }
+      } catch (e) {
+        /* transient network error — keep polling */
+      }
+    }, intervalMs);
+  }
+  window.pollZohoPaymentStatus = pollZohoPaymentStatus;
+
+  // ── Zoho return-URL handling ───────────────────────────────────────
+  // Zoho redirects back to /?payment=success&ref=TKCA-… after checkout.
+  // Confirm + record the payment, then clean the URL.
+  (function handleZohoReturn() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("payment") === "success" && params.get("ref")) {
+        const ref = params.get("ref");
+        toast("Verifying your payment…", "info");
+        pollZohoPaymentStatus(ref, { intervalMs: 4000, maxAttempts: 15 });
+        // Remove the query params so refreshes don't re-trigger.
+        const clean = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, clean);
+      }
+    } catch (e) {
+      console.warn("[ZohoPay] return handling failed:", e);
+    }
+  })();
 
   window.initiateRazorpayPay = async function () {
     const optionsEl = $("pay-options");

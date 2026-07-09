@@ -67,8 +67,11 @@
     { "source": "/api/chesscom-games-proxy/:match*", "destination": "/api/chesscom-games-proxy" },
     { "source": "/api/zoho-payment-init", "destination": "/api/zoho-payment-init" },
     { "source": "/api/zoho-payment-init/:match*", "destination": "/api/zoho-payment-init" },
+    { "source": "/api/zoho-payment-status", "destination": "/api/zoho-payment-status" },
+    { "source": "/api/zoho-payment-status/:match*", "destination": "/api/zoho-payment-status" },
     { "source": "/api/zoho-webhook", "destination": "/api/zoho-webhook" },
     { "source": "/api/zoho-webhook/:match*", "destination": "/api/zoho-webhook" },
+    { "source": "/api/zoho-debug", "destination": "/api/zoho-debug" },
     { "source": "/api/:path*", "destination": "https://zznbanjdkwofsvpzybtr.supabase.co/functions/v1/:path*" }
   ]
 }

@@ -121,6 +121,9 @@ export default async function handler(request) {
       method: 'POST',
       headers: { Prefer: 'return=representation' },
       body: {
+        // payments.id is TEXT PRIMARY KEY with no default — must be supplied.
+        // Deterministic per Zoho payment id → doubles as idempotency.
+        id: `pay_zoho_${paymentId}`,
         student_id: studentId,
         amount: Number.isFinite(amount) && amount > 0 ? amount : 0,
         status: 'paid',

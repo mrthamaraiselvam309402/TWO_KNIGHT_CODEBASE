@@ -27,8 +27,7 @@ async function handleLichessProxy(username) {
       { 
         headers: { 
           'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Encoding': 'gzip, deflate',
+          'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)',
           'Accept-Language': 'en-US,en;q=0.9'
         }, 
         signal 
@@ -50,8 +49,7 @@ async function handleLichessProxy(username) {
       { 
         headers: { 
           'Accept': 'application/x-ndjson',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Encoding': 'gzip, deflate',
+          'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)',
           'Accept-Language': 'en-US,en;q=0.9'
         }, 
         signal 
@@ -62,11 +60,15 @@ async function handleLichessProxy(username) {
     });
 
     if (historyRes && historyRes.ok) {
+      // rating-history returns a plain JSON array, not NDJSON
       const text = await historyRes.text();
-      const lines = text.split('\n').filter((line) => line.trim());
-      ratingHistory = lines.map((line) => {
-        try { return JSON.parse(line); } catch { return null; }
-      }).filter(Boolean);
+      try {
+        const parsed = JSON.parse(text);
+        ratingHistory = Array.isArray(parsed) ? parsed : [];
+        if (ratingHistory.length === 1 && Array.isArray(ratingHistory[0])) {
+          ratingHistory = ratingHistory[0];
+        }
+      } catch { ratingHistory = []; }
     } else if (historyRes) {
       console.error(`[Lichess Proxy] History fetch failed for ${username}:`, historyRes.status, historyRes.statusText);
     }
@@ -133,18 +135,24 @@ async function handleChesscomProxy(username) {
 
 async function handleLichessGamesProxy(username, req) {
   const max = req.query.max || '10';
+  const { signal, clear } = createAbortSignal(CHESS_API_TIMEOUT);
   const response = await fetch(
     `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${max}&pgnInJson=true`,
-    { 
-      headers: { 
+    {
+      headers: {
         'Accept': 'application/x-ndjson',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
+        'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)'
+      },
+      signal
     }
-  ).catch(() => ({ ok: false }));
+  ).catch((e) => {
+    console.error(`[Lichess Games] Fetch threw for ${username}:`, e.message);
+    return { ok: false };
+  });
+  clear();
 
   if (!response || !response.ok) {
-    return { status: response?.status || 500, body: { error: 'Lichess games API error', games: [] } };
+    return { status: response?.status || 502, body: { error: 'Lichess games API error', games: [] } };
   }
 
   const text = await response.text();
@@ -159,26 +167,40 @@ async function handleLichessGamesProxy(username, req) {
 async function handleLichessExtrasProxy(username) {
   const headers = { 
     'Accept': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)'
   };
   try {
-    const [trophiesRes, statusRes] = await Promise.all([
+    const [trophiesRes, statusRes] = await Promise.allSettled([
       fetch(`https://lichess.org/api/user/${encodeURIComponent(username)}/trophies`, { headers }),
-      fetch(`https://lichess.org/api/users/${encodeURIComponent(username)}/online-status`, { headers })
+      // Correct lichess endpoint: /api/users/status?ids=<usernames>
+      fetch(`https://lichess.org/api/users/status?ids=${encodeURIComponent(username)}`, { headers })
     ]);
 
-    const trophies = trophiesRes?.ok ? await trophiesRes.json().catch(() => []) : [];
-    const status = statusRes?.ok ? await statusRes.json().catch(() => ({})) : {};
+    let trophies = [];
+    if (trophiesRes.status === 'fulfilled' && trophiesRes.value.ok) {
+      trophies = await trophiesRes.value.json().catch(() => []);
+      if (!Array.isArray(trophies)) trophies = [];
+    }
+
+    let status = {};
+    if (statusRes.status === 'fulfilled' && statusRes.value.ok) {
+      const arr = await statusRes.value.json().catch(() => []);
+      if (Array.isArray(arr) && arr.length > 0) status = arr[0];
+      else if (arr && !Array.isArray(arr)) status = arr;
+    }
 
     return { status: 200, body: { trophies, status } };
-  } catch {
-    return { status: 500, body: { error: 'Failed to fetch Lichess extras' } };
+  } catch (e) {
+    console.error('[Lichess Extras] Error:', e.message);
+    // Extras are decorative — degrade gracefully instead of a 500.
+    return { status: 200, body: { trophies: [], status: {}, degraded: true } };
   }
 }
 
-async function handleChesscomGamesProxy(username, url) {
-  const year = url.searchParams.get('year') || new Date().getFullYear();
-  const month = url.searchParams.get('month') || String(new Date().getMonth() + 1).padStart(2, '0');
+async function handleChesscomGamesProxy(username, req) {
+  // req is an Express request — params live on req.query, not url.searchParams
+  const year = req.query.year || new Date().getFullYear();
+  const month = req.query.month || String(new Date().getMonth() + 1).padStart(2, '0');
 
   const response = await fetch(
     `https://api.chess.com/pub/player/${encodeURIComponent(username)}/games/${year}/${month}`,
@@ -262,8 +284,7 @@ async function handleLichessTest(username) {
       { 
         headers: { 
           'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Encoding': 'gzip, deflate',
+          'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)',
           'Accept-Language': 'en-US,en;q=0.9'
         },
         compress: false
@@ -354,6 +375,10 @@ app.use('/api', async (req, res) => {
       result = await handleChesscomGamesProxy(username, req);
     } else if ((pathname === '/chesscom-clubs-proxy' || pathname === '/api/chesscom-clubs-proxy') && username) {
       result = await handleChesscomClubsProxy(username);
+    } else if (pathname === '/zoho-payment-status' || pathname === '/api/zoho-payment-status') {
+      // Local dev has no Zoho credentials; report not-paid so the UI keeps
+      // its manual flows. Production uses api/zoho-payment-status.js.
+      result = { status: 200, body: { paid: false, status: 'dev-unsupported' } };
     } else if (pathname === '/zoho-payment-init' || pathname === '/api/zoho-payment-init') {
       result = await handleZohoPaymentInit(req);
     } else if (pathname === '/zoho-webhook' || pathname === '/api/zoho-webhook') {

@@ -476,7 +476,11 @@ async function loadChessDashboard(student) {
       }
       if (data) {
         const profile = data.profile || {};
-        const ratingHistory = Array.isArray(data.ratingHistory) ? data.ratingHistory : [];
+        let ratingHistory = Array.isArray(data.ratingHistory) ? data.ratingHistory : [];
+        // Self-heal older cached data that was NDJSON-parsed into a nested [[...]] shape.
+        if (ratingHistory.length === 1 && Array.isArray(ratingHistory[0])) {
+          ratingHistory = ratingHistory[0];
+        }
 
         if (!profile.username) {
           lichessCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
