@@ -364,16 +364,18 @@ window.generateReportPDF = async function() {
   <script src="/lib/chart.umd.min.js"></script>
   <style>
     :root {
-      --gold: #c9960c;
-      --gold-dark: #8c6a08;
-      --bg: #0a0a0b;
-      --card-bg: #111113;
-      --border: rgba(201, 150, 12, 0.2);
-      --text: #e0e0e0;
-      --text-dim: #888;
-      --sapphire: #5a9fff;
-      --emerald: #52c41a;
-      --ruby: #ff4d4f;
+      /* White executive theme — matches the printed output instead of the
+         old black boardroom look. */
+      --gold: #8c6a08;
+      --gold-dark: #6d5306;
+      --bg: #eef0f4;
+      --card-bg: #ffffff;
+      --border: rgba(140, 106, 8, 0.25);
+      --text: #22263a;
+      --text-dim: #667085;
+      --sapphire: #2f6fd6;
+      --emerald: #1e7e34;
+      --ruby: #c0392b;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     @page { size: A4; margin: 14mm; }
@@ -415,9 +417,9 @@ window.generateReportPDF = async function() {
       thead { display: table-header-group; }
     }
     body { background: var(--bg); font-family: 'Cormorant Garamond', serif; color: var(--text); line-height: 1.5; padding: 50px 0; display: flex; flex-direction: column; align-items: center; }
-    .page { width: 950px; padding: 80px; position: relative; min-height: 1300px; background: var(--card-bg); margin-bottom: 50px; box-shadow: 0 40px 100px rgba(0,0,0,0.6); border: 1px solid var(--border); overflow: hidden; }
-    
-    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Cinzel', serif; font-size: 100px; font-weight: 900; color: rgba(201, 150, 12, 0.04); pointer-events: none; white-space: nowrap; z-index: 0; }
+    .page { width: 950px; padding: 80px; position: relative; min-height: 1300px; background: var(--card-bg); margin-bottom: 50px; box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12); border: 1px solid #e4e6ec; overflow: hidden; }
+
+    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Cinzel', serif; font-size: 100px; font-weight: 900; color: rgba(140, 106, 8, 0.05); pointer-events: none; white-space: nowrap; z-index: 0; }
 
     .header { text-align: left; margin-bottom: 60px; border-bottom: 2px solid var(--gold); padding-bottom: 30px; position: relative; z-index: 1; }
     .header h1 { font-family: 'Cinzel', serif; font-size: 42px; font-weight: 900; letter-spacing: 2px; color: var(--gold); margin-bottom: 5px; text-transform: uppercase; }
@@ -427,13 +429,13 @@ window.generateReportPDF = async function() {
     .heartbeat { color: var(--emerald); font-weight: 600; }
 
     .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 50px; position: relative; z-index: 1; }
-    .kpi-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 20px 10px; text-align: center; border-radius: 4px; position: relative; }
+    .kpi-card { background: #faf7ef; border: 1px solid #e3d6a8; padding: 20px 10px; text-align: center; border-radius: 4px; position: relative; }
     .kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 10px; font-family: 'Syne', sans-serif; }
     .kpi-value { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 600; color: var(--gold); }
     .kpi-sub { font-size: 10px; color: #555; margin-top: 5px; font-style: italic; }
 
     .analytics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-bottom: 60px; align-items: center; position: relative; z-index: 1; }
-    .chart-box { background: rgba(255,255,255,0.01); padding: 30px; border: 1px solid var(--border); border-radius: 8px; height: 350px; position: relative; }
+    .chart-box { background: #fbfbfd; padding: 30px; border: 1px solid #e2e2e2; border-radius: 8px; height: 350px; position: relative; }
     .data-story { font-size: 18px; color: var(--text); }
     .data-story p { margin-bottom: 20px; }
     .strategic-insight { background: rgba(201, 150, 12, 0.05); border-left: 5px solid var(--gold); padding: 20px; font-style: italic; margin-top: 30px; border-radius: 0 8px 8px 0; font-size: 16px; }
@@ -448,7 +450,7 @@ window.generateReportPDF = async function() {
     .text-right { text-align: right; }
     .loss { color: var(--ruby) !important; font-weight: 600; }
     .gain { color: var(--emerald) !important; font-weight: 600; }
-    .bold { font-weight: 700; color: #fff; }
+    .bold { font-weight: 700; color: #000; }
 
     .footer { position: absolute; bottom: 50px; left: 80px; right: 80px; display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 25px; font-size: 10px; color: var(--text-dim); font-family: 'DM Mono', monospace; letter-spacing: 1px; }
     
@@ -783,16 +785,16 @@ window.generateReportPDF = async function() {
           labels: ['Profit', 'Payroll', 'Pending Arrears'],
           datasets: [{
             data: [${netProfit > 0 ? netProfit : 0}, ${payroll}, ${currPendingAmount}],
-            backgroundColor: ['#52c41a', '#1a1a1a', '#e8a830'],
-            borderColor: 'rgba(201,150,12,0.5)',
-            borderWidth: 1
+            backgroundColor: ['#1e7e34', '#334155', '#e8a830'],
+            borderColor: '#ffffff',
+            borderWidth: 2
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom', labels: { color: '#888', font: { family: 'Syne', size: 10 } } }
+            legend: { position: 'bottom', labels: { color: '#555', font: { family: 'Syne', size: 10 } } }
           }
         }
       });
@@ -804,8 +806,8 @@ window.generateReportPDF = async function() {
           datasets: [{
             label: 'Units',
             data: [${levels['Beginner']}, ${levels['Intermediate']}, ${levels['Advanced']}, ${levels['Elite']}],
-            backgroundColor: ['#c9960c', '#5a9fff', '#52c41a', '#ff4d4f'],
-            borderColor: 'rgba(255,255,255,0.1)',
+            backgroundColor: ['#c9960c', '#2f6fd6', '#1e7e34', '#c0392b'],
+            borderColor: 'rgba(0,0,0,0.1)',
             borderWidth: 1
           }]
         },
@@ -813,8 +815,8 @@ window.generateReportPDF = async function() {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666', precision: 0 } },
-            x: { grid: { display: false }, ticks: { color: '#666' } }
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.07)' }, ticks: { color: '#555', precision: 0 } },
+            x: { grid: { display: false }, ticks: { color: '#555' } }
           },
           plugins: { legend: { display: false } }
         }
@@ -826,8 +828,8 @@ window.generateReportPDF = async function() {
           labels: ['Morning', 'Evening', 'Weekend'],
           datasets: [{
             data: [${timings['Morning']}, ${timings['Evening']}, ${timings['Weekend']}],
-            backgroundColor: ['#dca33e', '#5a9fff', '#52c41a'],
-            borderColor: '#111113',
+            backgroundColor: ['#dca33e', '#2f6fd6', '#1e7e34'],
+            borderColor: '#ffffff',
             borderWidth: 2
           }]
         },
@@ -835,7 +837,7 @@ window.generateReportPDF = async function() {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom', labels: { color: '#888', font: { family: 'Syne', size: 10 } } }
+            legend: { position: 'bottom', labels: { color: '#555', font: { family: 'Syne', size: 10 } } }
           }
         }
       });
