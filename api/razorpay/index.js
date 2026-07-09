@@ -18,7 +18,7 @@ export default async function handler(request, response) {
     return response.status(200).end();
   }
 
-  const url = new URL(request.url);
+  const url = new URL(request.url, 'http://localhost');
   const path = url.pathname.replace(/^\/api\/razorpay\/?/, '') || 'config';
 
   if (path === 'config') {

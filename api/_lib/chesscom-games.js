@@ -1,5 +1,5 @@
 export default async function handler(request) {
-  const url = new URL(request.url);
+  const url = new URL(request.url, 'http://localhost');
   const username = url.searchParams.get('username');
   const year = url.searchParams.get('year');
   const month = url.searchParams.get('month');

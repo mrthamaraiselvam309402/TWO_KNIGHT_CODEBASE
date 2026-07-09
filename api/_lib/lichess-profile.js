@@ -1,7 +1,7 @@
 export default async function handler(request) {
   const startTime = Date.now();
   try {
-    const url = new URL(request.url);
+    const url = new URL(request.url, 'http://localhost');
     const username = url.searchParams.get('username');
     if (!username) {
       return new Response(JSON.stringify({ error: 'Missing username parameter' }), {
