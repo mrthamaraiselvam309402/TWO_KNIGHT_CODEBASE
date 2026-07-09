@@ -713,7 +713,7 @@
         <div style="max-height: 250px; overflow-y: auto; padding-right: 10px; background:var(--bg2); padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
           ${attLogHtml}
         </div>
-        <button class="btn btn-outline" style="width:100%; margin-top:16px;" onclick="window.print()">🖨️ Print Report</button>
+        <button class="btn btn-outline" style="width:100%; margin-top:16px;" onclick="printParentReport()">🖨️ Download / Print Report</button>
       </div>
 
       <!-- Fees Report Card -->
@@ -739,6 +739,93 @@
         <button class="btn btn-outline" style="width:100%;" onclick="setChildTab('billing')">View Ledger</button>
       </div>
     `;
+  };
+
+  // Opens a clean, printable monthly report for the parent portal.
+  // (The old button called window.print(), which printed the whole dark
+  // SPA shell instead of a report document.)
+  window.printParentReport = function () {
+    if (!currentStudent) return;
+    const s = currentStudent;
+    const monthInput = document.getElementById("parent-report-month");
+    const monthVal = monthInput && monthInput.value
+      ? monthInput.value
+      : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    const [yearStr, monthStr] = monthVal.split("-");
+    const targetYear = parseInt(yearStr, 10);
+    const targetMonth = parseInt(monthStr, 10) - 1;
+    const monthLabel = new Date(targetYear, targetMonth, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+    const monthAtt = (allAttendance || [])
+      .filter((a) => {
+        if (String(a.student_id) !== String(s.id)) return false;
+        const d = new Date(a.date);
+        return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const presentCount = monthAtt.filter((a) => (a.status || "").toLowerCase() === "present").length;
+    const attPct = monthAtt.length ? Math.round((presentCount / monthAtt.length) * 100) : 0;
+
+    const coach = allCoaches.find((c) => String(c.id) === String(s.coach_id));
+    const feeStatus = getStudentPaymentStatus(s, targetMonth, targetYear);
+    const monthlyFee = getStudentMonthlyFee(s);
+
+    const attRowsHtml = monthAtt.length
+      ? monthAtt.map((a) => {
+          const p = window.parseAttendanceNotes ? window.parseAttendanceNotes(a.notes || "") : { cw: "", hw: "", general: "" };
+          const notes = [p.cw && `Classwork: ${p.cw}`, p.hw && `Homework: ${p.hw}`, p.general && `Notes: ${p.general}`]
+            .filter(Boolean).join(" · ");
+          const ok = (a.status || "").toLowerCase() === "present";
+          return `<tr>
+            <td>${new Date(a.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</td>
+            <td style="color:${ok ? "#0a7a3d" : "#b91c1c"}; font-weight:bold;">${(a.status || "").toUpperCase()}</td>
+            <td>${escapeHtml(notes) || "—"}</td>
+          </tr>`;
+        }).join("")
+      : `<tr><td colspan="3" style="color:#888;">No attendance records for ${monthLabel}.</td></tr>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { toast("Pop-up blocked — allow pop-ups to print the report", "error"); return; }
+    w.document.write(`<!DOCTYPE html><html><head><title>Monthly Report — ${escapeHtml(getStudentName(s))} — ${monthLabel}</title>
+      <style>
+        body { font-family: Georgia, serif; color: #1a1a2e; margin: 36px; }
+        .head { text-align: center; border-bottom: 3px double #1e2a5e; padding-bottom: 14px; margin-bottom: 20px; }
+        .head h1 { margin: 0; font-size: 22px; color: #1e2a5e; letter-spacing: 2px; }
+        .head .sub { font-size: 12px; color: #555; }
+        h2 { font-size: 15px; color: #1e2a5e; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 26px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; vertical-align: top; }
+        th { background: #f0f2f8; color: #1e2a5e; }
+        .kpis { display: flex; gap: 14px; margin: 14px 0; }
+        .kpi { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 10px; text-align: center; }
+        .kpi b { display: block; font-size: 18px; margin-top: 2px; }
+        .foot { margin-top: 30px; font-size: 10px; color: #777; text-align: center; border-top: 1px solid #ccc; padding-top: 10px; }
+        @media print { .noprint { display: none; } }
+      </style></head><body>
+      <div class="head">
+        <h1>TWO KNIGHTS CHESS ACADEMY</h1>
+        <div class="sub">Building Champions, One Move at a Time · Monthly Student Report — ${monthLabel}</div>
+      </div>
+      <table>
+        <tr><th style="width:25%">Student</th><td>${escapeHtml(getStudentName(s))}</td><th style="width:20%">Level</th><td>${escapeHtml(getStudentLevel(s) || "N/A")}</td></tr>
+        <tr><th>Coach</th><td>${escapeHtml(coach ? getCoachName(coach) : "Not Assigned")}</td><th>Academy ELO</th><td>${getStudentRating(s) || "—"}</td></tr>
+      </table>
+      <div class="kpis">
+        <div class="kpi">Classes Held<b>${monthAtt.length}</b></div>
+        <div class="kpi">Attended<b>${presentCount}</b></div>
+        <div class="kpi">Attendance<b>${attPct}%</b></div>
+        <div class="kpi">Fee (${monthLabel.split(" ")[0]})<b style="color:${feeStatus === "Paid" ? "#0a7a3d" : "#b91c1c"}">${feeStatus.toUpperCase()} · ₹${monthlyFee}</b></div>
+      </div>
+      <h2>Attendance & Class Log</h2>
+      <table><thead><tr><th style="width:18%">Date</th><th style="width:14%">Status</th><th>Class Notes</th></tr></thead>
+      <tbody>${attRowsHtml}</tbody></table>
+      <div class="foot">Generated ${new Date().toLocaleString("en-IN")} · Two Knights Chess Academy · This is a system-generated report.</div>
+      <div class="noprint" style="text-align:center; margin-top:20px;">
+        <button onclick="window.print()" style="padding:10px 26px; font-size:14px; cursor:pointer;">🖨️ Print / Save as PDF</button>
+      </div>
+      </body></html>`);
+    w.document.close();
+    setTimeout(() => { try { w.focus(); } catch (e) { /* ignore */ } }, 300);
   };
 
   async function renderChildGrowth() {
@@ -11212,6 +11299,7 @@ Best regards,
     if (optionsEl) {
       optionsEl.style.display = "block";
       let optionsHtml = "";
+      optionsHtml += `<div class="upi-item" onclick="initiateZohoPay()" style="background:rgba(59,130,246,0.08); border-color:var(--gold); color:var(--gold); display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px;">💠 <b>Pay Online — Zoho Payments (Card/UPI/NetBanking)</b></div>`;
       if (isRazorpayConfigured) {
         optionsHtml += `<div class="upi-item" onclick="initiateRazorpayPay()" style="background:rgba(232,168,48,0.1); border-color:var(--gold); color:var(--gold); display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px;">🛡️ <b>Pay via Razorpay (Card/UPI)</b></div>`;
       }
@@ -11324,6 +11412,71 @@ Best regards,
   }
 
   // Real-time Razorpay Payment Flow
+  // Zoho Payments hosted checkout: asks the backend for a payment link
+  // (created fresh or reused for this student+month) and opens it.
+  window.initiateZohoPay = async function () {
+    const optionsEl = $("pay-options");
+    const processingEl = $("pay-processing");
+    const logsEl = $("pay-console-logs");
+    const titleEl = $("pay-status-title");
+
+    if (optionsEl) optionsEl.style.display = "none";
+    if (processingEl) processingEl.style.display = "block";
+    if (logsEl) logsEl.innerHTML = "";
+    if (titleEl) titleEl.textContent = "Creating secure Zoho payment link…";
+
+    const log = (text, color = "#d4d4d8") => {
+      if (!logsEl) return;
+      logsEl.innerHTML += `<div style="color:${color}; margin-bottom:4px;">[${new Date().toLocaleTimeString()}] ${escapeHtml(text)}</div>`;
+      logsEl.scrollTop = logsEl.scrollHeight;
+    };
+
+    try {
+      const s = allStudents.find((x) => String(x.id) === String(currentPayId)) || {};
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      log("Contacting Zoho Payments gateway…");
+
+      const res = await fetch(`${API_BASE}/zoho-payment-init`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: currentPayId,
+          studentName: getStudentName(s) || "Student",
+          amount: currentPayAmt,
+          currency: "INR",
+          email: s.email || "",
+          phone: s.parent_phone || s.phone || "",
+          month: month,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.url) {
+        log(`Gateway error: ${data.details || data.error || res.status}`, "var(--danger)");
+        if (titleEl) titleEl.textContent = "Payment link failed";
+        toast("Could not create Zoho payment link", "error");
+        return;
+      }
+
+      if (data.simulated) log("Zoho not configured — using simulated checkout.", "var(--amber)");
+      if (data.reused) log("Reusing this month's existing payment link.", "var(--amber)");
+      log(`Link ready for ${month} (ref ${data.referenceId || "n/a"}).`, "var(--success)");
+      log("Opening secure checkout in a new tab…", "var(--success)");
+      if (titleEl) titleEl.textContent = "Redirecting to Zoho secure checkout…";
+
+      window.open(data.url, "_blank", "noopener");
+      setTimeout(() => {
+        closeModal("pay-modal");
+        toast("Complete the payment in the Zoho tab. Status updates automatically once paid.", "info");
+      }, 1500);
+    } catch (e) {
+      console.error("[ZohoPay]", e);
+      log(`Unexpected error: ${e.message}`, "var(--danger)");
+      if (titleEl) titleEl.textContent = "Payment link failed";
+    }
+  };
+
   window.initiateRazorpayPay = async function () {
     const optionsEl = $("pay-options");
     const processingEl = $("pay-processing");
@@ -13740,7 +13893,31 @@ Best regards,
 
   // BOARDROOM REPORTING LOGIC MOVED TO js/reporting.js
 
-  function exportAcademyData() {
+  // Aggregate paid transactions by payment method for a billing month.
+  // Used by the financial PDF, boardroom deck and academy export
+  // (roadmap §17: admin dashboard payment-mode summary).
+  function getPaymentModeSummary(year, month0) {
+    const key = `${year}-${String(month0 + 1).padStart(2, "0")}`;
+    const modes = {};
+    (window.allPayments || []).forEach((p) => {
+      if (p.status !== "paid") return;
+      let applied = p.applied_month && String(p.applied_month).trim();
+      if (!applied) {
+        const d = new Date(p.payment_date || p.created_at);
+        if (isNaN(d.getTime())) return;
+        applied = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      }
+      if (applied !== key) return;
+      const mode = (p.payment_method || "Unknown").trim() || "Unknown";
+      if (!modes[mode]) modes[mode] = { count: 0, amount: 0 };
+      modes[mode].count += 1;
+      modes[mode].amount += parseFloat(p.amount || 0) || 0;
+    });
+    return modes;
+  }
+  window.getPaymentModeSummary = getPaymentModeSummary;
+
+  async function exportAcademyData() {
     if (typeof XLSX === "undefined") {
       toast(
         "Export library not loaded yet. Please wait a moment and try again.",
@@ -13831,10 +14008,147 @@ Best regards,
 
       XLSX.utils.book_append_sheet(wb, ws, "Academy Registry");
 
+      const monthKey = `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}`;
+
+      // ── Payments (report month) ──
+      const paymentRows = (window.allPayments || [])
+        .filter((p) => {
+          let applied = p.applied_month && String(p.applied_month).trim();
+          if (!applied) {
+            const d = new Date(p.payment_date || p.created_at);
+            applied = isNaN(d.getTime())
+              ? ""
+              : `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+          }
+          return applied === monthKey;
+        })
+        .map((p) => {
+          const stu = allStudents.find((x) => String(x.id) === String(p.student_id));
+          return {
+            Date: p.payment_date ? new Date(p.payment_date).toLocaleDateString("en-IN") : "N/A",
+            Student: stu ? getStudentName(stu) : p.student_id,
+            "Amount (₹)": parseFloat(p.amount || 0),
+            Method: p.payment_method || "Unknown",
+            Status: p.status || "paid",
+            "Applied Month": p.applied_month || monthKey,
+            "Transaction ID": p.transaction_id || "N/A",
+          };
+        });
+      if (paymentRows.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paymentRows), "Payments (Month)");
+      }
+
+      // ── Payment mode summary ──
+      const modeSummary = getPaymentModeSummary(targetYear, targetMonth);
+      const modeRows = Object.entries(modeSummary).map(([mode, v]) => ({
+        "Payment Mode": mode,
+        Transactions: v.count,
+        "Amount (₹)": v.amount,
+      }));
+      if (modeRows.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(modeRows), "Payment Modes");
+      }
+
+      // ── Expenditures (report month; fetched fresh so the sheet works
+      //    even if the Expenditures page was never opened) ──
+      let expRows = [];
+      try {
+        const expRes = await apiCall(`/api/expenditures?limit=500`);
+        if (expRes.ok) {
+          const expJson = await expRes.json();
+          expRows = (expJson.data || [])
+            .filter((e) => String(e.expense_date || e.date || "").startsWith(monthKey))
+            .map((e) => ({
+              Date: e.expense_date || e.date || "N/A",
+              Category: e.category || "Miscellaneous",
+              Description: e.description || "",
+              "Amount (₹)": parseFloat(e.amount || 0),
+              "Payment Mode": e.payment_mode || "N/A",
+            }));
+        }
+      } catch (e) {
+        console.warn("[Export] expenditures fetch failed:", e);
+      }
+      if (expRows.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expRows), "Expenditures");
+      }
+
+      // ── Coaches ──
+      const coachRows = (allCoaches || [])
+        .filter((c) => c.status !== "archived")
+        .map((c) => ({
+          Coach: getCoachName(c),
+          Phone: c.phone || "N/A",
+          Specialty: getCoachSpecialty(c) || "N/A",
+          "Monthly Salary (₹)": getCoachSalary(c) || 0,
+          "Assigned Students": allStudents.filter(
+            (s) => String(s.coach_id) === String(c.id) && getStudentStatus(s) !== "archived",
+          ).length,
+        }));
+      if (coachRows.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(coachRows), "Coaches");
+      }
+
+      // ── Batches ──
+      const batchRows = (window.allBatches || []).map((b) => {
+        const coach = allCoaches.find((c) => String(c.id) === String(b.coach_id));
+        const ids = Array.isArray(b.student_ids) ? b.student_ids : [];
+        return {
+          Batch: b.name || b.batch_name || "Batch",
+          Coach: coach ? getCoachName(coach) : "Unassigned",
+          Level: b.level || "N/A",
+          Days: Array.isArray(b.days) ? b.days.join(", ") : b.days || "N/A",
+          "Time Slot": b.time_slot || "N/A",
+          Students: ids.length,
+        };
+      });
+      if (batchRows.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(batchRows), "Batches");
+      }
+
+      // ── Attendance summary (report month, per student) ──
+      const attRows = allStudents
+        .map((s) => {
+          const recs = (allAttendance || []).filter((a) => {
+            if (String(a.student_id) !== String(s.id)) return false;
+            const d = new Date(a.date);
+            return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
+          });
+          if (!recs.length) return null;
+          const present = recs.filter((a) => (a.status || "").toLowerCase() === "present").length;
+          return {
+            Student: getStudentName(s),
+            "Classes Held": recs.length,
+            Present: present,
+            Absent: recs.length - present,
+            "Attendance %": Math.round((present / recs.length) * 100),
+          };
+        })
+        .filter(Boolean);
+      if (attRows.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(attRows), "Attendance (Month)");
+      }
+
+      // ── Financial summary ──
+      const collectedTotal = paymentRows.reduce((a, r) => a + (r["Amount (₹)"] || 0), 0);
+      const expTotal = expRows.reduce((a, r) => a + (r["Amount (₹)"] || 0), 0);
+      const payrollTotal = coachRows.reduce((a, r) => a + (r["Monthly Salary (₹)"] || 0), 0);
+      const summarySheet = XLSX.utils.json_to_sheet([
+        { Metric: "Report Month", Value: monthKey },
+        { Metric: "Total Students", Value: allStudents.length },
+        { Metric: "Active Coaches", Value: coachRows.length },
+        { Metric: "Collections (₹)", Value: collectedTotal },
+        { Metric: "Coach Payroll (₹)", Value: payrollTotal },
+        { Metric: "Expenditures (₹)", Value: expTotal },
+        { Metric: "Net Position (₹)", Value: collectedTotal - payrollTotal - expTotal },
+        { Metric: "Generated At", Value: new Date().toLocaleString("en-IN") },
+      ]);
+      XLSX.utils.book_append_sheet(wb, summarySheet, "Financial Summary");
+
       const fileName = `twoknights_Academy_Data_${new Date().toISOString().split("T")[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
 
-      toast("Academy Data Exported (Excel)", "success");
+      toast("Academy Data Exported (Excel — full workbook)", "success");
     } catch (err) {
       console.error("Academy Export Error:", err);
       toast("Excel Export Failed: System Error", "error");

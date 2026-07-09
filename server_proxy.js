@@ -1,6 +1,9 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import zohoPaymentInit from './api/zoho-payment-init.js';
+import zohoWebhook from './api/zoho-webhook.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -320,6 +323,29 @@ app.use('/api/access_control', async (req, res) => {
 
   return res.status(405).json({ error: 'Method not allowed' });
 });
+
+// ─── Zoho Payments: run the real Vercel handlers locally ────────────────
+// (must be mounted before the catch-all Supabase proxy below)
+function adaptWebHandler(handler) {
+  return async (req, res) => {
+    try {
+      const webReq = new Request(`http://localhost:${PORT}${req.originalUrl}`, {
+        method: req.method,
+        headers: req.headers,
+        body: ['GET', 'HEAD', 'OPTIONS'].includes(req.method) ? undefined : JSON.stringify(req.body || {})
+      });
+      const webRes = await handler(webReq);
+      res.status(webRes.status);
+      webRes.headers.forEach((v, k) => res.setHeader(k, v));
+      res.send(await webRes.text());
+    } catch (e) {
+      console.error('[Local Zoho handler]', e);
+      res.status(500).json({ error: 'Local handler failed', details: e.message });
+    }
+  };
+}
+app.use('/api/zoho-payment-init', adaptWebHandler(zohoPaymentInit));
+app.use('/api/zoho-webhook', adaptWebHandler(zohoWebhook));
 
 // Proxy /api requests to Supabase edge functions cleanly using standard middleware
 app.use('/api', async (req, res) => {

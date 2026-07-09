@@ -80,10 +80,12 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       allExpenditures = json.data || [];
+      window.allExpenditures = allExpenditures; // shared with reports/exports
       return allExpenditures;
     } catch (e) {
       console.error('[Expenditures] fetch error:', e);
       allExpenditures = [];
+      window.allExpenditures = allExpenditures;
       return [];
     }
   }

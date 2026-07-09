@@ -157,15 +157,22 @@ window.generateReportPDF = async function() {
     // Fetch real-time expenditures for the reporting month
     const monthStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
     let totalExp = 0;
+    let expCategoryTotals = {};
     try {
         const res = await (window.apiCall || fetch)(`/api/expenditures?mode=summary&month=${monthStr}`);
         if (res.ok) {
             const summary = await res.json();
             totalExp = parseFloat(summary.total_expense || 0);
+            expCategoryTotals = summary.category_totals || {};
         }
     } catch (e) {
         console.error("Failed to fetch expenditures for report", e);
     }
+
+    // Payment-mode split for the month (roadmap §17 dashboard requirement)
+    const payModeSummary = (typeof window.getPaymentModeSummary === 'function')
+        ? window.getPaymentModeSummary(targetYear, targetMonth)
+        : {};
     
     const netProfit = collected - payroll - totalExp;
     
@@ -539,6 +546,41 @@ window.generateReportPDF = async function() {
         <div class="strategic-insight">
           Audit Note: System confirms ${newStudsThisMonth} new student registrations. Average Academy ELO has reached <span class="bold">${avgElo}</span>. Total outstanding (Last Due + Current) stands at <span class="bold">₹${(lastDueAmount + currPendingAmount).toLocaleString()}</span>.
         </div>
+      </div>
+    </div>
+
+    <h3>I-C. Payment Mode & Expenditure Breakdown</h3>
+    <div class="analytics-row">
+      <div style="flex:1;">
+        <table>
+          <thead>
+            <tr><th>Payment Mode</th><th>Transactions</th><th>Amount Collected</th></tr>
+          </thead>
+          <tbody>
+            ${Object.keys(payModeSummary).length
+              ? Object.entries(payModeSummary)
+                  .sort((a, b) => b[1].amount - a[1].amount)
+                  .map(([mode, v]) => `<tr><td>${mode}</td><td>${v.count}</td><td>₹${v.amount.toLocaleString()}</td></tr>`)
+                  .join('')
+              : `<tr><td colspan="3" style="color:#888;">No collections recorded for ${dateStr}.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+      <div style="flex:1;">
+        <table>
+          <thead>
+            <tr><th>Expenditure Category</th><th>Amount Spent</th></tr>
+          </thead>
+          <tbody>
+            ${Object.keys(expCategoryTotals).length
+              ? Object.entries(expCategoryTotals)
+                  .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]))
+                  .map(([cat, amt]) => `<tr><td>${cat}</td><td>₹${parseFloat(amt || 0).toLocaleString()}</td></tr>`)
+                  .join('')
+              : `<tr><td colspan="2" style="color:#888;">No expenditures recorded for ${dateStr}.</td></tr>`}
+            <tr style="font-weight:bold; border-top:2px solid #daa33e;"><td>Total Expenditure</td><td>₹${totalExp.toLocaleString()}</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -1444,7 +1486,67 @@ window.generateReportPPT = async function() {
 
         addSlideFooter(slide6, 6);
 
-        // ────────── SLIDE 7: Boardroom AI Strategy ──────────
+        // ────────── SLIDE 7: Payment Modes & Net Position ──────────
+        let slidePay = pptx.addSlide();
+        slidePay.background = { fill: darkBG };
+        addSlideHeader(slidePay, "COLLECTIONS BY PAYMENT MODE & NET POSITION");
+
+        const payModes = (typeof window.getPaymentModeSummary === 'function')
+            ? window.getPaymentModeSummary(targetYear, targetMonth)
+            : {};
+        const modeEntries = Object.entries(payModes).sort((a, b) => b[1].amount - a[1].amount);
+
+        const modeTableRows = [[
+            { text: 'PAYMENT MODE', options: { bold: true, color: goldAccent, fontSize: 10 } },
+            { text: 'TXNS', options: { bold: true, color: goldAccent, fontSize: 10 } },
+            { text: 'AMOUNT', options: { bold: true, color: goldAccent, fontSize: 10 } }
+        ]];
+        if (modeEntries.length) {
+            modeEntries.forEach(([mode, v]) => {
+                modeTableRows.push([
+                    { text: mode, options: { color: textWhite, fontSize: 10 } },
+                    { text: String(v.count), options: { color: textWhite, fontSize: 10 } },
+                    { text: `₹${v.amount.toLocaleString()}`, options: { color: textWhite, fontSize: 10 } }
+                ]);
+            });
+        } else {
+            modeTableRows.push([
+                { text: 'No collections recorded this period', options: { color: textMuted, fontSize: 10, colspan: 3 } }
+            ]);
+        }
+        slidePay.addTable(modeTableRows, {
+            x: 0.6, y: 1.2, w: 4.2, colW: [2.0, 0.8, 1.4],
+            border: { pt: 0.5, color: '2D2D35' },
+            fill: { color: '17171C' },
+            rowH: 0.35
+        });
+
+        // Net position blocks (collected / payroll / expenditures / net)
+        const plRows = [
+            { label: 'FEES COLLECTED', value: `₹${collected.toLocaleString()}`, color: '3CCB7F' },
+            { label: 'COACH PAYROLL', value: `₹${payroll.toLocaleString()}`, color: 'EF4444' },
+            { label: 'ACADEMY EXPENDITURES', value: `₹${totalExp.toLocaleString()}`, color: 'EF4444' },
+            { label: 'NET POSITION', value: `₹${netProfit.toLocaleString()}`, color: netProfit >= 0 ? '3CCB7F' : 'EF4444' }
+        ];
+        plRows.forEach((row, idx) => {
+            slidePay.addShape('rect', {
+                x: 5.2, y: 1.2 + idx * 0.95, w: 4.2, h: 0.8,
+                fill: { color: '17171C' },
+                line: { color: idx === 3 ? goldAccent : '2D2D35', width: idx === 3 ? 1.5 : 1 }
+            });
+            slidePay.addText(row.label, {
+                x: 5.4, y: 1.28 + idx * 0.95, w: 3.8, h: 0.3,
+                fontSize: 9, fontFace: 'Arial', color: textMuted, bold: true
+            });
+            slidePay.addText(row.value, {
+                x: 5.4, y: 1.55 + idx * 0.95, w: 3.8, h: 0.4,
+                fontSize: 16, fontFace: 'Arial', color: row.color, bold: true
+            });
+        });
+
+        addSlideFooter(slidePay, 7);
+
+        // ────────── SLIDE 8: Boardroom AI Strategy ──────────
         let slide7 = pptx.addSlide();
         slide7.background = { fill: darkBG };
         addSlideHeader(slide7, "BOARDROOM STRATEGIC RECOMMENDATIONS");
@@ -1475,7 +1577,7 @@ window.generateReportPPT = async function() {
             });
         });
 
-        addSlideFooter(slide7, 7);
+        addSlideFooter(slide7, 8);
 
         // 3. Save File
         pptx.writeFile({ fileName: `twoknights_Executive_Slides_${monthStr}.pptx` });

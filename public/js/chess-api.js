@@ -319,6 +319,17 @@ async function loadChessDashboard(student) {
 
   if (!lichessCard || !chesscomCard) return;
 
+  // Reset every per-student container before fetching so the previously
+  // viewed student's profile can never leak into this one (bug: student
+  // without linked accounts kept showing the prior student's Lichess
+  // identity, join dates and online status).
+  ['chessapi-lichess-details', 'chessapi-lichess-extras',
+   'chessapi-chesscom-details', 'chessapi-chesscom-clubs',
+   'chessapi-chesscom-tournaments'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
+
   const seenAt = student.seenAt || student.lichess_seen_at || null;
   const chesscomLastOnline = student.last_online || student.chesscom_last_online || null;
 
@@ -328,6 +339,10 @@ async function loadChessDashboard(student) {
     if (recentGamesContainer) recentGamesContainer.innerHTML = 'No platform usernames linked.';
     if (ratingsTable) ratingsTable.innerHTML = 'No data available.';
     if (performanceContainer) performanceContainer.innerHTML = 'No data available.';
+    // Clear charts left over from the previous student.
+    if (chessChartInstance) { chessChartInstance.destroy(); chessChartInstance = null; }
+    renderRatingHistoryChart([]);
+    renderWdlChart(null, null);
     return;
   }
 
