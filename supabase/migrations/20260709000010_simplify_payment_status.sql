@@ -16,7 +16,15 @@ SELECT cron.unschedule('monthly-payment-rollover-v4')  WHERE EXISTS (SELECT 1 FR
 SELECT cron.unschedule('daily-payment-audit')          WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'daily-payment-audit');
 
 -- 2. Drop the debt-first engine objects
-DROP TRIGGER IF EXISTS recalc_balances_trigger ON payment_allocations;
+-- DROP TRIGGER "IF EXISTS" still errors when the TABLE is missing
+-- (42P01), and payment_allocations never existed on some environments,
+-- so guard on the table itself.
+DO $$
+BEGIN
+  IF to_regclass('public.payment_allocations') IS NOT NULL THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS recalc_balances_trigger ON public.payment_allocations';
+  END IF;
+END $$;
 DROP FUNCTION IF EXISTS public.recalc_student_balances() CASCADE;
 DROP FUNCTION IF EXISTS public.apply_payment_debt_first(TEXT, TEXT, NUMERIC, TIMESTAMP WITH TIME ZONE, TEXT) CASCADE;
 DROP FUNCTION IF EXISTS public.monthly_rollover_job_v4() CASCADE;
@@ -76,6 +84,9 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 -- 4. Daily job: refresh the stored `payment_status` (current month)
 --    for every active student. Never writes `status`.
 -- ============================================================
+-- The cached status column this job maintains (no-op where it exists).
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS payment_status TEXT;
+
 CREATE OR REPLACE FUNCTION public.recompute_payment_statuses()
 RETURNS JSONB AS $$
 DECLARE
@@ -156,8 +167,10 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 6. Single consolidated cron job
+-- 6. Single consolidated cron job (re-runnable: replace if present)
 -- ============================================================
+SELECT cron.unschedule('daily-payment-status-sync')
+WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'daily-payment-status-sync');
 SELECT cron.schedule(
   'daily-payment-status-sync',
   '5 0 * * *',
