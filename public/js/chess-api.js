@@ -29,6 +29,16 @@ function esc(str) {
     .replace(/"/g, '&quot;');
 }
 
+// fetch with a hard timeout — Vercel functions occasionally stall without
+// responding, and an un-timeboxed await freezes the whole dashboard at
+// "Loading..." even when the cached data already arrived.
+function fetchT(url, ms = 10000, opts = {}) {
+  const signal = typeof AbortSignal !== 'undefined' && AbortSignal.timeout
+    ? AbortSignal.timeout(ms)
+    : (() => { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; })();
+  return fetch(url, { ...opts, signal });
+}
+
 function chartThemeColors() {
   const isLight = document.body && document.body.getAttribute('data-theme') === 'light';
   return {
@@ -363,7 +373,7 @@ async function loadChessDashboard(student) {
   // Fetch Chess.com via proxy
   if (chesscomUser) {
     try {
-      const res = await fetch(`/api/chesscom-proxy?username=${encodeURIComponent(chesscomUser)}`);
+      const res = await fetchT(`/api/chesscom-proxy?username=${encodeURIComponent(chesscomUser)}`, 12000);
       if (res.ok) {
         const data = await res.json();
         const profile = data;
@@ -412,31 +422,29 @@ async function loadChessDashboard(student) {
         ratingsData.chesscom[3] = stats.chess_classical?.last?.rating || null;
         ratingsData.chesscom[4] = stats.tactics?.highest?.rating || null;
 
-        try {
-          const clubsRes = await fetch(`/api/chesscom-clubs-proxy?username=${encodeURIComponent(chesscomUser)}`);
-          if (clubsRes.ok) {
-            const clubsData = await clubsRes.json();
+        // Clubs/tournaments are decorative — never block the card on them.
+        fetchT(`/api/chesscom-clubs-proxy?username=${encodeURIComponent(chesscomUser)}`, 8000)
+          .then((clubsRes) => clubsRes.ok ? clubsRes.json() : null)
+          .then((clubsData) => {
+            if (!clubsData) return;
             renderChesscomClubs(clubsData.clubs || [], document.getElementById('chessapi-chesscom-clubs'));
             renderChesscomTournaments(clubsData.tournaments || [], document.getElementById('chessapi-chesscom-tournaments'));
-          } else if (document.getElementById('chessapi-chesscom-clubs')) {
-            document.getElementById('chessapi-chesscom-clubs').innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">Unable to load clubs.</div>';
-          }
-        } catch (e) {
-          console.warn('[Chess] clubs/tournaments fetch failed:', e);
-        }
+          })
+          .catch((e) => console.warn('[Chess] clubs/tournaments fetch failed:', e));
 
-        // Fetch current month games via proxy to avoid CORS
+        // Fetch current month games via proxy to avoid CORS (non-blocking).
         const d = new Date();
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
-        const gamesRes = await fetch(`/api/chesscom-games-proxy?username=${encodeURIComponent(chesscomUser)}&year=${y}&month=${m}`);
-        if (gamesRes.ok) {
-          const gamesData = await gamesRes.json();
-          allChesscomGames = (gamesData.games || []).slice(0, 10);
-          renderChesscomRecentGames(allChesscomGames, recentGamesContainer);
-        } else if (recentGamesContainer) {
-          recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">Unable to load recent games.</div>';
-        }
+        fetchT(`/api/chesscom-games-proxy?username=${encodeURIComponent(chesscomUser)}&year=${y}&month=${m}`, 12000)
+          .then((gamesRes) => gamesRes.ok ? gamesRes.json() : null)
+          .then((gamesData) => {
+            if (!gamesData) return;
+            allChesscomGames = (gamesData.games || []).slice(0, 10);
+            renderChesscomRecentGames(allChesscomGames, recentGamesContainer);
+            window.currentChessGames = [...allLichessGames, ...allChesscomGames];
+          })
+          .catch((e) => console.warn('[Chess] chesscom games fetch failed:', e));
       }
     } else {
       chesscomCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
@@ -462,7 +470,7 @@ async function loadChessDashboard(student) {
     try {
       let data = null;
       try {
-        const cacheRes = await fetch(`/api/lichess?username=${encodeURIComponent(lichessUser)}`);
+        const cacheRes = await fetchT(`/api/lichess?username=${encodeURIComponent(lichessUser)}`, 8000);
         if (cacheRes.ok) {
           const cacheData = await cacheRes.json();
           if (cacheData.data) data = cacheData.data;
@@ -471,7 +479,7 @@ async function loadChessDashboard(student) {
         // ignore, fall back below
       }
       if (!data) {
-        const res = await fetch(`/api/lichess-proxy?username=${encodeURIComponent(lichessUser)}`);
+        const res = await fetchT(`/api/lichess-proxy?username=${encodeURIComponent(lichessUser)}`, 12000);
         if (res.ok) data = await res.json();
       }
       if (data) {
@@ -499,17 +507,13 @@ async function loadChessDashboard(student) {
         const rapidRating = profile.perfs?.rapid?.rating || 'N/A';
         const puzzleRating = profile.perfs?.puzzle?.rating || 'N/A';
 
-        try {
-          const extrasRes = await fetch(`/api/lichess-extras-proxy?username=${encodeURIComponent(lichessUser)}`);
-          if (extrasRes.ok) {
-            const extras = await extrasRes.json();
-            renderLichessExtras(extras.trophies || [], extras.status || {}, document.getElementById('chessapi-lichess-extras'));
-          } else if (document.getElementById('chessapi-lichess-extras')) {
-            document.getElementById('chessapi-lichess-extras').innerHTML = '<div style="font-size:12px; color:var(--ivory-dim);">Unable to load extra data.</div>';
-          }
-        } catch (e) {
-          console.warn('[Chess] lichess extras fetch failed:', e);
-        }
+        // Decorative extras must never block the profile card: fire and forget.
+        fetchT(`/api/lichess-extras-proxy?username=${encodeURIComponent(lichessUser)}`, 8000)
+          .then((extrasRes) => extrasRes.ok ? extrasRes.json() : null)
+          .then((extras) => {
+            if (extras) renderLichessExtras(extras.trophies || [], extras.status || {}, document.getElementById('chessapi-lichess-extras'));
+          })
+          .catch((e) => console.warn('[Chess] lichess extras fetch failed:', e));
 
         const classicalRating = profile.perfs?.classical?.rating || 'N/A';
 
@@ -563,15 +567,22 @@ async function loadChessDashboard(student) {
         ratingsData.lichess[2] = profile.perfs?.rapid?.rating || null;
         ratingsData.lichess[3] = profile.perfs?.classical?.rating || null;
         ratingsData.lichess[4] = profile.perfs?.puzzle?.rating || null;
-        const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true`);
-        if (gamesRes.ok) {
-          const games = await gamesRes.json();
-          allLichessGames = Array.isArray(games) ? games : [];
-          renderRecentGamesList(allLichessGames, recentGamesContainer);
-          window.currentChessGames = [...allLichessGames, ...allChesscomGames];
-        } else if (recentGamesContainer) {
-          recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">Unable to load recent games.</div>';
-        }
+        // Recent games render independently — a stalled games endpoint must
+        // not block the ratings/charts that already have their data.
+        fetchT(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true`, 12000)
+          .then((gamesRes) => gamesRes.ok ? gamesRes.json() : null)
+          .then((games) => {
+            if (games) {
+              allLichessGames = Array.isArray(games) ? games : [];
+              renderRecentGamesList(allLichessGames, recentGamesContainer);
+              window.currentChessGames = [...allLichessGames, ...allChesscomGames];
+            } else if (recentGamesContainer) {
+              recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">Unable to load recent games.</div>';
+            }
+          })
+          .catch(() => {
+            if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">Unable to load recent games.</div>';
+          });
       }
     } else {
       lichessCard.innerHTML = `<span style="color:var(--danger);">Profile not found</span>`;
@@ -1312,7 +1323,7 @@ async function loadChessDashboardForTab(student) {
       const username = lichessUser;
       let cacheRes;
       try {
-        cacheRes = await fetch(`/api/lichess?username=${encodeURIComponent(username)}&t=${Date.now()}`);
+        cacheRes = await fetchT(`/api/lichess?username=${encodeURIComponent(username)}&t=${Date.now()}`, 8000);
       } catch (e) {
         cacheRes = null;
       }
@@ -1325,7 +1336,7 @@ async function loadChessDashboardForTab(student) {
             student.lichess_seen_at = new Date(cacheData.data.profile.seenAt).toISOString();
           }
 
-          const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`);
+          const gamesRes = await fetchT(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`, 12000);
           if (gamesRes.ok) {
             const games = await gamesRes.json();
             result.games.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
@@ -1341,7 +1352,7 @@ async function loadChessDashboardForTab(student) {
       } else {
         // Fall back to old proxy for backward compatibility
         try {
-          const res = await fetch(`/api/lichess-proxy?username=${encodeURIComponent(lichessUser)}&t=${Date.now()}`);
+          const res = await fetchT(`/api/lichess-proxy?username=${encodeURIComponent(lichessUser)}&t=${Date.now()}`, 12000);
           if (res.ok) {
             const data = await res.json();
             if (!data.notFound) {
@@ -1349,7 +1360,7 @@ async function loadChessDashboardForTab(student) {
               if (data.profile?.seenAt && student) {
                 student.lichess_seen_at = new Date(data.profile.seenAt).toISOString();
               }
-              const gamesRes = await fetch(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`);
+              const gamesRes = await fetchT(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`, 12000);
               if (gamesRes.ok) {
                 const games = await gamesRes.json();
                 result.games.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
@@ -1374,7 +1385,7 @@ async function loadChessDashboardForTab(student) {
   // Fetch Chess.com
   if (chesscomUser) {
     try {
-      const res = await fetch(`/api/chesscom-proxy?username=${encodeURIComponent(chesscomUser)}&t=${Date.now()}`);
+      const res = await fetchT(`/api/chesscom-proxy?username=${encodeURIComponent(chesscomUser)}&t=${Date.now()}`, 12000);
       if (res.ok) {
         const data = await res.json();
         if (data.notFound) {
@@ -1386,7 +1397,7 @@ async function loadChessDashboardForTab(student) {
           }
         const y = new Date().getFullYear();
         const m = String(new Date().getMonth() + 1).padStart(2, '0');
-        const gamesRes = await fetch(`/api/chesscom-games-proxy?username=${encodeURIComponent(chesscomUser)}&year=${y}&month=${m}&t=${Date.now()}`);
+        const gamesRes = await fetchT(`/api/chesscom-games-proxy?username=${encodeURIComponent(chesscomUser)}&year=${y}&month=${m}&t=${Date.now()}`, 12000);
         if (gamesRes.ok) {
           const gamesData = await gamesRes.json();
           result.games.push(...(gamesData.games || []).map(g => ({ ...g, platform: 'chesscom' })));
