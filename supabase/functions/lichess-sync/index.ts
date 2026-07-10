@@ -40,11 +40,15 @@ Deno.serve(async (req) => {
     } catch (_) { /* not on edge runtime (local dev) */ }
   }
 
-  // Accept both bare usernames and pasted profile URLs.
+  // Accept bare usernames and pasted profile URLs. Lowercased: lichess
+  // usernames are case-insensitive and the cache key must be canonical,
+  // otherwise "Harish_2015" and "harish_2015" become duplicate rows and
+  // lookups miss depending on how the username was typed.
   function normalizeUsername(raw: string): string {
     const v = String(raw || '').trim();
     if (!v) return '';
-    return v.startsWith('http') ? (v.split('/').filter(Boolean).pop() || '') : v;
+    const name = v.startsWith('http') ? (v.split('/').filter(Boolean).pop() || '') : v;
+    return name.toLowerCase();
   }
 
   try {

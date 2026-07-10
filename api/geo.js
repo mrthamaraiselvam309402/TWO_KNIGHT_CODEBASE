@@ -1,4 +1,4 @@
-export default async function handler() {
+async function route() {
   const services = [
     'https://ipapi.co/json/',
     'https://ip-api.com/json/'
@@ -31,3 +31,4 @@ export default async function handler() {
     headers: { 'Content-Type': 'application/json' }
   });
 }
+export const GET = route;

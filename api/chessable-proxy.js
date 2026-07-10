@@ -1,4 +1,4 @@
-export default async function handler(request) {
+async function route(request) {
   const url = new URL(request.url, 'http://localhost');
   const username = url.searchParams.get('username');
   if (!username) {
@@ -32,3 +32,6 @@ export default async function handler(request) {
     });
   }
 };
+
+export const GET = route;
+export const OPTIONS = route;

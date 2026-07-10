@@ -15,7 +15,7 @@ const PATH_TYPES = {
   'lichess-proxy': 'profile'
 };
 
-export default async function handler(request) {
+async function route(request) {
   const url = new URL(request.url, 'http://localhost');
   const pathKey = Object.keys(PATH_TYPES).find((k) => url.pathname.includes(k));
   const type = url.searchParams.get('type') || (pathKey ? PATH_TYPES[pathKey] : 'profile');
@@ -32,3 +32,7 @@ export default async function handler(request) {
       return profileHandler(request);
   }
 }
+
+// Named exports: required for Vercel to use the web fetch-style signature.
+export const GET = route;
+export const OPTIONS = route;

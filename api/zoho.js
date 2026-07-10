@@ -14,7 +14,10 @@ const PATH_ACTIONS = {
   'zoho-debug': 'debug'
 };
 
-export default async function handler(request) {
+// Vercel's Node runtime only honors the web fetch-style signature on NAMED
+// HTTP-method exports; a default export is treated as (req, res) and any
+// returned Response is silently ignored (requests then hang to timeout).
+async function route(request) {
   const url = new URL(request.url, 'http://localhost');
   const pathKey = Object.keys(PATH_ACTIONS).find((k) => url.pathname.includes(k));
   const action = url.searchParams.get('action') || (pathKey ? PATH_ACTIONS[pathKey] : '');
@@ -46,3 +49,7 @@ export default async function handler(request) {
       });
   }
 }
+
+export const GET = route;
+export const POST = route;
+export const OPTIONS = route;
