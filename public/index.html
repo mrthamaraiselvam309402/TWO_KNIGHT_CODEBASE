@@ -1011,7 +1011,7 @@
                   <div id="chessapi-lichess-details" style="margin-top:12px;position:relative;z-index:2;"></div>
                   <div id="chessapi-lichess-extras" style="margin-top:12px;position:relative;z-index:2;"></div>
                 </div>
-                <div style="margin-top:20px; font-size:12px; font-weight:600; color:#fff; display:flex; align-items:center; gap:4px;position:relative;z-index:2;">View Profile <span>→</span></div>
+                <div style="margin-top:20px; font-size:12px; font-weight:600; color:var(--ivory); display:flex; align-items:center; gap:4px;position:relative;z-index:2;">View Profile <span>→</span></div>
               </div>
 
               <!-- Chess.com -->
@@ -1304,10 +1304,10 @@
             <!-- ♘ Lichess Analytics Section -->
             <div class="card" id="lichess-chart-card" style="display:none;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                <h3 style="margin:0;color:#fff;display:flex;align-items:center;gap:8px;"><span class="ico">♘</span> Lichess Analytics</h3>
+                <h3 style="margin:0;color:var(--ivory);display:flex;align-items:center;gap:8px;"><span class="ico">♘</span> Lichess Analytics</h3>
                 <div style="display:flex; gap:8px;">
                   <button id="lichess-sync-btn" class="btn btn-sm" style="background:rgba(59,130,246,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);font-size:11px;padding:5px 12px;" onclick="window.syncLichess && (window.currentStudent ? window.syncLichess(window.currentStudent.lichess_username) : null)" title="Refresh Lichess data from cache">🔄 Sync</button>
-                  <a id="lichess-profile-link" href="#" target="_blank" class="btn btn-sm" style="background:#fff;color:#000;border:none;font-size:11px;padding:5px 12px;">View Full Profile ↗</a>
+                  <a id="lichess-profile-link" href="#" target="_blank" class="btn btn-sm" style="background:#fff;color:#000;border:1px solid rgba(15,23,42,0.25);font-size:11px;padding:5px 12px;">View Full Profile ↗</a>
                 </div>
               </div>
               <!-- Lichess Stat Cards -->
