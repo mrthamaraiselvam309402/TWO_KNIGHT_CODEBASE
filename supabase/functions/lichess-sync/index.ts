@@ -61,6 +61,39 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Extras mode (?extras=1): trophies + online status ────────
+    // Decorative data, served live from lichess.org here because the
+    // Vercel egress to lichess.org stalls; degrades to empty on failure.
+    if (url.searchParams.get('extras') === '1') {
+      const headers = {
+        'Accept': 'application/json',
+        'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)'
+      };
+      const [trophiesRes, statusRes] = await Promise.allSettled([
+        fetch(`https://lichess.org/api/user/${encodeURIComponent(username)}/trophies`, { headers, signal: AbortSignal.timeout(6000) }),
+        fetch(`https://lichess.org/api/users/status?ids=${encodeURIComponent(username)}`, { headers, signal: AbortSignal.timeout(6000) })
+      ]);
+      let trophies: unknown[] = [];
+      if (trophiesRes.status === 'fulfilled' && trophiesRes.value.ok) {
+        trophies = await trophiesRes.value.json().catch(() => []);
+        if (!Array.isArray(trophies)) trophies = [];
+      }
+      let status: Record<string, unknown> = {};
+      if (statusRes.status === 'fulfilled' && statusRes.value.ok) {
+        const arr = await statusRes.value.json().catch(() => []);
+        if (Array.isArray(arr) && arr.length > 0) status = arr[0];
+        else if (arr && !Array.isArray(arr)) status = arr;
+      }
+      return new Response(JSON.stringify({ trophies, status }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 's-maxage=120, stale-while-revalidate=300',
+          ...corsHeaders
+        }
+      });
+    }
+
     // ── Recent games mode (?games=1) ─────────────────────────────
     // Served live from lichess.org through this edge function because the
     // Vercel serverless path to lichess.org stalls intermittently. NDJSON

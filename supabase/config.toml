@@ -70,3 +70,6 @@ verify_jwt = false
 
 [functions.access_control]
 verify_jwt = false
+
+[functions.chesscom]
+verify_jwt = false

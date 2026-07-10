@@ -364,6 +364,10 @@ async function loadChessDashboard(student) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
   });
+  // The main platform cards too — while the new student's data is in
+  // flight they must show a loading state, not the previous student.
+  lichessCard.innerHTML = '<span style="color:var(--ivory-dim);">Loading…</span>';
+  chesscomCard.innerHTML = '<span style="color:var(--ivory-dim);">Loading…</span>';
 
   const seenAt = student.seenAt || student.lichess_seen_at || null;
   const chesscomLastOnline = student.last_online || student.chesscom_last_online || null;
