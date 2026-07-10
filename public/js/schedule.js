@@ -895,9 +895,9 @@
 
     let icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Two Knights Academy//Class Schedule//EN
+PRODID:-//Two Knights Chess Academy//Class Schedule//EN
 BEGIN:VEVENT
-UID:class-${student.id}@Two Knights.com
+UID:class-${student.id}@twoknightacademy.vercel.app
 DTSTAMP:${startStr}
 DTSTART:${startStr}
 SUMMARY:Two Knights Class

@@ -468,7 +468,7 @@ window.generateReportPDF = async function() {
     <div class="header">
       <h1>ACADEMY FINANCIAL REPORT</h1>
       <div class="header-meta">
-        <div>REPORT ID: CKD-FIN-${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${generatedAt.getTime().toString(36).toUpperCase()}</div>
+        <div>REPORT ID: TKCA-FIN-${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${generatedAt.getTime().toString(36).toUpperCase()}</div>
         <div class="confidential">EXECUTIVE REPORT // PRIVATE & CONFIDENTIAL</div>
         <div style="color:var(--gold);font-weight:700;letter-spacing:1px;margin-top:5px">REPORT PERIOD: ${dateStr.toUpperCase()}</div>
         <div class="heartbeat">SYNC STATUS: REAL-TIME &middot; GENERATED ${fullStamp.toUpperCase()}</div>

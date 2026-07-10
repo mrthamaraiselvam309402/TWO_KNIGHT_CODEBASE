@@ -835,46 +835,135 @@
   async function renderChildGrowth() {
     if (!currentStudent) return;
     const s = currentStudent;
+
+    // Shared stat-chip renderer for the Growth tab summary rows.
+    const growthChip = (label, value, sub, color) => `
+      <div style="background:var(--bg3); padding:10px 12px; border-radius:8px; border-left:4px solid ${color};">
+        <div style="font-size:10px; color:var(--ivory-dim); text-transform:uppercase; letter-spacing:0.8px;">${label}</div>
+        <div style="font-size:18px; font-weight:700; color:var(--ivory); margin-top:2px;">${value}</div>
+        <div style="font-size:10px; color:var(--ivory-dim); margin-top:1px;">${sub || ""}</div>
+      </div>`;
+
     const ctx = document.getElementById("chartChildElo");
     if (ctx && typeof Chart !== "undefined") {
       if (chartInstances.childElo) chartInstances.childElo.destroy();
       const history = allRatingHistory
         .filter((h) => String(h.student_id) === String(s.id))
         .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at));
-      const labels = history.length
-        ? history.map((h) => new Date(h.recorded_at).toLocaleDateString())
-        : ["Initial"];
-      const data = history.length
-        ? history.map((h) => h.rating)
-        : [getStudentRating(s)];
+      // Time-based points so Lichess progression can overlay on the same axis.
+      const basePoints = history.length
+        ? history.map((h) => ({ x: new Date(h.recorded_at).getTime(), y: h.rating }))
+        : [{ x: Date.now(), y: getStudentRating(s) || 0 }];
+
+      const current = basePoints[basePoints.length - 1].y;
+      const delta = current - basePoints[0].y;
+      const peak = Math.max(...basePoints.map((p) => p.y));
+      const deltaTxt = delta > 0 ? `▲ +${delta}` : delta < 0 ? `▼ ${delta}` : "—";
+      const deltaColor = delta > 0 ? "var(--success)" : delta < 0 ? "var(--danger)" : "var(--ivory-dim)";
+      const eloStatsEl = document.getElementById("growth-elo-stats");
+      if (eloStatsEl) {
+        eloStatsEl.innerHTML =
+          growthChip("Current ELO", current, getStudentLevel(s) || "", "var(--gold)") +
+          growthChip("Progress", deltaTxt, history.length > 1 ? "since first record" : "journey begins", deltaColor) +
+          growthChip("Peak Rating", peak, "academy best", "var(--sapphire, #3b82f6)") +
+          growthChip("Assessments", history.length || 1, "coach updates", "var(--emerald, #10b981)");
+      }
+
+      const theme = chartThemeColors();
       chartInstances.childElo = new Chart(ctx, {
         type: "line",
         data: {
-          labels,
           datasets: [
             {
-              label: "Internal ELO",
-              data,
+              label: "Academy ELO",
+              data: basePoints,
               borderColor: "#dca33e",
-              backgroundColor: "rgba(220,161,62,0.15)",
+              backgroundColor: "rgba(220,161,62,0.16)",
               fill: true,
-              tension: 0.4,
+              tension: 0.35,
+              borderWidth: 2.5,
               pointBackgroundColor: "#dca33e",
-              pointBorderColor: "#dca33e",
-              pointRadius: 4,
+              pointBorderColor: "#fff",
+              pointBorderWidth: 1.5,
+              pointRadius: basePoints.length > 25 ? 0 : 5,
+              pointHitRadius: 8,
             },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          interaction: { mode: "nearest", intersect: false },
+          plugins: {
+            legend: { display: false, labels: { color: theme.legend, usePointStyle: true, boxWidth: 8 } },
+            tooltip: {
+              callbacks: {
+                title: (items) => items.length
+                  ? new Date(items[0].parsed.x).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                  : "",
+              },
+            },
+          },
           scales: {
-            y: { beginAtZero: true, grid: { color: chartThemeColors().grid }, ticks: { color: chartThemeColors().tick } },
-            x: { grid: { display: false }, ticks: { color: chartThemeColors().tick } }
+            y: {
+              grace: "12%",
+              grid: { color: theme.grid },
+              ticks: { color: theme.tick, precision: 0 },
+            },
+            x: {
+              type: "linear",
+              bounds: "data",
+              max: Date.now() + 7 * 24 * 60 * 60 * 1000,
+              grid: { display: false },
+              ticks: {
+                color: theme.tick,
+                maxTicksLimit: 7,
+                callback: (v) => new Date(v).toLocaleDateString("en-IN", { month: "short", year: "2-digit" }),
+              },
+            },
           },
         },
       });
+    }
+
+    // Once Lichess data lands (fetched below), overlay the child's real
+    // online rating trend on the academy chart for a fuller growth story.
+    function blendLichessIntoEloChart(ld) {
+      const chart = chartInstances.childElo;
+      if (!chart || !ld || !Array.isArray(ld.ratingHistory)) return;
+      if (chart.data.datasets.some((d) => d.label === "Lichess Rapid")) return;
+      const rapid = ld.ratingHistory.find((h) => h && h.name === "Rapid");
+      if (!rapid || !Array.isArray(rapid.points) || rapid.points.length === 0) return;
+      const cutoff = Date.now() - 365 * 24 * 60 * 60 * 1000;
+      let pts = rapid.points.map(([y, m, d, r]) => ({ x: Date.UTC(y, m, d), y: r }));
+      const recent = pts.filter((p) => p.x >= cutoff);
+      pts = recent.length >= 2 ? recent : pts.slice(-10);
+      if (!pts.length) return;
+      chart.data.datasets.push({
+        label: "Lichess Rapid",
+        data: pts,
+        borderColor: "#3b82f6",
+        backgroundColor: "transparent",
+        borderWidth: 2,
+        borderDash: [6, 4],
+        pointRadius: 0,
+        pointHitRadius: 6,
+        tension: 0.25,
+      });
+      chart.options.plugins.legend.display = true;
+      chart.update();
+      const eloStatsEl2 = document.getElementById("growth-elo-stats");
+      if (eloStatsEl2 && !document.getElementById("growth-chip-lichess")) {
+        const lastRapid = pts[pts.length - 1].y;
+        eloStatsEl2.insertAdjacentHTML(
+          "beforeend",
+          `<div id="growth-chip-lichess" style="background:var(--bg3); padding:10px 12px; border-radius:8px; border-left:4px solid #3b82f6;">
+            <div style="font-size:10px; color:var(--ivory-dim); text-transform:uppercase; letter-spacing:0.8px;">♘ Lichess Rapid</div>
+            <div style="font-size:18px; font-weight:700; color:var(--ivory); margin-top:2px;">${lastRapid}</div>
+            <div style="font-size:10px; color:var(--ivory-dim); margin-top:1px;">live online rating</div>
+          </div>`
+        );
+      }
     }
 
     // Render attendance heatmap immediately from already-loaded in-memory data,
@@ -884,29 +973,61 @@
       const myAtt = allAttendance.filter(
         (a) => String(a.student_id) === String(s.id),
       );
-      const last30 = [];
-      const now = new Date();
-      const days = ["S", "M", "T", "W", "T", "F", "S"];
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(now.getDate() - i);
-        const dStr = d.toISOString().split("T")[0];
-        const record = myAtt.find((a) => a.date === dStr);
-        last30.push({
-          date: d.getDate(),
-          day: days[d.getDay()],
-          status: record ? record.status : "none",
+      // Local (not UTC) date key — toISOString() shifted IST dates a day back.
+      const localYMD = (d) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+      // Calendar-aligned window: 8 full weeks, columns Sun..Sat.
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(today);
+      start.setDate(today.getDate() - 55);
+      start.setDate(start.getDate() - start.getDay()); // back to Sunday
+      const cells = [];
+      for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+        const rec = myAtt.find((a) => a.date === localYMD(d));
+        cells.push({
+          dayNum: d.getDate(),
+          isFirst: d.getDate() === 1 || cells.length === 0,
+          month: d.toLocaleDateString("en-IN", { month: "short" }),
+          status: rec ? rec.status : "none",
+          full: d.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" }),
         });
       }
+      const dayHeader = ["S", "M", "T", "W", "T", "F", "S"]
+        .map((d) => `<div style="text-align:center;font-size:10px;font-weight:700;color:var(--ivory3);padding-bottom:2px;">${d}</div>`)
+        .join("");
       heatmap.innerHTML =
-        '<div class="heatmap-day-label" style="grid-column:1/-1;display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;color:var(--ivory3)">' +
-        "<span>30 days ago</span><span>Today</span></div>" +
-        last30
+        dayHeader +
+        cells
           .map(
-            (d) =>
-              `<div class="heatmap-day ${d.status}" title="${d.status || "No class"} - Day ${d.date}">${d.date}<span class="day-label">${d.day}</span></div>`,
+            (c) =>
+              `<div class="heatmap-day ${c.status}" title="${c.full} — ${c.status === "none" ? "No class" : c.status}">` +
+              `${c.dayNum}<span class="day-label">${c.isFirst ? c.month : ""}</span></div>`,
           )
           .join("");
+
+      // Summary chips: window counts + all-time attendance rate + streak.
+      const attStatsEl = document.getElementById("attendance-stats");
+      if (attStatsEl) {
+        const present = cells.filter((c) => c.status === "present").length;
+        const absent = cells.filter((c) => c.status === "absent").length;
+        const classDays = present + absent;
+        const rate = classDays ? Math.round((present / classDays) * 100) : null;
+        const marked = myAtt
+          .filter((a) => a.status === "present" || a.status === "absent")
+          .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+        let streak = 0;
+        for (const a of marked) {
+          if (a.status === "present") streak++;
+          else break;
+        }
+        attStatsEl.innerHTML =
+          growthChip("Present", present, "last 8 weeks", "var(--success)") +
+          growthChip("Absent", absent, "last 8 weeks", "var(--danger)") +
+          growthChip("Attendance", rate === null ? "—" : rate + "%", classDays ? `${classDays} class days` : "no classes yet", "var(--gold)") +
+          growthChip("Streak", streak ? `🔥 ${streak}` : "0", "consecutive classes", "#f59e0b");
+      }
     }
 
     let lichessData = null;
@@ -977,6 +1098,11 @@
       } catch (e) {
         console.error("Lichess cache fetch error", e);
       }
+    }
+
+    // Overlay the online rating trend on the Academy Rating chart.
+    if (lichessData) {
+      try { blendLichessIntoEloChart(lichessData); } catch (e) { console.warn("[Growth] blend failed:", e); }
     }
 
     // Fetch Chess.com data
@@ -1907,8 +2033,8 @@
         
         <div class="header">
           <div>
-            <div class="logo">CHESS<span>KIDOO</span> ACADEMY</div>
-            <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px; font-weight: 500;">Premium Scholastic Chess Mentorship & Coaching</div>
+            <div class="logo">TWO KNIGHTS <span>CHESS ACADEMY</span></div>
+            <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px; font-weight: 500;">Building Champions, One Move at a Time</div>
           </div>
           <div style="text-align: right;">
             <h2 style="margin: 0; color: #daa33e; font-size: 20px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Tuition Financial Report</h2>
@@ -1922,14 +2048,14 @@
             <span style="font-size: 16px; font-weight: 700; color: #2c3e50; display: inline-block; margin: 4px 0;">${getStudentName(s)}</span><br>
             Rating: <strong>${getStudentRating(s)} ELO</strong> (${getStudentLevel(s)})<br>
             Enrollment Date: ${getStudentDate(s) || "N/A"}<br>
-            Student ID Reference: <strong>CKA-${s.id}</strong>
+            Student ID Reference: <strong>TKCA-${s.id}</strong>
           </div>
           <div style="text-align: right; font-size: 13px; color: #7f8c8d;">
             <strong style="color: #34495e; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Academy Registry Issuer</strong><br>
-            <span style="font-size: 15px; font-weight: 700; color: #2c3e50; display: inline-block; margin: 4px 0;">Two Knights Academy Pvt Ltd</span><br>
-            Corporate GSTIN: <strong>33AAFCK0012C1ZP</strong><br>
-            Email: billing@Two Knights.com<br>
-            Web: www.Two Knights.com
+            <span style="font-size: 15px; font-weight: 700; color: #2c3e50; display: inline-block; margin: 4px 0;">Two Knights Chess Academy</span><br>
+            Institution Reg. No.: <strong>UDYAM-TN-08-0107781</strong><br>
+            Email: twoknightschessacademy@gmail.com<br>
+            Web: twoknightacademy.vercel.app &middot; Ph: +91 80155 12962
           </div>
         </div>
 
@@ -1957,7 +2083,7 @@
         <div style="clear: both;"></div>
 
         <div class="footer">
-          This is an official annual statement issued electronically by the accounting division of Two Knights Academy Pvt Ltd.<br>
+          This is an official annual statement issued electronically by the accounts desk of Two Knights Chess Academy.<br>
           We appreciate your dedication and scholastic investment in our master chess training program!
         </div>
       </body>

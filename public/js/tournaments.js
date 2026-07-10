@@ -676,9 +676,9 @@
     const icsContent = 
 `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Two Knights Academy//Tournament Finder//EN
+PRODID:-//Two Knights Chess Academy//Tournament Finder//EN
 BEGIN:VEVENT
-UID:${t.id}@Two Knights.com
+UID:${t.id}@twoknightacademy.vercel.app
 DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'}
 DTSTART:${startDate}
 DTEND:${endDate}

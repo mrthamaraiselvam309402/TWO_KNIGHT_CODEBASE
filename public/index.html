@@ -1298,7 +1298,8 @@
           <div class="dash-grid" style="margin-bottom:22px">
             <div class="card">
               <h3 style="margin-bottom:16px;color:var(--gold)">Academy Rating Progression</h3>
-              <div style="height:250px"><canvas id="chartChildElo"></canvas></div>
+              <div id="growth-elo-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:10px;margin-bottom:14px;"></div>
+              <div style="height:280px"><canvas id="chartChildElo"></canvas></div>
             </div>
             <!-- ♘ Lichess Analytics Section -->
             <div class="card" id="lichess-chart-card" style="display:none;">
@@ -1354,6 +1355,7 @@
             </div>
             <div class="card">
               <h3 style="margin-bottom:16px;color:var(--gold)">Attendance Overview</h3>
+              <div id="attendance-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:10px;margin-bottom:14px;"></div>
               <div id="attendance-heatmap" class="heatmap-container"></div>
               <div class="heatmap-legend" style="margin-top:12px;display:flex;gap:12px;font-size:11px;color:var(--ivory-dim)">
                 <span style="display:flex;align-items:center;gap:4px"><i style="display:inline-block;width:10px;height:10px;background:var(--success);border-radius:2px"></i> Present</span>
@@ -4205,7 +4207,7 @@
       <script src="js/tournaments.js?v=1.3&t=20260611a" charset="utf-8"></script>
       <script src="js/access.js?v=1.4&t=20260601i"></script>
       <script src="js/tom-brain.js?v=1.0&t=20260601" charset="utf-8"></script>
-      <script src="scripts.js?v=9.2&t=20260710_stallproof" charset="utf-8"></script>
+      <script src="scripts.js?v=9.3&t=20260710_growthtab" charset="utf-8"></script>
       <script src="js/chess-api.js?v=2.1&t=20260710_edgegames"></script>
       <script src="js/homework.js?v=1.0&t=20260614" charset="utf-8"></script>
       <script src="js/expenditures.js?v=1.1&t=20260601d" charset="utf-8"></script>
