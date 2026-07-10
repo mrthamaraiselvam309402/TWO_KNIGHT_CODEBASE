@@ -39,6 +39,31 @@ function fetchT(url, ms = 10000, opts = {}) {
   return fetch(url, { ...opts, signal });
 }
 
+// Recent games, reliability-ordered: the Supabase edge route first (proxied
+// at /api/lichess?games=1, consistently healthy), then the Vercel function
+// as fallback. Returns an array or null.
+async function fetchLichessGames(username, max = 10) {
+  try {
+    const res = await fetchT(`/api/lichess?games=1&username=${encodeURIComponent(username)}&max=${max}`, 10000);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.games)) return data.games;
+    }
+  } catch (e) {
+    console.warn('[Chess] edge games route failed, falling back:', e.message);
+  }
+  try {
+    const res = await fetchT(`/api/lichess-games-proxy?username=${encodeURIComponent(username)}&max=${max}&pgnInJson=true`, 12000);
+    if (res.ok) {
+      const games = await res.json();
+      if (Array.isArray(games)) return games;
+    }
+  } catch (e) {
+    console.warn('[Chess] games proxy fallback failed:', e.message);
+  }
+  return null;
+}
+
 function chartThemeColors() {
   const isLight = document.body && document.body.getAttribute('data-theme') === 'light';
   return {
@@ -569,19 +594,15 @@ async function loadChessDashboard(student) {
         ratingsData.lichess[4] = profile.perfs?.puzzle?.rating || null;
         // Recent games render independently — a stalled games endpoint must
         // not block the ratings/charts that already have their data.
-        fetchT(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true`, 12000)
-          .then((gamesRes) => gamesRes.ok ? gamesRes.json() : null)
+        fetchLichessGames(lichessUser, 10)
           .then((games) => {
             if (games) {
-              allLichessGames = Array.isArray(games) ? games : [];
+              allLichessGames = games;
               renderRecentGamesList(allLichessGames, recentGamesContainer);
               window.currentChessGames = [...allLichessGames, ...allChesscomGames];
             } else if (recentGamesContainer) {
               recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">Unable to load recent games.</div>';
             }
-          })
-          .catch(() => {
-            if (recentGamesContainer) recentGamesContainer.innerHTML = '<div style="color:var(--ivory-dim); padding:10px;">Unable to load recent games.</div>';
           });
       }
     } else {
@@ -1336,11 +1357,8 @@ async function loadChessDashboardForTab(student) {
             student.lichess_seen_at = new Date(cacheData.data.profile.seenAt).toISOString();
           }
 
-          const gamesRes = await fetchT(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`, 12000);
-          if (gamesRes.ok) {
-            const games = await gamesRes.json();
-            result.games.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
-          }
+          const games = await fetchLichessGames(lichessUser, 10);
+          if (games) result.games.push(...games.map(g => ({ ...g, platform: 'lichess' })));
         } else if (cacheData.cached === false && cacheData.error) {
           // No cache and sync failed - trigger background sync
           fetch('/api/lichess', {
@@ -1360,11 +1378,8 @@ async function loadChessDashboardForTab(student) {
               if (data.profile?.seenAt && student) {
                 student.lichess_seen_at = new Date(data.profile.seenAt).toISOString();
               }
-              const gamesRes = await fetchT(`/api/lichess-games-proxy?username=${encodeURIComponent(lichessUser)}&max=10&pgnInJson=true&t=${Date.now()}`, 12000);
-              if (gamesRes.ok) {
-                const games = await gamesRes.json();
-                result.games.push(...(Array.isArray(games) ? games.map(g => ({ ...g, platform: 'lichess' })) : []));
-              }
+              const games = await fetchLichessGames(lichessUser, 10);
+              if (games) result.games.push(...games.map(g => ({ ...g, platform: 'lichess' })));
             } else {
               result.lichessNotFound = true;
             }

@@ -29,12 +29,57 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const username = url.searchParams.get('username');
     const force = url.searchParams.get('force') === '1';
+    const wantGames = url.searchParams.get('games') === '1';
 
     if (!username) {
       return new Response(JSON.stringify({ error: 'Missing username parameter' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
+    }
+
+    // ── Recent games mode (?games=1) ─────────────────────────────
+    // Served live from lichess.org through this edge function because the
+    // Vercel serverless path to lichess.org stalls intermittently. NDJSON
+    // export, newest first, PGN included for the game viewer.
+    if (wantGames) {
+      const max = Math.min(parseInt(url.searchParams.get('max') || '10', 10) || 10, 30);
+      try {
+        const res = await fetch(
+          `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${max}&pgnInJson=true`,
+          {
+            headers: {
+              'Accept': 'application/x-ndjson',
+              'User-Agent': 'ChessKidoo-Admin/1.0 (chess academy management tool)'
+            },
+            signal: AbortSignal.timeout(9000)
+          }
+        );
+        if (!res.ok) {
+          return new Response(JSON.stringify({ error: 'Lichess games API error', status: res.status, games: [] }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        const text = await res.text();
+        const games = text.split('\n').filter((l) => l.trim()).map((l) => {
+          try { return JSON.parse(l); } catch { return null; }
+        }).filter(Boolean);
+        return new Response(JSON.stringify({ games }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 's-maxage=120, stale-while-revalidate=300',
+            ...corsHeaders
+          }
+        });
+      } catch (e) {
+        console.error(`[lichess-sync] Games fetch failed for ${username}:`, e);
+        return new Response(JSON.stringify({ error: 'Games fetch failed', games: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
     }
 
     async function fetchWithTimeout(target, headers, signal, timeoutMs = 6000) {
