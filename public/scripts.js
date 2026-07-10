@@ -5337,6 +5337,36 @@
   // DATA LOADING
   // ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═
   let isLoadingData = false;
+  // Fire a staggered cache-warming GET for each linked Lichess account.
+  // The lichess-sync edge function self-heals on cache misses (background
+  // sync via EdgeRuntime.waitUntil), so this keeps every student's data
+  // fresh without blocking anything — runs once per browser session.
+  function warmLichessCache() {
+    try {
+      if (sessionStorage.getItem("tk_lichess_warmed")) return;
+      sessionStorage.setItem("tk_lichess_warmed", "1");
+      const names = [
+        ...new Set(
+          (allStudents || [])
+            .map((s) => String(s.lichess_username || "").trim())
+            .filter(Boolean)
+            .map((u) => (u.startsWith("http") ? u.split("/").filter(Boolean).pop() : u))
+            .map((u) => u.toLowerCase()),
+        ),
+      ];
+      names.forEach((u, i) => {
+        setTimeout(() => {
+          fetch(`${API_BASE}/lichess?username=${encodeURIComponent(u)}`, {
+            signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
+          }).catch(() => {});
+        }, 800 + i * 500);
+      });
+      if (names.length) console.log(`[Sync] Warming Lichess cache for ${names.length} linked accounts`);
+    } catch (e) {
+      /* never block data load on warmup */
+    }
+  }
+
   async function loadAllData(forceRefresh = false) {
     if (loadDebounceTimer) clearTimeout(loadDebounceTimer);
     if (isLoadingData) return;
@@ -5599,6 +5629,12 @@
         console.log(
           `[Sync] Loaded: ${allStudents.length} students, ${allCoaches.length} coaches, ${allPayments.length} payments`,
         );
+
+        // Warm the Lichess cache for every linked student (staggered,
+        // once per session). A cache-miss GET makes the edge function sync
+        // that player in the background, so newly linked accounts appear
+        // by their next view without any manual step.
+        warmLichessCache();
 
         if (allStudents.length === 0 && role !== "parent") {
           console.warn("[Sync] Warning: No students found in database.");

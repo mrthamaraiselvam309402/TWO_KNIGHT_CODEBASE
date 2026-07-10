@@ -25,13 +25,36 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // On the Supabase edge runtime an un-awaited promise is terminated as soon
+  // as the response is sent — "fire and forget" silently does nothing.
+  // EdgeRuntime.waitUntil keeps the isolate alive until the work finishes.
+  function runInBackground(work: Promise<unknown>, label: string) {
+    const guarded = work.catch((e) => console.error(`[lichess-sync] ${label} failed:`, e));
+    try {
+      // deno-lint-ignore no-explicit-any
+      const rt = (globalThis as any).EdgeRuntime;
+      if (rt && typeof rt.waitUntil === 'function') {
+        rt.waitUntil(guarded);
+        return;
+      }
+    } catch (_) { /* not on edge runtime (local dev) */ }
+  }
+
+  // Accept both bare usernames and pasted profile URLs.
+  function normalizeUsername(raw: string): string {
+    const v = String(raw || '').trim();
+    if (!v) return '';
+    return v.startsWith('http') ? (v.split('/').filter(Boolean).pop() || '') : v;
+  }
+
   try {
     const url = new URL(req.url);
-    const username = url.searchParams.get('username');
+    const username = normalizeUsername(url.searchParams.get('username') || '');
     const force = url.searchParams.get('force') === '1';
     const wantGames = url.searchParams.get('games') === '1';
+    const syncAll = url.searchParams.get('all') === '1';
 
-    if (!username) {
+    if (!username && !syncAll) {
       return new Response(JSON.stringify({ error: 'Missing username parameter' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -171,6 +194,47 @@ Deno.serve(async (req) => {
       return { profile, ratingHistory };
     }
 
+    // ── Bulk mode (POST ?all=1) ──────────────────────────────────
+    // Syncs every linked student in one call: reads lichess usernames from
+    // the students table, dedupes, and refreshes each sequentially with a
+    // rate-limit-friendly gap. Used by the daily cron and for manual warmup.
+    if (syncAll && req.method === 'POST') {
+      const { data: studs, error: sErr } = await supabase
+        .from('students')
+        .select('lichess_username')
+        .not('lichess_username', 'is', null)
+        .neq('lichess_username', '');
+      if (sErr) {
+        return new Response(JSON.stringify({ error: 'Failed to read students', details: sErr.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      const names = [...new Set(
+        (studs || [])
+          .map((r: { lichess_username: string }) => normalizeUsername(r.lichess_username))
+          .filter(Boolean)
+          .map((u: string) => u.toLowerCase())
+      )];
+      const synced: string[] = [];
+      const failed: { username: string; error: string }[] = [];
+      for (const u of names) {
+        try {
+          await syncLichessData(u);
+          synced.push(u);
+        } catch (e) {
+          failed.push({ username: u, error: String((e as Error)?.message || e) });
+        }
+        // Be polite to lichess.org: ~1.5 req/s across profile+history calls.
+        await new Promise((r) => setTimeout(r, 700));
+      }
+      console.log(`[lichess-sync] bulk sync done: ${synced.length} ok, ${failed.length} failed`);
+      return new Response(JSON.stringify({ success: true, total: names.length, synced, failed }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
     if (req.method === 'POST' || force) {
       const result = await syncLichessData(username);
       return new Response(JSON.stringify({
@@ -208,10 +272,9 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Return stale data immediately, trigger background refresh
-      syncLichessData(username).catch((e) => {
-        console.error(`[lichess-sync] Background sync failed for ${username}:`, e);
-      });
+      // Return stale data immediately, refresh in the background
+      // (EdgeRuntime.waitUntil — a bare promise would be killed instantly).
+      runInBackground(syncLichessData(username), `stale refresh for ${username}`);
 
       return new Response(JSON.stringify({
         cached: true,
@@ -226,10 +289,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // No cache - trigger sync and return empty response with instruction
-    syncLichessData(username).catch((e) => {
-      console.error(`[lichess-sync] Cache miss sync failed for ${username}:`, e);
-    });
+    // No cache — sync in the background so the NEXT view is instant.
+    // This was the "other students never load" bug: without waitUntil the
+    // edge runtime killed this promise before it did anything.
+    runInBackground(syncLichessData(username), `cache-miss sync for ${username}`);
 
     return new Response(JSON.stringify({
       cached: false,
