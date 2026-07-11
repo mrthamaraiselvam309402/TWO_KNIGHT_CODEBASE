@@ -509,7 +509,7 @@
     if (body) {
       if (total === 0) {
         body.innerHTML =
-          '<tr><td colspan="3"><div class="empty-state" style="padding:24px"><span class="empty-icon">📅</span><p>No attendance records yet.</p></div></td></tr>';
+          '<tr><td colspan="5"><div class="empty-state" style="padding:24px"><span class="empty-icon">📅</span><p>No attendance records yet.</p></div></td></tr>';
       } else {
         body.innerHTML = myAtt
           .map((a) => {
@@ -527,12 +527,20 @@
                   year: "numeric",
                 })
               : "—";
+            // Split the three note sections into their own columns.
+            const p = window.parseAttendanceNotes
+              ? window.parseAttendanceNotes(a.notes || a.note || "")
+              : { cw: "", hw: "", general: "" };
+            const cell = (txt) =>
+              txt && txt.trim()
+                ? escapeHtml(txt).replace(/\n/g, "<br>")
+                : '<span style="color:var(--ivory-dim)">—</span>';
             return `<tr>
               <td>${dateStr}</td>
               <td>${badge}</td>
-              <td style="color:var(--ivory-dim); font-size:12px;">
-                ${(() => { const p = window.parseAttendanceNotes ? window.parseAttendanceNotes(a.notes || a.note || '') : { cw: '', hw: '', general: '' }; const parts = []; if (p.general) parts.push(escapeHtml(p.general)); if (p.cw) parts.push(`<div style="color:var(--gold);"><strong>CW:</strong> ${escapeHtml(p.cw)}</div>`); if (p.hw) parts.push(`<div style="color:var(--emerald);"><strong>HW:</strong> ${escapeHtml(p.hw)}</div>`); return parts.length ? parts.join('') : '—'; })()}
-              </td>
+              <td style="font-size:12px; color:var(--ivory2);">${cell(p.general)}</td>
+              <td style="font-size:12px; color:var(--gold);">${cell(p.cw)}</td>
+              <td style="font-size:12px; color:var(--emerald);">${cell(p.hw)}</td>
             </tr>`;
           })
           .join("");
@@ -3199,13 +3207,17 @@
     return "Group";
   }
   // Session type (Group / Individual) is stored as a [STYPE:...] tag in notes.
+  // An explicit tag always wins; otherwise a student with no coach AND no
+  // batch assigned is treated as an Individual (unassigned) class, not Group.
   function getStudentSessionType(s) {
+    if (!s) return "Group";
     const m = /\[STYPE:([^\]]+)\]/i.exec(s.notes || s.coach_notes || "");
     if (m) {
       const v = m[1].trim().toLowerCase();
       return v === "individual" || v === "single" ? "Individual" : "Group";
     }
-    return "Group";
+    const unassigned = !s.coach_id && !s.batch_id;
+    return unassigned ? "Individual" : "Group";
   }
   window.getStudentSessionType = getStudentSessionType;
   function getStudentBatchTime(s) {
@@ -8080,69 +8092,92 @@ setTimeout(function () {
   };
 
   // Student registry: reveal a single row's action buttons behind the "->"
-  // arrow. Opening one row collapses every other row's actions.
+  // arrow. The actions are cloned into a body-level floating panel so a
+  // background re-render of the table (notification poll etc., which rebuilds
+  // the rows a moment after the click) can't destroy the open panel — that
+  // re-render was silently killing the panel, making the arrow "do nothing".
+  let _rowActionsCloser = null;
+  const ROW_PANEL_ID = "__row-actions-panel";
   function closeAllRowActions() {
-    document.querySelectorAll(".row-actions").forEach((el) => {
-      el.style.display = "none";
-      el.removeAttribute("data-open");
-    });
+    if (_rowActionsCloser) {
+      document.removeEventListener("click", _rowActionsCloser, true);
+      _rowActionsCloser = null;
+    }
+    const panel = document.getElementById(ROW_PANEL_ID);
+    if (panel) panel.remove();
     document.querySelectorAll(".row-arrow-btn").forEach((b) => {
       b.textContent = "→";
       b.classList.remove("btn-gold");
       b.classList.add("btn-outline-grey");
     });
-    document.querySelectorAll(".more-menu").forEach((m) => (m.style.display = "none"));
   }
   window.closeAllRowActions = closeAllRowActions;
 
   window.toggleRowActions = function (id, btn) {
-    const box = document.getElementById(id);
-    if (!box) return;
-    const wasOpen = box.getAttribute("data-open") === "1";
+    const src = document.getElementById(id);
+    const already = document.getElementById(ROW_PANEL_ID);
+    const wasThisOpen = already && already.getAttribute("data-src") === id;
     closeAllRowActions();
-    if (wasOpen) return;
+    if (wasThisOpen || !src) return;
 
-    // Render as a fixed panel anchored to the arrow. Fixed positioning
-    // escapes the .table-wrap overflow clip (an absolute panel got cut off,
-    // so the actions appeared to not show at all). Measure hidden, then place.
-    box.style.position = "fixed";
-    box.style.display = "flex";
-    box.style.visibility = "hidden";
-    box.style.left = "0px";
-    box.style.top = "0px";
+    // Clone the row's action buttons into a floating panel on <body>.
+    const panel = src.cloneNode(true);
+    panel.id = ROW_PANEL_ID;
+    panel.setAttribute("data-src", id);
+    panel.classList.add("row-actions-floating");
+    panel.style.position = "fixed";
+    panel.style.display = "flex";
+    panel.style.visibility = "hidden";
+    panel.style.left = "0px";
+    panel.style.top = "0px";
+
+    // Flatten the "⋮ More" sub-menu into the panel: its toggle targets the
+    // original (now-hidden) row by id, so instead show every action inline.
+    const cloneMoreBtn = panel.querySelector(".more-btn");
+    if (cloneMoreBtn) cloneMoreBtn.remove();
+    const cloneMoreMenu = panel.querySelector(".more-menu");
+    if (cloneMoreMenu) {
+      cloneMoreMenu.removeAttribute("id");
+      cloneMoreMenu.style.cssText =
+        "position:static;display:flex;flex-wrap:wrap;gap:4px;background:transparent;border:none;box-shadow:none;padding:0;margin:0;min-width:0";
+    }
+    // Any leftover duplicate ids in the clone would shadow the originals.
+    panel.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
+    panel.id = ROW_PANEL_ID;
+
+    document.body.appendChild(panel);
 
     const rect = btn.getBoundingClientRect();
-    const bw = Math.min(box.offsetWidth || 320, window.innerWidth - 16);
-    box.style.width = bw + "px";
+    const bw = Math.min(panel.offsetWidth || 320, window.innerWidth - 16);
+    panel.style.width = bw + "px";
     let left = rect.right - bw; // right-align to the arrow
     if (left < 8) left = 8;
     if (left + bw > window.innerWidth - 8) left = window.innerWidth - 8 - bw;
-    const bh = box.offsetHeight;
+    const bh = panel.offsetHeight;
     let top = rect.bottom + 6;
     if (top + bh > window.innerHeight - 8) {
       top = Math.max(8, rect.top - bh - 6); // flip above if no room below
     }
-    box.style.left = left + "px";
-    box.style.top = top + "px";
-    box.style.visibility = "visible";
-    box.setAttribute("data-open", "1");
+    panel.style.left = left + "px";
+    panel.style.top = top + "px";
+    panel.style.visibility = "visible";
 
     if (btn) {
       btn.textContent = "×";
       btn.classList.remove("btn-outline-grey");
       btn.classList.add("btn-gold");
     }
-  };
 
-  // Close the floating actions on outside click or any scroll.
-  document.addEventListener("click", function (e) {
-    if (!e.target.closest(".action-menu-container") && !e.target.closest(".row-actions")) {
-      closeAllRowActions();
-    }
-  }, true);
-  window.addEventListener("scroll", function () {
-    if (document.querySelector('.row-actions[data-open="1"]')) closeAllRowActions();
-  }, true);
+    // Arm the outside-click closer on the NEXT tick so the very click that
+    // opened this panel cannot immediately close it.
+    setTimeout(() => {
+      _rowActionsCloser = function (e) {
+        if (e.target.closest("#" + ROW_PANEL_ID) || e.target.closest(".row-arrow-btn")) return;
+        closeAllRowActions();
+      };
+      document.addEventListener("click", _rowActionsCloser, true);
+    }, 0);
+  };
 
   document.addEventListener("click", function (e) {
     if (!e.target.closest(".action-menu-container")) {
