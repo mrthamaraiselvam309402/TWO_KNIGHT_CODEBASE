@@ -3364,6 +3364,14 @@
     const targetMonth =
       monthOverride !== null ? monthOverride : window.reportMonth;
     const targetYear = yearOverride !== null ? yearOverride : window.reportYear;
+
+    // Academy billing floor: the academy started collecting fees in July
+    // 2026, so no month before 2026-07 is ever billable — no pre-July dues
+    // or overdue arrears anywhere.
+    if (targetYear < 2026 || (targetYear === 2026 && targetMonth < 6)) {
+      return "Not Enrolled";
+    }
+
     const isCurrentMonth =
       targetMonth === new Date().getUTCMonth() &&
       targetYear === new Date().getUTCFullYear();
