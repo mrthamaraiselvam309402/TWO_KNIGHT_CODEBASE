@@ -8081,27 +8081,68 @@ setTimeout(function () {
 
   // Student registry: reveal a single row's action buttons behind the "->"
   // arrow. Opening one row collapses every other row's actions.
-  window.toggleRowActions = function (id, btn) {
-    const box = document.getElementById(id);
-    if (!box) return;
-    const isOpen = box.style.display === "flex";
-    // Collapse all rows first.
-    document.querySelectorAll(".row-actions").forEach((el) => (el.style.display = "none"));
+  function closeAllRowActions() {
+    document.querySelectorAll(".row-actions").forEach((el) => {
+      el.style.display = "none";
+      el.removeAttribute("data-open");
+    });
     document.querySelectorAll(".row-arrow-btn").forEach((b) => {
       b.textContent = "→";
       b.classList.remove("btn-gold");
       b.classList.add("btn-outline-grey");
     });
     document.querySelectorAll(".more-menu").forEach((m) => (m.style.display = "none"));
-    if (!isOpen) {
-      box.style.display = "flex";
-      if (btn) {
-        btn.textContent = "×";
-        btn.classList.remove("btn-outline-grey");
-        btn.classList.add("btn-gold");
-      }
+  }
+  window.closeAllRowActions = closeAllRowActions;
+
+  window.toggleRowActions = function (id, btn) {
+    const box = document.getElementById(id);
+    if (!box) return;
+    const wasOpen = box.getAttribute("data-open") === "1";
+    closeAllRowActions();
+    if (wasOpen) return;
+
+    // Render as a fixed panel anchored to the arrow. Fixed positioning
+    // escapes the .table-wrap overflow clip (an absolute panel got cut off,
+    // so the actions appeared to not show at all). Measure hidden, then place.
+    box.style.position = "fixed";
+    box.style.display = "flex";
+    box.style.visibility = "hidden";
+    box.style.left = "0px";
+    box.style.top = "0px";
+
+    const rect = btn.getBoundingClientRect();
+    const bw = Math.min(box.offsetWidth || 320, window.innerWidth - 16);
+    box.style.width = bw + "px";
+    let left = rect.right - bw; // right-align to the arrow
+    if (left < 8) left = 8;
+    if (left + bw > window.innerWidth - 8) left = window.innerWidth - 8 - bw;
+    const bh = box.offsetHeight;
+    let top = rect.bottom + 6;
+    if (top + bh > window.innerHeight - 8) {
+      top = Math.max(8, rect.top - bh - 6); // flip above if no room below
+    }
+    box.style.left = left + "px";
+    box.style.top = top + "px";
+    box.style.visibility = "visible";
+    box.setAttribute("data-open", "1");
+
+    if (btn) {
+      btn.textContent = "×";
+      btn.classList.remove("btn-outline-grey");
+      btn.classList.add("btn-gold");
     }
   };
+
+  // Close the floating actions on outside click or any scroll.
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".action-menu-container") && !e.target.closest(".row-actions")) {
+      closeAllRowActions();
+    }
+  }, true);
+  window.addEventListener("scroll", function () {
+    if (document.querySelector('.row-actions[data-open="1"]')) closeAllRowActions();
+  }, true);
 
   document.addEventListener("click", function (e) {
     if (!e.target.closest(".action-menu-container")) {
