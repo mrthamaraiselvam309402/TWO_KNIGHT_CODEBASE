@@ -3470,3 +3470,25 @@ body[data-theme="light"] .trace-chip.failed {
 @media (max-width: 860px) {
   .growth-split { grid-template-columns: 1fr; }
 }
+
+/* Student registry: the "->" arrow reveals actions as a dropdown panel
+   anchored to the arrow, constrained to the viewport so buttons never shoot
+   off-screen on narrow widths (the actions column sits far right in a
+   horizontally scrolling table). */
+.action-menu-container { position: relative; }
+.row-actions {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  z-index: 200;
+  box-shadow: var(--shadow);
+  max-width: min(340px, 92vw);
+  width: max-content;
+}
+.row-actions > div { flex-wrap: wrap !important; max-width: 100%; }
+.row-actions .btn { flex-shrink: 0; }

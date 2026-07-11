@@ -8003,7 +8003,7 @@ setTimeout(function () {
                 <td style="overflow:visible;white-space:nowrap">
                    <div style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;min-width:0" class="action-menu-container">
                     <button class="btn btn-outline-grey btn-sm row-arrow-btn" title="Show actions" onclick="toggleRowActions('acts-${uniqueId}', this)" style="flex-shrink:0;font-weight:700;padding:6px 12px">→</button>
-                    <div id="acts-${uniqueId}" class="row-actions" style="display:none;gap:4px;flex-wrap:nowrap;align-items:center">
+                    <div id="acts-${uniqueId}" class="row-actions" style="display:none;gap:4px;flex-wrap:wrap;align-items:center;max-width:360px">
                       ${primaryActions}
                       ${
                         moreActions
