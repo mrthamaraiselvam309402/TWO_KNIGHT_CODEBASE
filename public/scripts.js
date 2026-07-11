@@ -7025,6 +7025,10 @@ setTimeout(function () {
   // Collected-revenue calculation (calendar month view)
   function calculateCollectedRevenue(year, month) {
     if (!allPayments) return 0;
+    // Academy billing floor: no collections are counted before July 2026,
+    // so "collected last month" for the first billing month reads 0
+    // (ignores any stray pre-July payment rows).
+    if (year < 2026 || (year === 2026 && month < 6)) return 0;
     const seenStuds = new Set();
     return allPayments.reduce((sum, p) => {
       const pDate = new Date(p.payment_date || p.created_at);
@@ -8003,6 +8007,10 @@ setTimeout(function () {
                         ? "Not Enrolled"
                         : status;
 
+            // Persisted open-row state: survives the background table
+            // re-render (which otherwise wiped the inline expansion).
+            const isRowOpen = String(window.__openActionRow || "") === String(s.id);
+
             return `<tr>
               <td>${checkboxHtml}</td>
               <td style="color:var(--ivory-dim);font-weight:600">${i + 1}</td>
@@ -8013,20 +8021,11 @@ setTimeout(function () {
               <td><span class="${statusClass}" style="font-weight: 600;">${statusText}</span></td>
               <td>${dueDateHtml}</td>
                 <td style="overflow:visible;white-space:nowrap">
-                   <div style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;min-width:0" class="action-menu-container">
-                    <button class="btn btn-outline-grey btn-sm row-arrow-btn" title="Show actions" onclick="toggleRowActions('acts-${uniqueId}', this)" style="flex-shrink:0;font-weight:700;padding:6px 12px">→</button>
-                    <div id="acts-${uniqueId}" class="row-actions" style="display:none;gap:4px;flex-wrap:wrap;align-items:center;max-width:360px">
+                   <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-width:0" class="action-menu-container">
+                    <button class="btn btn-outline-grey btn-sm row-arrow-btn ${isRowOpen ? "btn-gold" : ""}" title="Show actions" onclick="toggleRowActions('${s.id}', this)" style="flex-shrink:0;font-weight:700;padding:6px 12px">${isRowOpen ? "×" : "→"}</button>
+                    <div class="row-actions" data-student-id="${s.id}" style="display:${isRowOpen ? "flex" : "none"};gap:4px;flex-wrap:wrap;align-items:center">
                       ${primaryActions}
-                      ${
-                        moreActions
-                          ? `
-                        <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
-                        <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:160px;box-shadow:var(--shadow);margin-top:4px">
-                          ${moreActions}
-                        </div>
-                      `
-                          : ""
-                      }
+                      ${moreActions || ""}
                     </div>
                   </div>
                </td>
@@ -8091,92 +8090,42 @@ setTimeout(function () {
     menu.style.display = isShown ? "none" : "block";
   };
 
-  // Student registry: reveal a single row's action buttons behind the "->"
-  // arrow. The actions are cloned into a body-level floating panel so a
-  // background re-render of the table (notification poll etc., which rebuilds
-  // the rows a moment after the click) can't destroy the open panel — that
-  // re-render was silently killing the panel, making the arrow "do nothing".
-  let _rowActionsCloser = null;
-  const ROW_PANEL_ID = "__row-actions-panel";
-  function closeAllRowActions() {
-    if (_rowActionsCloser) {
-      document.removeEventListener("click", _rowActionsCloser, true);
-      _rowActionsCloser = null;
-    }
-    const panel = document.getElementById(ROW_PANEL_ID);
-    if (panel) panel.remove();
-    document.querySelectorAll(".row-arrow-btn").forEach((b) => {
-      b.textContent = "→";
-      b.classList.remove("btn-gold");
-      b.classList.add("btn-outline-grey");
+  // Student registry: clicking the "->" arrow slides that row's action
+  // buttons open inline; every other row stays collapsed. The open row is
+  // tracked in window.__openActionRow (by student id) so the background
+  // table re-render (notification poll) re-renders it still open instead of
+  // wiping the expansion — that state loss was why the actions "disappeared".
+  window.__openActionRow = window.__openActionRow || null;
+
+  // Apply the current open/closed state to the rows already in the DOM,
+  // without a full re-render.
+  function applyRowActionsState() {
+    document.querySelectorAll(".row-actions").forEach((el) => {
+      const open = String(window.__openActionRow || "") === String(el.getAttribute("data-student-id"));
+      el.style.display = open ? "flex" : "none";
     });
+    document.querySelectorAll(".row-arrow-btn").forEach((b) => {
+      const cont = b.closest(".action-menu-container");
+      const box = cont ? cont.querySelector(".row-actions") : null;
+      const open = box && String(window.__openActionRow || "") === String(box.getAttribute("data-student-id"));
+      b.textContent = open ? "×" : "→";
+      b.classList.toggle("btn-gold", !!open);
+      b.classList.toggle("btn-outline-grey", !open);
+    });
+  }
+  window.applyRowActionsState = applyRowActionsState;
+
+  function closeAllRowActions() {
+    window.__openActionRow = null;
+    applyRowActionsState();
   }
   window.closeAllRowActions = closeAllRowActions;
 
-  window.toggleRowActions = function (id, btn) {
-    const src = document.getElementById(id);
-    const already = document.getElementById(ROW_PANEL_ID);
-    const wasThisOpen = already && already.getAttribute("data-src") === id;
-    closeAllRowActions();
-    if (wasThisOpen || !src) return;
-
-    // Clone the row's action buttons into a floating panel on <body>.
-    const panel = src.cloneNode(true);
-    panel.id = ROW_PANEL_ID;
-    panel.setAttribute("data-src", id);
-    panel.classList.add("row-actions-floating");
-    panel.style.position = "fixed";
-    panel.style.display = "flex";
-    panel.style.visibility = "hidden";
-    panel.style.left = "0px";
-    panel.style.top = "0px";
-
-    // Flatten the "⋮ More" sub-menu into the panel: its toggle targets the
-    // original (now-hidden) row by id, so instead show every action inline.
-    const cloneMoreBtn = panel.querySelector(".more-btn");
-    if (cloneMoreBtn) cloneMoreBtn.remove();
-    const cloneMoreMenu = panel.querySelector(".more-menu");
-    if (cloneMoreMenu) {
-      cloneMoreMenu.removeAttribute("id");
-      cloneMoreMenu.style.cssText =
-        "position:static;display:flex;flex-wrap:wrap;gap:4px;background:transparent;border:none;box-shadow:none;padding:0;margin:0;min-width:0";
-    }
-    // Any leftover duplicate ids in the clone would shadow the originals.
-    panel.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
-    panel.id = ROW_PANEL_ID;
-
-    document.body.appendChild(panel);
-
-    const rect = btn.getBoundingClientRect();
-    const bw = Math.min(panel.offsetWidth || 320, window.innerWidth - 16);
-    panel.style.width = bw + "px";
-    let left = rect.right - bw; // right-align to the arrow
-    if (left < 8) left = 8;
-    if (left + bw > window.innerWidth - 8) left = window.innerWidth - 8 - bw;
-    const bh = panel.offsetHeight;
-    let top = rect.bottom + 6;
-    if (top + bh > window.innerHeight - 8) {
-      top = Math.max(8, rect.top - bh - 6); // flip above if no room below
-    }
-    panel.style.left = left + "px";
-    panel.style.top = top + "px";
-    panel.style.visibility = "visible";
-
-    if (btn) {
-      btn.textContent = "×";
-      btn.classList.remove("btn-outline-grey");
-      btn.classList.add("btn-gold");
-    }
-
-    // Arm the outside-click closer on the NEXT tick so the very click that
-    // opened this panel cannot immediately close it.
-    setTimeout(() => {
-      _rowActionsCloser = function (e) {
-        if (e.target.closest("#" + ROW_PANEL_ID) || e.target.closest(".row-arrow-btn")) return;
-        closeAllRowActions();
-      };
-      document.addEventListener("click", _rowActionsCloser, true);
-    }, 0);
+  // id here is the student id (passed from the row template).
+  window.toggleRowActions = function (id) {
+    window.__openActionRow =
+      String(window.__openActionRow || "") === String(id) ? null : id;
+    applyRowActionsState();
   };
 
   document.addEventListener("click", function (e) {
