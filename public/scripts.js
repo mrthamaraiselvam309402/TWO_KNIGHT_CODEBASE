@@ -3198,6 +3198,16 @@
     if (String(raw).trim().toLowerCase() === "single") return "Single";
     return "Group";
   }
+  // Session type (Group / Individual) is stored as a [STYPE:...] tag in notes.
+  function getStudentSessionType(s) {
+    const m = /\[STYPE:([^\]]+)\]/i.exec(s.notes || s.coach_notes || "");
+    if (m) {
+      const v = m[1].trim().toLowerCase();
+      return v === "individual" || v === "single" ? "Individual" : "Group";
+    }
+    return "Group";
+  }
+  window.getStudentSessionType = getStudentSessionType;
   function getStudentBatchTime(s) {
     return s.session_time || s.batch_time || "";
   }
@@ -3212,6 +3222,7 @@
       .replace(/\[SCHEDULE64:[A-Za-z0-9+/=]+\]/g, "")
       .replace(/\[SCHEDULE:({.*?})\]/g, "")
       .replace(/\[LM:(online|offline)\]/g, "")
+      .replace(/\[STYPE:[^\]]*\]/gi, "")
       .trim();
   }
 
@@ -7981,19 +7992,22 @@ setTimeout(function () {
               <td>${feeHtml}</td>
               <td><span class="${statusClass}" style="font-weight: 600;">${statusText}</span></td>
               <td>${dueDateHtml}</td>
-                <td style="overflow-x:auto;white-space:nowrap">
-                   <div style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;min-width:0" class="action-menu-container">
-                    ${primaryActions}
-                    ${
-                      moreActions
-                        ? `
-                      <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
-                      <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:160px;box-shadow:var(--shadow);margin-top:4px">
-                        ${moreActions}
-                      </div>
-                    `
-                        : ""
-                    }
+                <td style="overflow:visible;white-space:nowrap">
+                   <div style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;min-width:0" class="action-menu-container">
+                    <button class="btn btn-outline-grey btn-sm row-arrow-btn" title="Show actions" onclick="toggleRowActions('acts-${uniqueId}', this)" style="flex-shrink:0;font-weight:700;padding:6px 12px">→</button>
+                    <div id="acts-${uniqueId}" class="row-actions" style="display:none;gap:4px;flex-wrap:nowrap;align-items:center">
+                      ${primaryActions}
+                      ${
+                        moreActions
+                          ? `
+                        <button class="btn btn-outline-grey btn-sm more-btn" onclick="toggleMoreMenu('${uniqueId}')">⋮ More</button>
+                        <div id="${uniqueId}" class="more-menu" style="display:none;position:absolute;right:0;top:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;z-index:100;min-width:160px;box-shadow:var(--shadow);margin-top:4px">
+                          ${moreActions}
+                        </div>
+                      `
+                          : ""
+                      }
+                    </div>
                   </div>
                </td>
             </tr>`;
@@ -8057,6 +8071,30 @@ setTimeout(function () {
     menu.style.display = isShown ? "none" : "block";
   };
 
+  // Student registry: reveal a single row's action buttons behind the "->"
+  // arrow. Opening one row collapses every other row's actions.
+  window.toggleRowActions = function (id, btn) {
+    const box = document.getElementById(id);
+    if (!box) return;
+    const isOpen = box.style.display === "flex";
+    // Collapse all rows first.
+    document.querySelectorAll(".row-actions").forEach((el) => (el.style.display = "none"));
+    document.querySelectorAll(".row-arrow-btn").forEach((b) => {
+      b.textContent = "→";
+      b.classList.remove("btn-gold");
+      b.classList.add("btn-outline-grey");
+    });
+    document.querySelectorAll(".more-menu").forEach((m) => (m.style.display = "none"));
+    if (!isOpen) {
+      box.style.display = "flex";
+      if (btn) {
+        btn.textContent = "×";
+        btn.classList.remove("btn-outline-grey");
+        btn.classList.add("btn-gold");
+      }
+    }
+  };
+
   document.addEventListener("click", function (e) {
     if (!e.target.closest(".action-menu-container")) {
       document
@@ -8083,6 +8121,15 @@ setTimeout(function () {
     $("e-id").value = s.id;
     $("e-name").value = getStudentName(s);
     if ($("e-email")) $("e-email").value = s.email || "";
+    if ($("e-parent-name")) $("e-parent-name").value = s.parent_name || "";
+    if ($("e-session-type")) $("e-session-type").value = getStudentSessionType(s);
+    if ($("e-dob")) $("e-dob").value = s.dob || "";
+    if ($("e-standard")) {
+      const stdMatch = /Standard:\s*(.+)/.exec(s.special_notes || "");
+      $("e-standard").value = stdMatch ? stdMatch[1].trim() : "";
+    }
+    if ($("e-school")) $("e-school").value = s.school_name || "";
+    if ($("e-address")) $("e-address").value = s.address || "";
     // Render country dropdown for edit modal
     renderCountryDropdown("country-dropdown-edit", "selectCountryEdit");
     // Set country first so phone placeholder/validation matches
@@ -8211,18 +8258,29 @@ setTimeout(function () {
           : mLegacy
             ? " " + mLegacy[0]
             : "";
+        // Session type: from the edit dropdown, else preserve the saved tag.
+        const stype = $("e-session-type")?.value || getStudentSessionType(s);
         // Strip any tag from the editable coach-notes field so it's never duplicated/orphaned.
         const cleanNotes = ($("e-notes")?.value || "")
           .replace(/\[LM:(online|offline)\]/g, "")
+          .replace(/\[STYPE:[^\]]*\]/gi, "")
           .replace(/\[SCHEDULE64:[A-Za-z0-9+/=]+\]/g, "")
           .replace(/\[SCHEDULE:({.*?})\]/g, "")
           .trim();
-        return (
-          `[LM:${$("e-learning-mode")?.value || s.learning_mode || "online"}] ` +
-          cleanNotes +
-          scheduleStr
-        );
+        // The edge function prepends the [LM:...] marker from learning_mode,
+        // so we only include [STYPE:...] + coach notes + schedule here.
+        return (`[STYPE:${stype}] ` + cleanNotes + scheduleStr).trim();
       })(),
+      // Guardian + personal details so edits persist (parent name was the
+      // field the user reported as never saving).
+      parent_name: $("e-parent-name") ? $("e-parent-name").value.trim() : (s.parent_name || ""),
+      dob: $("e-dob") && $("e-dob").value ? $("e-dob").value : (s.dob || null),
+      // `grade` column stores the LEVEL, so standard goes to special_notes.
+      special_notes: $("e-standard") && $("e-standard").value.trim() ? `Standard: ${$("e-standard").value.trim()}` : (s.special_notes || null),
+      school_name: $("e-school") ? ($("e-school").value.trim() || null) : (s.school_name || null),
+      address: $("e-address") ? ($("e-address").value.trim() || null) : (s.address || null),
+      session_mode: $("e-batch-type")?.value || s.session_mode || null,
+      session_time: $("e-batch-time")?.value || s.session_time || null,
     };
 
     try {
@@ -8402,6 +8460,14 @@ setTimeout(function () {
   function openEnroll() {
     $("m-name").value = "";
     if ($("m-email")) $("m-email").value = "";
+    if ($("m-parent-name")) $("m-parent-name").value = "";
+    if ($("m-parent-email")) $("m-parent-email").value = "";
+    if ($("m-dob")) $("m-dob").value = "";
+    if ($("m-standard")) $("m-standard").value = "";
+    if ($("m-school")) $("m-school").value = "";
+    if ($("m-address")) $("m-address").value = "";
+    if ($("m-session-type")) $("m-session-type").value = "Group";
+    if ($("m-admission-fee")) $("m-admission-fee").value = "0";
     $("m-phone").value = "";
     $("m-level").value = "Beginner";
     $("m-join").value = "";
@@ -8500,14 +8566,28 @@ due_date: (function () {
       batch_time: $("m-batch-time").value,
       days: getSelectedDays(".m-day-cb, .m-day-btn") || null,
       monthly_fee: parseInt($("m-fee").value) || 0,
-      admission_fee: parseInt($("m-admission-fee").value) || 0,
+      admission_fee: parseInt($("m-admission-fee")?.value) || 0,
       payment_status: defaultPaymentStatus,
       status: selectedStatus,
       learning_mode: $("m-learning-mode")?.value || "online",
-      notes: `[LM:${$("m-learning-mode")?.value || "online"}]`,
+      // Session type (Group/Individual) has no dedicated column, so it is
+      // tagged in notes. The edge function prepends the [LM:] marker, so we
+      // only supply the [STYPE:] tag here.
+      notes: `[STYPE:${$("m-session-type")?.value || "Group"}]`,
       lichess_username: $("m-lichess") ? $("m-lichess").value.trim() : "",
       chesscom_username: $("m-chesscom") ? $("m-chesscom").value.trim() : "",
       chessable_username: $("m-chessable") ? $("m-chessable").value.trim() : "",
+      // Personal / guardian details — previously collected by the form but
+      // never sent, so they silently vanished. Now persisted.
+      parent_name: $("m-parent-name") ? $("m-parent-name").value.trim() : "",
+      dob: $("m-dob") && $("m-dob").value ? $("m-dob").value : null,
+      // NOTE: the `grade` column holds the student LEVEL (Beginner/…), so the
+      // academic "standard" field is stored in special_notes, not grade.
+      special_notes: $("m-standard") && $("m-standard").value.trim() ? `Standard: ${$("m-standard").value.trim()}` : null,
+      school_name: $("m-school") ? ($("m-school").value.trim() || null) : null,
+      address: $("m-address") ? ($("m-address").value.trim() || null) : null,
+      session_mode: $("m-batch-type").value,
+      session_time: $("m-batch-time").value,
     };
 
     // Due date is handled by the backend if not provided.
@@ -10151,7 +10231,14 @@ due_date: (function () {
     if (!s) return;
     const coach = allCoaches.find((c) => String(c.id) === String(s.coach_id));
     const coachName = coach ? getCoachName(coach) : "N/A";
-    const receiptUrl = `${window.location.origin}/receipt.html?id=${studentId}&name=${encodeURIComponent(getStudentName(s))}&amount=${amount}&date=${new Date().toISOString()}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
+    // Use the exact payment details captured at record time (date + mode),
+    // falling back to now/Cash for legacy callers.
+    const det = (window.lastPaymentDetails && window.lastPaymentDetails.studentId === studentId)
+      ? window.lastPaymentDetails
+      : null;
+    const receiptDate = det?.dateIso || new Date().toISOString();
+    const receiptMethod = det?.method || "Cash";
+    const receiptUrl = `${window.location.origin}/receipt.html?id=${studentId}&name=${encodeURIComponent(getStudentName(s))}&amount=${amount}&date=${receiptDate}&method=${encodeURIComponent(receiptMethod)}&level=${encodeURIComponent(getStudentLevel(s))}&coach=${encodeURIComponent(coachName)}`;
 
     const ordinalText = (n) => {
       const s = ["th", "st", "nd", "rd"];
@@ -10360,11 +10447,54 @@ Best regards,
       else if (active === "page-bills") renderBills();
     }
   };
+    // Open the Record Payment dialog to collect date/time/mode before
+    // logging. Used by the manual "Mark Paid" button so receipts carry the
+    // real payment details instead of a random date/method.
+  window.openMarkPaidDialog = function (id) {
+    const s = allStudents.find((x) => String(x.id) === String(id));
+    if (!s) return;
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    if ($("mp-student-id")) $("mp-student-id").value = id;
+    if ($("mp-student-name")) $("mp-student-name").textContent = getStudentName(s);
+    if ($("mp-amount")) $("mp-amount").value = getStudentMonthlyFee(s) || 0;
+    if ($("mp-mode")) $("mp-mode").value = "Cash";
+    if ($("mp-date")) $("mp-date").value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    if ($("mp-time")) $("mp-time").value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    if ($("mp-month")) {
+      // Default to the month currently being viewed, floored at the billing start.
+      const vy = window.reportYear || now.getFullYear();
+      const vm = (window.reportMonth ?? now.getMonth()) + 1;
+      let key = `${vy}-${pad(vm)}`;
+      if (key < "2026-07") key = "2026-07";
+      $("mp-month").value = key;
+    }
+    openModal("mark-paid-modal");
+  };
+
+  window.confirmMarkPaid = async function () {
+    const id = $("mp-student-id")?.value;
+    if (!id) return;
+    const amount = parseFloat($("mp-amount")?.value) || 0;
+    const mode = $("mp-mode")?.value || "Cash";
+    const dateStr = $("mp-date")?.value;
+    const timeStr = $("mp-time")?.value || "12:00";
+    const monthStr = $("mp-month")?.value || "";
+    if (amount <= 0) { toast("Enter a valid amount", "error"); return; }
+    if (!dateStr) { toast("Select a payment date", "error"); return; }
+    // Build an ISO timestamp from the chosen local date + time.
+    const paymentDateIso = new Date(`${dateStr}T${timeStr}:00`).toISOString();
+    const appliedMonth = /^\d{4}-\d{2}$/.test(monthStr) ? monthStr : dateStr.slice(0, 7);
+    closeModal("mark-paid-modal");
+    await markPaid(id, amount, mode, "Monthly Tuition", { paymentDateIso, appliedMonth, timeStr });
+  };
+
   async function markPaid(
     id,
     amount,
     method = "Cash",
     desc = "Monthly Tuition",
+    opts = {},
   ) {
     try {
       const s = allStudents.find((x) => String(x.id) === String(id));
@@ -10379,29 +10509,42 @@ Best regards,
         body: JSON.stringify(updates),
       });
 
+      // Resolve the payment timestamp: explicit (from the dialog) wins,
+      // else fall back to the viewed month / now.
+      const resolvedDateIso =
+        opts.paymentDateIso ||
+        (window.reportMonth !== new Date().getUTCMonth() ||
+        window.reportYear !== new Date().getUTCFullYear()
+          ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString()
+          : new Date().toISOString());
+
       // 2. Create Transaction Record (Increments Credit Count)
+      const payBody = {
+        id: "pay_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+        student_id: id,
+        amount: parseFloat(amt),
+        status: "paid",
+        payment_method: method,
+        description: desc,
+        transaction_id: "MAN-" + Math.floor(Math.random() * 1000000),
+        payment_date: resolvedDateIso,
+      };
+      if (opts.appliedMonth) payBody.applied_month = opts.appliedMonth;
       await apiCall(`${API_BASE}/payments`, {
         method: "POST",
-        body: JSON.stringify({
-          id:
-            "pay_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9), // Required Primary Key
-          student_id: id,
-          amount: parseFloat(amt), // Ensure numeric
-          status: "paid",
-          payment_method: method,
-          description: desc,
-          transaction_id: "MAN-" + Math.floor(Math.random() * 1000000),
-          payment_date:
-            window.reportMonth !== new Date().getUTCMonth() ||
-            window.reportYear !== new Date().getUTCFullYear()
-              ? new Date(
-                  Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0),
-                ).toISOString()
-              : new Date().toISOString(),
-        }),
+        body: JSON.stringify(payBody),
       });
 
-      toast("Payment logged and due date advanced!", "success");
+      // Remember the exact details so the receipt reflects them (not random).
+      window.lastPaymentDetails = {
+        studentId: id,
+        amount: amt,
+        method,
+        dateIso: resolvedDateIso,
+        appliedMonth: opts.appliedMonth || resolvedDateIso.slice(0, 7),
+      };
+
+      toast("Payment recorded and receipt ready!", "success");
 
       // FIX #3: Invalidate payment cache before reload
       window.totalPaymentsMap = null;
@@ -11212,7 +11355,7 @@ Best regards,
             <button class="btn btn-gold btn-sm" onclick="openPay('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">💳 Pay Now</button>
             <button class="btn btn-outline-grey btn-sm" onclick="viewPaymentHistory('${s.id}')">⏳ History</button>
             <button class="btn btn-outline-info btn-sm" onclick="informParent('${s.id}', '${jsAttrEncode(getStudentName(s))}', '${getStudentMonthlyFee(s)}')">📢 Inform</button>
-            <button class="btn btn-outline btn-sm" onclick="markPaid('${s.id}')">✅ Mark Paid</button>
+            <button class="btn btn-outline btn-sm" onclick="openMarkPaidDialog('${s.id}')">✅ Mark Paid</button>
           `;
         } else {
           actionButtons = `<span style="color:var(--ivory-dim);font-size:11px">—</span>`;
