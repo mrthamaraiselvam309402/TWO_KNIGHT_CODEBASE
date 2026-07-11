@@ -2550,7 +2550,7 @@
     const enrollDate = enrollDateStr
       ? new Date(enrollDateStr)
       : new Date(Date.UTC(2026, 2, 1)); // Fallback to March 1, 2026
-    const baselineDate = new Date(Date.UTC(2026, 3, 1)); // Global System Baseline (April 1st, 2026)
+    const baselineDate = new Date(Date.UTC(2026, 6, 1)); // Global System Baseline (July 1st, 2026)
     const effectiveEnroll = (function () {
       var _a =
         window.getBillingAnchor && window.getBillingAnchor(s, baselineDate);
@@ -2879,7 +2879,7 @@
 
       // Audit-based debt calculation
       const enrollDateStr = getStudentDate(s);
-      const baseline = new Date(Date.UTC(2026, 3, 1));
+      const baseline = new Date(Date.UTC(2026, 6, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       const effectiveEnroll = (function () {
         var _a =
@@ -3265,7 +3265,7 @@
   // Returns the first BILLED month {year, month} for a student (0-indexed month),
   // applying the late-join grace rule and the academy baseline.
   function getBillingAnchor(s, baselineDate) {
-    const baseline = baselineDate || new Date(Date.UTC(2026, 3, 1));
+    const baseline = baselineDate || new Date(Date.UTC(2026, 6, 1));
     const enrollStr = getStudentDate(s);
     let e = enrollStr ? new Date(enrollStr) : baseline;
     if (isNaN(e.getTime())) e = baseline;
@@ -6921,7 +6921,7 @@ setTimeout(function () {
             return;
 
           const enrollDateStr = getStudentDate(s);
-          const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0));
+          const baseline = new Date(Date.UTC(2026, 6, 1, 0, 0, 0));
           const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
           const targetMonthEnd = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59));
           if (enrollDate > targetMonthEnd) return;
@@ -7087,7 +7087,7 @@ setTimeout(function () {
         return false;
 
       const enrollDateStr = getStudentDate(s);
-      const baseline = new Date(Date.UTC(2026, 3, 1, 0, 0, 0)); // April 1st Baseline (UTC)
+      const baseline = new Date(Date.UTC(2026, 6, 1, 0, 0, 0)); // July 1st Baseline (UTC)
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       return enrollDate <= targetMonthEnd;
     });
@@ -7114,7 +7114,7 @@ setTimeout(function () {
       const prevMonthStatus = getStudentPaymentStatus(s, prevMonthDate.getUTCMonth(), prevMonthDate.getUTCFullYear());
 
       const enrollDateStr = getStudentDate(s);
-      const baseline = new Date(Date.UTC(2026, 3, 1));
+      const baseline = new Date(Date.UTC(2026, 6, 1));
       const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
       const effectiveEnroll = (function () {
         var _a =
@@ -7631,7 +7631,7 @@ setTimeout(function () {
         const enrollDateStr = getStudentDate(s);
         const enrollDate = enrollDateStr
           ? new Date(enrollDateStr)
-          : new Date(Date.UTC(2026, 3, 1));
+          : new Date(Date.UTC(2026, 6, 1));
 
         // Always show upcoming, pending, or waitlisted students regardless of the dashboard month selected
         if (["upcoming", "pending", "waitlist"].includes(sStatus)) return true;
@@ -10452,7 +10452,7 @@ Best regards,
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
     const enrollDateStr = getStudentDate(s);
-    const baseline = new Date(Date.UTC(2026, 3, 1));
+    const baseline = new Date(Date.UTC(2026, 6, 1));
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
     const effectiveEnroll = (function () {
       var _a = window.getBillingAnchor && window.getBillingAnchor(s, baseline);
@@ -10467,13 +10467,28 @@ Best regards,
       (targetMonth - effectiveEnroll.getUTCMonth()) +
       1;
 
+    // Count only paid months within the billing window (>= billing start,
+    // <= the month being viewed). Pre-July payments must not offset dues,
+    // and a payment applied to a future month shouldn't either.
     const sid = String(s.id).toLowerCase();
+    const startKeyNum = effectiveEnroll.getUTCFullYear() * 12 + effectiveEnroll.getUTCMonth();
+    const targetKeyNum = targetYear * 12 + targetMonth;
     const paidMonthsSet = new Set();
     (window.allPayments || []).forEach((p) => {
-      if (p.status === "paid" && String(p.student_id).toLowerCase() === sid) {
+      if (p.status !== "paid" || String(p.student_id).toLowerCase() !== sid) return;
+      // Prefer the explicit applied_month; fall back to the payment date.
+      let py, pm;
+      if (/^\d{4}-\d{2}$/.test(p.applied_month || "")) {
+        py = parseInt(p.applied_month.slice(0, 4), 10);
+        pm = parseInt(p.applied_month.slice(5, 7), 10) - 1;
+      } else {
         const pDate = new Date(p.payment_date || p.created_at);
-        const mKey = `${pDate.getUTCFullYear()}-${pDate.getUTCMonth()}`;
-        paidMonthsSet.add(mKey);
+        py = pDate.getUTCFullYear();
+        pm = pDate.getUTCMonth();
+      }
+      const keyNum = py * 12 + pm;
+      if (keyNum >= startKeyNum && keyNum <= targetKeyNum) {
+        paidMonthsSet.add(`${py}-${pm}`);
       }
     });
     const totalDue = Math.max(
@@ -10518,7 +10533,7 @@ Best regards,
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
     const enrollDateStr = getStudentDate(s);
-    const baseline = new Date(Date.UTC(2026, 3, 1));
+    const baseline = new Date(Date.UTC(2026, 6, 1));
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
     const effectiveEnroll = (function () {
       var _a = window.getBillingAnchor && window.getBillingAnchor(s, baseline);
@@ -14170,7 +14185,7 @@ Best regards,
           const enrollStr = getStudentDate(s);
           const enrollDate = enrollStr
             ? new Date(enrollStr)
-            : new Date(Date.UTC(2026, 3, 1));
+            : new Date(Date.UTC(2026, 6, 1));
           const sStatus = getStudentStatus(s);
           const payStatus = getStudentPaymentStatus(s, targetMonth, targetYear);
           // Only drop students who weren't enrolled yet, or who are completely pending and inactive
@@ -14411,7 +14426,7 @@ Best regards,
         const enrollStr = getStudentDate(s);
         const enrollDate = enrollStr
           ? new Date(enrollStr)
-          : new Date(Date.UTC(2026, 3, 1));
+          : new Date(Date.UTC(2026, 6, 1));
         const sStatus = getStudentStatus(s);
         const payStatus = getStudentPaymentStatus(s, targetMonth, targetYear);
         if (enrollDate > targetMonthEnd) return false;
@@ -15617,7 +15632,7 @@ window.deleteStudent = deleteStudent;
     const arrearsDetails = [];
     const targetMonth = window.reportMonth;
     const targetYear = window.reportYear;
-    const baseline = new Date(Date.UTC(2026, 3, 1));
+    const baseline = new Date(Date.UTC(2026, 6, 1));
 
     const creditsMap = {};
     const seenMonths = new Set();

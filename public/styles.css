@@ -3457,3 +3457,16 @@ body[data-theme="light"] .trace-chip.failed {
   border-color: rgba(185, 28, 28, 0.3);
   background: rgba(239, 68, 68, 0.08);
 }
+
+/* ── Growth tab: full-width horizontal bands ──
+   Each card spans the row; a left stats rail + right visual fills the
+   space instead of leaving grid gaps. Collapses to stacked on mobile. */
+.growth-split {
+  display: grid;
+  grid-template-columns: minmax(230px, 300px) 1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .growth-split { grid-template-columns: 1fr; }
+}
