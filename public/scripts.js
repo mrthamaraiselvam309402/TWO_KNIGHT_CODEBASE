@@ -785,55 +785,302 @@
     const attRowsHtml = monthAtt.length
       ? monthAtt.map((a) => {
           const p = window.parseAttendanceNotes ? window.parseAttendanceNotes(a.notes || "") : { cw: "", hw: "", general: "" };
-          const notes = [p.cw && `Classwork: ${p.cw}`, p.hw && `Homework: ${p.hw}`, p.general && `Notes: ${p.general}`]
-            .filter(Boolean).join(" · ");
+          const notes = [p.cw && `<strong>Classwork:</strong> ${escapeHtml(p.cw)}`, p.hw && `<strong>Homework:</strong> ${escapeHtml(p.hw)}`, p.general && `<strong>Notes:</strong> ${escapeHtml(p.general)}`]
+            .filter(Boolean).join("<br>");
           const ok = (a.status || "").toLowerCase() === "present";
+          const badgeBg = ok ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)";
+          const badgeColor = ok ? "var(--success)" : "var(--danger)";
           return `<tr>
-            <td>${new Date(a.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</td>
-            <td style="color:${ok ? "#0a7a3d" : "#b91c1c"}; font-weight:bold;">${(a.status || "").toUpperCase()}</td>
-            <td>${escapeHtml(notes) || "—"}</td>
+            <td style="font-weight:600; color:var(--brand-dark);">${new Date(a.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</td>
+            <td><span class="status-badge" style="background:${badgeBg}; color:${badgeColor};">${(a.status || "").toUpperCase()}</span></td>
+            <td style="color:var(--text-muted); line-height:1.6;">${notes || "—"}</td>
           </tr>`;
         }).join("")
-      : `<tr><td colspan="3" style="color:#888;">No attendance records for ${monthLabel}.</td></tr>`;
+      : `<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:30px;">No attendance records for ${monthLabel}.</td></tr>`;
 
     const w = window.open("", "_blank");
     if (!w) { toast("Pop-up blocked — allow pop-ups to print the report", "error"); return; }
     w.document.write(`<!DOCTYPE html><html><head><title>Monthly Report — ${escapeHtml(getStudentName(s))} — ${monthLabel}</title>
       <style>
-        body { font-family: Georgia, serif; color: #1a1a2e; margin: 36px; }
-        .head { text-align: center; border-bottom: 3px double #1e2a5e; padding-bottom: 14px; margin-bottom: 20px; }
-        .head h1 { margin: 0; font-size: 22px; color: #1e2a5e; letter-spacing: 2px; }
-        .head .sub { font-size: 12px; color: #555; }
-        h2 { font-size: 15px; color: #1e2a5e; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 26px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; vertical-align: top; }
-        th { background: #f0f2f8; color: #1e2a5e; }
-        .kpis { display: flex; gap: 14px; margin: 14px 0; }
-        .kpi { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 10px; text-align: center; }
-        .kpi b { display: block; font-size: 18px; margin-top: 2px; }
-        .foot { margin-top: 30px; font-size: 10px; color: #777; text-align: center; border-top: 1px solid #ccc; padding-top: 10px; }
-        @media print { .noprint { display: none; } }
+        :root {
+          --brand-blue: #3b82f6;
+          --brand-dark: #1e293b;
+          --gold: #d4af37;
+          --bg-color: #f8fafc;
+          --card-bg: #ffffff;
+          --text-main: #0f172a;
+          --text-muted: #64748b;
+          --border: #e2e8f0;
+          --success: #10b981;
+          --danger: #ef4444;
+          --font-ui: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
+        }
+        body { 
+          font-family: var(--font-ui); 
+          color: var(--text-main); 
+          background-color: var(--bg-color);
+          margin: 0; 
+          padding: 40px; 
+          line-height: 1.5;
+        }
+        .report-container {
+          max-width: 800px;
+          margin: 0 auto;
+          background: var(--card-bg);
+          border-radius: 16px;
+          box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+          padding: 40px;
+          border: 1px solid var(--border);
+        }
+        .head { 
+          text-align: center; 
+          border-bottom: 2px solid var(--brand-blue); 
+          padding-bottom: 20px; 
+          margin-bottom: 30px; 
+        }
+        .logo-crest {
+          font-size: 40px;
+          color: var(--brand-blue);
+          margin-bottom: 10px;
+        }
+        .head h1 { 
+          margin: 0 0 8px 0; 
+          font-size: 28px; 
+          color: var(--brand-blue); 
+          letter-spacing: 2px; 
+          text-transform: uppercase;
+          font-weight: 800;
+        }
+        .head .sub { 
+          font-size: 14px; 
+          color: var(--gold); 
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          font-weight: 700;
+        }
+        .head .report-title {
+          margin-top: 15px;
+          display: inline-block;
+          background: var(--brand-blue);
+          color: white;
+          padding: 6px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 600;
+        }
+        h2 { 
+          font-size: 18px; 
+          color: var(--brand-dark); 
+          border-bottom: 2px solid var(--border); 
+          padding-bottom: 8px; 
+          margin: 36px 0 16px 0; 
+        }
+        .student-info {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          background: #f1f5f9;
+          padding: 20px;
+          border-radius: 12px;
+          margin-bottom: 30px;
+          border: 1px solid var(--border);
+        }
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          border-bottom: 1px dashed var(--border);
+          padding-bottom: 8px;
+        }
+        .info-row:last-child {
+          border-bottom: none;
+          padding-bottom: 0;
+        }
+        .info-label {
+          color: var(--text-muted);
+          font-weight: 600;
+          font-size: 13px;
+        }
+        .info-value {
+          font-weight: 700;
+          color: var(--brand-dark);
+          font-size: 14px;
+        }
+        .kpis { 
+          display: grid; 
+          grid-template-columns: repeat(4, 1fr); 
+          gap: 16px; 
+          margin-bottom: 30px; 
+        }
+        .kpi { 
+          background: var(--card-bg);
+          border: 1px solid var(--border); 
+          border-radius: 12px; 
+          padding: 16px; 
+          text-align: center; 
+          box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+        .kpi-label {
+          font-size: 11px; 
+          color: var(--text-muted); 
+          text-transform: uppercase; 
+          letter-spacing: 1px;
+          font-weight: 700;
+        }
+        .kpi-val { 
+          display: block; 
+          font-size: 24px; 
+          font-weight: 800;
+          color: var(--brand-blue);
+          margin-top: 8px; 
+        }
+        table { 
+          width: 100%; 
+          border-collapse: separate; 
+          border-spacing: 0;
+          font-size: 13px; 
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        th, td { 
+          padding: 14px 16px; 
+          text-align: left; 
+          vertical-align: top; 
+          border-bottom: 1px solid var(--border);
+        }
+        th { 
+          background: #f1f5f9; 
+          color: var(--brand-dark); 
+          font-weight: 700;
+          text-transform: uppercase;
+          font-size: 11px;
+          letter-spacing: 1px;
+        }
+        tr:last-child td {
+          border-bottom: none;
+        }
+        tbody tr:nth-child(even) {
+          background-color: #f8fafc;
+        }
+        .foot { 
+          margin-top: 40px; 
+          font-size: 11px; 
+          color: var(--text-muted); 
+          text-align: center; 
+          border-top: 1px solid var(--border); 
+          padding-top: 20px; 
+        }
+        .status-badge {
+          display: inline-block;
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .btn-print {
+          background: var(--brand-blue);
+          color: white;
+          border: none;
+          padding: 12px 30px;
+          border-radius: 8px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          font-family: inherit;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-print:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
+        }
+        @media print { 
+          body { padding: 0; background: white; }
+          .report-container { box-shadow: none; border: none; padding: 0; max-width: 100%; }
+          .noprint { display: none !important; }
+          .kpi { border: 1px solid #ddd; }
+          .student-info { background: white; border: 1px solid #ddd; }
+          table { border: 1px solid #ddd; }
+          th { background: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .status-badge { border: 1px solid #ddd; }
+          .head .report-title { color: black; background: transparent; border: 1px solid black; }
+        }
       </style></head><body>
-      <div class="head">
-        <h1>TWO KNIGHTS CHESS ACADEMY</h1>
-        <div class="sub">Building Champions, One Move at a Time · Monthly Student Report — ${monthLabel}</div>
-      </div>
-      <table>
-        <tr><th style="width:25%">Student</th><td>${escapeHtml(getStudentName(s))}</td><th style="width:20%">Level</th><td>${escapeHtml(getStudentLevel(s) || "N/A")}</td></tr>
-        <tr><th>Coach</th><td>${escapeHtml(coach ? getCoachName(coach) : "Not Assigned")}</td><th>Academy ELO</th><td>${getStudentRating(s) || "—"}</td></tr>
-      </table>
-      <div class="kpis">
-        <div class="kpi">Classes Held<b>${monthAtt.length}</b></div>
-        <div class="kpi">Attended<b>${presentCount}</b></div>
-        <div class="kpi">Attendance<b>${attPct}%</b></div>
-        <div class="kpi">Fee (${monthLabel.split(" ")[0]})<b style="color:${feeStatus === "Paid" ? "#0a7a3d" : "#b91c1c"}">${feeStatus.toUpperCase()} · ₹${monthlyFee}</b></div>
-      </div>
-      <h2>Attendance & Class Log</h2>
-      <table><thead><tr><th style="width:18%">Date</th><th style="width:14%">Status</th><th>Class Notes</th></tr></thead>
-      <tbody>${attRowsHtml}</tbody></table>
-      <div class="foot">Generated ${new Date().toLocaleString("en-IN")} · Two Knights Chess Academy · This is a system-generated report.</div>
-      <div class="noprint" style="text-align:center; margin-top:20px;">
-        <button onclick="window.print()" style="padding:10px 26px; font-size:14px; cursor:pointer;">🖨️ Print / Save as PDF</button>
+      <div class="report-container">
+        <div class="head">
+          <div class="logo-crest">♞</div>
+          <h1>TWO KNIGHTS</h1>
+          <div class="sub">CHESS ACADEMY</div>
+          <div class="report-title">Monthly Student Report — ${monthLabel}</div>
+        </div>
+        
+        <div class="student-info">
+          <div>
+            <div class="info-row">
+              <span class="info-label">Student Name</span>
+              <span class="info-value">${escapeHtml(getStudentName(s))}</span>
+            </div>
+            <div class="info-row" style="margin-top: 12px;">
+              <span class="info-label">Assigned Coach</span>
+              <span class="info-value">${escapeHtml(coach ? getCoachName(coach) : "Not Assigned")}</span>
+            </div>
+          </div>
+          <div>
+            <div class="info-row">
+              <span class="info-label">Academy Level</span>
+              <span class="info-value">${escapeHtml(getStudentLevel(s) || "N/A")}</span>
+            </div>
+            <div class="info-row" style="margin-top: 12px;">
+              <span class="info-label">Academy ELO</span>
+              <span class="info-value">${getStudentRating(s) || "—"}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi">
+            <span class="kpi-label">Classes Held</span>
+            <span class="kpi-val">${monthAtt.length}</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Attended</span>
+            <span class="kpi-val">${presentCount}</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Attendance</span>
+            <span class="kpi-val">${attPct}%</span>
+          </div>
+          <div class="kpi">
+            <span class="kpi-label">Fee (${monthLabel.split(" ")[0]})</span>
+            <span class="kpi-val" style="color:${feeStatus === "Paid" ? "var(--success)" : "var(--danger)"}; font-size: 16px; margin-top: 12px;">
+              ${feeStatus.toUpperCase()} <span style="font-size:14px; color:var(--text-main); font-weight: 600; display:block; margin-top: 4px;">₹${monthlyFee}</span>
+            </span>
+          </div>
+        </div>
+
+        <h2>Attendance & Class Log</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:20%">Date</th>
+              <th style="width:15%">Status</th>
+              <th>Class Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${attRowsHtml}
+          </tbody>
+        </table>
+
+        <div class="foot">
+          Generated ${new Date().toLocaleString("en-IN")} · Two Knights Chess Academy · This is a system-generated report.
+        </div>
+        
+        <div class="noprint" style="text-align:center; margin-top:40px;">
+          <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        </div>
       </div>
       </body></html>`);
     w.document.close();
@@ -3377,21 +3624,6 @@
       monthOverride !== null ? monthOverride : window.reportMonth;
     const targetYear = yearOverride !== null ? yearOverride : window.reportYear;
 
-    // Academy billing floor: the academy started collecting fees in July
-    // 2026, so no month before 2026-07 is ever billable — no pre-July dues
-    // or overdue arrears anywhere.
-    if (targetYear < 2026 || (targetYear === 2026 && targetMonth < 6)) {
-      return "Not Enrolled";
-    }
-
-    const isCurrentMonth =
-      targetMonth === new Date().getUTCMonth() &&
-      targetYear === new Date().getUTCFullYear();
-    const targetMonthEnd = new Date(
-      Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59),
-    );
-    const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}`;
-
     // 1. Enrollment gate
     const enrollStatus = getStudentStatus(s);
     if (
@@ -3405,18 +3637,20 @@
     }
     const enrollDateStr = getStudentDate(s);
     const enrollDate = enrollDateStr ? new Date(enrollDateStr) : null;
+    const targetMonthEnd = new Date(
+      Date.UTC(targetYear, targetMonth + 1, 0, 23, 59, 59),
+    );
     if (!enrollDate || enrollDate > targetMonthEnd) return "Not Enrolled";
 
-    // 2. Current month: trust the stored status (maintained by the backend cron)
-    if (
-      isCurrentMonth &&
-      s.payment_status &&
-      ["Paid", "Pending", "Due", "Overdue"].includes(s.payment_status)
-    ) {
-      return s.payment_status;
+    // Academy billing floor: the academy started collecting fees in July
+    // 2026, so no month before 2026-07 is ever billable — no pre-July dues
+    // or overdue arrears anywhere. Before July 2026, it is marked 'Paid' if enrolled.
+    if (targetYear < 2026 || (targetYear === 2026 && targetMonth < 6)) {
+      return "Paid";
     }
 
     // 3. Paid for this specific month? (payment dated or applied to this month)
+    const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}`;
     const sIdKey = String(s.id || "").trim().toLowerCase();
     const paidThisMonth = (allPayments || []).some((p) => {
       if (String(p.student_id || "").trim().toLowerCase() !== sIdKey) return false;
@@ -3456,8 +3690,7 @@
     );
 
     if (isFuture || now < dueDateObj) return "Pending";
-    const diffDays = Math.floor((now - dueDateObj) / (1000 * 60 * 60 * 24));
-    return diffDays > 3 ? "Overdue" : "Due";
+    return "Due";
   }
 
   // ── COUNTRY PHONE VALIDATION ──
@@ -6198,7 +6431,7 @@
           btnArea.innerHTML = `
           <div style="display:flex;gap:6px;align-items:center;background:var(--surface2);padding:3px 8px;border-radius:8px;border:1px solid var(--border);box-shadow:var(--shadow-amber)">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            <input type="month" id="report-period" class="selector-minimal" onchange="updateReportContext()" value="${periodValue}">
+            <input type="month" id="report-period" class="selector-minimal" min="2026-07" onchange="updateReportContext()" value="${periodValue}">
           </div>
           <button class="btn btn-outline" onclick="if(window.generateReportPDF)window.generateReportPDF()">📄 Financial Report</button>
           <button class="btn btn-outline" onclick="if(window.generateReportPPT)window.generateReportPPT()" style="border-color:var(--amber); color:var(--amber);">📊 Boardroom Slides</button>

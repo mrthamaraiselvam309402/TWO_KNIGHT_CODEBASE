@@ -28,6 +28,27 @@ function timingSafeEqual(a, b) {
   return out === 0;
 }
 
+// Zoho sends "X-Zoho-Webhook-Signature: t=<unixMillis>,v=<hexHmac>" and the
+// HMAC-SHA256 is computed over `${t}.${rawBody}` (timestamp + '.' + raw body).
+// Fall back to treating a bare header as the hex signature over the raw body.
+function parseZohoSignature(header) {
+  const h = String(header || '').trim();
+  const out = { t: '', v: '' };
+  if (h.includes('=')) {
+    for (const part of h.split(',')) {
+      const idx = part.indexOf('=');
+      if (idx === -1) continue;
+      const k = part.slice(0, idx).trim();
+      const val = part.slice(idx + 1).trim();
+      if (k === 't') out.t = val;
+      else if (k === 'v') out.v = val;
+    }
+  } else {
+    out.v = h; // bare hex signature, no timestamp
+  }
+  return out;
+}
+
 export default async function handler(request) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -53,13 +74,16 @@ export default async function handler(request) {
     // (from simulated-zoho-checkout.html) are only accepted while Zoho
     // itself is unconfigured, i.e. demo environments.
     const secret = process.env.ZOHO_WEBHOOK_SECRET;
-    const signature =
+    const signatureHeader =
       request.headers?.get('x-zoho-webhook-signature') ||
       request.headers?.get('x-zohopayments-signature') || '';
 
     if (secret) {
-      const expected = await hmacSha256Hex(secret, rawBody);
-      if (!timingSafeEqual(expected, signature.toLowerCase())) {
+      const { t, v } = parseZohoSignature(signatureHeader);
+      // Zoho signs `${timestamp}.${rawBody}`; bare-hex fallback signs the body.
+      const signedData = t ? `${t}.${rawBody}` : rawBody;
+      const expected = await hmacSha256Hex(secret, signedData);
+      if (!timingSafeEqual(expected, v.toLowerCase())) {
         const simulatedAllowed = !zohoConfigured() && payload.simulated === true;
         if (!simulatedAllowed) {
           console.warn('[Zoho Webhook] signature mismatch, rejecting');
