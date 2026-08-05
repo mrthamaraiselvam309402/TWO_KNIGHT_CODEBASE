@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { verifySignedToken } from './_verify_token.js';
+import { verifySignedToken } from '../_verify_token.js';
 
 // Decode the role claim from a Supabase JWT without verifying the signature
 // (the gateway has already validated it). Returns '' if it can't be read.
