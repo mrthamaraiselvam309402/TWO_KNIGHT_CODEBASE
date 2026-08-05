@@ -137,17 +137,24 @@ Deno.serve(async (req) => {
       if (!phoneStr) return { countryCode: 'IN', localNumber: '' };
       const digits = phoneStr.replace(/\D/g, '');
       if (digits.length === 10) {
-        if (digits.startsWith('658') || digits.startsWith('659')) {
-          return { countryCode: 'SG', localNumber: digits.slice(2) };
-        }
+        // 10 digits starting 6-9 is an Indian mobile. This collides with a
+        // Singapore number (+65 plus 8 digits), and resolving it in Singapore's
+        // favour corrupted valid Indian mobiles beginning 658/659 by chopping
+        // two digits. India wins the tie here; genuine SG numbers are carried
+        // by the stored country_code.
         if (digits.startsWith('6') || digits.startsWith('7') || digits.startsWith('8') || digits.startsWith('9')) {
           return { countryCode: 'IN', localNumber: digits };
         }
       }
       const sortedCountries = [...COUNTRY_CODES].sort((a, b) => b.dial.length - a.dial.length);
       for (const c of sortedCountries) {
-        if (digits.startsWith(c.dial)) {
-          const local = digits.slice(c.dial.length);
+        // c.dial carries a leading '+' but `digits` has every non-digit
+        // stripped, so comparing against c.dial directly never matched and this
+        // whole loop was dead — every international number fell through to the
+        // 'IN' default with its country code left inside the local number.
+        const dialDigits = String(c.dial).replace(/\D/g, '');
+        if (digits.startsWith(dialDigits)) {
+          const local = digits.slice(dialDigits.length);
           if (local.length >= c.length - 2 && local.length <= c.length + 2) {
             return { countryCode: c.code, localNumber: local };
           }
@@ -210,8 +217,10 @@ return {
         special_notes: s.special_notes || '',
         chesscom_username: s.chesscom_username || '',
         lichess_username: s.lichess_username || '',
+        chessable_username: s.chessable_username || '',
         days: s.days || '',
         admission_fee: parseInt(String(s.admission_fee)) || 0,
+        admission_paid: s.admission_paid === true,
         created_at: s.created_at,
         updated_at: s.updated_at
       }
@@ -378,6 +387,7 @@ const newStudent: Record<string, unknown> = {
           special_notes: sanitizeString(rawBody.special_notes, 1000) || null,
           chesscom_username: sanitizeString(rawBody.chesscom_username, 50) || null,
           lichess_username: sanitizeString(rawBody.lichess_username, 50) || null,
+          chessable_username: sanitizeString(rawBody.chessable_username, 50) || null,
           days: rawBody.days ? sanitizeString(String(rawBody.days), 100) : null,
           // If due_date is missing, default to the 5th of the next month
           due_date: rawBody.due_date && String(rawBody.due_date).trim() ? String(rawBody.due_date).trim() : (() => {
@@ -554,6 +564,9 @@ if (rawBody.father_name !== undefined) updateData.father_name = sanitizeString(r
       if (rawBody.special_notes !== undefined) updateData.special_notes = sanitizeString(rawBody.special_notes, 1000);
       if (rawBody.chesscom_username !== undefined) updateData.chesscom_username = sanitizeString(rawBody.chesscom_username, 50);
       if (rawBody.lichess_username !== undefined) updateData.lichess_username = sanitizeString(rawBody.lichess_username, 50);
+      // The chessable_username column exists (migration 20260622100000) but was
+      // never persisted or returned, so the form field was dead end-to-end.
+      if (rawBody.chessable_username !== undefined) updateData.chessable_username = sanitizeString(rawBody.chessable_username, 50);
       if (rawBody.password !== undefined) updateData.password = sanitizeString(rawBody.password, 255);
 if (rawBody.enrollment_date !== undefined || rawBody.join_date !== undefined) {
          const dateVal = rawBody.enrollment_date || rawBody.join_date;
@@ -592,6 +605,11 @@ if (rawBody.session_mode !== undefined || rawBody.batch_type !== undefined) {
 if (rawBody.monthly_fee !== undefined || rawBody.fee !== undefined || rawBody.fees !== undefined || rawBody.tuition_fee !== undefined) {
         const feeVal = parseInt(String(rawBody.monthly_fee ?? rawBody.fee ?? rawBody.fees ?? rawBody.tuition_fee)) || 0;
         updateData.monthly_fee = feeVal;
+      }
+      // admission_paid was never accepted here, so marking the one-time fee as
+      // collected could not be persisted.
+      if (rawBody.admission_paid !== undefined) {
+        updateData.admission_paid = rawBody.admission_paid === true || rawBody.admission_paid === 'true';
       }
       if (rawBody.admission_fee !== undefined) {
         updateData.admission_fee = parseInt(String(rawBody.admission_fee)) || 0;

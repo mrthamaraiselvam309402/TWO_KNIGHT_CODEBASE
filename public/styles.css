@@ -3487,3 +3487,62 @@ body[data-theme="light"] .trace-chip.failed {
 /* moreActions buttons were authored full-width for the old dropdown; inline
    them so History/Receipt/WhatsApp sit beside the primary actions. */
 .row-actions .btn { flex-shrink: 0; width: auto !important; margin-bottom: 0 !important; white-space: nowrap; }
+
+/* ── STUDENT REGISTRY TOTALS BAR ──
+   Billing roll-up for the students currently matching the registry filters.
+   Cards are buttons: clicking one narrows the registry to that bucket. */
+.stud-totals-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.stud-total-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+.stud-total-card:hover { transform: translateY(-2px); background: var(--bg3); }
+.stud-total-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.stud-total-card[aria-pressed="true"] { border-color: var(--gold); background: rgba(232, 168, 48, 0.1); }
+.stud-total-card .stc-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--ivory-dim);
+}
+.stud-total-card .stc-value {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--ivory);
+  overflow-wrap: anywhere;
+}
+.stud-total-card .stc-count { opacity: 0.75; font-weight: 600; }
+/* Bucket accents, matching the registry's own status colours. */
+.stud-total-card.is-total { border-color: var(--gold); }
+.stud-total-card.is-total   .stc-label, .stud-total-card.is-total   .stc-value { color: var(--gold); }
+.stud-total-card.is-paid    .stc-value { color: var(--success); }
+.stud-total-card.is-pending .stc-value { color: var(--warning); }
+.stud-total-card.is-due     .stc-value { color: #fb923c; }
+.stud-total-card.is-overdue .stc-value { color: var(--danger); }
+.stud-total-card.is-unbilled .stc-value { color: var(--ivory-dim); }
+/* Selection sum: informational, not a filter, so it is not clickable. */
+.stud-total-card.is-selected { cursor: default; border-color: var(--gold); background: rgba(232, 168, 48, 0.07); }
+.stud-total-card.is-selected:hover { transform: none; background: rgba(232, 168, 48, 0.07); }
+.stud-total-card.is-selected .stc-label, .stud-total-card.is-selected .stc-value { color: var(--gold); }
+
+@media (max-width: 768px) {
+  .stud-totals-bar { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .stud-total-card { padding: 10px; }
+  .stud-total-card .stc-value { font-size: 13px; }
+}

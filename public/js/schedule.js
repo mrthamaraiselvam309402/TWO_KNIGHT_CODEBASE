@@ -136,7 +136,7 @@
       document.getElementById("sch-coach-select").value = "";
     if (document.getElementById("sch-footnote"))
       document.getElementById("sch-footnote").value =
-        "Welcome to Two Knights Academy! We look forward to an exciting chess learning journey together.";
+        "Welcome to Two Knights Chess Academy! We look forward to an exciting chess learning journey together.";
   }
 
   // UTF-8 safe base64 helpers. The server sanitizes the `notes` column and
@@ -161,8 +161,28 @@
   // Parses the embedded schedule tag from the notes column. Supports the new
   // sanitization-safe [SCHEDULE64:...] format and the legacy [SCHEDULE:{...}].
   window.extractScheduleJSON = function (notesString, student = null) {
-    if (!notesString) {
-      // FALLBACK: Check student's days column first, then batch lookup
+    // 1. An explicit schedule tag always wins.
+    if (notesString) {
+      const m64 = notesString.match(/\[SCHEDULE64:([A-Za-z0-9+/=]+)\]/);
+      if (m64 && m64[1]) {
+        const decoded = decodeSchedulePayload(m64[1]);
+        if (decoded) return decoded;
+      }
+      const legacy = notesString.match(/\[SCHEDULE:({.*?})\]/);
+      if (legacy && legacy[1]) {
+        try {
+          return JSON.parse(legacy[1]);
+        } catch (e) {
+          console.warn("Failed to parse legacy schedule JSON", e);
+        }
+      }
+    }
+    // 2. No schedule tag: fall back to the student's own days column — the days
+    //    the admin picks in the edit modal — and then to their batch.
+    //    This fallback used to run only when notesString was EMPTY, but notes
+    //    always carry [STYPE:]/[LM:] tags, so it never ran and days edited on
+    //    the student never reached the schedule view.
+    {
       if (student) {
         // First try: use student's days column
         if (student.days) {
@@ -206,21 +226,6 @@
       }
       return null;
     }
-    const m64 = notesString.match(/\[SCHEDULE64:([A-Za-z0-9+/=]+)\]/);
-    if (m64 && m64[1]) {
-      const decoded = decodeSchedulePayload(m64[1]);
-      if (decoded) return decoded;
-    }
-    const match = notesString.match(/\[SCHEDULE:({.*?})\]/);
-    if (match && match[1]) {
-      try {
-        return JSON.parse(match[1]);
-      } catch (e) {
-        console.warn("Failed to parse legacy schedule JSON", e);
-        return null;
-      }
-    }
-    return null;
   };
 
   window.removeScheduleJSON = function (notesString) {
@@ -239,8 +244,10 @@
     }
 
     const student = (window.allStudents || []).find((s) => s.id == studentId);
-    if (student && student.notes) {
-      const schedData = window.extractScheduleJSON(student.notes);
+    // Pass the student so the days/batch fallback can run, and don't require
+    // notes — a student with no notes still has a days column to fall back on.
+    if (student) {
+      const schedData = window.extractScheduleJSON(student.notes, student);
       if (schedData) {
         if (document.getElementById("sch-reg-days"))
           document.getElementById("sch-reg-days").value =
@@ -804,7 +811,7 @@
 
     // NOTE: emojis are written as \u{...} escapes (pure ASCII in source) so
     // they can never be corrupted to "?" by file-encoding / build / transport.
-    let msg = `\u{1F451} *Two Knights ACADEMY*\n_Official Class Schedule_\n\n`; // 👑
+    let msg = `\u{1F451} *TWO KNIGHTS CHESS ACADEMY*\n_Official Class Schedule_\n\n`; // 👑
     msg += `Hello Sir/Madam, \u{1F44B}\n\n`; // 👋
     msg += `We are happy to inform you that *${cleanName}* has been scheduled for chess classes at our academy. \u{265F}\u{FE0F}\n\n`; // ♟️
     msg += `\u{1F5D3}\u{FE0F} *REGULAR CLASS*\n`; // 🗓️
@@ -865,8 +872,10 @@
 
   window.syncClassCalendar = function (studentId) {
     const student = (window.allStudents || []).find((s) => s.id == studentId);
-    if (!student || !student.notes) return;
-    const schedData = window.extractScheduleJSON(student.notes);
+    if (!student) return;
+    // Pass the student so a schedule derived from their days column (rather
+    // than a notes tag) still syncs to the calendar.
+    const schedData = window.extractScheduleJSON(student.notes, student);
     if (!schedData) return;
 
     // Parse days

@@ -615,7 +615,7 @@
       <div style="width:600px; height:800px; background:linear-gradient(160deg,#0f1117 0%,#1a1d29 55%,#0b0d13 100%); color:#fff; font-family:Arial,sans-serif; padding:48px 44px; box-sizing:border-box; position:relative; overflow:hidden;">
         <div style="position:absolute; top:-40px; right:-30px; font-size:260px; opacity:0.05;">♟️</div>
         <div style="text-align:center; border-bottom:2px solid #DAA33E; padding-bottom:18px;">
-          <div style="font-size:13px; letter-spacing:5px; color:#DAA33E; font-weight:700;">Two Knights ACADEMY</div>
+          <div style="font-size:13px; letter-spacing:5px; color:#DAA33E; font-weight:700;">Two Knights Chess Academy</div>
           <div style="font-size:11px; letter-spacing:3px; color:#9aa0ad; margin-top:6px;">TOURNAMENT ANNOUNCEMENT</div>
         </div>
         <div style="margin-top:46px; text-align:center;">
@@ -721,7 +721,7 @@ END:VCALENDAR`;
     const studentName = studentObj ? (studentObj.name || studentObj.full_name) : 'Student';
     const eventDate = new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-    const msg = `🏆 *Two Knights TOURNAMENT REMINDER*\n\nHello Parent,\n\nWe found a highly compatible chess event for *${studentName}* nearby:\n\n📌 *Tournament:* ${t.title}\n📅 *Date:* ${eventDate} @ ${t.time}\n📍 *Venue:* ${t.location}\n💰 *Entry Fee:* ${t.fee > 0 ? `Rs.${t.fee}` : 'Free Entry'}\n🔥 *Category:* ${t.category}\n\n🔗 *Register Here:* ${t.regLink}\n\nGood luck! Two Knights Academy Team`;
+    const msg = `🏆 *Two Knights TOURNAMENT REMINDER*\n\nHello Parent,\n\nWe found a highly compatible chess event for *${studentName}* nearby:\n\n📌 *Tournament:* ${t.title}\n📅 *Date:* ${eventDate} @ ${t.time}\n📍 *Venue:* ${t.location}\n💰 *Entry Fee:* ${t.fee > 0 ? `Rs.${t.fee}` : 'Free Entry'}\n🔥 *Category:* ${t.category}\n\n🔗 *Register Here:* ${t.regLink}\n\nGood luck! Two Knights Chess Academy Team`;
 
     const phone = studentObj ? (studentObj.parent_phone || studentObj.phone || '') : '';
     const parsed = window.parseStoredPhone ? window.parseStoredPhone(phone) : { countryCode: 'IN', localNumber: phone };
