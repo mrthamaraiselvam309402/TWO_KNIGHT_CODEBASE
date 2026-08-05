@@ -49,7 +49,7 @@ window.generateReportPDF = async function() {
 
      // 1. Data Aggregation (Filtered by Period)
      const monthEndLimit = new Date(Date.UTC(targetYear, targetMonth + 1, 0)); // last day of month at 00:00 UTC
-     const baseline = new Date(Date.UTC(2026, 5, 1, 0, 0, 0)); // June 1st Baseline (UTC)
+     const baseline = new Date(Date.UTC(2026, 6, 1, 0, 0, 0)); // July 1st 2026 billing floor (UTC)
      
      const targetStudents = allStudents.filter(s => {
           const sStatus = getStudentStatus(s);
@@ -125,7 +125,12 @@ window.generateReportPDF = async function() {
     let potential = 0;
 
     targetStudents.forEach(s => {
-        const fee = getStudentMonthlyFee(s) || 0;
+        // Expected value for THIS month: what was actually billed once the
+        // month is settled, else the student's current fee. Collected uses the
+        // billed amount, so projecting from today's fee made the two drift.
+        const fee = window.getExpectedTuitionFor
+          ? window.getExpectedTuitionFor(s, targetYear, targetMonth)
+          : getStudentMonthlyFee(s) || 0;
         const enrollDateStr = getStudentDate(s);
         let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
         if (isNaN(enrollDate.getTime())) {
@@ -280,7 +285,9 @@ window.generateReportPDF = async function() {
             let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
             if (isNaN(enrollDate.getTime())) enrollDate = baseline;
             if (enrollDate <= mEnd) {
-                const fee = getStudentMonthlyFee(s) || 0;
+                const fee = window.getExpectedTuitionFor
+                  ? window.getExpectedTuitionFor(s, y, m)
+                  : getStudentMonthlyFee(s) || 0;
                 mPotential += fee;
                 
                 const status = getStudentPaymentStatus(s, m, y);
@@ -612,7 +619,7 @@ window.generateReportPDF = async function() {
     </table>
 
     <div class="footer">
-      <div>© Two Knights ACADEMY MANAGEMENT</div>
+      <div>© Two Knights Chess Academy MANAGEMENT</div>
       <div>CLASSIFICATION: EXECUTIVE</div>
       <div>PAGE 01 / 03</div>
     </div>
@@ -713,7 +720,7 @@ window.generateReportPDF = async function() {
     </div>
 
     <div class="footer">
-      <div>© Two Knights ACADEMY MANAGEMENT</div>
+      <div>© Two Knights Chess Academy MANAGEMENT</div>
       <div>AUTHENTICATED BY: CKD-AI-CORE</div>
       <div>PAGE 02 / 03</div>
     </div>
@@ -766,7 +773,7 @@ window.generateReportPDF = async function() {
     </div>
 
     <div class="footer">
-      <div>&copy; Two Knights ACADEMY MANAGEMENT</div>
+      <div>&copy; Two Knights Chess Academy MANAGEMENT</div>
       <div>AUDIT TRAIL: ${generatedAt.toISOString()}</div>
       <div>PAGE 03 / 03</div>
     </div>
@@ -930,7 +937,7 @@ window.generateReportPPT = async function() {
         const targetYM = `${targetYear}-${targetMonth}`;
         const monthStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
         const monthEndLimit = new Date(Date.UTC(targetYear, targetMonth + 1, 0));
-        const baseline = new Date(Date.UTC(2026, 5, 1, 0, 0, 0));
+        const baseline = new Date(Date.UTC(2026, 6, 1, 0, 0, 0));
 
         const targetStudents = allStudents.filter(s => {
             const sStatus = getStudentStatus(s);
@@ -1001,7 +1008,11 @@ window.generateReportPPT = async function() {
         let potential = 0;
 
         targetStudents.forEach(s => {
-            const fee = getStudentMonthlyFee(s) || 0;
+            // Settled months are worth what was billed; unsettled ones the
+            // current fee — same basis as Collected, so the two reconcile.
+            const fee = window.getExpectedTuitionFor
+              ? window.getExpectedTuitionFor(s, targetYear, targetMonth)
+              : getStudentMonthlyFee(s) || 0;
             potential += fee;
             const enrollDateStr = getStudentDate(s);
             let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
@@ -1122,7 +1133,9 @@ window.generateReportPPT = async function() {
                 let enrollDate = enrollDateStr ? new Date(enrollDateStr) : baseline;
                 if (isNaN(enrollDate.getTime())) enrollDate = baseline;
                 if (enrollDate <= mEnd) {
-                    const fee = getStudentMonthlyFee(s) || 0;
+                    const fee = window.getExpectedTuitionFor
+                      ? window.getExpectedTuitionFor(s, y, m)
+                      : getStudentMonthlyFee(s) || 0;
                     mPotential += fee;
                     const status = getStudentPaymentStatus(s, m, y);
                     if (status !== 'Paid' && status !== 'Not Enrolled') {
@@ -1208,7 +1221,7 @@ window.generateReportPPT = async function() {
         
         slide1.addShape('rect', { x: 0.5, y: 0.5, w: 9.0, h: 4.625, line: { color: goldAccent, width: 2 } });
         
-        slide1.addText("Two Knights ACADEMY", {
+        slide1.addText("Two Knights Chess Academy", {
             x: 1.0, y: 1.6, w: 8.0, h: 0.8,
             fontSize: 36, fontFace: 'Georgia', color: goldAccent, bold: true, align: 'center'
         });
@@ -1863,7 +1876,7 @@ window.generateEventCertificates = async function() {
        
        certHTML += `<div class="cert-page">
          <div class="c-title">CERTIFICATE OF PARTICIPATION</div>
-         <div class="c-sub">Two Knights ACADEMY</div>
+         <div class="c-sub">Two Knights Chess Academy</div>
          <div style="font-family: Montserrat; font-size: 16px; margin-bottom: 20px;">This is to proudly certify that</div>
          <div class="c-name">${name}</div>
          <div class="c-body">has successfully participated and demonstrated excellent sportsmanship in the <strong>${e.title}</strong> held on ${new Date(e.date || e.event_date).toLocaleDateString()}.</div>

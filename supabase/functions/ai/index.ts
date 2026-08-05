@@ -297,5 +297,5 @@ async function generateTOMResponse(message: string, role: string, moduleFocus: s
     return `🤖 **TOM AI — Parent Portal**\n\nI can help you track your child's chess journey. Ask me about:\n• Progress & ELO rating\n• Attendance records\n• Upcoming events\n• Payment status\n• Coach feedback`
   }
 
-  return `🤖 **Welcome to TOM AI** — the Training Operations Manager for Two Knights Academy.\n\nPlease sign in to access personalized insights and real-time analytics.`
+  return `🤖 **Welcome to TOM AI** — the Training Operations Manager for Two Knights Chess Academy.\n\nPlease sign in to access personalized insights and real-time analytics.`
 }

@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td style="color:var(--ivory-dim)">${idx + 1}</td>
           <td style="font-weight:500; color:var(--ivory)">${window.escapeHtml ? window.escapeHtml(name) : name}</td>
           <td style="font-family:monospace; font-size:12px;">${phone}</td>
-          <td><button class="btn btn-outline btn-sm" onclick="if(window.openStudentDetail)window.openStudentDetail('${s.id}')">View</button></td>
+          <td><button class="btn btn-outline btn-sm" onclick="if(window.viewStudent)window.viewStudent('${s.id}')">View</button></td>
         </tr>
       `;
     }).join('');
@@ -325,7 +325,23 @@ document.addEventListener('DOMContentLoaded', () => {
         '</tr>';
     }).join('');
 
-    updateCoachAttStats();
+    window.updateCoachAttStats();
+  };
+
+  // Live Present/Absent tally for the marking table. Reads the dropdowns rather
+  // than saved records, so the summary reflects unsaved edits as the coach marks
+  // (called on every status change and after the bulk mark-all buttons).
+  window.updateCoachAttStats = function () {
+    const summary = document.getElementById('coach-attendance-summary');
+    if (!summary) return;
+    let presentCount = 0;
+    let absentCount = 0;
+    document.querySelectorAll('#coach-att-marking-body .att-status').forEach((sel) => {
+      const v = (sel.value || '').toLowerCase();
+      if (v === 'present') presentCount++;
+      else if (v === 'absent') absentCount++;
+    });
+    summary.innerHTML = '<div class="coach-attendance-summary"><div class="coach-attendance-item present"><span class="attendance-count">' + presentCount + '</span><span class="attendance-label">Present</span></div><div class="coach-attendance-item absent"><span class="attendance-count">' + absentCount + '</span><span class="attendance-label">Absent</span></div></div>';
   };
 
   window.parseAttendanceNotes = function(raw) {
@@ -436,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const select = row.querySelector('.att-status');
       if (select) select.value = 'present';
     });
-    updateCoachAttStats();
+    window.updateCoachAttStats();
   };
 
   window.markAllCoachAbsent = function () {
@@ -445,7 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const select = row.querySelector('.att-status');
       if (select) select.value = 'absent';
     });
-    updateCoachAttStats();
+    window.updateCoachAttStats();
   };
 
   window.openCoachHomeworkModal = function () {

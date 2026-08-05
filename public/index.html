@@ -10,7 +10,7 @@
   <!-- Force UTF-8 encoding for all browsers including Edge -->
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <link href="/fonts/fonts.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=20260602_v10"/>
+  <link rel="stylesheet" href="styles.css?v=20260805_totals_bar"/>
 
    <!-- Local Libraries (self-hosted) -->
    <script src="lib/chart.umd.min.js"></script>
@@ -112,7 +112,7 @@
 </div>
 
 <nav class="sidebar" id="sidebar">
-  <div class="logo" style="padding: 16px 20px;"><img src="/assets/logo1.png" alt="Two Knights Academy" style="max-height: 54px; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></div>
+  <div class="logo" style="padding: 16px 20px;"><img src="/assets/logo1.png" alt="Two Knights Chess Academy" style="max-height: 54px; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></div>
   <div class="nav-group">
     <div class="nav-item admin-only" id="nav-dash" onclick="setPage('dash')"><span class="ico">📊</span> Dashboard</div>
     <div class="nav-item coach-only" id="nav-coach-dash" onclick="setPage('coach-dash')"><span class="ico">🏠</span> My Portal</div>
@@ -489,6 +489,7 @@
        </div>
 <div class="dash-grid" style="margin-bottom:14px">
         <div class="card"><div class="stat-label">Collected This Month</div><div class="stat-value text-success" id="s-curr-collected">₹0</div></div>
+        <div class="card"><div class="stat-label">Admission Fees (This Month)</div><div class="stat-value" style="color:var(--gold)" id="s-admission" title="Admission fees collected this month, plus admission for students enrolled this month that predates itemised recording">₹0</div></div>
         <div class="card"><div class="stat-label">Collected Last Month</div><div class="stat-value" style="color:var(--success)" id="s-prev-collected">₹0</div></div>
         <div class="card"><div class="stat-label">Collection Rate</div><div class="stat-value" style="color:var(--blue)" id="s-rate">—</div></div>
       </div>
@@ -570,7 +571,21 @@
          <div class="coach-section-block">
            <div class="coach-section-row">
              <h2 class="coach-section-title">Students</h2>
+             <!-- Collapsible-filters toggle. The CSS and toggleMobileFilters()
+                  for this button already existed but the button itself was
+                  never in the DOM, so on mobile the filter bar was
+                  display:none with no way to open it. -->
+             <button id="filter-toggle-btn" type="button" onclick="toggleMobileFilters()" aria-controls="student-filter-bar" aria-expanded="false"
+                     style="display:none; align-items:center; gap:6px; padding:8px 14px; background:transparent; border:1px solid var(--border); color:var(--ivory); border-radius:8px; font-size:13px; font-family:inherit; cursor:pointer;">
+               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+               <span>Filters</span>
+             </button>
            </div>
+
+           <!-- Billing totals for the students currently matching the filters.
+                Each card is clickable to narrow the registry to that bucket. -->
+           <div id="stud-totals-bar" class="stud-totals-bar" aria-live="polite"></div>
+
            <div id="student-filter-bar" class="filter-bar" style="margin-bottom:15px; background:var(--surface2); padding:12px; border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px; width:100%;">
                <!-- First Row: Search and Core Filters -->
                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; width:100%;">
@@ -1896,7 +1911,7 @@
           <!-- Footnote / Extra info -->
           <div class="form-group" style="margin-top:16px;">
             <label class="label">Custom Welcoming Footnote</label>
-            <textarea id="sch-footnote" class="input-field" style="height:70px; resize:none;">Welcome to Two Knights Academy! We look forward to an exciting chess learning journey together.</textarea>
+            <textarea id="sch-footnote" class="input-field" style="height:70px; resize:none;">Welcome to Two Knights Chess Academy! We look forward to an exciting chess learning journey together.</textarea>
           </div>
 
           <!-- Action buttons -->
@@ -4078,7 +4093,7 @@
     <div class="modal-grid" style="margin-top:12px">
       <div class="form-group">
         <label>Amount (₹)</label>
-        <input type="number" id="mp-amount" placeholder="0">
+        <input type="number" id="mp-amount" placeholder="0" oninput="updateMarkPaidTotal()">
       </div>
       <div class="form-group">
         <label>Payment Mode</label>
@@ -4088,6 +4103,16 @@
           <option value="Bank Transfer">Bank Transfer</option>
           <option value="Online">Online</option>
         </select>
+      </div>
+    </div>
+    <div class="modal-grid">
+      <div class="form-group">
+        <label>Admission Fee (₹) <span style="font-weight:400;font-size:11px;color:var(--muted)">one-time · leave 0 if already paid</span></label>
+        <input type="number" id="mp-admission" placeholder="0" value="0" oninput="updateMarkPaidTotal()">
+      </div>
+      <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end">
+        <label>Total on Receipt</label>
+        <div id="mp-total" class="stat-value" style="font-size:18px;color:var(--gold)">₹0</div>
       </div>
     </div>
     <div class="modal-grid">
@@ -4103,6 +4128,22 @@
     <div class="form-group">
       <label>For Month</label>
       <input type="month" id="mp-month" min="2026-07">
+    </div>
+    <!-- Appears only when the amount entered differs from the student's stored
+         monthly fee, so the admin explicitly decides whether this is a one-off
+         adjustment or their new recurring fee. -->
+    <div class="form-group" id="mp-fee-change-block" style="display:none;background:rgba(232,168,48,0.08);border:1px solid var(--gold);border-radius:8px;padding:10px 12px;margin-top:4px">
+      <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:8px">
+        Fee changed: <span id="mp-fee-old"></span> → <span id="mp-fee-new"></span>
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12px;margin-bottom:6px;cursor:pointer">
+        <input type="radio" name="mp-fee-scope" value="once" checked style="margin-top:2px;width:auto">
+        <span>This month only — keep their monthly fee at <span id="mp-fee-old-2"></span></span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12px;cursor:pointer">
+        <input type="radio" name="mp-fee-scope" value="forward" style="margin-top:2px;width:auto">
+        <span>Going forward — make <span id="mp-fee-new-2"></span> their new monthly fee for this and future months</span>
+      </label>
     </div>
     <div style="display:flex;gap:10px;margin-top:18px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal('mark-paid-modal')">Cancel</button>
@@ -4289,28 +4330,28 @@
 
       <script src="js/telemetry.js?v=1.0" charset="utf-8"></script>
       <script src="js/productivity.js?v=1.2&t=20260601c" charset="utf-8"></script>
-      <script src="js/tournaments.js?v=1.3&t=20260611a" charset="utf-8"></script>
+      <script src="js/tournaments.js?v=1.4&t=20260729r" charset="utf-8"></script>
       <script src="js/access.js?v=1.4&t=20260601i"></script>
-      <script src="js/tom-brain.js?v=1.0&t=20260601" charset="utf-8"></script>
-      <script src="scripts.js?v=10.1&t=20260711_inline_actions" charset="utf-8"></script>
+      <script src="js/tom-brain.js?v=1.1&t=20260729r" charset="utf-8"></script>
+      <script src="scripts.js?v=10.7&t=20260805_days_admission" charset="utf-8"></script>
       <script src="js/chess-api.js?v=2.2&t=20260711_chesscom_edge"></script>
       <script src="js/homework.js?v=1.0&t=20260614" charset="utf-8"></script>
       <script src="js/expenditures.js?v=1.1&t=20260601d" charset="utf-8"></script>
       <script src="js/calculator.js?v=1.0" charset="utf-8"></script>
-      <script src="js/reporting.js?v=v13&t=20260602c" charset="utf-8"></script>
-      <script src="js/ai-assistant.js?v=v4&t=20260601" charset="utf-8"></script>
+      <script src="js/reporting.js?v=v14&t=20260729r" charset="utf-8"></script>
+      <script src="js/ai-assistant.js?v=v5&t=20260729r" charset="utf-8"></script>
       <script src="js/auth.js?v=v3&t=20260529" charset="utf-8"></script>
       <script src="js/router.js?v=20260529" charset="utf-8"></script>
       <script src="js/main.js?v=20260529" charset="utf-8"></script>
       <script src="js/chessboard.js?v=20260529" charset="utf-8"></script>
       <script src="js/admin.js?v=20260529" charset="utf-8"></script>
       <script src="js/student.js?v=20260529" charset="utf-8"></script>
-      <script src="js/coach.js?v=20260529" charset="utf-8"></script>
+      <script src="js/coach.js?v=20260805_att_stats" charset="utf-8"></script>
       <script src="js/batch-passwords.js" charset="utf-8"></script>
       <script src="js/encryption.js?v=20260529" charset="utf-8"></script>
       <script src="js/scripts_patch.js?v=2.3&t=20260529" charset="utf-8"></script>
-      <script src="js/automation.js?v=3.9&t=20260529" charset="utf-8"></script>
-      <script src="js/schedule.js?v=2.0&t=20260611a" charset="utf-8"></script>
+      <script src="js/automation.js?v=4.0&t=20260729r" charset="utf-8"></script>
+      <script src="js/schedule.js?v=2.2&t=20260805_days_link" charset="utf-8"></script>
  
       <script src="js/attendance_extension.js?v=2.0&t=20260611a" charset="utf-8"></script>
 

@@ -1,5 +1,5 @@
 /**
- * Two Knights ACADEMY - Complete Admin Panel Scripts
+ * Two Knights Chess Academy - Complete Admin Panel Scripts
  * Fixed version - Academy Expansion Logic Integrated
  */
 
@@ -164,8 +164,114 @@
 
   window.allResources = allResources;
 
-  window.reportMonth = new Date().getUTCMonth(); // 0-11 (UTC)
-  window.reportYear = new Date().getUTCFullYear();
+  // ── LIVE BILLING PERIOD (auto-rolls; never needs manual switching) ──
+  // The academy started collecting fees in July 2026, so the period never
+  // resolves earlier than that — matches the `min` on the month selectors, the
+  // floor in getStudentPaymentStatus and migration 20260711000003.
+  const BILLING_FLOOR = { year: 2026, month: 6 }; // month is 0-indexed: 6 = July
+
+  // "Today" in the academy's own timezone — deliberately LOCAL, not UTC.
+  // getUTCMonth() rolls over 5.5h late in IST, so between 00:00 and 05:30 IST
+  // on the 1st the whole panel still showed the previous month.
+  function getCurrentPeriod() {
+    const now = new Date();
+    let year = now.getFullYear();
+    let month = now.getMonth();
+    if (
+      year < BILLING_FLOOR.year ||
+      (year === BILLING_FLOOR.year && month < BILLING_FLOOR.month)
+    ) {
+      year = BILLING_FLOOR.year;
+      month = BILLING_FLOOR.month;
+    }
+    return { year, month };
+  }
+  window.getCurrentPeriod = getCurrentPeriod;
+
+  // YYYY-MM key for a 0-indexed month — the value shape <input type="month"> uses.
+  function periodKey(year, month) {
+    return `${year}-${String(month + 1).padStart(2, "0")}`;
+  }
+  window.periodKey = periodKey;
+
+  // Is the view pinned to the live month? Used to decide whether a recorded
+  // payment is dated "now" or backdated to the month being browsed. Must be
+  // compared in the same (local) frame as getCurrentPeriod, otherwise the
+  // answer flips incorrectly for the first hours of the 1st in IST.
+  function isViewingCurrentPeriod() {
+    const cur = getCurrentPeriod();
+    return window.reportMonth === cur.month && window.reportYear === cur.year;
+  }
+  window.isViewingCurrentPeriod = isViewingCurrentPeriod;
+
+  const initialPeriod = getCurrentPeriod();
+  window.reportMonth = initialPeriod.month; // 0-11 (local)
+  window.reportYear = initialPeriod.year;
+
+  // The period the app last believed was "now". The rollover watchdog compares
+  // against this to tell "user is sitting on the live month" (advance it) apart
+  // from "user deliberately opened a past month" (leave that view alone).
+  let lastSeenPeriodKey = periodKey(initialPeriod.year, initialPeriod.month);
+
+  // Push the globals into every month selector on screen and re-render whatever
+  // page is showing, so a rollover needs no manual interaction.
+  function applyReportPeriodToUI() {
+    const val = periodKey(window.reportYear, window.reportMonth);
+    ["report-period", "f-bill-month", "f-bill-month-stud"].forEach((id) => {
+      const el = document.getElementById(id);
+      // f-bill-month-stud doubles as a filter — only retarget it if it was set.
+      if (el && (id !== "f-bill-month-stud" || el.value)) el.value = val;
+    });
+    const active = document.querySelector(".page.active")?.id;
+    if (active === "page-dash") renderDash();
+    else if (active === "page-stud") renderStudents();
+    else if (active === "page-bills") renderBills();
+  }
+  window.applyReportPeriodToUI = applyReportPeriodToUI;
+
+  // Snap the view back to the live month (login + the "current month" resets).
+  // Also rebaselines the watchdog so it doesn't treat this as a rollover.
+  function syncToCurrentPeriod() {
+    const cur = getCurrentPeriod();
+    window.reportYear = cur.year;
+    window.reportMonth = cur.month;
+    lastSeenPeriodKey = periodKey(cur.year, cur.month);
+    return cur;
+  }
+  window.syncToCurrentPeriod = syncToCurrentPeriod;
+
+  // Auto month rollover. The panel is a long-lived SPA that admins leave open
+  // for days, and the period used to be computed only at script load and at
+  // login — so on the 1st it kept showing last month (stale Due/Pending and
+  // stale due dates) until someone changed the selector by hand. Re-check on a
+  // timer and whenever the tab is refocused, since background tabs get their
+  // timers throttled or frozen entirely.
+  function checkPeriodRollover() {
+    const cur = getCurrentPeriod();
+    const curKey = periodKey(cur.year, cur.month);
+    if (curKey === lastSeenPeriodKey) return;
+
+    const wasOnLiveMonth =
+      periodKey(window.reportYear, window.reportMonth) === lastSeenPeriodKey;
+    lastSeenPeriodKey = curKey;
+    if (!wasOnLiveMonth) return; // browsing history — don't yank the view
+
+    window.reportYear = cur.year;
+    window.reportMonth = cur.month;
+    applyReportPeriodToUI();
+    toast(
+      `New month — now showing ${new Date(cur.year, cur.month, 1).toLocaleString("en-IN", { month: "long", year: "numeric" })}`,
+      "info",
+    );
+  }
+  window.checkPeriodRollover = checkPeriodRollover;
+
+  setInterval(checkPeriodRollover, 60000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) checkPeriodRollover();
+  });
+  window.addEventListener("focus", checkPeriodRollover);
+
   window.isEditing = false;
 
   let currentStudent = null;
@@ -1790,8 +1896,21 @@
     const s = currentStudent;
     const status = getStudentPaymentStatus(s);
     const fee = getStudentMonthlyFee(s) || 0;
-    const dueDate = s.due_date
-      ? new Date(s.due_date).toLocaleDateString()
+    // Due date follows the month being viewed — the stored due_date only
+    // supplies the recurring billing day. Rendering it raw pinned the parent
+    // dashboard to the month the due date was first set (e.g. July).
+    const hasDueBasis = !!(s.due_date || getStudentDate(s));
+    const dueDate = hasDueBasis
+      ? getStudentDueDateFor(
+          s,
+          "",
+          window.reportMonth,
+          window.reportYear,
+        ).date.toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
       : "Not set";
     const myPayments = allPayments.filter(
       (p) => String(p.student_id) === String(s.id),
@@ -2766,6 +2885,7 @@
       : "9025846663 (Ranjith)";
     if (isDueOrOverdue) {
       return (
+        `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*\n\n` + // ♟️ letterhead
         `\u{1F534} FEE PAYMENT DUE\n\n` + // 🔴
         `Hello Sir/Madam, \u{1F44B}\n\n` + // 👋
         `\u{265F}\u{FE0F} This is a gentle note that your Monthly Tuition payment is currently due.\n\n` + // ♟️
@@ -2774,10 +2894,11 @@
         `Kindly complete the payment on or before the due date to avoid any interruption in class participation. \u{1F64F}\n\n` + // 🙏
         `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n\n` + // 📲
         `Thank you for your continued support! \u{1F31F}\n` + // 🌟
-        `\u{265F}\u{FE0F} Two Knights Academy`
+        `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*`
       ); // ♟️
     }
     return (
+      `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*\n\n` + // ♟️ letterhead
       `\u{1F4E2} UPCOMING FEE REMINDER\n\n` + // 📢
       `Hello Sir/Madam, \u{1F44B}\n\n` + // 👋
       `We hope you are doing well! \u{1F60A} This is a friendly reminder that your Monthly Tuition payment is coming up soon. \u{265F}\u{FE0F}\n\n` + // 😊 ♟️
@@ -2786,7 +2907,7 @@
       `Kindly complete the payment on or before the due date. \u{1F64F}\n\n` + // 🙏
       `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n\n` + // 📲
       `Thank you so much for your support and cooperation! \u{1F31F}\n` + // 🌟
-      `\u{265F}\u{FE0F} Two Knights Academy`
+      `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*`
     ); // ♟️
   }
 
@@ -2995,7 +3116,7 @@
     );
 
     let msg =
-      `${EMOJI.warning} Two Knights ACADEMY – FEE AUDIT REPORT ${EMOJI.chart}\n\n` +
+      `${EMOJI.warning} *TWO KNIGHTS CHESS ACADEMY* – FEE AUDIT REPORT ${EMOJI.chart}\n\n` +
       `Hello Coach ${cleanText(getCoachName(c)).toUpperCase()} ${EMOJI.teacher},\n\n` +
       `The following students under your mentorship have an outstanding balance for the ${dateStr} billing cycle ${EMOJI.calendar}:\n\n` +
       studentLines.join("\n") +
@@ -3006,7 +3127,7 @@
       `${EMOJI.siren} ARREARS = Unpaid fees from previous months\n` +
       `${EMOJI.pending} PENDING = Current month's unpaid fee\n\n` +
       `Regards,\n` +
-      `Administrative Team | Two Knights Academy ${EMOJI.trophy}${EMOJI.sparkle}`;
+      `Administrative Team | *TWO KNIGHTS CHESS ACADEMY* ${EMOJI.trophy}${EMOJI.sparkle}`;
 
     const phone = c.phone || c.contact || "0000000000";
     const parsed = parseStoredPhone(phone);
@@ -3553,8 +3674,16 @@
   }
   window.getBillingAnchor = getBillingAnchor;
 
-  function getStudentDueConfig(s, coachName, month = 4, year = 2026) {
+  // month/year default to the LIVE period — they used to be hardcoded to
+  // May 2026, which silently mis-applied the first-month due-day override for
+  // any caller that omitted them.
+  function getStudentDueConfig(s, coachName, month = null, year = null) {
     if (!s) return { day: 5, feeOverride: null };
+    if (month === null || year === null) {
+      const cur = getCurrentPeriod();
+      if (month === null) month = cur.month;
+      if (year === null) year = cur.year;
+    }
     let day = 5;
     let feeOverride = null;
 
@@ -3609,8 +3738,61 @@
       }
     }
 
+    // Clamp to the target month's length: a stored billing day of 31 must not
+    // roll into the next month (new Date(2026, 1, 31) silently becomes Mar 3),
+    // and the registry must never print "31-Feb-2026".
+    const daysInTargetMonth = new Date(year, month + 1, 0).getDate();
+    if (day > daysInTargetMonth) day = daysInTargetMonth;
+    if (day < 1) day = 1;
+
     return { day, feeOverride };
   }
+
+  // The effective due date for a student IN A GIVEN MONTH. `due_date` is stored
+  // as a full YYYY-MM-DD (the forms are <input type="date">), but only its
+  // DAY is meaningful — it is a recurring monthly billing day. Rendering the
+  // stored month/year verbatim is what pinned every due date to July forever.
+  function getStudentDueDateFor(s, coachName, month, year) {
+    const cur = getCurrentPeriod();
+    const m = month ?? cur.month;
+    const y = year ?? cur.year;
+    const cfg = getStudentDueConfig(s, coachName || "", m, y);
+    return {
+      day: cfg.day,
+      date: new Date(y, m, cfg.day, 23, 59, 59),
+      iso: `${y}-${String(m + 1).padStart(2, "0")}-${String(cfg.day).padStart(2, "0")}`,
+    };
+  }
+  window.getStudentDueDateFor = getStudentDueDateFor;
+
+  // `special_notes` has to carry two unrelated things: the academic standard
+  // ("Standard: 5") and the free-text "Things about the Child". The forms had a
+  // textarea for the latter that was never saved and never repopulated, and the
+  // standard was written as the whole column value — so one always clobbered the
+  // other. Keep the standard on the first line and the free text below it.
+  function composeSpecialNotes(standard, childNotes) {
+    const std = String(standard || "").trim();
+    const child = String(childNotes || "").trim();
+    const parts = [];
+    if (std) parts.push(`Standard: ${std}`);
+    if (child) parts.push(child);
+    return parts.length ? parts.join("\n") : null;
+  }
+  window.composeSpecialNotes = composeSpecialNotes;
+
+  function parseSpecialNotes(raw) {
+    const text = String(raw || "");
+    const m = /^\s*Standard:\s*(.*)$/m.exec(text);
+    return {
+      standard: m ? m[1].trim() : "",
+      child: text
+        .split("\n")
+        .filter((l) => !/^\s*Standard:/.test(l))
+        .join("\n")
+        .trim(),
+    };
+  }
+  window.parseSpecialNotes = parseSpecialNotes;
 
   function getStudentPaymentStatus(
     s,
@@ -3671,8 +3853,8 @@
     // 4. Due-date based transition (no arrears / debt-first carry-over)
     const now = new Date();
     const isFuture =
-      targetYear > now.getUTCFullYear() ||
-      (targetYear === now.getUTCFullYear() && targetMonth > now.getUTCMonth());
+      targetYear > now.getFullYear() ||
+      (targetYear === now.getFullYear() && targetMonth > now.getMonth());
     const coach = allCoaches.find((c) => String(c.id) === String(s.coach_id));
     const dueCfg = getStudentDueConfig(
       s,
@@ -3826,9 +4008,13 @@
     if (!phoneStr) return { countryCode: "IN", localNumber: "" };
     const digits = phoneStr.replace(/\D/g, "");
     if (digits.length === 10) {
-      if (digits.startsWith("658") || digits.startsWith("659")) {
-        return { countryCode: "SG", localNumber: digits.slice(2) };
-      }
+      // A 10-digit number starting 6-9 is an Indian mobile. It is genuinely
+      // ambiguous with a Singapore number (+65 plus 8 digits is also 10
+      // digits), and the old code resolved that in Singapore's favour — which
+      // corrupted valid Indian mobiles beginning 658/659 by chopping two
+      // digits. This is an India-based academy, so India wins the tie;
+      // genuine SG numbers are identified by their stored country_code, which
+      // every caller already prefers over this heuristic.
       if (
         digits.startsWith("6") ||
         digits.startsWith("7") ||
@@ -3859,7 +4045,15 @@
     const country = getCountryByCode(countryCode);
     if (!country) return digits;
     const dialDigits = country.dial.replace(/\D/g, "");
-    if (digits.startsWith(dialDigits)) {
+    // Only treat a leading dial code as "already present" when removing it
+    // leaves a plausible local number. A bare prefix check silently dropped the
+    // country code from Indian mobiles that legitimately begin with 91
+    // (e.g. 9123456789 was stored as-is instead of 919123456789).
+    if (
+      digits.startsWith(dialDigits) &&
+      digits.length > country.length &&
+      Math.abs(digits.length - dialDigits.length - country.length) <= 2
+    ) {
       return digits;
     }
     return dialDigits + digits;
@@ -6164,6 +6358,29 @@
       : [];
     lastDueCount = dueStudents.length;
   }
+  // Poll helper. An unhealthy API returns an HTML error page, and calling
+  // .json() on that throws "Unexpected token '<'" — a cryptic error that hides
+  // the real HTTP status and aborts the rest of the poll cycle. Return null
+  // instead so the cycle degrades quietly and logs something actionable.
+  async function pollJson(path) {
+    const res = await apiCall(path);
+    if (!res || !res.ok) {
+      console.warn(`[poll] ${path} -> HTTP ${res ? res.status : "no response"}`);
+      return null;
+    }
+    const ctype = res.headers?.get?.("content-type") || "";
+    if (!ctype.includes("json")) {
+      console.warn(`[poll] ${path} -> non-JSON response (${ctype || "unknown"})`);
+      return null;
+    }
+    try {
+      return await res.json();
+    } catch (e) {
+      console.warn(`[poll] ${path} -> malformed JSON:`, e.message);
+      return null;
+    }
+  }
+
   function startNotificationPolling() {
     if (notificationPolling) return;
 
@@ -6171,9 +6388,8 @@
       if (typeof navigator !== "undefined" && !navigator.onLine) return; // Silent skip when offline
       try {
         // 1. New messages
-        const res = await apiCall("/api/messages");
-        const msgs = await res.json();
-        const newMsgs = msgs.data || msgs || [];
+        const msgs = await pollJson("/api/messages");
+        const newMsgs = msgs ? msgs.data || msgs || [] : [];
         if (newMsgs.length > lastMsgCount) {
           const newCount = newMsgs.length - lastMsgCount;
           const latest = newMsgs[0];
@@ -6189,9 +6405,8 @@
         }
 
         // 2. New student enrolled check
-        const studsRes = await apiCall("/api/students");
-        const studs = await studsRes.json();
-        const rawStuds = studs.data || studs || [];
+        const studs = await pollJson("/api/students");
+        const rawStuds = studs ? studs.data || studs || [] : [];
 
         const currentRaw = Array.isArray(rawStuds) ? rawStuds : [];
         const seenId = new Set();
@@ -6213,11 +6428,11 @@
 
         // 3. Failed login from Supabase
         try {
-          const auditRes = await apiCall("/api/audit?limit=10");
-          const auditData = await auditRes.json();
-          const failedLogins = (auditData.data || auditData || []).filter(
-            (l) => l.action === "login_failed",
-          );
+          const auditData = await pollJson("/api/audit?limit=10");
+          const failedLogins = (
+            (auditData && (auditData.data || auditData)) ||
+            []
+          ).filter((l) => l.action === "login_failed");
           if (failedLogins.length > 0) {
             const latest = failedLogins[0];
             if (
@@ -6663,14 +6878,10 @@ setTimeout(function () {
     }
 
     // Switch page immediately - DEFAULT TO CURRENT MONTH (not previous)
-    window.reportMonth = new Date().getUTCMonth();
-    window.reportYear = new Date().getUTCFullYear();
-    if ($("report-period"))
-      $("report-period").value =
-        `${window.reportYear}-${String(window.reportMonth + 1).padStart(2, "0")}`;
-    if ($("report-month-select"))
-      $("report-month-select").value =
-        `${window.reportYear}-${String(window.reportMonth + 1).padStart(2, "0")}`;
+    const loginPeriod = syncToCurrentPeriod();
+    const loginPeriodKey = periodKey(loginPeriod.year, loginPeriod.month);
+    if ($("report-period")) $("report-period").value = loginPeriodKey;
+    if ($("report-month-select")) $("report-month-select").value = loginPeriodKey;
 
     if (userRole === "parent") {
       setPage("child");
@@ -6970,7 +7181,8 @@ setTimeout(function () {
         "Dec",
       ];
       const counts = new Array(12).fill(0);
-      const currentYear = new Date().getUTCFullYear();
+      const trendPeriod = getCurrentPeriod();
+      const currentYear = trendPeriod.year;
       studs.forEach((s) => {
         const d = getStudentDate(s);
         if (d) {
@@ -6980,7 +7192,7 @@ setTimeout(function () {
           }
         }
       });
-      const endMonth = new Date().getUTCMonth();
+      const endMonth = trendPeriod.month;
       const startMonth = (endMonth - 5 + 12) % 12;
       const labels = [];
       const data = [];
@@ -7133,8 +7345,9 @@ setTimeout(function () {
         "Nov",
         "Dec",
       ];
-      const currentYear = new Date().getUTCFullYear();
-      const currentMonth = new Date().getUTCMonth();
+      const cur = getCurrentPeriod();
+      const currentYear = cur.year;
+      const currentMonth = cur.month;
 
       const labels = [];
       const paidData = [];
@@ -7255,6 +7468,53 @@ setTimeout(function () {
   }
   window.getStudentPaidInvoiceCount = getStudentPaidInvoiceCount;
 
+  // Tuition actually collected from ONE student for ONE month, or null when
+  // they have not paid it. Single source of truth so "Collected" and
+  // "Projected" can never drift apart: Projected asks this first and only falls
+  // back to the student's current fee when the answer is null.
+  function getCollectedTuitionFor(s, year, month) {
+    if (!s || !allPayments) return null;
+    const sid = String(s.id || "").trim().toLowerCase();
+    const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+    for (const p of allPayments) {
+      if (p.status !== "paid") continue;
+      if (isAdmissionPayment(p)) continue; // counted as admission revenue
+      if (String(p.student_id || "").trim().toLowerCase() !== sid) continue;
+      const pDate = new Date(p.payment_date || p.created_at);
+      const pKey =
+        p.applied_month ||
+        `${pDate.getUTCFullYear()}-${String(pDate.getUTCMonth() + 1).padStart(2, "0")}`;
+      if (pKey !== key) continue;
+      // The student's monthly_fee is the source of truth for what a settled
+      // month is worth. `payments.amount` is only a snapshot taken when "mark
+      // paid" was clicked, and it goes stale the moment an admin corrects the
+      // fee afterwards — which is exactly what happened to three July rows
+      // (fee edited 34 seconds to a day after payment), under-reporting July
+      // collections by ₹3,125. Reading the fee keeps the figure truthful and
+      // self-heals whenever a fee is corrected.
+      return getStudentMonthlyFee(s) || 0;
+    }
+    return null;
+  }
+  window.getCollectedTuitionFor = getCollectedTuitionFor;
+
+  // What one student is EXPECTED to contribute for one month.
+  //
+  // Once a month is paid, the amount on the payment row IS what that student
+  // was billed — pro-rata for a mid-month joiner, or a negotiated figure. Their
+  // `monthly_fee` is only a forward-looking default and changes over time, so
+  // projecting a settled month from it restates history: every "Projected vs
+  // Collected" figure in the app drifted apart by the fee changes made since.
+  // Unpaid months have no billed record yet, so the current fee is the estimate.
+  //
+  // Use this for ALL projected/potential/expected tuition so every screen
+  // agrees and Projected = Collected + Outstanding holds.
+  function getExpectedTuitionFor(s, year, month) {
+    const collected = getCollectedTuitionFor(s, year, month);
+    return collected !== null ? collected : getStudentMonthlyFee(s) || 0;
+  }
+  window.getExpectedTuitionFor = getExpectedTuitionFor;
+
   // Collected-revenue calculation (calendar month view)
   function calculateCollectedRevenue(year, month) {
     if (!allPayments) return 0;
@@ -7264,6 +7524,11 @@ setTimeout(function () {
     if (year < 2026 || (year === 2026 && month < 6)) return 0;
     const seenStuds = new Set();
     return allPayments.reduce((sum, p) => {
+      // Admission rows are counted by calculateAdmissionRevenue. Without this
+      // skip they'd be treated as the student's tuition payment for the month
+      // (the dedupe below keeps only the first row per student), replacing the
+      // real tuition figure with the admission amount.
+      if (isAdmissionPayment(p)) return sum;
       const pDate = new Date(p.payment_date || p.created_at);
       const pMonthKey = p.applied_month || `${pDate.getUTCFullYear()}-${String(pDate.getUTCMonth() + 1).padStart(2, '0')}`;
       const targetMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -7275,12 +7540,79 @@ setTimeout(function () {
         if (seenStuds.has(sid)) return sum;
         seenStuds.add(sid);
         const s = allStudents.find(x => String(x.id).toLowerCase() === sid);
-        const fee = s ? getStudentMonthlyFee(s) : (p.amount || 0);
-        return sum + fee;
+        // The student's fee is authoritative for a settled month (see
+        // getCollectedTuitionFor). A combined enrolment invoice also bundles
+        // admission, so its row amount would overstate tuition — the fee avoids
+        // that too. Only an orphaned row (student deleted) falls back to the
+        // recorded amount, since nothing better exists.
+        if (s) return sum + (getStudentMonthlyFee(s) || 0);
+        const paid = parseFloat(p.amount);
+        return sum + (Number.isFinite(paid) && paid > 0 ? paid : 0);
       }
       return sum;
     }, 0);
   }
+
+  // Canonical collected-revenue figure. reporting.js already calls
+  // `window.cycleRevenue ? window.cycleRevenue(y, m) : calculateSlotRevenue(y, m)`
+  // but nothing ever exported it, so every report silently used its own
+  // divergent copy: no July-2026 floor, bucketed by payment_date instead of
+  // the authoritative applied_month, and an extra status filter that dropped
+  // rows. That made the Financial Report disagree with the dashboard.
+  window.cycleRevenue = calculateCollectedRevenue;
+  window.calculateCollectedRevenue = calculateCollectedRevenue;
+
+  // Admission is recorded as its own payment row (description "Admission Fee")
+  // so the amount the admin actually collects is persisted and attributed to
+  // the month it was taken. Tuition maths must skip these rows.
+  // Standalone admission row only. Deliberately anchored to the start of the
+  // description so it does NOT match the enrolment edge function's combined
+  // "Monthly Tuition + Admission" invoice, which is handled separately below.
+  function isAdmissionPayment(p) {
+    return /^admission\b/i.test(String((p && p.description) || "").trim());
+  }
+  window.isAdmissionPayment = isAdmissionPayment;
+
+  // The students edge function books a new enrolment as ONE paid row worth
+  // (monthly fee + admission fee). Counting it whole overstates tuition by the
+  // admission amount, which calculateAdmissionRevenue then counts again.
+  function isCombinedAdmissionPayment(p) {
+    return /tuition\s*\+\s*admission/i.test(String((p && p.description) || ""));
+  }
+  window.isCombinedAdmissionPayment = isCombinedAdmissionPayment;
+
+  // Admission revenue for a month:
+  //   1. admission actually collected that month (its own payment rows), plus
+  //   2. legacy students enrolled that month whose admission predates those
+  //      rows — skipped once any admission payment exists for them, so the two
+  //      sources can never double-count the same student.
+  function calculateAdmissionRevenue(year, month) {
+    if (!allStudents) return 0;
+    if (year < 2026 || (year === 2026 && month < 6)) return 0; // same July-2026 floor
+    const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+    const everRecorded = new Set();
+    let total = (allPayments || []).reduce((sum, p) => {
+      if (p.status !== "paid" || !isAdmissionPayment(p)) return sum;
+      const sid = String(p.student_id || "").trim().toLowerCase();
+      everRecorded.add(sid);
+      const pDate = new Date(p.payment_date || p.created_at);
+      const pKey =
+        p.applied_month ||
+        `${pDate.getUTCFullYear()}-${String(pDate.getUTCMonth() + 1).padStart(2, "0")}`;
+      return pKey === key ? sum + (parseFloat(p.amount) || 0) : sum;
+    }, 0);
+
+    total += allStudents.reduce((sum, s) => {
+      if (everRecorded.has(String(s.id || "").trim().toLowerCase())) return sum;
+      const ed = getStudentDate(s) || s.enrollment_date || "";
+      if (String(ed).slice(0, 7) !== key) return sum;
+      return sum + (parseFloat(s.admission_fee || 0) || 0);
+    }, 0);
+
+    return total;
+  }
+  window.calculateAdmissionRevenue = calculateAdmissionRevenue;
 
   function renderDash() {
     // 1. Recalculate Payment Map for freshness (Deduplicated by month)
@@ -7342,6 +7674,9 @@ setTimeout(function () {
     const currCollected = calculateCollectedRevenue(targetYear, targetMonth);
     const prevMonthDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1));
     const prevCollected = calculateCollectedRevenue(prevMonthDate.getUTCFullYear(), prevMonthDate.getUTCMonth());
+    // Admission fees for the selected month (added to revenue + shown separately).
+    const admissionThisMonth = calculateAdmissionRevenue(targetYear, targetMonth);
+    if ($("s-admission")) $("s-admission").textContent = "₹" + admissionThisMonth.toLocaleString();
 
     const targetStudents = (allStudents || []).filter((s) => {
       const sStatus = getStudentStatus(s);
@@ -7401,7 +7736,15 @@ setTimeout(function () {
       // Only count students whose billing has STARTED by this month (respects the
       // late-join grace anchor), so Projected = Collected + Outstanding stays
       // consistent — a grace-month student isn't yet "expected" revenue.
-      if (monthsRequired >= 1) totalPotential += fee;
+      //
+      // For a student who HAS paid, the amount expected for that month is what
+      // they were actually billed, not their fee today. Projecting on today's
+      // fee while Collected reports the historical payment mixes two time
+      // frames, so a fully-paid past month showed Projected above Collected by
+      // exactly the fee increases applied since.
+      if (monthsRequired >= 1) {
+        totalPotential += getExpectedTuitionFor(s, targetYear, targetMonth);
+      }
 
       // Current Month Pending
       if (status !== "Paid") {
@@ -7428,10 +7771,11 @@ setTimeout(function () {
     }
 
     // Update UI
-    if ($("s-curr-collected")) $("s-curr-collected").textContent = "₹" + currCollected.toLocaleString();
+    if ($("s-curr-collected")) $("s-curr-collected").textContent = "₹" + (currCollected + admissionThisMonth).toLocaleString();
     if ($("s-prev-collected")) $("s-prev-collected").textContent = "₹" + prevCollected.toLocaleString();
     if ($("s-total-revenue"))
-      $("s-total-revenue").textContent = "₹" + totalPotential.toLocaleString();
+      $("s-total-revenue").textContent =
+        "₹" + (totalPotential + admissionThisMonth).toLocaleString();
 
     if ($("s-last-due"))
       $("s-last-due").textContent = "₹" + lastMonthDueAmount.toLocaleString();
@@ -7457,17 +7801,30 @@ setTimeout(function () {
         })
         .then((summary) => {
           if ($("s-profit")) {
-            const profitLoss = parseFloat(summary.profit_or_loss || 0);
-            const collected = parseFloat(summary.total_income || currCollected);
+            // Net Profit must reconcile with the figures shown on this same
+            // dashboard: Collected Revenue − Coach Payroll − Academy Expenditure.
+            // Previously it used the expenditures API's own profit_or_loss,
+            // which sums raw payment amounts by payment_date (a different
+            // revenue engine than currCollected) and ignored coach payroll —
+            // so Net Profit never matched Collected Revenue.
+            const academyExpense = parseFloat(summary.total_expense || 0);
+            const revenue = currCollected + admissionThisMonth;
+            const netProfit = revenue - totalCoachCost - academyExpense;
             $("s-profit").textContent =
-              "₹" + Math.round(profitLoss).toLocaleString();
-            $("s-profit").title = `Income: ₹${collected.toLocaleString()} | Expenses: ₹${parseFloat(summary.total_expense || 0).toLocaleString()}`;
+              "₹" + Math.round(netProfit).toLocaleString();
+            $("s-profit").style.color =
+              netProfit >= 0 ? "var(--success)" : "var(--danger)";
+            $("s-profit").title = `Revenue: ₹${revenue.toLocaleString()} (tuition ₹${currCollected.toLocaleString()} + admission ₹${admissionThisMonth.toLocaleString()}) − Coach payroll: ₹${totalCoachCost.toLocaleString()} − Expenses: ₹${academyExpense.toLocaleString()}`;
           }
         })
         .catch((err) => {
           console.error("[Dashboard] Failed to fetch other expenditures:", err);
           if ($("s-profit")) {
-            $("s-profit").textContent = "₹0";
+            // Fallback: still show a consistent figure (assume 0 expenses).
+            const revenue = currCollected + admissionThisMonth;
+            const netProfit = revenue - totalCoachCost;
+            $("s-profit").textContent = "₹" + Math.round(netProfit).toLocaleString();
+            $("s-profit").title = `Revenue: ₹${revenue.toLocaleString()} − Coach payroll: ₹${totalCoachCost.toLocaleString()}`;
           }
         });
     }
@@ -7749,14 +8106,134 @@ setTimeout(function () {
   };
 
   window.resetStudMonth = function () {
-    const now = new Date();
-    window.reportMonth = now.getUTCMonth();
-    window.reportYear = now.getUTCFullYear();
+    syncToCurrentPeriod();
     if ($("f-bill-month-stud")) $("f-bill-month-stud").value = "";
     if ($("f-due-date-stud")) $("f-due-date-stud").value = "";
     renderStudents();
     toast("Switched to current month view", "info");
   };
+
+  // ── STUDENT REGISTRY BILLING TOTALS ──
+  // Buckets are mutually exclusive, so TOTAL = PAID + PENDING + DUE + OVERDUE.
+  // NOT BILLED (not enrolled yet for the viewed month) sits outside the total.
+  // OVERDUE wins over the others: it means the student has at least one EARLIER
+  // unpaid month (arrears), which matters more than this month's state.
+  const STUD_BUCKETS = [
+    { key: "total", label: "Total", cls: "is-total" },
+    { key: "paid", label: "Paid", cls: "is-paid" },
+    { key: "pending", label: "Pending", cls: "is-pending" },
+    { key: "due", label: "Due", cls: "is-due" },
+    { key: "overdue", label: "Overdue", cls: "is-overdue" },
+    { key: "unbilled", label: "Not Billed", cls: "is-unbilled" },
+  ];
+
+  // How many months before the viewed one are still unpaid. The billing anchor
+  // is already floored at July 2026, which bounds the lookback.
+  function countUnpaidEarlierMonths(s, targetMonth, targetYear) {
+    const anchor = getBillingAnchor(s);
+    let y = anchor.year;
+    let m = anchor.month;
+    let unpaid = 0;
+    let guard = 0;
+    while (
+      (y < targetYear || (y === targetYear && m < targetMonth)) &&
+      guard++ < 120
+    ) {
+      if (getStudentPaymentStatus(s, m, y) === "Due") unpaid += 1;
+      m += 1;
+      if (m > 11) {
+        m = 0;
+        y += 1;
+      }
+    }
+    return unpaid;
+  }
+  window.countUnpaidEarlierMonths = countUnpaidEarlierMonths;
+
+  function classifyStudentBilling(s, targetMonth, targetYear) {
+    const status = getStudentPaymentStatus(s, targetMonth, targetYear);
+    if (status === "Not Enrolled") return "unbilled";
+    if (countUnpaidEarlierMonths(s, targetMonth, targetYear) > 0) return "overdue";
+    if (status === "Paid") return "paid";
+    if (status === "Due") return "due";
+    return "pending";
+  }
+  window.classifyStudentBilling = classifyStudentBilling;
+
+  // Clicking a card narrows the table to that bucket; clicking it again (or
+  // Total) clears the narrowing.
+  window.studBucketFilter = null;
+  window.setStudBucketFilter = function (bucket) {
+    window.studBucketFilter =
+      bucket === "total" || window.studBucketFilter === bucket ? null : bucket;
+    renderStudents();
+  };
+
+  function renderStudentTotals(list, targetMonth, targetYear) {
+    const bar = document.getElementById("stud-totals-bar");
+    if (!bar) return;
+    const acc = {};
+    STUD_BUCKETS.forEach((b) => (acc[b.key] = { n: 0, amt: 0 }));
+    (list || []).forEach((s) => {
+      const bucket = classifyStudentBilling(s, targetMonth, targetYear);
+      // Same basis as the dashboard: a settled month is worth what was actually
+      // billed, an unsettled one is worth the student's current fee.
+      const fee = getExpectedTuitionFor(s, targetYear, targetMonth);
+      acc[bucket].n += 1;
+      acc[bucket].amt += fee;
+      if (bucket !== "unbilled") {
+        acc.total.n += 1;
+        acc.total.amt += fee;
+      }
+    });
+    const money = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
+    bar.innerHTML = STUD_BUCKETS.map((b) => {
+      const cell = acc[b.key];
+      const active = window.studBucketFilter === b.key;
+      const label = b.key === "total" ? `Total (${cell.n})` : b.label;
+      // "Not Billed" students have no billable amount, so show the count alone.
+      const value =
+        b.key === "unbilled"
+          ? String(cell.n)
+          : `<span class="stc-count">${cell.n} ·</span> ${money(cell.amt)}`;
+      const hint = b.key === "total" ? "Show all students" : `Show only ${b.label}`;
+      return `<button type="button" class="stud-total-card ${b.cls}" aria-pressed="${active}" title="${hint}" onclick="setStudBucketFilter('${b.key}')">
+          <span class="stc-label">${label}</span>
+          <span class="stc-value">${value}</span>
+        </button>`;
+    }).join("");
+    renderSelectedTotal();
+  }
+  window.renderStudentTotals = renderStudentTotals;
+
+  // Fee sum for the rows the admin has ticked. Appended to the totals bar and
+  // refreshed by updateStudentBulkCount() as checkboxes change, so the bar
+  // answers "what am I about to charge for this selection?".
+  function renderSelectedTotal() {
+    const bar = document.getElementById("stud-totals-bar");
+    if (!bar) return;
+    let card = document.getElementById("stud-selected-card");
+    const ids = window.getSelectedStudentIds ? getSelectedStudentIds() : [];
+    if (!ids.length) {
+      if (card) card.remove();
+      return;
+    }
+    const amt = ids.reduce((sum, id) => {
+      const s = (allStudents || []).find((x) => String(x.id) === String(id));
+      // Same per-month basis as the bucket cards so the two always reconcile.
+      return sum + (s ? getExpectedTuitionFor(s, window.reportYear, window.reportMonth) : 0);
+    }, 0);
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "stud-selected-card";
+      card.className = "stud-total-card is-selected";
+      bar.appendChild(card);
+    }
+    card.innerHTML =
+      `<span class="stc-label">Selected</span>` +
+      `<span class="stc-value"><span class="stc-count">${ids.length} ·</span> ₹${Math.round(amt).toLocaleString("en-IN")}</span>`;
+  }
+  window.renderSelectedTotal = renderSelectedTotal;
 
   function renderStudents() {
     const tbody = $("stud-body");
@@ -7851,9 +8328,7 @@ setTimeout(function () {
         typeof window.reportYear !== "number" ||
         isNaN(window.reportYear)
       ) {
-        const now = new Date();
-        window.reportMonth = now.getUTCMonth();
-        window.reportYear = now.getUTCFullYear();
+        syncToCurrentPeriod();
         console.warn("[renderStudents] Fixed invalid reportMonth/year");
       }
 
@@ -8022,8 +8497,21 @@ setTimeout(function () {
         }
       }
 
+      // Totals cover every student matching the filters and are computed
+      // BEFORE the bucket narrowing, so the other cards keep showing their real
+      // figures while one bucket is selected.
+      if (role !== "coach") {
+        renderStudentTotals(studs, targetMonth, targetYear);
+        if (window.studBucketFilter) {
+          studs = studs.filter(
+            (s) =>
+              classifyStudentBilling(s, targetMonth, targetYear) ===
+              window.studBucketFilter,
+          );
+        }
+      }
+
       if (!studs || studs.length === 0) {
-        const cols = role === "coach" ? 7 : 9;
         tbody.innerHTML =
           `<tr><td colspan="${role === "coach" ? 7 : 9}" class="text-center">No students found matching filters for this period</td></tr>`;
         return;
@@ -8059,37 +8547,19 @@ setTimeout(function () {
               "Nov",
               "Dec",
             ];
-            // Due Date: show the EXACT date the admin entered/updated (s.due_date),
-            // with no month-selector shifting or auto-rollover. Fall back to the
-            // day-of-month billing computation only when no explicit date is stored.
-            let dueDateString, dueDateObj;
-            const _ddMatch = String(s.due_date || "").match(
-              /(\d{4})-(\d{2})-(\d{2})/,
+            // Due Date: the admin's stored due_date supplies the recurring
+            // billing DAY; the month/year always follow the period being viewed
+            // so the column rolls over on its own. Previously the stored date
+            // was printed verbatim, which pinned every student to "05-Jul-2026"
+            // forever no matter which month was selected.
+            const dueInfo = getStudentDueDateFor(
+              s,
+              coachName,
+              targetMonth,
+              targetYear,
             );
-            if (_ddMatch) {
-              const _yy = +_ddMatch[1],
-                _mm = +_ddMatch[2] - 1,
-                _dd = +_ddMatch[3];
-              dueDateObj = new Date(_yy, _mm, _dd, 23, 59, 59);
-              dueDateString = `${String(_dd).padStart(2, "0")}-${months[_mm]}-${_yy}`;
-            } else {
-              const dueCfg = getStudentDueConfig(
-                s,
-                coachName,
-                targetMonth,
-                targetYear,
-              );
-              const dueDay = String(dueCfg.day).padStart(2, "0");
-              dueDateString = `${dueDay}-${months[targetMonth]}-${targetYear}`;
-              dueDateObj = new Date(
-                targetYear,
-                targetMonth,
-                dueCfg.day,
-                23,
-                59,
-                59,
-              );
-            }
+            const dueDateObj = dueInfo.date;
+            const dueDateString = `${String(dueInfo.day).padStart(2, "0")}-${months[targetMonth]}-${targetYear}`;
             const isOverdue =
               status === "Overdue" ||
               (status !== "Paid" &&
@@ -8388,11 +8858,32 @@ setTimeout(function () {
     $("e-name").value = getStudentName(s);
     if ($("e-email")) $("e-email").value = s.email || "";
     if ($("e-parent-name")) $("e-parent-name").value = s.parent_name || "";
+    // Guardian (father/mother) details: the edit modal has these inputs but
+    // openEdit never filled them, so they showed blank on every edit even
+    // though the data was saved. Populate them from the student record.
+    {
+      const setV = (id, val) => { if ($(id)) $(id).value = val || ""; };
+      setV("e-father-name", s.father_name);
+      setV("e-father-phone", s.father_phone);
+      setV("e-father-qualification", s.father_qualification);
+      setV("e-father-profession", s.father_profession);
+      setV("e-father-email", s.father_email);
+      setV("e-father-whatsapp", s.father_whatsapp);
+      setV("e-mother-name", s.mother_name);
+      setV("e-mother-phone", s.mother_phone);
+      setV("e-mother-qualification", s.mother_qualification);
+      setV("e-mother-profession", s.mother_profession);
+      setV("e-mother-email", s.mother_email);
+      setV("e-mother-whatsapp", s.mother_whatsapp);
+    }
     if ($("e-session-type")) $("e-session-type").value = getStudentSessionType(s);
     if ($("e-dob")) $("e-dob").value = s.dob || "";
-    if ($("e-standard")) {
-      const stdMatch = /Standard:\s*(.+)/.exec(s.special_notes || "");
-      $("e-standard").value = stdMatch ? stdMatch[1].trim() : "";
+    {
+      // special_notes holds "Standard: X" plus the free-text notes about the
+      // child; repopulate both so neither is lost on the next save.
+      const sn = parseSpecialNotes(s.special_notes);
+      if ($("e-standard")) $("e-standard").value = sn.standard;
+      if ($("e-special-notes")) $("e-special-notes").value = sn.child;
     }
     if ($("e-school")) $("e-school").value = s.school_name || "";
     if ($("e-address")) $("e-address").value = s.address || "";
@@ -8401,15 +8892,29 @@ setTimeout(function () {
     // Set country first so phone placeholder/validation matches
     const studentPhone = getStudentPhone(s);
     const parsed = parseStoredPhone(studentPhone);
+    // The stored country_code is reliable; the phone-number heuristic
+    // (parseStoredPhone) misidentifies countries like Germany (+49) and was
+    // silently switching the dropdown. Prefer the saved country_code and only
+    // fall back to the heuristic when no country_code was stored.
+    const storedCC = (s.country_code || "").toUpperCase();
     const inferredCountry =
-      parsed.countryCode && parsed.countryCode !== "IN"
-        ? parsed.countryCode
-        : s.country_code || "IN";
+      storedCC ||
+      (parsed.countryCode && parsed.countryCode !== "IN" ? parsed.countryCode : "IN");
     const country = getCountryByCode(inferredCountry);
     if (country) {
       selectCountryEdit(country.code, country.dial, country.length);
     }
-    $("e-phone").value = parsed.localNumber;
+    // Recompute the local number by stripping the CHOSEN country's dial code,
+    // so a heuristic mis-parse can't leave the wrong local digits behind.
+    {
+      const dialDigits = country ? country.dial.replace(/\D/g, "") : "";
+      const allDigits = (studentPhone || "").replace(/\D/g, "");
+      const expectedLen = country && country.length ? country.length : 10;
+      $("e-phone").value =
+        dialDigits && allDigits.startsWith(dialDigits) && allDigits.length > expectedLen
+          ? allDigits.slice(dialDigits.length)
+          : parsed.localNumber;
+    }
     $("e-level").value = getStudentLevel(s);
     $("e-elo").value = getStudentRating(s);
     $("e-fee").value = getStudentMonthlyFee(s);
@@ -8503,7 +9008,12 @@ setTimeout(function () {
        batch_type: $("e-batch-type").value?.trim() || null,
        session_time: $("e-batch-time").value?.trim() || null,
        batch_time: $("e-batch-time").value?.trim() || null,
-       days: getSelectedDays(".e-day-cb, .e-day-btn") || null,
+       // Only the ACTIVE (selected) day buttons in this modal — getSelectedDays
+       // returned every button regardless of selection, so all students ended
+       // up saved with all 7 days.
+       days: Array.from(document.querySelectorAll("#edit-modal .e-day-btn.active"))
+         .map((b) => b.dataset.day)
+         .join(", ") || null,
       // Send fee under ALL possible column names
       monthly_fee: newFee,
       fee: newFee,
@@ -8540,9 +9050,26 @@ setTimeout(function () {
       // Guardian + personal details so edits persist (parent name was the
       // field the user reported as never saving).
       parent_name: $("e-parent-name") ? $("e-parent-name").value.trim() : (s.parent_name || ""),
+      // Guardian (father/mother) details — send them so edits to these fields
+      // actually persist (previously never populated nor saved from the modal).
+      father_name: $("e-father-name") ? $("e-father-name").value.trim() : (s.father_name || null),
+      father_phone: $("e-father-phone") ? $("e-father-phone").value.trim() : (s.father_phone || null),
+      father_qualification: $("e-father-qualification") ? $("e-father-qualification").value.trim() : (s.father_qualification || null),
+      father_profession: $("e-father-profession") ? $("e-father-profession").value.trim() : (s.father_profession || null),
+      father_email: $("e-father-email") ? $("e-father-email").value.trim() : (s.father_email || null),
+      father_whatsapp: $("e-father-whatsapp") ? $("e-father-whatsapp").value.trim() : (s.father_whatsapp || null),
+      mother_name: $("e-mother-name") ? $("e-mother-name").value.trim() : (s.mother_name || null),
+      mother_phone: $("e-mother-phone") ? $("e-mother-phone").value.trim() : (s.mother_phone || null),
+      mother_qualification: $("e-mother-qualification") ? $("e-mother-qualification").value.trim() : (s.mother_qualification || null),
+      mother_profession: $("e-mother-profession") ? $("e-mother-profession").value.trim() : (s.mother_profession || null),
+      mother_email: $("e-mother-email") ? $("e-mother-email").value.trim() : (s.mother_email || null),
+      mother_whatsapp: $("e-mother-whatsapp") ? $("e-mother-whatsapp").value.trim() : (s.mother_whatsapp || null),
       dob: $("e-dob") && $("e-dob").value ? $("e-dob").value : (s.dob || null),
       // `grade` column stores the LEVEL, so standard goes to special_notes.
-      special_notes: $("e-standard") && $("e-standard").value.trim() ? `Standard: ${$("e-standard").value.trim()}` : (s.special_notes || null),
+      special_notes:
+        $("e-standard") || $("e-special-notes")
+          ? composeSpecialNotes($("e-standard")?.value, $("e-special-notes")?.value)
+          : s.special_notes || null,
       school_name: $("e-school") ? ($("e-school").value.trim() || null) : (s.school_name || null),
       address: $("e-address") ? ($("e-address").value.trim() || null) : (s.address || null),
       session_mode: $("e-batch-type")?.value || s.session_mode || null,
@@ -8616,8 +9143,7 @@ setTimeout(function () {
                 description: "Status updated to Paid via Profile",
                 transaction_id: "PRF-" + Math.floor(Math.random() * 1000000),
                 payment_date:
-                  window.reportMonth !== new Date().getUTCMonth() ||
-                  window.reportYear !== new Date().getUTCFullYear()
+                  !isViewingCurrentPeriod()
                     ? new Date(
                         Date.UTC(
                           window.reportYear,
@@ -8747,6 +9273,18 @@ setTimeout(function () {
     if ($("m-learning-mode")) $("m-learning-mode").value = "offline";
     document.querySelectorAll(".m-day-btn").forEach((btn) => btn.classList.remove("active"));
     if ($("m-days")) $("m-days").value = "";
+    // Guardian / free-text fields. These are now actually persisted, so they
+    // must be reset between enrolments or the previous student's details leak
+    // into the next form.
+    [
+      "m-father-name", "m-father-phone", "m-father-qualification",
+      "m-father-profession", "m-father-email", "m-father-whatsapp",
+      "m-mother-name", "m-mother-phone", "m-mother-qualification",
+      "m-mother-profession", "m-mother-email", "m-mother-whatsapp",
+      "m-notes", "m-special-notes", "m-lichess", "m-chesscom", "m-chessable",
+    ].forEach((id) => {
+      if ($(id)) $(id).value = "";
+    });
     window.selectedCountryCode = "IN";
     window.selectedCountryCodeEdit = "IN";
     const selected = $("country-selected");
@@ -8770,8 +9308,13 @@ setTimeout(function () {
   
   function getSelectedDays(selector) {
     return Array.from(document.querySelectorAll(selector))
+      // Only the days the admin actually picked. Without this filter every day
+      // button was collected, so EVERY newly enrolled student was saved with
+      // all 7 days — which is why the edit modal then showed the whole week
+      // selected. updateStudent was fixed for this; the enrol path was not.
+      .filter((el) => el.classList.contains("active") || el.checked === true)
       .map((el) => el.dataset.day || el.value)
-      .filter(d => d && d.trim())
+      .filter((d) => d && d.trim())
       .join(", ");
   }
   
@@ -8839,17 +9382,40 @@ due_date: (function () {
       // Session type (Group/Individual) has no dedicated column, so it is
       // tagged in notes. The edge function prepends the [LM:] marker, so we
       // only supply the [STYPE:] tag here.
-      notes: `[STYPE:${$("m-session-type")?.value || "Group"}]`,
+      notes: (`[STYPE:${$("m-session-type")?.value || "Group"}] ` + ($("m-notes")?.value || "").trim()).trim(),
       lichess_username: $("m-lichess") ? $("m-lichess").value.trim() : "",
       chesscom_username: $("m-chesscom") ? $("m-chesscom").value.trim() : "",
       chessable_username: $("m-chessable") ? $("m-chessable").value.trim() : "",
       // Personal / guardian details — previously collected by the form but
       // never sent, so they silently vanished. Now persisted.
       parent_name: $("m-parent-name") ? $("m-parent-name").value.trim() : "",
+      // NOTE: the form's "Parent Email" input has no `parent_email` column in
+      // the students table and no handler in the edge function, so it is not
+      // sent — it would be silently dropped. Needs a migration to enable.
+      // Father / mother blocks: the enrolment form has always shown these 12
+      // inputs but saveStudent never sent any of them, so everything an admin
+      // typed at enrolment was discarded (updateStudent did save them, which is
+      // why the details only appeared if the student was edited afterwards).
+      father_name: $("m-father-name") ? ($("m-father-name").value.trim() || null) : null,
+      father_phone: $("m-father-phone") ? ($("m-father-phone").value.trim() || null) : null,
+      father_qualification: $("m-father-qualification") ? ($("m-father-qualification").value.trim() || null) : null,
+      father_profession: $("m-father-profession") ? ($("m-father-profession").value.trim() || null) : null,
+      father_email: $("m-father-email") ? ($("m-father-email").value.trim() || null) : null,
+      father_whatsapp: $("m-father-whatsapp") ? ($("m-father-whatsapp").value.trim() || null) : null,
+      mother_name: $("m-mother-name") ? ($("m-mother-name").value.trim() || null) : null,
+      mother_phone: $("m-mother-phone") ? ($("m-mother-phone").value.trim() || null) : null,
+      mother_qualification: $("m-mother-qualification") ? ($("m-mother-qualification").value.trim() || null) : null,
+      mother_profession: $("m-mother-profession") ? ($("m-mother-profession").value.trim() || null) : null,
+      mother_email: $("m-mother-email") ? ($("m-mother-email").value.trim() || null) : null,
+      mother_whatsapp: $("m-mother-whatsapp") ? ($("m-mother-whatsapp").value.trim() || null) : null,
       dob: $("m-dob") && $("m-dob").value ? $("m-dob").value : null,
       // NOTE: the `grade` column holds the student LEVEL (Beginner/…), so the
-      // academic "standard" field is stored in special_notes, not grade.
-      special_notes: $("m-standard") && $("m-standard").value.trim() ? `Standard: ${$("m-standard").value.trim()}` : null,
+      // academic "standard" field is stored in special_notes, not grade —
+      // alongside the free-text "Things about the Child".
+      special_notes: composeSpecialNotes(
+        $("m-standard")?.value,
+        $("m-special-notes")?.value,
+      ),
       school_name: $("m-school") ? ($("m-school").value.trim() || null) : null,
       address: $("m-address") ? ($("m-address").value.trim() || null) : null,
       session_mode: $("m-batch-type").value,
@@ -10519,7 +11085,9 @@ due_date: (function () {
     ).toLocaleString("en-IN", { month: "long" });
     const billingCycleStr = `${billingMonthName} ${window.reportYear}`;
 
-    const message = `${EMOJI.check} PAYMENT RECEIVED \u{2014} RECEIPT CONFIRMED ${EMOJI.receipt}${EMOJI.sparkle}
+    const message = `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*
+
+${EMOJI.check} PAYMENT RECEIVED \u{2014} RECEIPT CONFIRMED ${EMOJI.receipt}${EMOJI.sparkle}
 
 Hello Sir/Madam ${EMOJI.wave},
 
@@ -10533,10 +11101,10 @@ ${EMOJI.tear_calendar} Confirmed On: ${formattedDate}
 ${EMOJI.link} Download Your Official Receipt:
 ${receiptUrl}
 
-Thank you for your prompt payment and continued support of Two Knights Academy! ${EMOJI.grad}${EMOJI.trophy}
+Thank you for your prompt payment and continued support of Two Knights Chess Academy! ${EMOJI.grad}${EMOJI.trophy}
 
 Best regards,
-– Two Knights Academy ${EMOJI.knight}`;
+– *TWO KNIGHTS CHESS ACADEMY* ${EMOJI.knight}`;
 
     const studentPhone = getStudentPhone(s);
     const parsed = parseStoredPhone(studentPhone);
@@ -10582,9 +11150,13 @@ Best regards,
           new Date(p.payment_date || p.created_at).getUTCFullYear() ===
             targetYear,
       );
-      window.allPayments = window.allPayments.filter(
+      // Assign the closure binding too, not just the window alias: every status
+      // helper reads the closure `allPayments`, so updating only window.* left
+      // the UI showing the pre-toggle state.
+      allPayments = window.allPayments.filter(
         (p) => !removedPayments.includes(p),
       );
+      window.allPayments = allPayments;
     } else {
       mockPayment = {
         id: "pay_toggle_temp_" + Date.now(),
@@ -10595,8 +11167,7 @@ Best regards,
         description: "Monthly Tuition",
         transaction_id: "TGL-" + Math.floor(Math.random() * 1000000),
         payment_date:
-          window.reportMonth !== new Date().getUTCMonth() ||
-          window.reportYear !== new Date().getUTCFullYear()
+          !isViewingCurrentPeriod()
             ? new Date(
                 Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0),
               ).toISOString()
@@ -10688,7 +11259,11 @@ Best regards,
     } catch (e) {
       console.error("Toggle status sync failed, rolling back:", e);
       toast("Sync failed, rolling back UI...", "error");
-      window.allPayments = originalPayments;
+      // Roll back the closure binding as well — restoring only window.* left
+      // the status helpers reading the failed optimistic state, so the
+      // re-render below painted the un-rolled-back rows.
+      allPayments = originalPayments;
+      window.allPayments = allPayments;
       if (dataCache) dataCache.payments = window.allPayments;
 
       const rollMap = {};
@@ -10729,19 +11304,69 @@ Best regards,
     if ($("mp-time")) $("mp-time").value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     if ($("mp-month")) {
       // Default to the month currently being viewed, floored at the billing start.
-      const vy = window.reportYear || now.getFullYear();
-      const vm = (window.reportMonth ?? now.getMonth()) + 1;
-      let key = `${vy}-${pad(vm)}`;
-      if (key < "2026-07") key = "2026-07";
+      const cur = getCurrentPeriod();
+      const vy = window.reportYear || cur.year;
+      const vm = window.reportMonth ?? cur.month;
+      let key = periodKey(vy, vm);
+      const floorKey = periodKey(BILLING_FLOOR.year, BILLING_FLOOR.month);
+      if (key < floorKey) key = floorKey;
       $("mp-month").value = key;
     }
+    if ($("mp-admission")) {
+      // Prefill the one-time admission fee only when the payment month matches
+      // the student's enrollment month (so it's collected once). Always editable.
+      const enrollMonth = String(getStudentDate(s) || s.enrollment_date || "").slice(0, 7);
+      const payMonth = $("mp-month") ? $("mp-month").value : "";
+      const isEnrollMonth = enrollMonth && (!payMonth || payMonth === enrollMonth);
+      $("mp-admission").value = isEnrollMonth ? (parseInt(s.admission_fee) || 0) : 0;
+    }
+    // Reset the fee-change choice for each new dialog so a previous student's
+    // "carry forward" selection can't leak into the next payment.
+    const feeScopeOnce = document.querySelector('input[name="mp-fee-scope"][value="once"]');
+    if (feeScopeOnce) feeScopeOnce.checked = true;
+    if ($("mp-fee-change-block")) $("mp-fee-change-block").style.display = "none";
+    window.updateMarkPaidTotal();
     openModal("mark-paid-modal");
   };
+
+  // Live "Total on Receipt" = amount + admission, updated as either field changes.
+  window.updateMarkPaidTotal = function () {
+    const amt = parseFloat($("mp-amount")?.value) || 0;
+    const adm = parseFloat($("mp-admission")?.value) || 0;
+    if ($("mp-total")) $("mp-total").textContent = "₹" + (amt + adm).toLocaleString();
+    updateFeeChangeNotice();
+  };
+
+  // Surface the "is this a one-off or their new fee?" choice the moment the
+  // typed amount diverges from the student's stored monthly fee. Recording a
+  // different amount used to only write the payment row, leaving the student's
+  // fee — and therefore the registry, the totals and future months — on the old
+  // value with no indication anything had diverged.
+  function updateFeeChangeNotice() {
+    const block = $("mp-fee-change-block");
+    if (!block) return;
+    const id = $("mp-student-id")?.value;
+    const s = (allStudents || []).find((x) => String(x.id) === String(id));
+    const current = s ? getStudentMonthlyFee(s) || 0 : 0;
+    const typed = parseFloat($("mp-amount")?.value) || 0;
+    const differs = s && typed > 0 && typed !== current;
+    block.style.display = differs ? "" : "none";
+    if (!differs) return;
+    const money = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
+    ["mp-fee-old", "mp-fee-old-2"].forEach((k) => {
+      if ($(k)) $(k).textContent = money(current);
+    });
+    ["mp-fee-new", "mp-fee-new-2"].forEach((k) => {
+      if ($(k)) $(k).textContent = money(typed);
+    });
+  }
+  window.updateFeeChangeNotice = updateFeeChangeNotice;
 
   window.confirmMarkPaid = async function () {
     const id = $("mp-student-id")?.value;
     if (!id) return;
     const amount = parseFloat($("mp-amount")?.value) || 0;
+    const admission = parseFloat($("mp-admission")?.value) || 0;
     const mode = $("mp-mode")?.value || "Cash";
     const dateStr = $("mp-date")?.value;
     const timeStr = $("mp-time")?.value || "12:00";
@@ -10751,8 +11376,14 @@ Best regards,
     // Build an ISO timestamp from the chosen local date + time.
     const paymentDateIso = new Date(`${dateStr}T${timeStr}:00`).toISOString();
     const appliedMonth = /^\d{4}-\d{2}$/.test(monthStr) ? monthStr : dateStr.slice(0, 7);
+    // Did the admin choose to carry a changed fee forward? Only meaningful when
+    // the fee-change block is actually showing.
+    const feeBlockVisible =
+      $("mp-fee-change-block") && $("mp-fee-change-block").style.display !== "none";
+    const scope = document.querySelector('input[name="mp-fee-scope"]:checked')?.value;
+    const applyFeeForward = !!feeBlockVisible && scope === "forward";
     closeModal("mark-paid-modal");
-    await markPaid(id, amount, mode, "Monthly Tuition", { paymentDateIso, appliedMonth, timeStr });
+    await markPaid(id, amount, mode, "Monthly Tuition", { paymentDateIso, appliedMonth, timeStr, admission, openReceipt: true, applyFeeForward });
   };
 
   async function markPaid(
@@ -10770,6 +11401,25 @@ Best regards,
       const updates = { payment_status: "Paid" };
       // Due date is now automatically rolled over by the backend when the payment is created.
 
+      // Carry a changed fee forward when the admin asked for it, so the new
+      // amount shows everywhere the student's fee is read (registry column,
+      // registry totals, dashboards, future months) instead of living only on
+      // this one payment row. Sent under every fee alias, matching the edit form.
+      if (opts.applyFeeForward && parseFloat(amt) > 0) {
+        const newFee = parseInt(amt, 10);
+        updates.monthly_fee = newFee;
+        updates.fee = newFee;
+        updates.fees = newFee;
+        updates.tuition_fee = newFee;
+        if (s) {
+          // Reflect it locally right away so the re-render below is correct
+          // even before loadAllData() comes back.
+          s.monthly_fee = newFee;
+          s.fee = newFee;
+          s.fees = newFee;
+        }
+      }
+
       await apiCall(`${API_BASE}/students?id=${id}`, {
         method: "PUT",
         body: JSON.stringify(updates),
@@ -10779,8 +11429,7 @@ Best regards,
       // else fall back to the viewed month / now.
       const resolvedDateIso =
         opts.paymentDateIso ||
-        (window.reportMonth !== new Date().getUTCMonth() ||
-        window.reportYear !== new Date().getUTCFullYear()
+        (!isViewingCurrentPeriod()
           ? new Date(Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0)).toISOString()
           : new Date().toISOString());
 
@@ -10802,9 +11451,48 @@ Best regards,
       });
 
       // Remember the exact details so the receipt reflects them (not random).
+      const admissionAmt = parseFloat(opts.admission) || 0;
+
+      // Persist the admission fee as its own payment row. It used to exist only
+      // on the printed receipt and an in-memory object, so an admission the
+      // admin collected here never reached the dashboard or revenue at all.
+      // A separate row attributes it to the month actually collected and keeps
+      // it out of the tuition figure.
+      if (admissionAmt > 0) {
+        const admBody = {
+          id: "adm_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+          student_id: id,
+          amount: admissionAmt,
+          status: "paid",
+          payment_method: method,
+          description: "Admission Fee",
+          transaction_id: "ADM-" + Math.floor(Math.random() * 1000000),
+          payment_date: resolvedDateIso,
+        };
+        if (opts.appliedMonth) admBody.applied_month = opts.appliedMonth;
+        try {
+          await apiCall(`${API_BASE}/payments`, {
+            method: "POST",
+            body: JSON.stringify(admBody),
+          });
+          // Flag the student so the one-time fee isn't prompted for again.
+          await apiCall(`${API_BASE}/students?id=${id}`, {
+            method: "PUT",
+            body: JSON.stringify({ admission_fee: admissionAmt, admission_paid: true }),
+          });
+          if (s) {
+            s.admission_fee = admissionAmt;
+            s.admission_paid = true;
+          }
+        } catch (admErr) {
+          console.warn("Admission fee not recorded:", admErr);
+          toast("Payment saved, but the admission fee failed to record", "warning");
+        }
+      }
       window.lastPaymentDetails = {
         studentId: id,
         amount: amt,
+        admission: admissionAmt,
         method,
         dateIso: resolvedDateIso,
         appliedMonth: opts.appliedMonth || resolvedDateIso.slice(0, 7),
@@ -10820,7 +11508,23 @@ Best regards,
       renderDash();
       renderBills();
 
-      // 3. Auto-Notify Parent with Receipt Link
+      // 3a. Open the printable receipt reflecting the CONFIRMED amount +
+      // admission (the modal's "Record & Generate Receipt" action).
+      if (opts.openReceipt && s) {
+        const coachObj = s.coach_id
+          ? (allCoaches || []).find((c) => String(c.id) === String(s.coach_id))
+          : null;
+        const coachName = coachObj ? (coachObj.name || coachObj.full_name || "N/A") : "N/A";
+        const rUrl =
+          `receipt.html?id=${id}&name=${encodeURIComponent(getStudentName(s))}` +
+          `&amount=${amt}&admission_fee=${admissionAmt}` +
+          `&level=${encodeURIComponent(getStudentLevel(s))}&rating=${getStudentRating(s)}` +
+          `&coach=${encodeURIComponent(coachName)}&method=${encodeURIComponent(method)}` +
+          `&date=${encodeURIComponent(resolvedDateIso)}&type=tuition&print=true`;
+        window.open(rUrl, "_blank");
+      }
+
+      // 3b. Auto-Notify Parent with Receipt Link
       if (window.sendPaymentReceiptNotification) {
         sendPaymentReceiptNotification(id, amt);
       }
@@ -11081,9 +11785,16 @@ Best regards,
     const currentStatus = getStudentPaymentStatus(s);
     const isCurrentlyPaid = currentStatus === "Paid";
     const action = isCurrentlyPaid ? "unpaid" : "paid";
-    const confirmMsg = isCurrentlyPaid
-      ? `Mark ${name} as Unpaid? This will remove this month's payment record and revert status to Pending.`
-      : `Mark ${name} as Paid? This will create a payment record for this month.`;
+
+    // Marking as PAID now goes through the confirmation modal so the fee can be
+    // reviewed/edited (fees may have increased after enrolment) and the one-time
+    // admission fee confirmed + printed on the receipt.
+    if (!isCurrentlyPaid && window.openMarkPaidDialog) {
+      window.openMarkPaidDialog(id);
+      return;
+    }
+
+    const confirmMsg = `Mark ${name} as Unpaid? This will remove this month's payment record and revert status to Pending.`;
 
     if (!confirm(confirmMsg)) return;
 
@@ -11136,8 +11847,7 @@ Best regards,
           description: "Monthly Tuition",
           transaction_id: "TGL-" + Math.floor(Math.random() * 1000000),
           payment_date:
-            window.reportMonth !== new Date().getUTCMonth() ||
-            window.reportYear !== new Date().getUTCFullYear()
+            !isViewingCurrentPeriod()
               ? new Date(
                   Date.UTC(window.reportYear, window.reportMonth, 1, 12, 0, 0),
                 ).toISOString()
@@ -11306,9 +12016,9 @@ Best regards,
       `We are pleased to inform you that your salary of ₹${salary.toLocaleString()} for this period has been successfully processed and credited to your account! 💳💸\n\n` +
       `📄 View/Download your Official Salary Slip here:\n` +
       `${receiptUrl}\n\n` +
-      `Thank you so much for your incredible dedication, training expertise, and mentorship. You make Two Knights Academy shine! 🏆🎓\n\n` +
+      `Thank you so much for your incredible dedication, training expertise, and mentorship. You make Two Knights Chess Academy shine! 🏆🎓\n\n` +
       `Warm regards,\n` +
-      `– Two Knights Academy Team 👑✓¨`;
+      `– *TWO KNIGHTS CHESS ACADEMY* Team 👑✓¨`;
     openWhatsApp(dialCode, parsed.localNumber, msg);
   }
 
@@ -11460,9 +12170,8 @@ Best regards,
   };
 
   window.resetBillMonth = function () {
-    const now = new Date();
-    window.reportYear = now.getUTCFullYear();
-    window.reportMonth = now.getUTCMonth();
+    const cur = syncToCurrentPeriod();
+    if ($("f-bill-month")) $("f-bill-month").value = periodKey(cur.year, cur.month);
     renderBills();
   };
 
@@ -11543,8 +12252,8 @@ Best regards,
     filteredStudents.sort((a, b) => getStudentName(a).localeCompare(getStudentName(b)));
 
     const now = new Date();
-    const currentMonth = now.getUTCMonth();
-    const currentYear = now.getUTCFullYear();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
     const isCurrentMonth =
       targetMonth === currentMonth && targetYear === currentYear;
     const isPastMonth =
@@ -11684,6 +12393,7 @@ Best regards,
     countEl.textContent = `${checked} selected`;
     const all = $("stud-check-all");
     if (all) all.checked = total > 0 && checked === total;
+    renderSelectedTotal();
   }
 
   // Returns the list of currently selected student IDs (persisted Set), only
@@ -11750,8 +12460,7 @@ Best regards,
             description: "Bulk mark as paid by administrator",
             transaction_id: "BLK-" + Math.floor(Math.random() * 1000000),
             payment_date:
-              window.reportMonth !== new Date().getUTCMonth() ||
-              window.reportYear !== new Date().getUTCFullYear()
+              !isViewingCurrentPeriod()
                 ? new Date(
                     Date.UTC(
                       window.reportYear,
@@ -12233,7 +12942,7 @@ Best regards,
         key: razorpayKeyId,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: "Two Knights Academy",
+        name: "Two Knights Chess Academy",
         description: "Monthly Tuition - " + studentName,
         order_id: orderData.id,
         handler: async function (response) {
@@ -14084,7 +14793,7 @@ Best regards,
 
       if (!response) {
         // Default comprehensive response
-        response = `🏫 **Two Knights Academy Report**
+        response = `🏫 **Two Knights Chess Academy Report**
 `;
         response += `${TEMPORAL_ENGINE.getTimeBasedGreeting()}! Here's your academy overview:
 
@@ -15113,6 +15822,11 @@ window.addEventListener("DOMContentLoaded", () => {
   window.clearNotifications = clearNotifications;
   window.clearFilters = clearFilters;
   window.renderStudents = renderStudents;
+  // renderDash/loadAllData were never exported, so the guarded calls in
+  // automation.js, homework.js and batch-passwords.js silently did nothing —
+  // the dashboard and student data never refreshed after those actions.
+  window.renderDash = renderDash;
+  window.loadAllData = loadAllData;
   window.viewStudent = viewStudent;
   window.openStudentEditPortalModal = openStudentEditPortalModal;
   window.saveStudentPortalDetails = saveStudentPortalDetails;

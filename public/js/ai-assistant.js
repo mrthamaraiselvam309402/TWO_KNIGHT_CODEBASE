@@ -280,7 +280,7 @@ function escapeHtml(text) {
                     message: msg,
                     role: window.role || 'admin',
                     context: snapshot || { status: 'contextual_insight' },
-                    systemPrompt: "You are TOM AI, the Two Knights Academy Advisor. Provide a very short, direct, and helpful insight based on the prompt. No pleasantries, just the insight."
+                    systemPrompt: "You are TOM AI, the Two Knights Chess Academy Advisor. Provide a very short, direct, and helpful insight based on the prompt. No pleasantries, just the insight."
                 })
             });
 
