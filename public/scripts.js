@@ -2880,8 +2880,7 @@
       Number(amount || 0).toLocaleString() +
       getStudentLocalCurrencyAmount(s, amount);
     const cn = cleanText(name);
-    const payee = window.getPaymentPayee ? window.getPaymentPayee() : { number: 'twokn80151078@barodampay', name: 'Two Knights Chess Academy' };
-    const payTo = `+91 80155 12962 (${payee.name || 'Two Knights Chess Academy'}) UPI ID: ${payee.number}`;
+    const payTo = "+91 80155 12962 (Two Knights Chess Academy) UPI ID: twokn80151078@barodampay";
     const qrUrl = window.getPaymentQrUrl
       ? window.getPaymentQrUrl()
       : (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin !== "null"
