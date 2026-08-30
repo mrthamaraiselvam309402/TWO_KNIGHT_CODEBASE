@@ -2890,7 +2890,7 @@
           : "/assets/payment-qr.png");
     if (isDueOrOverdue) {
       return (
-        `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*\n\n` + // ♟️ letterhead
+        `\u{265F}\u{FE0F} TWO KNIGHTS CHESS ACADEMY\n\n` + // ♟️ letterhead
         `\u{1F534} FEE PAYMENT DUE\n\n` + // 🔴
         `Hello Sir/Madam, \u{1F44B}\n\n` + // 👋
         `\u{265F}\u{FE0F} This is a gentle note that your Monthly Tuition payment is currently due.\n\n` + // ♟️
@@ -2900,11 +2900,11 @@
         `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n` + // 📲
         `\u{1F5BC}\u{FE0F} Scan QR to Pay: ${qrUrl}\n\n` + // 🖼️
         `Thank you for your continued support! \u{1F31F}\n` + // 🌟
-        `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*`
+        `\u{265F}\u{FE0F} TWO KNIGHTS CHESS ACADEMY`
       ); // ♟️
     }
     return (
-      `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*\n\n` + // ♟️ letterhead
+      `\u{265F}\u{FE0F} TWO KNIGHTS CHESS ACADEMY\n\n` + // ♟️ letterhead
       `\u{1F4E2} UPCOMING FEE REMINDER\n\n` + // 📢
       `Hello Sir/Madam, \u{1F44B}\n\n` + // 👋
       `We hope you are doing well! \u{1F60A} This is a friendly reminder that your Monthly Tuition payment is coming up soon. \u{265F}\u{FE0F}\n\n` + // 😊 ♟️
@@ -2914,7 +2914,7 @@
       `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n` + // 📲
       `\u{1F5BC}\u{FE0F} Scan QR to Pay: ${qrUrl}\n\n` + // 🖼️
       `Thank you so much for your support and cooperation! \u{1F31F}\n` + // 🌟
-      `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*`
+      `\u{265F}\u{FE0F} TWO KNIGHTS CHESS ACADEMY`
     ); // ♟️
   }
 
