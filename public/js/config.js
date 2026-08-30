@@ -70,15 +70,15 @@ window.sbMarkTableMissing = function (table) {
 
 // ─── Configurable fee-collection payee (used in all reminder messages) ───────
 // Stored in localStorage so the admin can change the UPI/phone + name without a
-// code change. Defaults preserve the previous hard-coded value.
+// code change. Default is the official Bank of Baroda Merchant UPI ID.
 window.getPaymentPayee = function () {
   try {
     const saved = JSON.parse(localStorage.getItem('twoknights_payment_payee') || 'null');
-    if (saved && saved.number) {
+    if (saved && saved.number && saved.number !== '9025846663') {
       return { number: String(saved.number), name: String(saved.name || '') };
     }
   } catch (e) {}
-  return { number: '9025846663', name: 'Ranjith' };
+  return { number: 'twokn80151078@barodampay', name: 'Two Knights Chess Academy' };
 };
 
 window.setPaymentPayee = function (number, name) {
@@ -88,7 +88,19 @@ window.setPaymentPayee = function (number, name) {
   }));
 };
 
-// Convenience string: "9025846663 (Ranjith)" or just the number if no name.
+// Returns public URL for payment QR code image
+window.getPaymentQrUrl = function () {
+  try {
+    const saved = localStorage.getItem('twoknights_payment_qr_url');
+    if (saved && saved.trim()) return saved.trim();
+  } catch (e) {}
+  if (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') {
+    return `${window.location.origin}/assets/payment-qr.png`;
+  }
+  return '/assets/payment-qr.png';
+};
+
+// Convenience string: "twokn80151078@barodampay (Two Knights Chess Academy)" or just the number/UPI if no name.
 window.getPaymentPayeeText = function () {
   const p = window.getPaymentPayee();
   return p.name ? `${p.number} (${p.name})` : p.number;

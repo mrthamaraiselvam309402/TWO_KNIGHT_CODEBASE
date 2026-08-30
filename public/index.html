@@ -2316,23 +2316,31 @@
           <!-- Fee Collection Account (configurable, used in reminder messages) -->
           <div class="card" style="border: 1px solid var(--border); background:var(--bg2); padding: 20px;">
             <h3 style="margin: 0 0 12px 0; color:var(--gold); font-size:16px; display:flex; align-items:center; gap:8px;">
-              <span>💳</span> Fee Collection Account
+              <span>💳</span> Fee Collection Account &amp; UPI QR
             </h3>
             <p style="font-size:11px; color:var(--ivory-dim); line-height:1.4; margin-bottom:12px;">
-              Shown to parents in every fee reminder (UPI / GPay / PhonePe). Update here — no code change needed.
+              Shown to parents in every fee reminder (UPI / GPay / PhonePe / QR Code). Update here — no code change needed.
             </p>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-              <div>
-                <label style="font-size:10px; color:var(--ivory-dim); text-transform:uppercase; display:block; margin-bottom:4px;">UPI / Phone Number</label>
-                <input type="text" id="pay-payee-number" placeholder="9025846663" style="width:100%; padding:8px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+            <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
+              <div style="flex:1; min-width:240px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                  <div>
+                    <label style="font-size:10px; color:var(--ivory-dim); text-transform:uppercase; display:block; margin-bottom:4px;">UPI ID / Phone Number</label>
+                    <input type="text" id="pay-payee-number" placeholder="twokn80151078@barodampay" style="width:100%; padding:8px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+                  </div>
+                  <div>
+                    <label style="font-size:10px; color:var(--ivory-dim); text-transform:uppercase; display:block; margin-bottom:4px;">Payee Name</label>
+                    <input type="text" id="pay-payee-name" placeholder="Two Knights Chess Academy" style="width:100%; padding:8px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+                  </div>
+                </div>
+                <button class="btn btn-gold" onclick="window.savePaymentPayee()" style="margin-top:12px; padding:8px 16px; font-size:12px; font-weight:700;">💾 Save Collection Account</button>
+                <div id="pay-payee-preview" style="margin-top:10px; font-size:11px; color:var(--ivory-dim);"></div>
               </div>
-              <div>
-                <label style="font-size:10px; color:var(--ivory-dim); text-transform:uppercase; display:block; margin-bottom:4px;">Payee Name</label>
-                <input type="text" id="pay-payee-name" placeholder="Ranjith" style="width:100%; padding:8px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--ivory); border-radius:6px; font-size:13px;">
+              <div style="display:flex; flex-direction:column; align-items:center; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px; text-align:center;">
+                <img src="/assets/payment-qr.png" alt="Two Knights UPI QR" style="width:100px; height:100px; object-fit:cover; border-radius:6px; background:#fff; padding:2px;">
+                <div style="font-size:10px; font-weight:600; color:var(--gold); margin-top:6px;">Bank of Baroda QR</div>
               </div>
             </div>
-            <button class="btn btn-gold" onclick="window.savePaymentPayee()" style="margin-top:12px; padding:8px 16px; font-size:12px; font-weight:700;">💾 Save Collection Account</button>
-            <div id="pay-payee-preview" style="margin-top:10px; font-size:11px; color:var(--ivory-dim);"></div>
           </div>
 
           <!-- Academy operational details & Note pad -->
@@ -4196,6 +4204,16 @@
             <span class="channel-desc">Live mobile banner</span>
           </div>
         </label>
+      </div>
+
+      <!-- Attached Payment & QR Info -->
+      <div style="margin:14px 0;padding:12px;background:rgba(232,168,48,0.06);border:1px solid rgba(232,168,48,0.25);border-radius:8px;display:flex;align-items:center;gap:12px">
+        <img src="/assets/payment-qr.png" alt="Payment QR" style="width:58px;height:58px;border-radius:6px;border:1px solid var(--border);object-fit:cover;background:#fff;padding:2px;flex-shrink:0;">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Attached Payment Details</div>
+          <div style="font-size:12px;color:var(--ivory);font-family:var(--font-mono);font-weight:600;word-break:break-all">📲 <span id="inform-upi-id">twokn80151078@barodampay</span></div>
+          <div style="font-size:11px;color:var(--ivory-dim);margin-top:2px">Bank of Baroda Merchant QR link included automatically in reminder</div>
+        </div>
       </div>
 
       <label style="display:block;margin-bottom:4px;font-size:12px;color:var(--ivory-dim)">CUSTOM MESSAGE (Optional)</label>

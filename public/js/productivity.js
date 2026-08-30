@@ -920,7 +920,11 @@
     const prev = document.getElementById('pay-payee-preview');
     if (numEl) numEl.value = p.number || '';
     if (nameEl) nameEl.value = p.name || '';
-    if (prev) prev.textContent = 'Reminders will show: ' + (window.getPaymentPayeeText ? window.getPaymentPayeeText() : '');
+    if (prev) {
+      const payeeText = window.getPaymentPayeeText ? window.getPaymentPayeeText() : '';
+      const qrUrl = window.getPaymentQrUrl ? window.getPaymentQrUrl() : '/assets/payment-qr.png';
+      prev.textContent = `Reminders will show: ${payeeText} | QR: ${qrUrl}`;
+    }
   }
 
   window.savePaymentPayee = function () {

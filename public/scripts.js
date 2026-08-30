@@ -2882,7 +2882,12 @@
     const cn = cleanText(name);
     const payTo = window.getPaymentPayeeText
       ? window.getPaymentPayeeText()
-      : "9025846663 (Ranjith)";
+      : "twokn80151078@barodampay (Two Knights Chess Academy)";
+    const qrUrl = window.getPaymentQrUrl
+      ? window.getPaymentQrUrl()
+      : (typeof window !== "undefined" && window.location && window.location.origin && window.location.origin !== "null"
+          ? `${window.location.origin}/assets/payment-qr.png`
+          : "/assets/payment-qr.png");
     if (isDueOrOverdue) {
       return (
         `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*\n\n` + // ♟️ letterhead
@@ -2892,7 +2897,8 @@
         `\u{1F4B0} Amount Due: ${amountText}\n` + // 💰
         `\u{1F4C5} Due Date: ${dueDateStr}\n\n` + // 📅
         `Kindly complete the payment on or before the due date to avoid any interruption in class participation. \u{1F64F}\n\n` + // 🙏
-        `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n\n` + // 📲
+        `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n` + // 📲
+        `\u{1F5BC}\u{FE0F} Scan QR to Pay: ${qrUrl}\n\n` + // 🖼️
         `Thank you for your continued support! \u{1F31F}\n` + // 🌟
         `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*`
       ); // ♟️
@@ -2905,7 +2911,8 @@
       `\u{1F4B0} Fee Amount: ${amountText}\n` + // 💰
       `\u{1F4C5} Due Date: ${dueDateStr}\n\n` + // 📅
       `Kindly complete the payment on or before the due date. \u{1F64F}\n\n` + // 🙏
-      `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n\n` + // 📲
+      `\u{1F4F2} Pay via UPI / GPay / PhonePe: ${payTo}\n` + // 📲
+      `\u{1F5BC}\u{FE0F} Scan QR to Pay: ${qrUrl}\n\n` + // 🖼️
       `Thank you so much for your support and cooperation! \u{1F31F}\n` + // 🌟
       `\u{265F}\u{FE0F} *TWO KNIGHTS CHESS ACADEMY*`
     ); // ♟️
@@ -11613,6 +11620,10 @@ Best regards,
     $("inform-student-name").textContent = name;
     $("inform-amount").textContent = formatStudentFee(s, totalDue);
     $("inform-custom-msg").value = "";
+    if ($("inform-upi-id")) {
+      const p = window.getPaymentPayee ? window.getPaymentPayee() : { number: "twokn80151078@barodampay" };
+      $("inform-upi-id").textContent = p.number || "twokn80151078@barodampay";
+    }
 
     // Store student ID in modal data attribute
     const modal = $("inform-modal");
